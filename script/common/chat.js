@@ -2,17 +2,26 @@ import { commonRoll, combatRoll, damageRoll } from "./roll.js";
 import { prepareCommonRoll } from "./dialog.js";
 import DarkHeresyUtil from "./util.js";
 
-
 /**
  * Listeners for Chatmessages
  * @param {HTMLElement} html
  */
 export function chatListeners(html) {
-    if (!(html instanceof HTMLElement)) return;
-    html.querySelectorAll(".invoke-test")?.forEach(button => button.addEventListener("click", event => onTestClick(event)));
-    html.querySelectorAll(".invoke-damage")?.forEach(button => button.addEventListener("click", event => onDamageClick(event)));
-    html.querySelectorAll(".reload-Weapon")?.forEach(button => button.addEventListener("click", event => onReloadClick(event)));
-    html.querySelectorAll(".dark-heresy.chat.roll>.background.border")?.forEach(button => button.addEventListener("dblclick", event => onChatRollClick(event)));
+	if (!(html instanceof HTMLElement)) return;
+	html.querySelectorAll(".invoke-test")?.forEach((button) => {
+		button.addEventListener("click", onTestClick);
+	});
+	html.querySelectorAll(".invoke-damage")?.forEach((button) => {
+		button.addEventListener("click", onDamageClick);
+	});
+	html.querySelectorAll(".reload-Weapon")?.forEach((button) => {
+		button.addEventListener("click", onReloadClick);
+	});
+	html
+		.querySelectorAll(".dark-heresy.chat.roll>.background.border")
+		?.forEach((button) => {
+			button.addEventListener("dblclick", onChatRollClick);
+		});
 }
 
 /**
@@ -24,43 +33,43 @@ export function chatListeners(html) {
  *
  * @returns {Array}              The extended options Array including new context choices
  */
-export const addChatMessageContextOptions = function(html, options) {
-    let canApply = li => {
-        const message = game.messages.get(li.dataset.messageId);
-        return message.getRollData()?.flags.isDamageRoll
-            && message.isContentVisible
-            && canvas.tokens.controlled.length;
-    };
-    options.unshift(
-        {
-            name: game.i18n.localize("CHAT.CONTEXT.APPLY_DAMAGE"),
-            icon: '<i class="fas fa-user-minus"></i>',
-            condition: canApply,
-            callback: li => applyChatCardDamage(li)
-        }
-    );
+export const addChatMessageContextOptions = function (html, options) {
+	let canApply = (li) => {
+		const message = game.messages.get(li.dataset.messageId);
+		return (
+			message.getRollData()?.flags.isDamageRoll &&
+			message.isContentVisible &&
+			canvas.tokens.controlled.length
+		);
+	};
+	options.unshift({
+		name: game.i18n.localize("CHAT.CONTEXT.APPLY_DAMAGE"),
+		icon: '<i class="fas fa-user-minus"></i>',
+		condition: canApply,
+		callback: (li) => applyChatCardDamage(li),
+	});
 
-    let canReroll = li => {
-        const message = game.messages.get(li.dataset.messageId);
-        let actor = game.actors.get(message.getRollData()?.ownerId);
-        return message.isRoll
-            && !message.getRollData()?.flags.isDamageRoll
-            && message.isContentVisible
-            && actor?.fate.value > 0;
-    };
+	let canReroll = (li) => {
+		const message = game.messages.get(li.dataset.messageId);
+		let actor = game.actors.get(message.getRollData()?.ownerId);
+		return (
+			message.isRoll &&
+			!message.getRollData()?.flags.isDamageRoll &&
+			message.isContentVisible &&
+			actor?.fate.value > 0
+		);
+	};
 
-    options.unshift(
-        {
-            name: game.i18n.localize("CHAT.CONTEXT.REROLL"),
-            icon: '<i class="fa-solid fa-repeat"></i>',
-            condition: canReroll,
-            callback: li => {
-                const message = game.messages.get(li.dataset.messageId);
-                rerollTest(message.getRollData());
-            }
-        }
-    );
-    return options;
+	options.unshift({
+		name: game.i18n.localize("CHAT.CONTEXT.REROLL"),
+		icon: '<i class="fa-solid fa-repeat"></i>',
+		condition: canReroll,
+		callback: (li) => {
+			const message = game.messages.get(li.dataset.messageId);
+			rerollTest(message.getRollData());
+		},
+	});
+	return options;
 };
 
 /**
@@ -72,30 +81,32 @@ export const addChatMessageContextOptions = function(html, options) {
  * @returns {Promise}
  */
 function applyChatCardDamage(roll, multiplier) {
-    // Get the damage data, get them as arrays in case of multiple hits
-    const amount = roll.querySelectorAll(".damage-total");
-    const location = roll.querySelectorAll(".damage-location");
-    const penetration = roll.querySelectorAll(".damage-penetration");
-    const type = roll.querySelectorAll(".damage-type");
-    const righteousFury = roll.querySelectorAll(".damage-righteous-fury");
+	// Get the damage data, get them as arrays in case of multiple hits
+	const amount = roll.querySelectorAll(".damage-total");
+	const location = roll.querySelectorAll(".damage-location");
+	const penetration = roll.querySelectorAll(".damage-penetration");
+	const type = roll.querySelectorAll(".damage-type");
+	const righteousFury = roll.querySelectorAll(".damage-righteous-fury");
 
-    // Put the data from different hits together
-    const damages = [];
-    for (let i = 0; i < amount.length; i++) {
-        damages.push({
-            amount: $(amount[i]).text(),
-            location: $(location[i]).data("location"),
-            penetration: $(penetration[i]).text(),
-            type: $(type[i]).text(),
-            righteousFury: $(righteousFury[i]).text()
-        });
-    }
+	// Put the data from different hits together
+	const damages = [];
+	for (let i = 0; i < amount.length; i++) {
+		damages.push({
+			amount: $(amount[i]).text(),
+			location: $(location[i]).data("location"),
+			penetration: $(penetration[i]).text(),
+			type: $(type[i]).text(),
+			righteousFury: $(righteousFury[i]).text(),
+		});
+	}
 
-    // Apply to any selected actors
-    return Promise.all(canvas.tokens.controlled.map(t => {
-        const a = t.actor;
-        return a.applyDamage(damages);
-    }));
+	// Apply to any selected actors
+	return Promise.all(
+		canvas.tokens.controlled.map((t) => {
+			const a = t.actor;
+			return a.applyDamage(damages);
+		}),
+	);
 }
 
 /**
@@ -104,19 +115,19 @@ function applyChatCardDamage(roll, multiplier) {
  * @returns {Promise}
  */
 function rerollTest(rollData) {
-    let actor = game.actors.get(rollData.ownerId);
-    actor.update({ "system.fate.value": actor.fate.value -1 });
-    delete rollData.damages; // Reset so no old data is shown on failure
+	let actor = game.actors.get(rollData.ownerId);
+	actor.update({ "system.fate.value": actor.fate.value - 1 });
+	delete rollData.damages; // Reset so no old data is shown on failure
 
-    rollData.flags.isReRoll = true;
-    if (rollData.flags.isCombatRoll) {
-    // All the regexes in this are broken once retrieved from the chatmessage
-    // No idea why this happens so we need to fetch them again so the roll works correctly
-        rollData.attributeBoni = actor.attributeBoni;
-        return combatRoll(rollData);
-    } else {
-        return commonRoll(rollData);
-    }
+	rollData.flags.isReRoll = true;
+	if (rollData.flags.isCombatRoll) {
+		// All the regexes in this are broken once retrieved from the chatmessage
+		// No idea why this happens so we need to fetch them again so the roll works correctly
+		rollData.attributeBoni = actor.attributeBoni;
+		return combatRoll(rollData);
+	} else {
+		return commonRoll(rollData);
+	}
 }
 
 /**
@@ -124,30 +135,32 @@ function rerollTest(rollData) {
  * @param {Event} ev
  */
 function onTestClick(ev) {
-    let actor = game.macro.getActor();
-    let id = $(ev.currentTarget).parents(".message").attr("data-message-id");
-    let msg = game.messages.get(id);
-    let rollData = msg.getRollData();
+	let actor = game.macro.getActor();
+	let id = $(ev.currentTarget).parents(".message").attr("data-message-id");
+	let msg = game.messages.get(id);
+	let rollData = msg.getRollData();
 
-    if (!actor) {
-        ui.notifications.warn(`${game.i18n.localize("NOTIFICATION.MACRO_ACTOR_NOT_FOUND")}`);
-        return;
-    }
-    let evasions = {
-        dodge: DarkHeresyUtil.createSkillRollData(actor, "dodge"),
-        parry: DarkHeresyUtil.createSkillRollData(actor, "parry"),
-        deny: DarkHeresyUtil.createCharacteristicRollData(actor, "willpower"),
-        selected: "dodge"
-    };
-    rollData.evasions = evasions;
-    rollData.target.modifier = 0;
-    rollData.flags.isEvasion = true;
-    rollData.flags.isAttack = false;
-    rollData.flags.isDamageRoll = false;
-    rollData.flags.isCombatRoll = false;
-    if (rollData.psy) rollData.psy.display = false;
-    rollData.name = game.i18n.localize("DIALOG.EVASION");
-    prepareCommonRoll(rollData);
+	if (!actor) {
+		ui.notifications.warn(
+			`${game.i18n.localize("NOTIFICATION.MACRO_ACTOR_NOT_FOUND")}`,
+		);
+		return;
+	}
+	let evasions = {
+		dodge: DarkHeresyUtil.createSkillRollData(actor, "dodge"),
+		parry: DarkHeresyUtil.createSkillRollData(actor, "parry"),
+		deny: DarkHeresyUtil.createCharacteristicRollData(actor, "willpower"),
+		selected: "dodge",
+	};
+	rollData.evasions = evasions;
+	rollData.target.modifier = 0;
+	rollData.flags.isEvasion = true;
+	rollData.flags.isAttack = false;
+	rollData.flags.isDamageRoll = false;
+	rollData.flags.isCombatRoll = false;
+	if (rollData.psy) rollData.psy.display = false;
+	rollData.name = game.i18n.localize("DIALOG.EVASION");
+	prepareCommonRoll(rollData);
 }
 
 /**
@@ -156,13 +169,13 @@ function onTestClick(ev) {
  * @returns {Promise}
  */
 function onDamageClick(ev) {
-    let id = $(ev.currentTarget).parents(".message").attr("data-message-id");
-    let msg = game.messages.get(id);
-    let rollData = msg.getRollData();
-    rollData.flags.isEvasion = false;
-    rollData.flags.isCombatRoll = false;
-    rollData.flags.isDamageRoll = true;
-    return damageRoll(rollData);
+	let id = $(ev.currentTarget).parents(".message").attr("data-message-id");
+	let msg = game.messages.get(id);
+	let rollData = msg.getRollData();
+	rollData.flags.isEvasion = false;
+	rollData.flags.isCombatRoll = false;
+	rollData.flags.isDamageRoll = true;
+	return damageRoll(rollData);
 }
 
 /**
@@ -170,11 +183,11 @@ function onDamageClick(ev) {
  * @param {Event} ev
  */
 async function onReloadClick(ev) {
-    let id = $(ev.currentTarget).parents(".message").attr("data-message-id");
-    let msg = game.messages.get(id);
-    let rollData = msg.getRollData();
-    let weapon = game.actors.get(rollData.ownerId)?.items?.get(rollData.itemId);
-    await weapon.update({"system.clip.value": rollData.weapon.clip.max});
+	let id = $(ev.currentTarget).parents(".message").attr("data-message-id");
+	let msg = game.messages.get(id);
+	let rollData = msg.getRollData();
+	let weapon = game.actors.get(rollData.ownerId)?.items?.get(rollData.itemId);
+	await weapon.update({ "system.clip.value": rollData.weapon.clip.max });
 }
 
 /**
@@ -182,9 +195,9 @@ async function onReloadClick(ev) {
  * @param {Event} event
  */
 function onChatRollClick(event) {
-    event.preventDefault();
-    let roll = $(event.currentTarget.parentElement);
-    let tip = roll.find(".dice-rolls");
-    if ( !tip.is(":visible") ) tip.slideDown(200);
-    else tip.slideUp(200);
+	event.preventDefault();
+	let roll = $(event.currentTarget.parentElement);
+	let tip = roll.find(".dice-rolls");
+	if (!tip.is(":visible")) tip.slideDown(200);
+	else tip.slideUp(200);
 }

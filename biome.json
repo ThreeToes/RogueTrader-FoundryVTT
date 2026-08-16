@@ -1,0 +1,91 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
+	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+	"files": { "ignoreUnknown": false },
+	"formatter": { "enabled": true, "indentStyle": "tab" },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "none",
+			"complexity": {
+				"noAdjacentSpacesInRegex": "warn",
+				"noCommaOperator": "warn",
+				"noExtraBooleanCast": "warn",
+				"noImplicitCoercions": "warn",
+				"noUselessCatch": "warn",
+				"noUselessConstructor": "warn",
+				"noUselessEscapeInRegex": "warn",
+				"noUselessLoneBlockStatements": "warn",
+				"noUselessRename": "warn",
+				"noUselessStringConcat": "warn",
+				"noUselessTernary": "warn",
+				"noVoid": "warn",
+				"useLiteralKeys": "warn",
+				"useNumericLiterals": "warn",
+				"useRegexLiterals": "warn"
+			},
+			"correctness": {
+				"noConstAssign": "error",
+				"noConstantCondition": "warn",
+				"noConstructorReturn": "warn",
+				"noEmptyCharacterClassInRegex": "warn",
+				"noEmptyPattern": "warn",
+				"noGlobalObjectCalls": "warn",
+				"noInvalidConstructorSuper": "error",
+				"noNonoctalDecimalEscape": "warn",
+				"noSelfAssign": "warn",
+				"noSetterReturn": "warn",
+				"noUnreachable": "warn",
+				"noUnreachableSuper": "error",
+				"noUnsafeOptionalChaining": "warn",
+				"noUnusedVariables": "warn",
+				"useIsNan": "warn",
+				"useValidTypeof": "warn"
+			},
+			"security": { "noScriptUrl": "warn" },
+			"style": {
+				"noMultilineString": "warn",
+				"useArrayLiterals": "warn",
+				"useCollapsedElseIf": "warn",
+				"useConsistentBuiltinInstantiation": "warn",
+				"useDefaultParameterLast": "warn",
+				"useObjectSpread": "warn",
+				"useSingleVarDeclarator": "warn",
+				"useSpreadOverApply": "warn",
+				"useSymbolDescription": "warn",
+				"useTemplate": "warn"
+			},
+			"suspicious": {
+				"noAlert": "warn",
+				"noClassAssign": "warn",
+				"noCompareNegZero": "warn",
+				"noDoubleEquals": "warn",
+				"noDuplicateCase": "warn",
+				"noDuplicateClassMembers": "warn",
+				"noDuplicateObjectKeys": "warn",
+				"noDuplicateParameters": "warn",
+				"noEmptyBlockStatements": "warn",
+				"noFunctionAssign": "warn",
+				"noGlobalAssign": "warn",
+				"noImportAssign": "warn",
+				"noIrregularWhitespace": "warn",
+				"noMisleadingCharacterClass": "warn",
+				"noOctalEscape": "warn",
+				"noProto": "warn",
+				"noSelfCompare": "warn",
+				"noTemplateCurlyInString": "warn",
+				"noUnsafeNegation": "warn",
+				"noUnusedExpressions": "warn",
+				"noUselessRegexBackrefs": "warn",
+				"noVar": "warn",
+				"useGetterReturn": "warn",
+				"useIterableCallbackReturn": { "level": "warn", "options": {} }
+			}
+		}
+	},
+	"javascript": { "formatter": { "quoteStyle": "double" } },
+	"assist": {
+		"enabled": true,
+		"actions": { "source": { "organizeImports": "on" } }
+	}
+}

@@ -45,10 +45,10 @@
     ],
     "scripts": [],
     "esmodules": [
-        "script/dark-heresy.js"
+        "release/script/rogue-trader.js"
     ],
     "styles": [
-        "css/dark-heresy.css"
+        "release/css/rogue-trader.css"
     ],
     "packs": [
         {
@@ -88,6 +88,6 @@
     "url": "https://github.com/ThreeToes/RogueTrader-FoundryVTT",
     "socket": true,
     "manifest": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/system.json",
-    "download": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/dark-heresy.zip",
+    "download": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/rogue-trader.zip",
     "license": "LICENSE.txt"
 }

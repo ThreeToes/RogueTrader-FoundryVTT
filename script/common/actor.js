@@ -222,7 +222,7 @@ export class DarkHeresyActor extends Actor {
 	}
 
 	_computeExperience() {
-		if (game.settings.get("dark-heresy", "autoCalcXPCosts"))
+		if (game.settings.get("rogue-trader", "autoCalcXPCosts"))
 			this._computeExperience_auto();
 		else this._computeExperience_normal();
 	}
@@ -568,7 +568,7 @@ export class DarkHeresyActor extends Actor {
 	async _showCritMessage(rolls, target, totalWounds, totalCritWounds) {
 		if (rolls.length === 0) return;
 		const html = await renderTemplate(
-			"systems/dark-heresy/template/chat/critical.hbs",
+			"systems/rogue-trader/template/chat/critical.hbs",
 			{
 				rolls,
 				target,
@@ -579,8 +579,8 @@ export class DarkHeresyActor extends Actor {
 		ChatMessage.create({
 			content: html,
 			flags: {
-				"dark-heresy.rolls": rolls,
-				"dark-heresy.totalCritWounds": totalCritWounds,
+				"rogue-trader.rolls": rolls,
+				"rogue-trader.totalCritWounds": totalCritWounds,
 			},
 		});
 	}

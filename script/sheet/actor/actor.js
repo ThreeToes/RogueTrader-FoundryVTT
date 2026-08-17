@@ -65,7 +65,7 @@ export class DarkHeresySheet extends ActorSheet {
 	/** @override */
 	get template() {
 		if (!game.user.isGM && this.actor.limited) {
-			return "systems/dark-heresy/template/sheet/actor/limited-sheet.hbs";
+			return "systems/rogue-trader/template/sheet/actor/limited-sheet.hbs";
 		} else {
 			return this.options.template;
 		}

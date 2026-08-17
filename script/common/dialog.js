@@ -6,7 +6,7 @@ import { commonRoll, combatRoll, reportEmptyClip } from "./roll.js";
  */
 export async function prepareCommonRoll(rollData) {
 	const html = await renderTemplate(
-		"systems/dark-heresy/template/dialog/common-roll.hbs",
+		"systems/rogue-trader/template/dialog/common-roll.hbs",
 		rollData,
 	);
 	let dialog = new Dialog(
@@ -77,7 +77,7 @@ export async function prepareCombatRoll(rollData, actorRef) {
 		reportEmptyClip(rollData);
 	} else {
 		const html = await renderTemplate(
-			"systems/dark-heresy/template/dialog/combat-roll.hbs",
+			"systems/rogue-trader/template/dialog/combat-roll.hbs",
 			rollData,
 		);
 		let dialog = new Dialog(
@@ -167,7 +167,7 @@ export async function prepareCombatRoll(rollData, actorRef) {
  */
 export async function preparePsychicPowerRoll(rollData) {
 	const html = await renderTemplate(
-		"systems/dark-heresy/template/dialog/psychic-power-roll.hbs",
+		"systems/rogue-trader/template/dialog/psychic-power-roll.hbs",
 		rollData,
 	);
 	let dialog = new Dialog(

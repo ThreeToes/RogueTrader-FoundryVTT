@@ -18,7 +18,7 @@ export function chatListeners(html) {
 		button.addEventListener("click", onReloadClick);
 	});
 	html
-		.querySelectorAll(".dark-heresy.chat.roll>.background.border")
+		.querySelectorAll(".rogue-trader.chat.roll>.background.border")
 		?.forEach((button) => {
 			button.addEventListener("dblclick", onChatRollClick);
 		});

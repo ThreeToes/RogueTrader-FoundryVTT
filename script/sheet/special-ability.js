@@ -1,29 +1,29 @@
 import { DarkHeresyItemSheet } from "./item.js";
 
 export class SpecialAbilitySheet extends DarkHeresyItemSheet {
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            classes: ["dark-heresy", "sheet", "special-ability"],
-            template: "systems/dark-heresy/template/sheet/special-ability.hbs",
-            width: 500,
-            height: 369,
-            tabs: [
-                {
-                    navSelector: ".sheet-tabs",
-                    contentSelector: ".sheet-body",
-                    initial: "stats"
-                }
-            ]
-        });
-    }
+	static get defaultOptions() {
+		return foundry.utils.mergeObject(super.defaultOptions, {
+			classes: ["rogue-trader", "sheet", "special-ability"],
+			template: "systems/rogue-trader/template/sheet/special-ability.hbs",
+			width: 500,
+			height: 369,
+			tabs: [
+				{
+					navSelector: ".sheet-tabs",
+					contentSelector: ".sheet-body",
+					initial: "stats",
+				},
+			],
+		});
+	}
 
-    _getHeaderButtons() {
-        let buttons = super._getHeaderButtons();
-        buttons = [].concat(buttons);
-        return buttons;
-    }
+	_getHeaderButtons() {
+		let buttons = super._getHeaderButtons();
+		buttons = [].concat(buttons);
+		return buttons;
+	}
 
-    activateListeners(html) {
-        super.activateListeners(html);
-    }
+	activateListeners(html) {
+		super.activateListeners(html);
+	}
 }

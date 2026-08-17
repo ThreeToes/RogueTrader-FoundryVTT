@@ -590,7 +590,7 @@ export class DarkHeresyActor extends Actor {
 		for (let characteristic of Object.values(this.characteristics)) {
 			if (characteristic.short.toLowerCase() === "t") {
 				boni.push({
-					regex: /(?<=[+\\-*\\/])\\s*TB/gi,
+					regex: /(?<=[+\-*\/])\s*TB/gi,
 					value: characteristic.bonus,
 				});
 			} else {

@@ -1,4 +1,4 @@
-export class DarkHeresyItemSheet extends ItemSheet {
+export class DarkHeresyItemSheet extends foundry.appv1.sheets.ItemSheet {
 	activateListeners(html) {
 		super.activateListeners(html);
 		html.find("input").focusin((ev) => this._onFocusIn(ev));

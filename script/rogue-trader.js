@@ -1,3 +1,4 @@
+// Import our resources
 import { DarkHeresyActor } from "./common/actor.js";
 import { DarkHeresyItem } from "./common/item.js";
 import { AcolyteSheet } from "./sheet/actor/acolyte.js";
@@ -59,88 +60,158 @@ Hooks.once("init", function () {
 		},
 	};
 	game.macro = DhMacroUtil;
-	Actors.unregisterSheet("core", ActorSheet);
-	Actors.registerSheet("rogue-trader", AcolyteSheet, {
-		types: ["acolyte"],
-		makeDefault: true,
-	});
-	Actors.registerSheet("rogue-trader", NpcSheet, {
+	foundry.documents.collections.Actors.unregisterSheet(
+		"core",
+		foundry.appv1.sheets.ActorSheet,
+	);
+	foundry.documents.collections.Actors.registerSheet(
+		"rogue-trader",
+		AcolyteSheet,
+		{
+			types: ["acolyte"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Actors.registerSheet("rogue-trader", NpcSheet, {
 		types: ["npc"],
 		makeDefault: true,
 	});
-	Items.unregisterSheet("core", ItemSheet);
-	Items.registerSheet("rogue-trader", WeaponSheet, {
-		types: ["weapon"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", AmmunitionSheet, {
-		types: ["ammunition"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", WeaponModificationSheet, {
-		types: ["weaponModification"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", ArmourSheet, {
-		types: ["armour"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", ForceFieldSheet, {
-		types: ["forceField"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", CyberneticSheet, {
-		types: ["cybernetic"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", DrugSheet, {
+	foundry.documents.collections.Items.unregisterSheet(
+		"core",
+		foundry.appv1.sheets.ItemSheet,
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		WeaponSheet,
+		{
+			types: ["weapon"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		AmmunitionSheet,
+		{
+			types: ["ammunition"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		WeaponModificationSheet,
+		{
+			types: ["weaponModification"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		ArmourSheet,
+		{
+			types: ["armour"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		ForceFieldSheet,
+		{
+			types: ["forceField"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		CyberneticSheet,
+		{
+			types: ["cybernetic"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet("rogue-trader", DrugSheet, {
 		types: ["drug"],
 		makeDefault: true,
 	});
-	Items.registerSheet("rogue-trader", GearSheet, {
+	foundry.documents.collections.Items.registerSheet("rogue-trader", GearSheet, {
 		types: ["gear"],
 		makeDefault: true,
 	});
-	Items.registerSheet("rogue-trader", ToolSheet, {
+	foundry.documents.collections.Items.registerSheet("rogue-trader", ToolSheet, {
 		types: ["tool"],
 		makeDefault: true,
 	});
-	Items.registerSheet("rogue-trader", CriticalInjurySheet, {
-		types: ["criticalInjury"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", MalignancySheet, {
-		types: ["malignancy"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", MentalDisorderSheet, {
-		types: ["mentalDisorder"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", MutationSheet, {
-		types: ["mutation"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", PsychicPowerSheet, {
-		types: ["psychicPower"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", TalentSheet, {
-		types: ["talent"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", SpecialAbilitySheet, {
-		types: ["specialAbility"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", TraitSheet, {
-		types: ["trait"],
-		makeDefault: true,
-	});
-	Items.registerSheet("rogue-trader", AptitudeSheet, {
-		types: ["aptitude"],
-		makeDefault: true,
-	});
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		CriticalInjurySheet,
+		{
+			types: ["criticalInjury"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		MalignancySheet,
+		{
+			types: ["malignancy"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		MentalDisorderSheet,
+		{
+			types: ["mentalDisorder"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		MutationSheet,
+		{
+			types: ["mutation"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		PsychicPowerSheet,
+		{
+			types: ["psychicPower"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		TalentSheet,
+		{
+			types: ["talent"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		SpecialAbilitySheet,
+		{
+			types: ["specialAbility"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		TraitSheet,
+		{
+			types: ["trait"],
+			makeDefault: true,
+		},
+	);
+	foundry.documents.collections.Items.registerSheet(
+		"rogue-trader",
+		AptitudeSheet,
+		{
+			types: ["aptitude"],
+			makeDefault: true,
+		},
+	);
 
 	registerDataModels();
 

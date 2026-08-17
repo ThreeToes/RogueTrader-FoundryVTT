@@ -5,7 +5,7 @@ import {
 } from "../../common/dialog.js";
 import DarkHeresyUtil from "../../common/util.js";
 
-export class DarkHeresySheet extends ActorSheet {
+export class DarkHeresySheet extends foundry.appv1.sheets.ActorSheet {
 	activateListeners(html) {
 		super.activateListeners(html);
 		html.find(".item-create").click((ev) => this._onItemCreate(ev));

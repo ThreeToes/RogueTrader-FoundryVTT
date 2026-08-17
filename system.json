@@ -1,75 +1,93 @@
 {
-  "id": "dark-heresy",
-  "title": "Dark Heresy 2E",
-  "description": "Unofficial Foundry VTT System for Dark Heresy 2nd Edition.",
-  "version": "4.4.0.1",
-  "minimumCoreVersion" : 13,
-  "compatibility" : {
-    "minimum" : 13,
-    "verified" : 14,
-    "maximum" : 14
-  },
-  "templateVersion": 2,
-  "authors": [
-	{ "name":"JeansenVaars" }, 
-    { "name":"Moo Man",
-      "email": "russellt@cubicle7games.com",
-      "discord": "Moo Man#7518",
-      "reddit": "u/mooman10" }, 
-    { "name":"fredthedeadhead" },
-    { "name":"Perfectro" }, 
-    { "name":"Vendare",
-	  "discord": "Vendare#4014"},
-    { "name":"Silver292" },
-    { "name":"Giddy" },
-    { "name":"Dazzerix" },
-	{ "name":"FilippoPolo" }
-  ],
-  "scripts": [],
-  "esmodules": [
-    "script/dark-heresy.js"
-  ],
-  "styles": [
-    "css/dark-heresy.css"
-  ],
-  "packs": [
-    {
-      "name": "character-aptitudes",
-      "label": "Character Aptitudes",
-      "system": "dark-heresy",
-      "path": "./packs/aptitudes.db",
-      "type": "Item"
-    }
-  ],
-  "languages": [
-    {
-      "lang": "en",
-      "name": "English",
-      "path": "lang/en.json"
+    "id": "rogue-trader",
+    "title": "Rogue Trader",
+    "description": "Unofficial Foundry VTT System for Rogue Trader.",
+    "version": "4.4.0.1",
+    "minimumCoreVersion": 13,
+    "compatibility": {
+        "minimum": 13,
+        "verified": 14,
+        "maximum": 14
     },
-    {
-      "lang": "es",
-      "name": "Español",
-      "path": "lang/es.json"
-    },
-    {
-      "lang": "fr",
-      "name": "Français",
-      "path": "lang/fr.json"
-    },
-	  {
-      "lang": "pl",
-      "name": "Polski",
-      "path": "lang/pl.json"
-    }
-  ],
-  "gridDistance": 1,
-  "gridUnits": "m",
-  "primaryTokenAttribute": null,
-  "secondaryTokenAttribute": null,
-  "url": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT",
-  "socket": true,
-  "manifest": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/system.json",
-  "download": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/dark-heresy.zip",
-  "license": "LICENSE.txt"
+    "templateVersion": 2,
+    "authors": [
+        {
+            "name": "JeansenVaars"
+        },
+        {
+            "name": "Moo Man",
+            "email": "russellt@cubicle7games.com",
+            "discord": "Moo Man#7518",
+            "reddit": "u/mooman10"
+        },
+        {
+            "name": "fredthedeadhead"
+        },
+        {
+            "name": "Perfectro"
+        },
+        {
+            "name": "Vendare",
+            "discord": "Vendare#4014"
+        },
+        {
+            "name": "Silver292"
+        },
+        {
+            "name": "Giddy"
+        },
+        {
+            "name": "Dazzerix"
+        },
+        {
+            "name": "FilippoPolo"
+        }
+    ],
+    "scripts": [],
+    "esmodules": [
+        "script/dark-heresy.js"
+    ],
+    "styles": [
+        "css/dark-heresy.css"
+    ],
+    "packs": [
+        {
+            "name": "character-aptitudes",
+            "label": "Character Aptitudes",
+            "system": "rogue-trader",
+            "path": "./packs/aptitudes.db",
+            "type": "Item"
+        }
+    ],
+    "languages": [
+        {
+            "lang": "en",
+            "name": "English",
+            "path": "lang/en.json"
+        },
+        {
+            "lang": "es",
+            "name": "Español",
+            "path": "lang/es.json"
+        },
+        {
+            "lang": "fr",
+            "name": "Français",
+            "path": "lang/fr.json"
+        },
+        {
+            "lang": "pl",
+            "name": "Polski",
+            "path": "lang/pl.json"
+        }
+    ],
+    "gridDistance": 1,
+    "gridUnits": "m",
+    "primaryTokenAttribute": null,
+    "secondaryTokenAttribute": null,
+    "url": "https://github.com/ThreeToes/RogueTrader-FoundryVTT",
+    "socket": true,
+    "manifest": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/system.json",
+    "download": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/dark-heresy.zip",
+    "license": "LICENSE.txt"
 }

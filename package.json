@@ -6,7 +6,6 @@
         "lint": "biome lint",
         "format": "biome format --write",
         "check": "biome check",
-        "lint:fix": "gulp lint --fix",
         "test": "npm run lint:fix"
     },
     "devDependencies": {

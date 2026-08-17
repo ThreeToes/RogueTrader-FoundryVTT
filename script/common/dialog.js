@@ -217,6 +217,7 @@ export async function preparePsychicPowerRoll(rollData) {
 				},
 			},
 			default: "roll",
+			close: () => {},
 		},
 		{ width: 200 },
 	);

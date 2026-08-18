@@ -1,27 +1,18 @@
 {
     "scripts": {
-        "build": "gulp buildAll",
-        "build:css": "gulp buildCSS",
-        "build:watch": "gulp",
+        "build": "bun run build:js && bun run build:css && bun run build:packs",
+        "build:js": "bun utils/javascript.js",
+        "build:css": "bun utils/css.js",
+        "build:packs": "bun utils/compendia.ts",
         "lint": "biome lint",
         "format": "biome format --write",
-        "check": "biome check",
-        "test": "npm run lint:fix"
+        "check": "biome check"
     },
     "devDependencies": {
-        "@babel/eslint-parser": "^7.22.5",
         "@biomejs/biome": "2.5.8",
         "@league-of-foundry-developers/foundry-vtt-types": "^13.341.1",
-        "@rollup/plugin-node-resolve": "^15.2.2",
-        "eslint-plugin-jsdoc": "^46.2.6",
-        "gulp": "^5.0.0",
-        "gulp-eslint-new": "^1.8.0",
-        "gulp-if": "^3.0.0",
-        "gulp-less": "^5.0.0",
-        "merge-stream": "^2.0.0",
         "nedb": "^1.8.0",
-        "rollup": "^4.22.4",
-        "through2": "^4.0.2",
-        "yargs": "^17.7.2"
-    }
+        "less": "^4.9.0"
+    },
+    "dependencies": {}
 }

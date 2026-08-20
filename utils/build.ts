@@ -1,6 +1,7 @@
 import { bundleTypescript } from "./javascript";
 import { bundleCss } from "./css";
 import { bundlePacks } from "./compendia";
+import { cp } from "node:fs/promises";
 
 async function copyStaticFiles() {
 	await cp("./system-manifests/dev.json", "./release/system.json", {

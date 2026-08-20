@@ -1,9 +1,12 @@
 {
     "scripts": {
-        "build": "bun run build:js && bun run build:css && bun run build:packs",
-        "build:js": "bun utils/javascript.js",
-        "build:css": "bun utils/css.js",
+        "build": "bun utils/build.ts",
+        "build:js": "bun utils/javascript.ts",
+        "build:css": "bun utils/css.ts",
         "build:packs": "bun utils/compendia.ts",
+        "build:manifest": "cp system-manifests/dev.json ./release/system.json",
+        "build:languages": "cp -R ./lang/ release/",
+        "build:templates": "cp -R ./template release/",
         "lint": "biome lint",
         "format": "biome format --write",
         "check": "biome check"
@@ -11,8 +14,10 @@
     "devDependencies": {
         "@biomejs/biome": "2.5.8",
         "@league-of-foundry-developers/foundry-vtt-types": "^13.341.1",
+        "fvtt-types": "npm:@league-of-foundry-developers/foundry-vtt-types",
+        "less": "^4.9.0",
         "nedb": "^1.8.0",
-        "less": "^4.9.0"
+        "yaml-js": "^0.3.1"
     },
     "dependencies": {}
 }

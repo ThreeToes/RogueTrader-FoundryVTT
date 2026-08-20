@@ -1,7 +1,7 @@
-async function bundleJavascript() {
+export async function bundleTypescript() {
 	const result = await Bun.build({
-		entrypoints: ["./script/rogue-trade.js"],
-		outdir: "./release/script",
+		entrypoints: ["./src/roguetrader/entry-point.ts"],
+		outdir: "./release",
 		target: "browser",
 	});
 
@@ -15,4 +15,5 @@ async function bundleJavascript() {
 		throw new Error("JavaScript build failed");
 	}
 }
-export const bundle = bundleJavascript;
+
+await bundleTypescript();

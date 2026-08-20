@@ -1,3 +1,4 @@
+// TODO: move this to the new DB format
 import { mkdir, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import yaml from "js-yaml";
@@ -53,7 +54,7 @@ async function buildPack(folder: string) {
 	}
 }
 
-export async function compile() {
+export async function bundlePacks() {
 	await mkdir(PACK_DEST, { recursive: true });
 
 	const entries = await readdir(PACK_SRC, {
@@ -66,3 +67,5 @@ export async function compile() {
 
 	await Promise.all(folders.map(buildPack));
 }
+
+await bundlePacks();

@@ -1,5 +1,8 @@
+/**
+ * Rate of fire profile for ranged weapons.
+ */
 export interface RateOfFire {
-	Single: boolean;
-	Burst: number;
-	FullAuto: number;
+	singleShot: boolean;
+	burst: number;
+	fullAuto: number;
 }

@@ -55,7 +55,9 @@
     ],
     "documentTypes": {
         "Item": {
-            "gear": {}
+            "gear": {},
+            "ranged-weapon": {},
+            "melee-weapon": {}
         }
     },
     "gridDistance": 1,

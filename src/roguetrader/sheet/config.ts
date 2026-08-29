@@ -5,6 +5,12 @@ export const RogueTraderConfig = {
 		good: "CRAFTSMANSHIP.GOOD",
 		best: "CRAFTSMANSHIP.BEST",
 	},
+	"ranged-weapon-class": {
+		pistol: "CLASS.PISTOL",
+		basic: "CLASS.BASIC",
+		heavy: "CLASS.HEAVY",
+		thrown: "CLASS.THROWN",
+	},
 	availability: {
 		ubiquitous: "AVAILABILITY.UBIQUITOUS",
 		abundant: "AVAILABILITY.ABUNDANT",

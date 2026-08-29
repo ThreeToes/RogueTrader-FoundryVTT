@@ -1,0 +1,104 @@
+<section class="tab {{tabs.data.cssClass}}" data-group="primary" data-tab="data">
+    <div class="stats border">
+        <h1>{{localize "TITLE.STATS"}}</h1>
+        <div class="stats-row">
+            <div class="stat class">
+                <label>{{localize "WEAPON.CLASS"}}</label>
+                <select name="system.class">
+                    {{selectOptions classChoices selected=source.system.class localize=true}}
+                </select>
+            </div>
+            <div class="stat range">
+                <label>{{localize "WEAPON.RANGE"}}</label>
+                <input name="system.range" type="number" value="{{source.system.range}}" />
+            </div>
+            <div class="stat weight">
+                <label>{{localize "GEAR.WEIGHT"}}</label>
+                <input name="system.weight" type="number" value="{{source.system.weight}}" />
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat damage">
+                <label>{{localize "WEAPON.DAMAGE_FULL"}}</label>
+                <input name="system.damage" type="text" value="{{source.system.damage}}" />
+            </div>
+            <div class="stat penetration">
+                <label>{{localize "WEAPON.PENETRATION_FULL"}}</label>
+                <input name="system.penetration" type="number" value="{{source.system.penetration}}" />
+            </div>
+            <div class="stat availability">
+                <label>{{localize "GEAR.AVAILABILITY"}}</label>
+                <select name="system.availability">
+                    {{selectOptions (config "availability") selected=source.system.availability localize=true}}
+                </select>
+            </div>
+            </div>
+        </div>
+
+        {{#if isRanged}}
+        <div class="stats-row ranged-row">
+            <div class="stat rate-of-fire">
+                <label>{{localize "RANGED_WEAPON.RATE_OF_FIRE"}}</label>
+                <div class="rof-inputs">
+                    <div class="rof-field">
+                        <label for="rof-single">{{localize "RANGED_WEAPON.SINGLE_SHOT"}}</label>
+                        <input id="rof-single" type="checkbox" name="system.rateOfFire.singleShot"
+                            {{checked source.system.rateOfFire.singleShot}} />
+                    </div>
+                    <div class="rof-field">
+                        <label for="rof-burst">{{localize "RANGED_WEAPON.BURST"}}</label>
+                        <input id="rof-burst" name="system.rateOfFire.burst" type="number" min="0"
+                            value="{{source.system.rateOfFire.burst}}" />
+                    </div>
+                    <div class="rof-field">
+                        <label for="rof-full">{{localize "RANGED_WEAPON.FULL_AUTO"}}</label>
+                        <input id="rof-full" name="system.rateOfFire.fullAuto" type="number" min="0"
+                            value="{{source.system.rateOfFire.fullAuto}}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat clip">
+                <label>{{localize "RANGED_WEAPON.CLIP"}}</label>
+                <input name="system.clip" type="number" min="0" value="{{source.system.clip}}" />
+            </div>
+            <div class="stat reload">
+                <label>{{localize "RANGED_WEAPON.RELOAD"}}</label>
+                <input name="system.reload" type="number" min="0" value="{{source.system.reload}}" />
+            </div>
+            <div class="stat craftsmanship">
+                <label>{{localize "GEAR.CRAFTSMANSHIP"}}</label>
+                <select name="system.craftsmanship">
+                    {{selectOptions (config "craftsmanship") selected=source.system.craftsmanship localize=true}}
+                </select>
+            </div>
+        </div>
+        {{else}}
+        <div class="stats-row">
+            <div class="stat craftsmanship">
+                <label>{{localize "GEAR.CRAFTSMANSHIP"}}</label>
+                <select name="system.craftsmanship">
+                    {{selectOptions (config "craftsmanship") selected=source.system.craftsmanship localize=true}}
+                </select>
+            </div>
+        </div>
+        {{/if}}
+
+        <div class="stats-row">
+            <div class="stat special">
+                <label>{{localize "WEAPON.SPECIAL"}}</label>
+                <select name="system.special" multiple size="6">
+                    {{selectOptions (config "qualities") selected=source.system.special localize=true}}
+                </select>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat short-description">
+                <label>{{localize "GEAR.SHORT_DESCRIPTION"}}</label>
+                <input name="system.shortDescription" type="text" value="{{source.system.shortDescription}}" />
+            </div>
+        </div>
+    </div>
+</section>

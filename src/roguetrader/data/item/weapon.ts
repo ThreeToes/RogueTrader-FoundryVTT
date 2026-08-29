@@ -1,5 +1,6 @@
 import { Gear } from "./gear";
 import { WeaponClass } from "./weapon-class";
+import { qualities } from "../../registry";
 
 /**
  * Placeholder for weapon qualities (e.g. Accurate, Tearing).
@@ -22,7 +23,7 @@ export abstract class Weapon extends Gear {
 			/** Weapon class, e.g. pistol/basic/heavy/thrown/melee. */
 			class: new foundry.data.fields.StringField({
 				choices: Object.values(WeaponClass),
-				initial: WeaponClass.Melee,
+				initial: WeaponClass.Melee as WeaponClass,
 				required: true,
 				nullable: false,
 			}),
@@ -45,7 +46,12 @@ export abstract class Weapon extends Gear {
 				required: true,
 			}),
 			special: new foundry.data.fields.ArrayField(
-				new foundry.data.fields.ObjectField(),
+				new foundry.data.fields.StringField({
+					choices: qualities.choices,
+					required: true,
+					nullable: false,
+					initial: "",
+				}),
 			),
 		};
 	}

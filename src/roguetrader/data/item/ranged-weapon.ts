@@ -1,8 +1,7 @@
 import { Weapon, WeaponQuality } from "./weapon";
-import { WeaponClass } from "./weapon-class";
+import { RANGED_CLASSES, WeaponClass } from "./weapon-class";
 
 export type { WeaponQuality };
-
 /**
  * Ranged weapon: a Weapon with ammunition management.
  */
@@ -13,7 +12,7 @@ export class RangedWeapon extends Weapon {
 		return {
 			...super.defineSchema(),
 			class: new foundry.data.fields.StringField({
-				choices: Object.values(WeaponClass),
+				choices: RANGED_CLASSES,
 				initial: WeaponClass.Basic,
 				required: true,
 				nullable: false,

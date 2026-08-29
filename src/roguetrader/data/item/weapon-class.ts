@@ -9,3 +9,11 @@ export enum WeaponClass {
 	Basic = "basic",
 	Heavy = "heavy",
 }
+
+export const MELEE_CLASSES: WeaponClass[] = [WeaponClass.Melee, WeaponClass.Thrown];
+export const RANGED_CLASSES: WeaponClass[] = [
+	WeaponClass.Basic,
+	WeaponClass.Pistol,
+	WeaponClass.Heavy,
+	WeaponClass.Thrown,
+];

@@ -8,29 +8,25 @@
     "ADVANCE.PROFICIENT": "Qualifié",
     "ADVANCE.EXPERT": "Expert",
     "ADVANCE.VETERAN": "Vétéran",
-  
     "APTITUDE.NAME": "Nom",
-  
     "AMMUNITION.HEADER": "Munitions",
     "AMMUNITION.NAME": "Nom",
     "AMMUNITION.WEAPON": "Arme",
     "AMMUNITION.QUANTITY": "Quantité",
     "AMMUNITION.WEIGHT": "Poids",
-    "AMMUNITION.SUM" : "Somme",
+    "AMMUNITION.SUM": "Somme",
     "AMMUNITION.SPECIAL": "Attributs",
     "AMMUNITION.CRAFTSMANSHIP": "Qualité",
     "AMMUNITION.AVAILABILITY": "Disponibilité",
     "AMMUNITION.DAMAGE": "Dégâts",
     "AMMUNITION.ATTACK": "Attaque",
     "AMMUNITION.PENETRATION": "Pen",
-
     "ARMOUR.HEAD": "Tête",
     "ARMOUR.LEFT_ARM": "Bras gauche",
     "ARMOUR.RIGHT_ARM": "Bras droit",
     "ARMOUR.BODY": "Corps",
     "ARMOUR.LEFT_LEG": "Jambe gauche",
     "ARMOUR.RIGHT_LEG": "Jambe droite",
-  
     "ARMOUR.HEADER": "Armure",
     "ARMOUR.NAME": "Nom",
     "ARMOUR.PART": "Localisation(s)",
@@ -39,13 +35,11 @@
     "ARMOUR.TYPE": "Type",
     "ARMOUR.CRAFTSMANSHIP": "Qualité",
     "ARMOUR.AVAILABILITY": "Disponibilité",
-  
     "ARMOUR_TYPE.BASIC": "Primitive",
     "ARMOUR_TYPE.FLAK": "Pare-balle",
     "ARMOUR_TYPE.MESH": "Composite",
     "ARMOUR_TYPE.CARAPACE": "Carapace",
     "ARMOUR_TYPE.POWER": "Énergétique",
-  
     "ATTACK_TYPE.NONE": "Aucune",
     "ATTACK_TYPE.STANDARD": "Attaque standard",
     "ATTACK_TYPE.SWIFT": "Attaque rapide",
@@ -53,7 +47,6 @@
     "ATTACK_TYPE.LIGHTNING": "Attaque éclaire",
     "ATTACK_TYPE.FULL_AUTO": "Rafale automatique",
     "ATTACK_TYPE.CALLED_SHOT": "Attaque ciblée",
-  
     "AVAILABILITY.UBIQUITOUS": "Universel",
     "AVAILABILITY.ABUNDANT": "Banal",
     "AVAILABILITY.PLENTIFUL": "Très courant",
@@ -65,7 +58,6 @@
     "AVAILABILITY.EXTREMELY_RARE": "Extrêmement rare",
     "AVAILABILITY.NEAR_UNIQUE": "Presque unique",
     "AVAILABILITY.UNIQUE": "Unique",
-  
     "BIO.NAME": "Nom",
     "BIO.HOME_WORLD": "Origine",
     "BIO.BACKGROUND": "Carrière",
@@ -84,16 +76,13 @@
     "BIO.FACTION": "Faction",
     "BIO.SUBFACTION": "S/s faction",
     "BIO.THREAT_LEVEL": "Menace",
-  
     "BUTTON.POST_ITEM": "Ajouter objet",
     "BUTTON.ROLL": "Lancer",
     "BUTTON.CANCEL": "Annuler",
     "BUTTON.YES": "Oui",
     "BUTTON.NO": "Non",
-  
     "ENCUMBRANCE.MAX": "Max",
     "ENCUMBRANCE.CURRENT": "Actuel",
-  
     "CHARACTERISTIC.WEAPON_SKILL": "Capacité de combat",
     "CHARACTERISTIC.BALLISTIC_SKILL": "Capacité de tir",
     "CHARACTERISTIC.STRENGTH": "Force",
@@ -104,13 +93,11 @@
     "CHARACTERISTIC.WILLPOWER": "Force Mentale",
     "CHARACTERISTIC.FELLOWSHIP": "Sociabilité",
     "CHARACTERISTIC.INFLUENCE": "Influence",
-  
     "CHARACTERISTIC.NAME": "Nom",
     "CHARACTERISTIC.ADVANCE": "Progression",
     "CHARACTERISTIC.UNNATURAL": "Surnaturel",
     "CHARACTERISTIC.BASE": "Base",
     "CHARACTERISTIC.COST": "Coût",
-  
     "CHAT.SUCCESS": "Réussite !",
     "CHAT.FAILURE": "Echec !",
     "CHAT.ROLLED_WITH": "Lancé avec",
@@ -123,27 +110,22 @@
     "CHAT.PSY_PUSH": "Push",
     "CHAT.NUMBER_OF_HIT": "Nombre de touches",
     "CHAT.HAS_PSYCHIC_PHENOMENA": "Vous devez lancer sur la table des phénomènes psy !",
-  
     "CORRUPTION.HEADER": "Corruption",
     "CORRUPTION.MALIGNANCY": "Malignité",
     "CORRUPTION.MUTATION": "Mutation",
-  
     "CRAFTSMANSHIP.POOR": "Médiocre",
     "CRAFTSMANSHIP.COMMON": "Moyenne",
     "CRAFTSMANSHIP.GOOD": "Bonne",
     "CRAFTSMANSHIP.BEST": "Exceptionnelle",
-  
     "CRITICAL_INJURY.NAME": "Nom",
     "CRITICAL_INJURY.PART": "Localisation",
     "CRITICAL_INJURY.TYPE": "Type",
-  
     "CYBERNETIC.HEADER": "Cybernétique",
     "CYBERNETIC.NAME": "Nom",
     "CYBERNETIC.INSTALLED": "Installée",
     "CYBERNETIC.CRAFTSMANSHIP": "Qualité",
     "CYBERNETIC.AVAILABILITY": "Disponibilité",
     "CYBERNETIC.WEIGHT": "Poids",
-  
     "DAMAGE_TYPE.ENERGY": "Energie",
     "DAMAGE_TYPE.IMPACT": "Impact",
     "DAMAGE_TYPE.RENDING": "Pénétrant",
@@ -152,7 +134,6 @@
     "DAMAGE_TYPE.IMPACT_SHORT": "I",
     "DAMAGE_TYPE.RENDING_SHORT": "P",
     "DAMAGE_TYPE.EXPLOSIVE_SHORT": "X",
-  
     "DIALOG.CUSTOM_ROLL": "Lancer personnalisé",
     "DIALOG.ROLL_WITH": "Lancer avec",
     "DIALOG.CLIP": "Munitions restantes",
@@ -165,14 +146,12 @@
     "DIALOG.PSY_RATING": "Niveau psy",
     "DIALOG.RANGE": "Portée",
     "DIALOG.ATTACK_TYPE": "Type d'attaque",
-  
     "DRUG.HEADER": "Stimulants",
     "DRUG.NAME": "Nom",
     "DRUG.SHORT_DESCRIPTION": "Description",
     "DRUG.WEIGHT": "Poids",
     "DRUG.CRAFTSMANSHIP": "Qualité",
     "DRUG.AVAILABILITY": "Disponibilité",
-  
     "EXPERIENCE.CURRENT": "Actuelle",
     "EXPERIENCE.SPENT_CHARACTERISTICS": "Dépensée en caractéristiques",
     "EXPERIENCE.SPENT_SKILLS": "Dépensée en compétences",
@@ -181,12 +160,9 @@
     "EXPERIENCE.SPENT_OTHER": "Dépensée en autre",
     "EXPERIENCE.TOTAL_SPENT": "Total dépensé",
     "EXPERIENCE.TOTAL": "Total",
-  
     "FATE": "Destin",
     "FATIGUE": "Fatigue",
-  
     "FEAR.HEADER": "Peur",
-  
     "FORCE_FIELD.HEADER": "Champ de conversion",
     "FORCE_FIELD.NAME": "Nom",
     "FORCE_FIELD.CRAFTSMANSHIP": "Qualité",
@@ -194,35 +170,25 @@
     "FORCE_FIELD.AVAILABILITY": "Disponibilité",
     "FORCE_FIELD.PROTECTION_RATING": "Points d'Armure",
     "FORCE_FIELD.OVERLOAD_CHANCE": "Chance de Surcharge",
-  
     "GEAR.HEADER": "Équipement",
     "GEAR.NAME": "Nom",
     "GEAR.SHORT_DESCRIPTION": "Description",
     "GEAR.WEIGHT": "Poids",
     "GEAR.CRAFTSMANSHIP": "Qualité",
     "GEAR.AVAILABILITY": "Disponibilité",
-  
     "HEADER.DESCRIPTION": "Description",
-  
     "INITIATIVE": "Initiative",
-  
     "INSANITY.MENTAL_DISORDER": "Troubles mentaux",
-  
     "MALIGNANCY.NAME": "Nom",
-  
     "MENTAL_DISORDER.NAME": "Nom",
-  
     "MOVEMENT.HALF": "Demi-déplacement",
     "MOVEMENT.FULL": "Déplacement complet",
     "MOVEMENT.CHARGE": "Charge",
     "MOVEMENT.RUN": "Course",
-  
     "MUTATION.NAME": "Nom",
-  
     "NPC_TYPE.TROOP": "Troupe",
     "NPC_TYPE.MASTER": "Maître",
     "NPC_TYPE.ELITE": "Élite",
-  
     "PSYCHIC_POWER.NAME": "Nom",
     "PSYCHIC_POWER.COST": "Coût",
     "PSYCHIC_POWER.CLASS": "Discipline",
@@ -244,17 +210,14 @@
     "PSYCHIC_POWER.BOLT": "Bolt",
     "PSYCHIC_POWER.BARRAGE": "Barrage",
     "PSYCHIC_POWER.STORM": "Tempète",
-  
     "PSYCHIC_POWER.BOUND": "Lié",
     "PSYCHIC_POWER.UNBOUND": "Libre",
     "PSYCHIC_POWER.DAEMONIC": "Démoniaque",
-  
     "RANGE.NONE": "Aucune",
     "RANGE.POINT_BLANK": "Bout portant",
     "RANGE.SHORT": "Courte",
     "RANGE.LONG": "Longue",
     "RANGE.EXTREME": "Extrème",
-  
     "SKILL.ACROBATICS": "Acrobatie",
     "SKILL.ATHLETICS": "Athlétisme",
     "SKILL.AWARENESS": "Vigilance",
@@ -283,18 +246,14 @@
     "SKILL.SURVIVAL": "Survie",
     "SKILL.TECH_USE": "Technomaîtrise",
     "SKILL.TRADE": "Métier",
-  
     "SKILL.NAME": "Nom",
     "SKILL.ADVANCE": "Progression",
     "SKILL.TOTAL": "Total",
     "SKILL.COST": "Coût",
     "SKILL.STARTER": "I",
-
     "SIZE": "Taille",
-  
     "SPECIAL_ABILITY.NAME": "Nom",
     "SPECIAL_ABILITY.BENEFIT": "Effet",
-  
     "TAB.STATS": "Caractéristiques",
     "TAB.COMBAT": "Combat",
     "TAB.ABILITIES": "Capacités",
@@ -304,7 +263,6 @@
     "TAB.NOTES": "Notes",
     "TAB.DATA": "Données",
     "TAB.EFFECT": "Effets",
-  
     "TALENT.NAME": "Nom",
     "TALENT.BENEFIT": "Effet",
     "TALENT.COST": "Coût",
@@ -312,17 +270,14 @@
     "TALENT.PREREQUISITES": "Prérequis",
     "TALENT.TIER": "Rang",
     "TALENT.APTITUDES": "Aptitudes",
-  
     "TOOL.HEADER": "Outil",
     "TOOL.NAME": "Nom",
     "TOOL.SHORT_DESCRIPTION": "Description",
     "TOOL.WEIGHT": "Poids",
     "TOOL.CRAFTSMANSHIP": "Qualité",
     "TOOL.AVAILABILITY": "Disponibilité",
-  
     "TRAIT.NAME": "Nom",
     "TRAIT.BENEFIT": "Effet",
-  
     "TITLE.INSANITY": "Folie",
     "TITLE.CHARACTERISTICS": "Caractéristique",
     "TITLE.CORRUPTION": "Corruption",
@@ -352,7 +307,6 @@
     "TITLE.STATS": "Caractéristiques",
     "TITLE.EFFECT": "Effet",
     "TITLE.OTHER": "Autre",
-  
     "WEAPON.HEADER": "Arme",
     "WEAPON.NAME": "Nom",
     "WEAPON.CLASS": "Groupe",
@@ -378,7 +332,6 @@
     "WEAPON.BASIC": "Base",
     "WEAPON.HEAVY": "Lourd",
     "WEAPON.VEHICLE": "Véhicule",
-  
     "WEAPON_MODIFICATION.HEADER": "Amélioration",
     "WEAPON_MODIFICATION.NAME": "Nom",
     "WEAPON_MODIFICATION.UPGRADES": "Effets",
@@ -386,9 +339,56 @@
     "WEAPON_MODIFICATION.AVAILABILITY": "Disponibilité",
     "WEAPON_MODIFICATION.WEIGHT": "Poids",
     "WEAPON_MODIFICATION.INSTALLED": "Installé",
-  
     "WOUND.CRITICAL_INJURIES": "Blessures critiques",
     "WOUND.TOTAL": "Total",
     "WOUND.CURRENT": "Actuel",
-    "WOUND.CRITICAL_DAMAGE": "Dégats critiques"
+    "WOUND.CRITICAL_DAMAGE": "Dégats critiques",
+    "GEAR.DESCRIPTION": "Description",
+    "ROGUE_TRADER.GEAR.SHEET": "Rogue Trader – Équipement",
+    "ROGUE_TRADER.WEAPON.SHEET": "Rogue Trader – Arme",
+    "ROGUE_TRADER.ARMOUR.SHEET": "Rogue Trader – Armure",
+    "ITEM.NAME": "Nom",
+    "BODY_LOCATION.HEAD": "Tête",
+    "BODY_LOCATION.BODY": "Corps",
+    "BODY_LOCATION.LEFT_ARM": "Bras gauche",
+    "BODY_LOCATION.RIGHT_ARM": "Bras droit",
+    "BODY_LOCATION.LEFT_LEG": "Jambe gauche",
+    "BODY_LOCATION.RIGHT_LEG": "Jambe droite",
+    "PROTECTION_TYPE.PRIMITIVE": "Primitive",
+    "PROTECTION_TYPE.NON_PRIMITIVE": "Non primitive",
+    "ARMOUR.ARMOUR_POINTS": "Points d'armure",
+    "ARMOUR.PROTECTION_TYPE": "Protection",
+    "ARMOUR.LOCATIONS": "Localisations",
+    "CLASS.MELEE": "Corps à corps",
+    "CLASS.PISTOL": "Armes de poing",
+    "CLASS.BASIC": "Armes de base",
+    "CLASS.HEAVY": "Armes lourdes",
+    "CLASS.THROWN": "Armes de lancer",
+    "RANGED_WEAPON.CLASS": "Classe",
+    "RANGED_WEAPON.RANGE": "Portée",
+    "RANGED_WEAPON.RATE_OF_FIRE": "Cadence de tir",
+    "RANGED_WEAPON.SINGLE_SHOT": "Coup unique",
+    "RANGED_WEAPON.BURST": "Rafale",
+    "RANGED_WEAPON.FULL_AUTO": "Tir automatique",
+    "RANGED_WEAPON.DAMAGE": "Dégâts",
+    "RANGED_WEAPON.PENETRATION": "Perforation",
+    "RANGED_WEAPON.CLIP": "Chargeur",
+    "RANGED_WEAPON.RELOAD": "Rechargement",
+    "RANGED_WEAPON.SPECIAL": "Spécial",
+    "QUALITY.ACCURATE": "Précise",
+    "QUALITY.BALANCED": "Équilibrée",
+    "QUALITY.BLAST": "Explosion",
+    "QUALITY.BURNING": "Incendiaire",
+    "QUALITY.CHEAP": "Bon marché",
+    "QUALITY.CORROSIVE": "Corrosive",
+    "QUALITY.FLAME": "Flamme",
+    "QUALITY.OVERHEATS": "Surchauffe",
+    "QUALITY.POWERFUL": "Puissante",
+    "QUALITY.RELIABLE": "Fiable",
+    "QUALITY.SCATTER": "Dispersion",
+    "QUALITY.SHOCKING": "Électrisante",
+    "QUALITY.STORM": "Tempête",
+    "QUALITY.TOXIC": "Toxique",
+    "QUALITY.UNRELIABLE": "Peu fiable",
+    "QUALITY.VOLATILE": "Volatile"
 }

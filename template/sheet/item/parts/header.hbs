@@ -1,0 +1,12 @@
+<div class="header border flex row">
+    <div class="avatar">
+        <img class="profile-img" src="{{document.img}}" data-action="editImage" data-field="img"
+            alt="{{document.name}}" title="{{document.name}}" />
+    </div>
+    <div class="flex column grow justify-center">
+        <div class="name header-row">
+            <label>{{localize "GEAR.NAME"}}</label>
+            <input name="name" type="text" value="{{document.name}}" />
+        </div>
+    </div>
+</div>

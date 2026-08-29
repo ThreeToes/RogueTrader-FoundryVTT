@@ -1,0 +1,29 @@
+<section class="tab {{tabs.data.cssClass}}" data-group="primary" data-tab="data">
+    <div class="stats border">
+        <h1>{{localize "TITLE.STATS"}}</h1>
+        <div class="stats-row">
+            <div class="stat craftsmanship">
+                <label>{{localize "GEAR.CRAFTSMANSHIP"}}</label>
+                <select name="system.craftsmanship">
+                    {{selectOptions (config "craftsmanship") selected=source.system.craftsmanship localize=true}}
+                </select>
+            </div>
+            <div class="stat availability">
+                <label>{{localize "GEAR.AVAILABILITY"}}</label>
+                <select name="system.availability">
+                    {{selectOptions (config "availability") selected=source.system.availability localize=true}}
+                </select>
+            </div>
+            <div class="stat weight">
+                <label>{{localize "GEAR.WEIGHT"}}</label>
+                <input name="system.weight" type="number" value="{{source.system.weight}}" />
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat short-description">
+                <label>{{localize "GEAR.SHORT_DESCRIPTION"}}</label>
+                <input name="system.shortDescription" type="text" value="{{source.system.shortDescription}}" />
+            </div>
+        </div>
+    </div>
+</section>

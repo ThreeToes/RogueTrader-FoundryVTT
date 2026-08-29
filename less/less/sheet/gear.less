@@ -1,47 +1,79 @@
- .rogue-trader .tab {
-     height: 100%;
-     width: 100%;
- }
+.rogue-trader .tab {
+	min-height: 0;
+	width: 100%;
+	overflow-y: auto;
+}
 
- .rogue-trader .tab.active {
-     display: block;
- }
+.rogue-trader .tab.active {
+	display: block;
+	flex: 1 1 auto;
+}
 
- .rogue-trader .sheet-body {
-     overflow: hidden;
-     flex-grow: 1;
- }
+/* Parts are concatenated directly into the sheet form element. */
+.rogue-trader.sheet form {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	height: 100%;
+	overflow: hidden;
+}
 
- .rogue-trader.gear .notes-editor {
-     height: 165px;
-     max-height: 165px;
- }
+.rogue-trader.sheet form .sheet-tabs {
+	flex-grow: 0;
+}
 
- .rogue-trader.gear .stats {
-     height: 165px;
-     align-content: baseline;
- }
+.rogue-trader.sheet .header {
+	flex-grow: 0;
+	gap: 8px;
+	align-items: center;
+}
 
- .rogue-trader.gear .stats .stats-row .stat.craftsmanship select {
-     width: 8em;
- }
+.rogue-trader.sheet .header .avatar img {
+	max-width: 95px;
+	max-height: 95px;
+	border: none;
+	display: block;
+	margin: auto;
+}
 
- .rogue-trader.gear .stats .stats-row .stat.availability select {
-     width: 8em;
- }
+.rogue-trader.gear .stats {
+	align-content: baseline;
+}
 
- .rogue-trader.gear .stats .stats-row .stat.weight input {
-     width: 2em;
-     text-align: center;
- }
+.rogue-trader.gear .stats-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 4px;
+}
 
- .rogue-trader.gear .stats .stats-row .stat.short-description input {
-     width: 31em;
- }
+.rogue-trader.gear .stats-row .stat {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+}
 
- .rogue-trader.sheet .header .avatar img {
-     max-width: 95px;
-     max-height: 95px;
-     display: block;
-     margin: auto;
- }
+.rogue-trader.gear .stats-row .stat.craftsmanship select,
+.rogue-trader.gear .stats-row .stat.availability select {
+	width: 8em;
+}
+
+.rogue-trader.gear .stats-row .stat.weight input {
+	width: 4em;
+	text-align: center;
+}
+
+.rogue-trader.gear .stats-row .stat.short-description {
+	flex: 1;
+}
+
+.rogue-trader.gear .tab[data-tab="notes"] .notes-editor {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.rogue-trader.gear .notes-editor prose-mirror {
+	flex-grow: 1;
+}

@@ -146,3 +146,52 @@
 	color: #7a6a53;
 	margin-top: 6px;
 }
+
+/* Skill picker (Add Custom) */
+
+.rogue-trader.sheet.skill-picker .skill-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	height: 100%;
+	overflow: hidden;
+}
+
+.rogue-trader.sheet.skill-picker .catalog {
+	flex: 1 1 auto;
+	min-height: 0;
+	max-height: 380px;
+	overflow-y: auto;
+	padding-right: 4px;
+}
+
+.rogue-trader.sheet.skill-picker .catalog-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 1px 0;
+}
+
+.rogue-trader.sheet.skill-picker .catalog-row.owned {
+	opacity: 0.55;
+}
+
+.rogue-trader.sheet.skill-picker .add-row {
+	cursor: pointer;
+	color: #b8860b;
+	width: 1.5em;
+	text-align: center;
+}
+
+.rogue-trader.sheet.skill-picker form.custom {
+	flex: none;
+	display: flex;
+	gap: 6px;
+	align-items: center;
+}
+
+.rogue-trader.sheet.skill-picker form.custom input {
+	flex: 1;
+	min-width: 8em;
+}

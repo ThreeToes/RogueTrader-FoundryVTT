@@ -24,37 +24,37 @@
         <div class="stats-row">
             <div class="stat wounds">
                 <label>{{localize "TITLE.WOUNDS"}}</label>
-                <input name="system.wounds.value" type="number" min="0" value="{{system.wounds.value}}" />
+                <input name="system.wounds.value" type="number" min="0" value="{{source.system.wounds.value}}" />
                 <span>/</span>
-                <input name="system.wounds.max" type="number" min="0" value="{{system.wounds.max}}" />
+                <input name="system.wounds.max" type="number" min="0" value="{{source.system.wounds.max}}" />
             </div>
             {{#if isPC}}
             <div class="stat fate">
                 <label>{{localize "CHARACTER.FATE"}}</label>
-                <input name="system.fate.value" type="number" min="0" value="{{system.fate.value}}" />
+                <input name="system.fate.value" type="number" min="0" value="{{source.system.fate.value}}" />
                 <span>/</span>
-                <input name="system.fate.max" type="number" min="0" value="{{system.fate.max}}" />
+                <input name="system.fate.max" type="number" min="0" value="{{source.system.fate.max}}" />
             </div>
             {{/if}}
         </div>
         <div class="stats-row">
             <div class="stat fatigue">
                 <label>{{localize "CHARACTER.FATIGUE"}}</label>
-                <input name="system.fatigue" type="number" min="0" value="{{system.fatigue}}" />
+                <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
             </div>
             {{#if isPC}}
             <div class="stat insanity">
                 <label>{{localize "CHARACTER.INSANITY"}}</label>
-                <input name="system.insanity" type="number" min="0" value="{{system.insanity}}" />
+                <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
             </div>
             <div class="stat corruption">
                 <label>{{localize "CHARACTER.CORRUPTION"}}</label>
-                <input name="system.corruption" type="number" min="0" value="{{system.corruption}}" />
+                <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
             </div>
             {{else}}
             <div class="stat threat-level">
                 <label>{{localize "NPC.THREAT_LEVEL"}}</label>
-                <input name="system.threatLevel" type="text" value="{{system.threatLevel}}" />
+                <input name="system.threatLevel" type="text" value="{{source.system.threatLevel}}" />
             </div>
             {{/if}}
         </div>

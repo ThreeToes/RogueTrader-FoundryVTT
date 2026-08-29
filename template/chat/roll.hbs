@@ -1,61 +1,26 @@
-<div class="rogue-trader chat roll" data-actor-id="{{ownerId}}" data-item-id="{{itemId}}" {{#if tokenId}}data-token-id="{{tokenId}}"{{/if}}>
+<div class="rogue-trader chat roll">
     <div class="background border">
-        {{#if isReRoll}}
-            <h1>{{localize "CHAT.REROLL"}}</h1>
-        {{/if}}
-        <h1>{{name}} ({{target.final}})</h1>
-        {{#if flags.isSuccess}}
-        <h3 style="color: var(--color-success)">{{localize "CHAT.SUCCESS"}} <span>({{result}})</span></h3>
-        {{else}}
-        <h3 style="color: var(--color-failure)">{{localize "CHAT.FAILURE"}} <span>({{result}})</span></h3>
-        {{/if}}
-
-        <p><strong>{{localize "CHAT.TEST_MODIFIER"}}:</strong> {{target.modifier}}</p>
-
-        {{#if rolledWith}}
-            <p><strong>{{localize "CHAT.ROLLED_WITH"}}:</strong> {{rolledWith}}</p>
-        {{/if}}
-
-        {{#if aim}}
-            <p><strong>{{localize "CHAT.AIMING"}}:</strong> {{aim.text}}</p>
-        {{/if}}
-        {{#if rangeText}}
-            <p><strong>{{localize "CHAT.ATTACK_RANGE"}}:</strong> {{rangeModText}}</p>
-        {{/if}}
-
-        {{#if attackType}}
-            <p><strong>{{localize "CHAT.ATTACK_TYPE"}}:</strong> {{attackType.text}}</p>
-        {{/if}}
-
-        {{#if flags.isSuccess}}
-            <p><strong>{{localize "CHAT.DOS"}}:</strong> {{dos}}</p>
-            {{#if numberOfHits}}
-            <p><strong>{{localize "CHAT.NUMBER_OF_HIT"}}:</strong> {{numberOfHits}}</p>
-            {{/if}}
-        {{else}}
-            <p><strong>{{localize "CHAT.DOF"}}:</strong> {{dof}}</p>
-        {{/if}}
-        {{#if psy.display}}
-            {{#if psy.push}}
-            <p><strong>{{localize "CHAT.PSY_RATING"}}:</strong> {{psy.value}} ({{localize "CHAT.PSY_PUSH"}})</p>
-            {{else}}
-            <p><strong>{{localize "CHAT.PSY_RATING"}}:</strong> {{psy.value}}</p>
-            {{/if}}
-            {{#if psy.hasPhenomena}}
-                {{#if psy.warpConduit}}
-                    <p><strong style="color: var(--color-failure)">{{localize "CHAT.HAS_PSYCHIC_PHENOMENA_WITH_WARPCONDUIT"}}</strong></p>
-                {{else}}
-                    <p><strong style="color: var(--color-failure)">{{localize "CHAT.HAS_PSYCHIC_PHENOMENA"}}</strong></p>
-                {{/if}}
-            {{/if}}
-        {{/if}}
-        {{#if flags.isAttack}}
-            {{#if flags.isSuccess}}
-                <div class="wrapper flex-column">
-                    <button class="invoke-test">{{localize "CHAT.ROLL_EVASION"}}</button>
-                    <button class="invoke-damage">{{localize "CHAT.ROLL_DAMAGE"}}</button>
-                </div>
-            {{/if}}
+        <h1>{{title}}</h1>
+        <div class="roll-summary">
+            <div class="roll-target">
+                <span class="label">{{localize "ROLL.TARGET"}}</span>
+                <span class="value">{{target}}</span>
+            </div>
+            <div class="roll-result {{outcomeClass}}">
+                <span class="value">{{roll}}</span>
+                <span class="label">
+                    {{outcomeLabel}}
+                    {{#if critical}}<strong>({{localize "ROLL.CRITICAL"}})</strong>{{/if}}
+                </span>
+            </div>
+        </div>
+        {{#if analysis.length}}
+        <ul class="modifier-breakdown">
+            {{localize "ROLL.MODIFIERS"}}:
+            {{#each analysis as |mod|}}
+            <li>{{mod.label}}: {{mod.value}}</li>
+            {{/each}}
+        </ul>
         {{/if}}
     </div>
 </div>

@@ -8,7 +8,7 @@
  * effective bonus = bonus x unnatural multiplier).
  */
 
-const CHARACTERISTIC_KEYS = [
+export const CHARACTERISTIC_KEYS = [
 	"ws",
 	"bs",
 	"s",

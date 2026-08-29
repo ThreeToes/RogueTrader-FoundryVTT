@@ -1,0 +1,24 @@
+<div class="skill-picker">
+    <div class="catalog">
+        <h2>{{localize "SKILL.CATALOG"}}</h2>
+        {{#each catalog as |skill|}}
+        <div class="catalog-row {{#if skill.owned}}owned{{/if}}">
+            <span class="name">{{skill.name}} <em>({{localize skill.charLabel}})</em></span>
+            {{#if skill.owned}}
+            <span class="owned-marker">{{localize "SKILL.OWNED"}}</span>
+            {{else}}
+            <a class="add-row" data-action="addCatalog" data-name="{{skill.name}}"
+                data-tooltip="{{localize "SKILL.ADD"}}"><i class="fas fa-plus"></i></a>
+            {{/if}}
+        </div>
+        {{/each}}
+    </div>
+    <form class="custom border">
+        <h2>{{localize "SKILL.CUSTOM"}}</h2>
+        <input name="name" type="text" placeholder="{{localize "SKILL.CUSTOM_NAME"}}" />
+        <select name="characteristic">
+            {{selectOptions characteristicChoices localize=true}}
+        </select>
+        <button type="button" data-action="addCustom">{{localize "SKILL.ADD"}}</button>
+    </form>
+</div>

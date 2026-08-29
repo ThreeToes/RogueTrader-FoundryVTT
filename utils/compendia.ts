@@ -1,5 +1,5 @@
 // TODO: move this to the new DB format
-import { mkdir, readdir, readFile, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import yaml from "js-yaml";
 import Datastore from "nedb";
@@ -16,6 +16,19 @@ async function purgeDatabase(database: Datastore) {
 			}
 
 			database.persistence.compactDatafile();
+
+			resolve();
+		});
+	});
+}
+
+async function insertDocument(database: Datastore, document: object) {
+	await new Promise<void>((resolve, reject) => {
+		database.insert(document, (error: Error) => {
+			if (error) {
+				reject(error);
+				return;
+			}
 
 			resolve();
 		});
@@ -39,18 +52,13 @@ async function buildPack(folder: string) {
 
 		const filename = path.join(PACK_SRC, folder, file);
 		const contents = await readFile(filename, "utf8");
-		const documents = yaml.loadAll(contents);
+		const documents = yaml.loadAll(contents) as object[];
 
-		await new Promise<void>((resolve, reject) => {
-			database.insert(documents, (error: Error) => {
-				if (error) {
-					reject(error);
-					return;
-				}
-
-				resolve();
-			});
-		});
+		// Insert one document at a time: Foundry's NeDB format is
+		// newline-delimited (one document per line), never a top-level array.
+		for (const document of documents) {
+			await insertDocument(database, document);
+		}
 	}
 }
 

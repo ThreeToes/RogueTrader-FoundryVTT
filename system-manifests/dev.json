@@ -29,6 +29,13 @@
             "system": "rogue-trader",
             "path": "./packs/aptitudes.db",
             "type": "Item"
+        },
+        {
+            "name": "skills",
+            "label": "Rogue Trader Skills",
+            "system": "rogue-trader",
+            "path": "./packs/skills.db",
+            "type": "Item"
         }
     ],
     "languages": [
@@ -39,12 +46,12 @@
         },
         {
             "lang": "es",
-            "name": "Español",
+            "name": "Espa\u00f1ol",
             "path": "lang/es.json"
         },
         {
             "lang": "fr",
-            "name": "Français",
+            "name": "Fran\u00e7ais",
             "path": "lang/fr.json"
         },
         {
@@ -55,14 +62,39 @@
     ],
     "documentTypes": {
         "Actor": {
-            "pc": { "htmlFields": ["description"] },
-            "npc": { "htmlFields": ["description"] }
+            "pc": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "npc": {
+                "htmlFields": [
+                    "description"
+                ]
+            }
         },
         "Item": {
-            "gear": { "htmlFields": ["description"] },
-            "ranged-weapon": { "htmlFields": ["description"] },
-            "melee-weapon": { "htmlFields": ["description"] },
-            "armour": { "htmlFields": ["description"] }
+            "gear": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "ranged-weapon": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "melee-weapon": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "armour": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "skill": {}
         }
     },
     "gridDistance": 1,

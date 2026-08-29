@@ -1,0 +1,55 @@
+<section class="tab {{tabs.skills.cssClass}}" data-group="primary" data-tab="skills">
+    <div class="skills border">
+        <div class="skills-header">
+            <h1>{{localize "TAB.SKILLS"}}</h1>
+            <button type="button" class="add-skill" data-action="addSkill">
+                <i class="fas fa-plus"></i> {{localize "SKILL.CUSTOM"}}
+            </button>
+        </div>
+        {{#each skillGroups as |group|}}
+        {{#if group.skills.length}}
+        <h2 class="skill-group-label">{{localize group.label}}</h2>
+        <ol class="skill-list">
+            {{#each group.skills as |skill|}}
+            <li class="skill-row{{#unless skill.owned}} untrained{{/unless}}" data-item-id="{{skill.id}}">
+                {{#if skill.owned}}
+                <a class="skill-roll" data-action="rollSkill" data-item="{{skill.id}}"
+                    data-tooltip="{{localize "ROLL.SUCCESS"}}"
+                ><i class="fa-solid fa-dice-d10"></i></a>
+                {{else}}
+                <a class="skill-roll" data-action="rollUntrained" data-name="{{skill.name}}"
+                    data-characteristic="{{group.key}}"
+                    data-tooltip="{{localize "SKILL.UNTRAINED_HINT"}}"
+                ><i class="fa-solid fa-dice-d10 fa-flip-horizontal"></i></a>
+                {{/if}}
+                <h4 class="skill-name">{{skill.name}}{{#if skill.advanced}}
+                    <em class="skill-advanced">({{localize "SKILL.ADVANCED"}})</em>{{/if}}</h4>
+                <div class="ladder">
+                    {{#if skill.owned}}
+                    {{#each skill.ladderOptions as |opt|}}
+                    <button type="button" class="ladder-option {{#if (eq skill.ladder opt.value)}}active{{/if}}"
+                        data-action="setLadder" data-item="{{skill.id}}" data-value="{{opt.value}}">
+                        {{localize opt.label}}
+                    </button>
+                    {{/each}}
+                    <a class="skill-delete" data-action="deleteSkill" data-item="{{skill.id}}"
+                        data-tooltip="{{localize "DOCUMENT.Delete"}}"
+                    ><i class="fas fa-trash"></i></a>
+                    {{else}}
+                    {{#each skill.ladderOptions as |opt|}}
+                    <button type="button" class="ladder-option" data-action="ownSkill" data-name="{{skill.name}}"
+                        data-characteristic="{{group.key}}" data-value="{{opt.value}}"
+                        data-tooltip="{{localize "SKILL.OWN_HINT"}}">
+                        {{localize opt.label}}
+                    </button>
+                    {{/each}}
+                    {{/if}}
+                </div>
+            </li>
+            {{/each}}
+        </ol>
+        {{/if}}
+        {{/each}}
+        <p class="untrained-hint">{{localize "SKILL.UNTRAINED_NOTE"}}</p>
+    </div>
+</section>

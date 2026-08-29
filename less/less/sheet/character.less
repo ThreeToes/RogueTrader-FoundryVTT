@@ -54,3 +54,95 @@
 	width: 3em;
 	text-align: center;
 }
+
+/* Characteristic roll button on character sheets */
+
+.rogue-trader.sheet.character .char-roll {
+	flex: none;
+	width: 1.5em;
+	text-align: center;
+	color: #b8860b;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.character .char-roll:hover {
+	text-shadow: 0 0 4px currentColor;
+}
+/* Skills tab */
+
+.rogue-trader.sheet.character .skills-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.rogue-trader.sheet.character .skill-group-label {
+	margin: 8px 0 2px;
+	font-size: 0.9em;
+	text-transform: uppercase;
+	color: #7a6a53;
+}
+
+.rogue-trader.sheet.character .skill-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0;
+}
+
+.rogue-trader.sheet.character .skill-delete {
+	width: 1.5em;
+	text-align: center;
+	color: #8b5e52;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.character .skill-name {
+	flex: 1;
+	margin: 0;
+}
+
+.rogue-trader.sheet.character .ladder {
+	display: flex;
+	gap: 2px;
+}
+
+.rogue-trader.sheet.character .ladder-option {
+	font-size: 0.75em;
+	padding: 1px 6px;
+	border: 1px solid #7a6a53;
+	background: transparent;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.character .ladder-option.active {
+	background: #b8860b;
+	color: #fff;
+}
+
+.rogue-trader.sheet.character .skill-roll {
+	width: 1.5em;
+	text-align: center;
+	color: #b8860b;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.character .skill-roll:hover {
+	text-shadow: 0 0 4px currentColor;
+}
+
+.rogue-trader.sheet.character .skill-row.untrained {
+	opacity: 0.55;
+}
+
+.rogue-trader.sheet.character .skill-advanced {
+	font-size: 0.8em;
+	color: #7a6a53;
+}
+
+.rogue-trader.sheet.character .untrained-hint {
+	font-size: 0.8em;
+	color: #7a6a53;
+	margin-top: 6px;
+}

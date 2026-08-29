@@ -1,6 +1,6 @@
+import { qualities } from "../../registry";
 import { Gear } from "./gear";
 import { WeaponClass } from "./weapon-class";
-import { qualities } from "../../registry";
 
 /**
  * Placeholder for weapon qualities (e.g. Accurate, Tearing).

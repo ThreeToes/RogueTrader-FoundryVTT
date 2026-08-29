@@ -1,7 +1,10 @@
 import { Availability } from "./availability";
 import { Craftsmanship } from "./craftsmanship";
 
-export class Gear extends foundry.abstract.TypeDataModel<foundry.data.fields.DataSchema, foundry.documents.Item> {
+export class Gear extends foundry.abstract.TypeDataModel<
+	foundry.data.fields.DataSchema,
+	foundry.documents.Item
+> {
 	static LOCALIZATION_PREFIXES = ["GEAR"];
 
 	static defineSchema() {

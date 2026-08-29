@@ -1,0 +1,19 @@
+<section>
+    <div class="stats border">
+        <h1>{{document.name}}</h1>
+        <div class="stats-row">
+            <div class="stat characteristic">
+                <label>{{localize "SKILL.CHARACTERISTIC"}}</label>
+                <select name="system.characteristic">
+                    {{selectOptions characteristicChoices selected=source.system.characteristic localize=true}}
+                </select>
+            </div>
+            <div class="stat ladder">
+                <label>{{localize "SKILL.LADDER"}}</label>
+                <select name="system.ladder">
+                    {{selectOptions ladderOptions selected=source.system.ladder labelAttr="label" valueAttr="value" localize=true}}
+                </select>
+            </div>
+        </div>
+    </div>
+</section>

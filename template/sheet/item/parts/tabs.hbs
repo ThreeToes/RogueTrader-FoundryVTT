@@ -1,5 +1,5 @@
 <nav class="sheet-tabs tabs flex row" data-group="primary">
     {{#each tabs as |tab|}}
-    <a class="item {{tab.cssClass}}" data-tab="{{tab.id}}" data-group="{{tab.group}}">{{localize tab.label}}</a>
+    <a class="item {{tab.cssClass}}" data-action="tab" data-tab="{{tab.id}}" data-group="{{tab.group}}">{{localize tab.label}}</a>
     {{/each}}
 </nav>

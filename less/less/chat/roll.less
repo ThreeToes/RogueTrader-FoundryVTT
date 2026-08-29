@@ -1,0 +1,45 @@
+/* Chat roll cards */
+
+.rogue-trader.chat.roll .roll-summary {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	justify-content: space-around;
+	margin: 6px 0;
+}
+
+.rogue-trader.chat.roll .roll-target,
+.rogue-trader.chat.roll .roll-result {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+}
+
+.rogue-trader.chat.roll .roll-target .label,
+.rogue-trader.chat.roll .roll-result .label {
+	font-size: 0.85em;
+	color: #7a6a53;
+}
+
+.rogue-trader.chat.roll .roll-value,
+.rogue-trader.chat.roll .roll-result .value,
+.rogue-trader.chat.roll .roll-target .value {
+	font-size: 1.6em;
+	font-weight: bold;
+}
+
+.rogue-trader.chat.roll .roll-result.success .value {
+	color: #2e7d32;
+}
+
+.rogue-trader.chat.roll .roll-result.failure .value {
+	color: #b71c1c;
+}
+
+.rogue-trader.chat.roll ul.modifier-breakdown {
+	margin: 4px 0 0;
+	padding-left: 1.2em;
+	font-size: 0.9em;
+	color: #4a3f31;
+}

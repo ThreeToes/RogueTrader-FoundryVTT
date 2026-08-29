@@ -6,6 +6,8 @@
             <div class="characteristic stat">
                 <label for="char-{{c.key}}">{{localize c.label}}</label>
                 <div class="char-inputs">
+                    <a class="char-roll" data-action="rollTest" data-key="{{c.key}}"
+                        data-tooltip="{{localize "ROLL.DIALOG"}}"><i class="fa-solid fa-dice-d10"></i></a>
                     <input id="char-{{c.key}}" class="char-value" name="system.characteristics.{{c.key}}.value"
                         type="number" min="0" max="100" value="{{c.value}}" data-tooltip="{{c.label}}" />
                     <input class="char-bonus" title="{{c.effectiveBonus}}" disabled type="text"

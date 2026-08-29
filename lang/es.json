@@ -376,5 +376,21 @@
     "QUALITY.STORM": "Tormenta",
     "QUALITY.TOXIC": "Tóxica",
     "QUALITY.UNRELIABLE": "No fiable",
-    "QUALITY.VOLATILE": "Volátil"
+    "QUALITY.VOLATILE": "Volátil",
+    "CHARACTERISTIC.WS": "Combate (melee)",
+    "CHARACTERISTIC.BS": "Combate a distancia",
+    "CHARACTERISTIC.S": "Fuerza",
+    "CHARACTERISTIC.T": "Resistencia",
+    "CHARACTERISTIC.AG": "Agilidad",
+    "CHARACTERISTIC.INT": "Inteligencia",
+    "CHARACTERISTIC.PER": "Percepción",
+    "CHARACTERISTIC.WP": "Fuerza de voluntad",
+    "CHARACTERISTIC.FEL": "Interacción",
+    "CHARACTER.FATE": "Destino",
+    "CHARACTER.FATIGUE": "Fatiga",
+    "CHARACTER.INSANITY": "Locura",
+    "CHARACTER.CORRUPTION": "Corrupción",
+    "NPC.THREAT_LEVEL": "Nivel de amenaza",
+    "TYPES.Actor.pc": "Personaje jugador",
+    "ROGUE_TRADER.CHARACTER.SHEET": "Rogue Trader – Personaje"
 }

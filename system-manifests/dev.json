@@ -54,6 +54,10 @@
         }
     ],
     "documentTypes": {
+        "Actor": {
+            "pc": { "htmlFields": ["description"] },
+            "npc": { "htmlFields": ["description"] }
+        },
         "Item": {
             "gear": { "htmlFields": ["description"] },
             "ranged-weapon": { "htmlFields": ["description"] },

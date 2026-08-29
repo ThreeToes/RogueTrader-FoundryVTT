@@ -1,8 +1,10 @@
+import { Character } from "../data/actor/character";
 import { Armour } from "../data/item/armour";
 import { Gear } from "../data/item/gear";
 import { MeleeWeapon } from "../data/item/melee-weapon";
 import { RangedWeapon } from "../data/item/ranged-weapon";
 import { attachRegistriesToConfig } from "../registry";
+import { CharacterSheet } from "./actor/character-sheet";
 import { registerConfigHelper } from "./handlebars";
 import { ArmourSheet } from "./item/armour-sheet";
 import { GearSheet } from "./item/gear-sheet";
@@ -20,15 +22,18 @@ export function sheetInit() {
 		CONFIG.Item.dataModels["ranged-weapon"] = RangedWeapon;
 		CONFIG.Item.dataModels["melee-weapon"] = MeleeWeapon;
 		CONFIG.Item.dataModels.armour = Armour;
+		CONFIG.Actor.dataModels.pc = Character;
+		CONFIG.Actor.dataModels.npc = Character;
 		registerConfigHelper();
 
-		const registerItemSheet = (
+		const registerSheet = (
+			documentClass: typeof foundry.documents.Item | typeof foundry.documents.Actor,
 			sheet: AnySheetCtor,
 			types: [string, ...string[]],
 			label: string,
 		) => {
 			foundry.applications.apps.DocumentSheetConfig.registerSheet(
-				foundry.documents.Item,
+				documentClass,
 				game.system?.id ?? "rogue-trader",
 				sheet as never,
 				{
@@ -39,20 +44,29 @@ export function sheetInit() {
 			);
 		};
 
-		registerItemSheet(
+		registerSheet(
+			foundry.documents.Item,
 			GearSheet as unknown as AnySheetCtor,
 			["gear"],
 			"ROGUE_TRADER.GEAR.SHEET",
 		);
-		registerItemSheet(
+		registerSheet(
+			foundry.documents.Item,
 			WeaponSheet as unknown as AnySheetCtor,
 			["ranged-weapon", "melee-weapon"],
 			"ROGUE_TRADER.WEAPON.SHEET",
 		);
-		registerItemSheet(
+		registerSheet(
+			foundry.documents.Item,
 			ArmourSheet as unknown as AnySheetCtor,
 			["armour"],
 			"ROGUE_TRADER.ARMOUR.SHEET",
+		);
+		registerSheet(
+			foundry.documents.Actor,
+			CharacterSheet as unknown as AnySheetCtor,
+			["pc", "npc"],
+			"ROGUE_TRADER.CHARACTER.SHEET",
 		);
 	});
 }

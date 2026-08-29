@@ -1,0 +1,61 @@
+<section class="tab {{tabs.data.cssClass}}" data-group="primary" data-tab="data">
+    <div class="stats border">
+        <h1>{{localize "TITLE.CHARACTERISTICS"}}</h1>
+        <div class="characteristics-grid">
+            {{#each characteristics as |c|}}
+            <div class="characteristic stat">
+                <label for="char-{{c.key}}">{{localize c.label}}</label>
+                <div class="char-inputs">
+                    <input id="char-{{c.key}}" class="char-value" name="system.characteristics.{{c.key}}.value"
+                        type="number" min="0" max="100" value="{{c.value}}" data-tooltip="{{c.label}}" />
+                    <input class="char-bonus" title="{{c.effectiveBonus}}" disabled type="text"
+                        value="+{{c.bonus}}" />
+                    {{#if c.unnatural}}
+                    <input class="char-unnatural" title="{{c.key}}" name="system.characteristics.{{c.key}}.unnatural"
+                        type="number" min="1" value="{{c.unnatural}}" />
+                    {{/if}}
+                </div>
+            </div>
+            {{/each}}
+        </div>
+
+        <div class="stats-row">
+            <div class="stat wounds">
+                <label>{{localize "TITLE.WOUNDS"}}</label>
+                <input name="system.wounds.value" type="number" min="0" value="{{system.wounds.value}}" />
+                <span>/</span>
+                <input name="system.wounds.max" type="number" min="0" value="{{system.wounds.max}}" />
+            </div>
+            {{#if isPC}}
+            <div class="stat fate">
+                <label>{{localize "CHARACTER.FATE"}}</label>
+                <input name="system.fate.value" type="number" min="0" value="{{system.fate.value}}" />
+                <span>/</span>
+                <input name="system.fate.max" type="number" min="0" value="{{system.fate.max}}" />
+            </div>
+            {{/if}}
+        </div>
+        <div class="stats-row">
+            <div class="stat fatigue">
+                <label>{{localize "CHARACTER.FATIGUE"}}</label>
+                <input name="system.fatigue" type="number" min="0" value="{{system.fatigue}}" />
+            </div>
+            {{#if isPC}}
+            {{#if isPC}}
+            <div class="stat insanity">
+                <label>{{localize "CHARACTER.INSANITY"}}</label>
+                <input name="system.insanity" type="number" min="0" value="{{system.insanity}}" />
+            </div>
+            <div class="stat corruption">
+                <label>{{localize "CHARACTER.CORRUPTION"}}</label>
+                <input name="system.corruption" type="number" min="0" value="{{system.corruption}}" />
+            </div>
+            {{else}}
+            <div class="stat threat-level">
+                <label>{{localize "NPC.THREAT_LEVEL"}}</label>
+                <input name="system.threatLevel" type="text" value="{{system.threatLevel}}" />
+            </div>
+            {{/if}}
+        </div>
+    </div>
+</section>

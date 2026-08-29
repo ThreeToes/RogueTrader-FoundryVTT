@@ -5,7 +5,7 @@ import yaml from "js-yaml";
 import Datastore from "nedb";
 
 const PACK_SRC = "./src/packs";
-const PACK_DEST = "../packs";
+const PACK_DEST = "./release/packs";
 
 async function purgeDatabase(database: Datastore) {
 	await new Promise<void>((resolve, reject) => {
@@ -68,4 +68,6 @@ export async function bundlePacks() {
 	await Promise.all(folders.map(buildPack));
 }
 
-await bundlePacks();
+if (import.meta.main) {
+	await bundlePacks();
+}

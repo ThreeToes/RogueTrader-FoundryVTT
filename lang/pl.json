@@ -436,5 +436,21 @@
     "QUALITY.STORM": "Sztormowa",
     "QUALITY.TOXIC": "Trująca",
     "QUALITY.UNRELIABLE": "Zawodna",
-    "QUALITY.VOLATILE": "Niestabilna"
+    "QUALITY.VOLATILE": "Niestabilna",
+    "CHARACTERISTIC.WS": "Walka wręcz",
+    "CHARACTERISTIC.BS": "Walka dystansowa",
+    "CHARACTERISTIC.S": "Siła",
+    "CHARACTERISTIC.T": "Wytrzymałość",
+    "CHARACTERISTIC.AG": "Zręczność",
+    "CHARACTERISTIC.INT": "Inteligencja",
+    "CHARACTERISTIC.PER": "Percepcja",
+    "CHARACTERISTIC.WP": "Siła woli",
+    "CHARACTERISTIC.FEL": "Charyzma",
+    "CHARACTER.FATE": "Przeznaczenie",
+    "CHARACTER.FATIGUE": "Zmęczenie",
+    "CHARACTER.INSANITY": "Obłęd",
+    "CHARACTER.CORRUPTION": "Skażenie",
+    "NPC.THREAT_LEVEL": "Poziom zagrożenia",
+    "TYPES.Actor.pc": "Postać gracza",
+    "ROGUE_TRADER.CHARACTER.SHEET": "Rogue Trader – Postać"
 }

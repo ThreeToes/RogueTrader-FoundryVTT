@@ -1,0 +1,56 @@
+/* Character sheet (pc/npc) */
+
+.rogue-trader.sheet.character .characteristics-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 6px 10px;
+}
+
+.rogue-trader.sheet.character .characteristic {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.rogue-trader.sheet.character .characteristic label {
+	font-weight: bold;
+	text-align: center;
+}
+
+.rogue-trader.sheet.character .char-inputs {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+}
+
+.rogue-trader.sheet.character .char-value {
+	width: 3.5em;
+	text-align: center;
+}
+
+.rogue-trader.sheet.character .char-bonus {
+	width: 2.5em;
+	text-align: center;
+	border: none;
+	background: transparent;
+	font-weight: bold;
+	pointer-events: none;
+}
+
+.rogue-trader.sheet.character .char-unnatural {
+	width: 2.5em;
+	text-align: center;
+}
+
+.rogue-trader.sheet.character .stat.wounds,
+.rogue-trader.sheet.character .stat.fate {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.rogue-trader.sheet.character .stat.wounds input,
+.rogue-trader.sheet.character .stat.fate input {
+	width: 3em;
+	text-align: center;
+}

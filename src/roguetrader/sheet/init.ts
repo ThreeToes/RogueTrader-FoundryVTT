@@ -14,8 +14,6 @@ import { GearSheet } from "./item/gear-sheet";
 import { SkillSheet } from "./item/skill-sheet";
 import { WeaponSheet } from "./item/weapon-sheet";
 
-// biome-ignore lint/suspicious/noExplicitAny: AppV2 sheet classes pass typing
-// checks at runtime but the bundled foundry typings flag them.
 type AnySheetCtor = new (...args: unknown[]) => object;
 
 let commonSkillCatalog: object[] = [];

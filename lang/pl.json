@@ -478,5 +478,8 @@
     "SKILL.UNTRAINED_HINT": "Próba bez treningu (-10)",
     "SKILL.UNTRAINED_NOTE": "Szare umiejętności nie są znane: podstawowe można próbować na -10; zaawansowane wymagają wykupienia.",
     "SKILL.OWN_HINT": "Nabierz (znana)",
-    "ROLL.UNTRAINED": "Bez treningu (-10)"
+    "ROLL.UNTRAINED": "Bez treningu (-10)",
+    "CHARACTER.UNNATURAL": "Nienaturalna",
+    "CHARACTER.BONUS_TOOLTIP": "Premia pochodna: +{bonus}",
+    "CHARACTER.UNNATURAL_TOOLTIP": "Nienaturalna: x{mult}"
 }

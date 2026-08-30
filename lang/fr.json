@@ -432,5 +432,8 @@
     "SKILL.UNTRAINED_HINT": "Tentative non entraînée (-10)",
     "SKILL.UNTRAINED_NOTE": "Les compétences en gris ne sont pas connues : les de base peuvent être tentées à -10 ; les avancées ne peuvent pas être utilisées sans être acquises.",
     "SKILL.OWN_HINT": "Acquérir (connue)",
-    "ROLL.UNTRAINED": "Non entraîné (-10)"
+    "ROLL.UNTRAINED": "Non entraîné (-10)",
+    "CHARACTER.UNNATURAL": "Non naturel",
+    "CHARACTER.BONUS_TOOLTIP": "Bonus dérivé : +{bonus}",
+    "CHARACTER.UNNATURAL_TOOLTIP": "Non naturel : x{mult}"
 }

@@ -1,4 +1,4 @@
-import { readFile, mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import less from "less";
 
 const LESS_DEST = "./release/rogue-trader.css";

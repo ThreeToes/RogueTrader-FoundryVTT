@@ -418,5 +418,8 @@
     "SKILL.UNTRAINED_HINT": "Intento sin entrenamiento (-10)",
     "SKILL.UNTRAINED_NOTE": "Las habilidades en gris no se conocen: las basicas pueden intentarse a -10; las avanzadas no pueden usarse sin estar adquiridas.",
     "SKILL.OWN_HINT": "Adquirir (conocida)",
-    "ROLL.UNTRAINED": "Sin entrenar (-10)"
+    "ROLL.UNTRAINED": "Sin entrenar (-10)",
+    "CHARACTER.UNNATURAL": "No natural",
+    "CHARACTER.BONUS_TOOLTIP": "Bonus derivado: +{bonus}",
+    "CHARACTER.UNNATURAL_TOOLTIP": "No natural: x{mult}"
 }

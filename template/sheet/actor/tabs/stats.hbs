@@ -4,57 +4,72 @@
         <div class="characteristics-grid">
             {{#each characteristics as |c|}}
             <div class="characteristic stat">
-                <label for="char-{{c.key}}">{{localize c.label}}</label>
                 <div class="char-inputs">
                     <a class="char-roll" data-action="rollTest" data-key="{{c.key}}"
-                        data-tooltip="{{localize "ROLL.DIALOG"}}"><i class="fa-solid fa-dice-d10"></i></a>
+                        data-tooltip="{{localize "ROLL.MODIFIER"}}" title="{{c.label}}"
+                    ><i class="fa-solid fa-dice-d10"></i></a>
+                    <label class="char-label" for="char-{{c.key}}">{{localize c.label}}</label>
                     <input id="char-{{c.key}}" class="char-value" name="system.characteristics.{{c.key}}.value"
                         type="number" min="0" max="100" value="{{c.value}}" data-tooltip="{{c.label}}" />
-                    <input class="char-bonus" title="{{c.effectiveBonus}}" disabled type="text"
+                    <input class="char-bonus" title="{{c.bonusTooltip}}" disabled type="text"
                         value="+{{c.bonus}}" />
-                    {{#if c.unnatural}}
-                    <input class="char-unnatural" title="{{c.key}}" name="system.characteristics.{{c.key}}.unnatural"
-                        type="number" min="1" value="{{c.unnatural}}" />
-                    {{/if}}
+                    <span class="unnatural-pips {{#if (gt c.unnatural 1)}}has-mult{{/if}}">
+                        {{#each c.pips as |pip|}}
+                        <button type="button" class="pip {{#if pip.lit}}lit{{/if}}"
+                            data-action="setUnnatural" data-key="{{c.key}}"
+                            data-value="{{pip.value}}" data-tooltip="{{c.unnaturalTooltip}}"
+                        ></button>
+                        {{/each}}
+                    </span>
                 </div>
             </div>
             {{/each}}
         </div>
 
-        <div class="stats-row">
-            <div class="stat wounds">
-                <label>{{localize "TITLE.WOUNDS"}}</label>
-                <input name="system.wounds.value" type="number" min="0" value="{{source.system.wounds.value}}" />
-                <span>/</span>
-                <input name="system.wounds.max" type="number" min="0" value="{{source.system.wounds.max}}" />
+        <div class="stat-footer">
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "TITLE.WOUNDS"}}</span>
+                <div class="chip-value">
+                    <input name="system.wounds.value" type="number" min="0" value="{{source.system.wounds.value}}" />
+                    <span class="chip-sep">/</span>
+                    <input name="system.wounds.max" type="number" min="0" value="{{source.system.wounds.max}}" />
+                </div>
             </div>
             {{#if isPC}}
-            <div class="stat fate">
-                <label>{{localize "CHARACTER.FATE"}}</label>
-                <input name="system.fate.value" type="number" min="0" value="{{source.system.fate.value}}" />
-                <span>/</span>
-                <input name="system.fate.max" type="number" min="0" value="{{source.system.fate.max}}" />
-            </div>
-            {{/if}}
-        </div>
-        <div class="stats-row">
-            <div class="stat fatigue">
-                <label>{{localize "CHARACTER.FATIGUE"}}</label>
-                <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
-            </div>
-            {{#if isPC}}
-            <div class="stat insanity">
-                <label>{{localize "CHARACTER.INSANITY"}}</label>
-                <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
-            </div>
-            <div class="stat corruption">
-                <label>{{localize "CHARACTER.CORRUPTION"}}</label>
-                <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "CHARACTER.FATE"}}</span>
+                <div class="chip-value">
+                    <input name="system.fate.value" type="number" min="0" value="{{source.system.fate.value}}" />
+                    <span class="chip-sep">/</span>
+                    <input name="system.fate.max" type="number" min="0" value="{{source.system.fate.max}}" />
+                </div>
             </div>
             {{else}}
-            <div class="stat threat-level">
-                <label>{{localize "NPC.THREAT_LEVEL"}}</label>
-                <input name="system.threatLevel" type="text" value="{{source.system.threatLevel}}" />
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "NPC.THREAT_LEVEL"}}</span>
+                <div class="chip-value">
+                    <input name="system.threatLevel" type="text" value="{{source.system.threatLevel}}" />
+                </div>
+            </div>
+            {{/if}}
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "CHARACTER.FATIGUE"}}</span>
+                <div class="chip-value">
+                    <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
+                </div>
+            </div>
+            {{#if isPC}}
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "CHARACTER.INSANITY"}}</span>
+                <div class="chip-value">
+                    <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
+                </div>
+            </div>
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "CHARACTER.CORRUPTION"}}</span>
+                <div class="chip-value">
+                    <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
+                </div>
             </div>
             {{/if}}
         </div>

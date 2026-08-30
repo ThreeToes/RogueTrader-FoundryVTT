@@ -14,7 +14,13 @@ interface CharacteristicView {
 	bonus: number;
 	effectiveBonus: number;
 	unnatural: number;
+	bonusTooltip: string;
+	unnaturalTooltip: string;
+	pips: Array<{ value: number; lit: boolean }>;
 }
+
+/** Max unnatural multiplier shown as pips. */
+const MAX_UNNATURAL_STEPS = 5;
 
 export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
@@ -28,6 +34,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			rollUntrained: CharacterSheet.#onRollUntrained,
 			ownSkill: CharacterSheet.#onOwnSkill,
 			addSkill: CharacterSheet.#onAddSkill,
+			setUnnatural: CharacterSheet.#onSetUnnatural,
 			setLadder: CharacterSheet.#onSetLadder,
 			deleteSkill: CharacterSheet.#onDeleteSkill,
 		},
@@ -97,6 +104,24 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const value = Number(target.dataset.value);
 		if (!itemId || Number.isNaN(value)) return;
 		await this.actor.items.get(itemId)?.update({ system: { ladder: value } });
+	}
+
+	/** Set the unnatural multiplier from a clicked pip; clicking the last lit pip resets to natural. */
+	static async #onSetUnnatural(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const key = target.dataset.key;
+		const value = Number(target.dataset.value);
+		if (!key || Number.isNaN(value)) return;
+		const current =
+			(this.actor.system as unknown as Character).characteristics[key]
+				?.unnatural ?? 1;
+		const next = current === value ? 1 : value;
+		await this.actor.update({
+			system: { characteristics: { [key]: { unnatural: next } } },
+		});
 	}
 
 	static async #onDeleteSkill(
@@ -177,14 +202,28 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const system = this.actor.system as Character;
 
 		context.characteristics = Object.entries(system.characteristics).map(
-			([key, data]): CharacteristicView => ({
-				key,
-				label: `CHARACTERISTIC.${key.toUpperCase()}`,
-				value: data.value,
-				unnatural: data.unnatural,
-				bonus: system.characteristicBonus(key),
-				effectiveBonus: system.effectiveCharacteristicBonus(key),
-			}),
+			([key, data]): CharacteristicView => {
+				const bonus = system.characteristicBonus(key);
+				const effectiveBonus = system.effectiveCharacteristicBonus(key);
+				return {
+					key,
+					label: `CHARACTERISTIC.${key.toUpperCase()}`,
+					value: data.value,
+					unnatural: data.unnatural,
+					bonus,
+					effectiveBonus,
+					bonusTooltip: game.i18n.format("CHARACTER.BONUS_TOOLTIP", {
+						bonus: data.unnatural > 1 ? effectiveBonus : bonus,
+					}),
+					unnaturalTooltip: game.i18n.format("CHARACTER.UNNATURAL_TOOLTIP", {
+						mult: data.unnatural,
+					}),
+					pips: Array.from({ length: MAX_UNNATURAL_STEPS }, (_, i) => {
+						const mult = i + 2; // pip 1 = x2
+						return { value: mult, lit: data.unnatural >= mult };
+					}),
+				};
+			},
 		);
 
 		const ownedSkills = this.actor.items.filter(

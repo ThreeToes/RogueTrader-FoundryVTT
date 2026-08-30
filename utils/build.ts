@@ -1,8 +1,8 @@
-import { bundleTypescript } from "./javascript";
-import { bundleCss } from "./css";
-import { bundlePacks } from "./compendia";
-import { cp } from "node:fs/promises";
 import { watch } from "node:fs";
+import { cp, rm } from "node:fs/promises";
+import { bundlePacks } from "./compendia";
+import { bundleCss } from "./css";
+import { bundleTypescript } from "./javascript";
 
 const WATCH_PATHS = [
 	"./src",
@@ -18,6 +18,9 @@ async function copyStaticFiles() {
 		force: true,
 	});
 	await cp("./lang", "./release/lang", { recursive: true, force: true });
+	// Prune-then-copy: release/template must mirror ./template exactly so
+	// stale legacy templates never ship (release directory cleanup, v9o).
+	await rm("./release/template", { recursive: true, force: true });
 	await cp("./template", "./release/template", {
 		recursive: true,
 		force: true,
@@ -47,7 +50,7 @@ async function watchMode() {
 				console.log(
 					`\n[${new Date().toLocaleTimeString()}] Change detected in ${path}/${filename}`,
 				);
-				build().catch(() => {});
+				build().catch(() => undefined);
 			}, 150);
 		});
 	}

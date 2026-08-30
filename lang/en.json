@@ -523,5 +523,8 @@
     "SKILL.UNTRAINED_HINT": "Untrained attempt (-10)",
     "SKILL.UNTRAINED_NOTE": "Dimmed rows are untrained: basic skills may be attempted at -10; advanced skills cannot be used until acquired.",
     "SKILL.OWN_HINT": "Acquire (Known)",
-    "ROLL.UNTRAINED": "Untrained (-10)"
+    "ROLL.UNTRAINED": "Untrained (-10)",
+    "CHARACTER.UNNATURAL": "Unnatural",
+    "CHARACTER.BONUS_TOOLTIP": "Derived bonus: +{bonus}",
+    "CHARACTER.UNNATURAL_TOOLTIP": "Unnatural: x{mult}"
 }

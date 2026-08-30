@@ -11,7 +11,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "weapon"],
-		position: { width: 500, height: 500 },
+		position: { width: 520, height: "auto" },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 	};
@@ -55,6 +55,13 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 		context.isRanged = this.document.type === "ranged-weapon";
 		context.isMelee = this.document.type === "melee-weapon";
+
+		// Quality toggle-chips: lookup map so `checked` marks existing picks.
+		context.specialFlags = Object.fromEntries(
+			((this.document.system as unknown as { special?: string[] }).special ?? []).map(
+				(q) => [q, true],
+			),
+		);
 
 		// Normalized rate of fire record so all fields exist for ranged weapons.
 		context.rateOfFire = {

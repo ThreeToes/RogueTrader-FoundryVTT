@@ -117,6 +117,23 @@ export class Character extends foundry.abstract.TypeDataModel<
 			threatLevel: new foundry.data.fields.StringField({
 				initial: "",
 			}),
+			/** Career/rank label (free text, displayed in the sheet header). */
+			career: new foundry.data.fields.StringField({
+				initial: "",
+			}),
+			/** Experience points: spent and total, header display as spent/total. */
+			xp: new foundry.data.fields.SchemaField({
+				spent: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
+				total: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
+			}),
 			description: new foundry.data.fields.HTMLField(),
 		};
 	}

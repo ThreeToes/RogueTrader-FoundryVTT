@@ -32,6 +32,12 @@
                     {{selectOptions (config "availability") selected=source.system.availability localize=true}}
                 </select>
             </div>
+            <div class="stat equip-state">
+                <label>{{localize "GEAR.EQUIP_STATE"}}</label>
+                <select name="system.equipState">
+                    {{selectOptions (config "equipStates") selected=source.system.equipState localize=true}}
+                </select>
+            </div>
         </div>
 
         {{#if isRanged}}
@@ -46,13 +52,13 @@
                         <span class="rof-s {{#unless source.system.rateOfFire.singleShot}}off{{/unless}}">S</span>
                     </label>
                     <span class="rof-sep">/</span>
-                    <span class="rof-num">
+                    <span class="rof-num {{#unless source.system.rateOfFire.burst}}has-zero{{/unless}}">
                         <input name="system.rateOfFire.burst" type="number" min="0"
                             value="{{source.system.rateOfFire.burst}}" />
                         {{#unless source.system.rateOfFire.burst}}<span class="rof-zero">&ndash;</span>{{/unless}}
                     </span>
                     <span class="rof-sep">/</span>
-                    <span class="rof-num">
+                    <span class="rof-num {{#unless source.system.rateOfFire.fullAuto}}has-zero{{/unless}}">
                         <input name="system.rateOfFire.fullAuto" type="number" min="0"
                             value="{{source.system.rateOfFire.fullAuto}}" />
                         {{#unless source.system.rateOfFire.fullAuto}}<span class="rof-zero">&ndash;</span>{{/unless}}
@@ -82,9 +88,15 @@
         <div class="stats-row">
             <div class="stat special">
                 <label>{{localize "WEAPON.SPECIAL"}}</label>
-                <select name="system.special" multiple size="6">
-                    {{selectOptions (config "qualities") selected=source.system.special localize=true}}
-                </select>
+                <div class="chip-select">
+                    {{#each (config "qualities") as |label key|}}
+                    <label class="chip-option" data-tooltip="{{localize label}}">
+                        <input type="checkbox" name="system.special" value="{{key}}"
+                            {{checked (lookup ../specialFlags key)}} />
+                        <span class="chip">{{localize label}}</span>
+                    </label>
+                    {{/each}}
+                </div>
             </div>
         </div>
 

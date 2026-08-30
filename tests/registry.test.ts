@@ -4,6 +4,12 @@ import {
 	EntryRegistry,
 	protectionTypes,
 	qualities,
+	talentCategories,
+	talents,
+	vehicleClasses,
+	vehicleFacings,
+	vehicleSystems,
+	vehicleTraits,
 } from "../src/roguetrader/registry";
 
 describe("EntryRegistry", () => {
@@ -58,5 +64,31 @@ describe("EntryRegistry", () => {
 	test("protection types include primitive and non-primitive", () => {
 		expect(protectionTypes.has("primitive")).toBe(true);
 		expect(protectionTypes.has("non-primitive")).toBe(true);
+	});
+
+	test("vehicle registries are seeded with localization keys", () => {
+		for (const key of vehicleClasses.keys()) {
+			expect(vehicleClasses.get(key)).toMatch(/^VEHICLE_CLASS\./);
+		}
+		for (const facing of ["front", "left", "right", "rear", "top", "bottom"]) {
+			expect(vehicleFacings.has(facing)).toBe(true);
+			expect(vehicleFacings.get(facing)).toMatch(/^VEHICLE_FACING\./);
+		}
+		for (const key of vehicleTraits.keys()) {
+			expect(vehicleTraits.get(key)).toMatch(/^VEHICLE_TRAIT\./);
+		}
+		for (const key of vehicleSystems.keys()) {
+			expect(vehicleSystems.get(key)).toMatch(/^VEHICLE_SYSTEM\./);
+		}
+	});
+
+	test("talent registries are seeded with localization keys", () => {
+		expect(talents.has("frenzy")).toBe(true);
+		for (const key of talents.keys()) {
+			expect(talents.get(key)).toMatch(/^TALENT\./);
+		}
+		for (const key of talentCategories.keys()) {
+			expect(talentCategories.get(key)).toMatch(/^TALENT_CATEGORY\./);
+		}
 	});
 });

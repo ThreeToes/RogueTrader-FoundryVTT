@@ -1,0 +1,32 @@
+<section class="tab {{tabs.details.cssClass}}" data-group="primary" data-tab="details">
+    <div class="stats border">
+        <h1>{{localize "TAB.DETAILS"}}</h1>
+        <div class="stats-row">
+            <div class="stat special">
+                <label>{{localize "VEHICLE.TRAITS"}}</label>
+                <div class="chip-select">
+                    {{#each traitChoices as |label key|}}
+                    <label class="chip-option">
+                        <input type="checkbox" name="system.traits" value="{{key}}"
+                            {{checked (lookup ../traitFlags key)}} />
+                        <span class="chip">{{localize label}}</span>
+                    </label>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat description">
+                <label>{{localize "VEHICLE.DESCRIPTION"}}</label>
+                {{#if editable}}
+                <prose-mirror name="system.description" value="{{source.system.description}}" button="true"
+                    editable="{{editable}}" toggled="false">
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                {{{descriptionHTML}}}
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

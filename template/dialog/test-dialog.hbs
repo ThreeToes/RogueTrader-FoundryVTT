@@ -1,0 +1,43 @@
+<div class="test-dialog">
+    <div class="modifier-list">
+        <h3 class="inv-group-label">{{localize "ROLL.MODIFIERS"}}</h3>
+        {{#if contributors.length}}
+        <dl class="contributor-list">
+            {{#each contributors as |m|}}
+            <div class="modifier-row fixed" data-tooltip="{{m.sourceLabel}}">
+                <span class="modifier-label">{{m.label}}</span>
+                <span class="modifier-value {{#if (gt m.value 0)}}pos{{else}}neg{{/if}}">{{m.value}}</span>
+            </div>
+            {{/each}}
+        </dl>
+        {{/if}}
+        {{#each customModifiers as |m i|}}
+        <div class="modifier-row custom">
+            <input class="modifier-label" type="text" value="{{m.label}}" placeholder="{{localize "ROLL.LABEL"}}"
+                data-index="{{i}}" data-action="updateModifier" data-field="label" />
+            <input class="modifier-value" type="number" value="{{m.value}}" data-index="{{i}}"
+                data-action="updateModifier" data-field="value" />
+            <a class="modifier-remove" data-action="removeModifier" data-index="{{i}}"
+                data-tooltip="{{localize "ROLL.REMOVE"}}"
+            ><i class="fa-solid fa-xmark"></i></a>
+        </div>
+        {{/each}}
+        <button type="button" class="modifier-add" data-action="addModifier">
+            <i class="fas fa-plus"></i> {{localize "ROLL.ADD_MODIFIER"}}
+        </button>
+    </div>
+
+    <div class="target-preview">
+        <span class="chip-label">{{localize "ROLL.TARGET"}}</span>
+        <span class="preview-value" data-preview>{{previewTarget}}</span>
+    </div>
+
+    <nav class="dialog-buttons flexrow">
+        <button type="button" class="dialog-button default" data-action="roll">
+            <i class="fa-solid fa-dice-d10"></i> {{localize "ROLL.ROLL_BUTTON"}}
+        </button>
+        <button type="button" class="dialog-button" data-action="cancel">
+            {{localize "Cancel"}}
+        </button>
+    </nav>
+</div>

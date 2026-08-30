@@ -1,0 +1,24 @@
+<section class="tab {{tabs.weapons.cssClass}}" data-group="primary" data-tab="weapons">
+    <div class="stats border">
+        <h1>{{localize "TAB.WEAPONS"}}</h1>
+        {{#if mountedRows.length}}
+        <div class="inv-list weapon-mount-list">
+            {{#each mountedRows as |m i|}}
+            <div class="inv-row">
+                <span class="inv-name">{{m.name}}</span>
+                <label class="system-rating">
+                    <span class="system-rating-label">{{localize "VEHICLE.FACING"}}</span>
+                    <select name="system.mountedWeapons.{{i}}.facing">
+                        {{selectOptions ../facingChoices selected=m.facing localize=true}}
+                    </select>
+                </label>
+                <a class="inv-delete" data-action="removeMounted" data-index="{{i}}"
+                    data-tooltip="{{localize "GEAR.DELETE"}}"><i class="fa-solid fa-xmark"></i></a>
+            </div>
+            {{/each}}
+        </div>
+        {{else}}
+        <p class="untrained-hint">{{localize "VEHICLE.WEAPONS_HINT"}}</p>
+        {{/if}}
+    </div>
+</section>

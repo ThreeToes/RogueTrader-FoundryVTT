@@ -1,8 +1,10 @@
 import { Character } from "../../data/actor/character";
-import { rollSkill, rollSkillUntrained, rollTest } from "../../rules/adapter";
+import { rollSkill, rollSkillUntrained, rollTest, rollWeaponAttack } from "../../rules/adapter";
+import { deriveCapacity, resolveEncumbrance } from "../../rules/encumbrance";
 import { defaultSkillItems } from "../../rules/default-skills";
 import { getSkillCatalog } from "./skill-catalog";
 import { SkillPicker } from "./skill-picker";
+import { TalentPicker } from "./talent-picker";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -39,6 +41,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			deleteSkill: CharacterSheet.#onDeleteSkill,
 			openItem: CharacterSheet.#onOpenItem,
 			deleteItem: CharacterSheet.#onDeleteItem,
+			rollWeapon: CharacterSheet.#onRollWeapon,
+			openTalentPicker: CharacterSheet.#onOpenTalentPicker,
+			toggleEquip: CharacterSheet.#onToggleEquip,
 		},
 	};
 
@@ -62,6 +67,45 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
 		await this.actor.items.get(itemId)?.delete();
+	}
+
+	/** Roll the to-hit test for a weapon on the combat tab (v1). */
+	static async #onRollWeapon(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		if (!itemId) return;
+		await rollWeaponAttack(this.actor, itemId);
+	}
+
+	static async #onOpenTalentPicker(
+		this: { actor: foundry.documents.Actor },
+	): Promise<void> {
+		await new TalentPicker({ actor: this.actor }).render({ force: true });
+	}
+
+	/**
+	 * Toggle the equip state of an inventory item: stowed -> carried (or worn
+	 * for armour); any ready state -> stowed.
+	 */
+	static async #onToggleEquip(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		if (!itemId) return;
+		const item = this.actor.items.get(itemId);
+		if (!item) return;
+		const type = item.type as string;
+		if (!(["weapon", "melee-weapon", "ranged-weapon", "armour", "gear"].includes(type))) return;
+		const current =
+			(item.system as unknown as { equipState?: string }).equipState ?? "stowed";
+		const readyState = type === "armour" ? "worn" : "carried";
+		const next = current === readyState ? "stowed" : readyState;
+		await item.update({ system: { equipState: next } });
 	}
 
 	/**
@@ -106,7 +150,8 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	): Promise<void> {
 		const name = target.dataset.name;
 		const characteristic = target.dataset.characteristic;
-		const ladder = Number(target.dataset.ladder);
+		// Template attribute is data-value on ladder buttons (see skills.hbs).
+		const ladder = Number(target.dataset.value);
 		if (!name || !characteristic || Number.isNaN(ladder)) return;
 		await this.actor.createEmbeddedDocuments("Item", [
 			{ name, type: "skill", system: { characteristic, ladder } },
@@ -351,12 +396,19 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const byType = (types: string[]) =>
 			this.actor.items
 				.filter((item) => types.includes(item.type as string))
-				.map((item) => ({
-					id: item.id,
-					name: item.name,
-					uuid: item.uuid,
-					weight: (item.system as unknown as { weight?: number }).weight ?? 0,
-				}));
+				.map((item) => {
+					const equipState = (item.system as unknown as { equipState?: string })
+						.equipState;
+					return {
+						id: item.id,
+						name: item.name,
+						uuid: item.uuid,
+						weight:
+							(item.system as unknown as { weight?: number }).weight ?? 0,
+						equipState: equipState ?? "stowed",
+						equipped: equipState === "carried" || equipState === "worn",
+					};
+				});
 		context.inventory = [
 			{
 				label: "WEAPON.HEADER",
@@ -372,11 +424,11 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const armourItems = this.actor.items.filter((item) => item.type === "armour");
 		const LOCATIONS = [
 			"head",
-			"leftArm",
+			"left-arm",
 			"body",
-			"rightArm",
-			"leftLeg",
-			"rightLeg",
+			"right-arm",
+			"left-leg",
+			"right-leg",
 		] as const;
 		context.armourLocations = Object.fromEntries(
 			LOCATIONS.map((loc) => {
@@ -388,7 +440,67 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				);
 				return [loc, { ap }];
 			}),
-		);		context.descriptionHTML =
+		);
+
+		// Combat tab: weapons from inventory with visible stats (display only;
+		// roll buttons land with the roll-damage adapter work).
+		context.weapons = this.actor.items
+			.filter(
+				(item) => item.type === "melee-weapon" || item.type === "ranged-weapon",
+			)
+			.map((item) => {
+				const sys = item.system as unknown as {
+					class: string;
+					damage?: string;
+					penetration?: number;
+					clip?: number;
+					rateOfFire?: {
+						singleShot: boolean;
+						burst: number;
+						fullAuto: number;
+					};
+				};
+				const isRanged = item.type === "ranged-weapon";
+				return {
+					id: item.id,
+					name: item.name,
+					classLabel: `CLASS.${(sys.class ?? "melee").toUpperCase()}`,
+					damage: sys.damage || "\u2013",
+					penetration: sys.penetration ?? 0,
+					isRanged,
+					rof: {
+						singleShot:
+							sys.rateOfFire?.singleShot ? "S" : "\u2013",
+							burst: sys.rateOfFire?.burst || "\u2013",
+							fullAuto:
+							sys.rateOfFire?.fullAuto || "\u2013",
+					},
+					clip: sys.clip ?? 0,
+				};
+			})
+			.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+
+		context.inventory.unshift({
+			label: "TYPES.Item.talent",
+			items: byType(["talent"]),
+			addLabel: "TALENT.ADD",
+			addAction: "openTalentPicker",
+		});
+
+		// Encumbrance v2: carried weight vs capacity - manual maxCarriage wins;
+		// otherwise derive from Strength Bonus (rules/encumbrance.ts, VERIFY book).
+		const carried = [
+			...byType(["melee-weapon", "ranged-weapon"]),
+			...byType(["armour"]),
+			...byType(["gear"]),
+		].reduce((sum, item) => sum + Number(item.weight ?? 0), 0);
+		const strengthBonus = system.characteristicBonus("s");
+		const capacity =
+			(system.maxCarriage ?? 0) > 0
+				? (system.maxCarriage ?? 0)
+				: deriveCapacity(strengthBonus);
+		context.encumbrance = resolveEncumbrance(carried, capacity);
+		context.descriptionHTML =
 			await foundry.applications.ux.TextEditor.enrichHTML(system.description, {
 				secrets: this.actor.isOwner,
 				relativeTo: this.actor,

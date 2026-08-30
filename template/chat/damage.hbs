@@ -1,32 +1,28 @@
-<div class="rogue-trader chat roll">
+<div class="rogue-trader chat damage">
     <div class="background border">
-        <h1>{{itemName}}</h1>
-        {{#each damages as |damage|}}
-            <h3 class="separator damage-location" data-location={{location}}>{{localize location}}</h3>
-            <div>
-                <p><strong>{{localize "CHAT.DAMAGE"}}:</strong> <span class="damage-total">{{damage.total}}</span> 
-                <strong class="damage-type">{{damageTypeShort ../weapon.damageType}}</strong>
-	            </p>
-	        </div>
-	        <p><strong>{{localize "CHAT.PENETRATION"}}:</strong> <span class="damage-penetration">{{penetration}}</span></p>
-	        {{#if damage.righteousFury}}
-	        <p><strong>{{localize "CHAT.RIGHTEOUS_FURY"}}:</strong> <span class="damage-righteous-fury">{{damage.righteousFury}}</span></p>
-	        {{/if}}
-	    {{/each}}
-	    <div class="dice-rolls" style="display:none">
-	        <h1>{{localize "CHAT.ROLL_TITLE"}}</h1>
-		    {{#each damages as |damage|}}
-		        <p><strong>{{localize "CHAT.DAMAGE_HEADER"}}</strong></p>
-		        <div class="dice-roll-render">
-		            {{{damage.damageRender}}}
-		        </div>
-		        {{#if damage.accurateRender}}
-		            <p><strong>{{localize "CHAT.ACCURATE_HEADER"}}</strong></p>
-		            <div class="dice-roll-render">
-		                {{{damage.accurateRender}}}
-		            </div>
-		        {{/if}}
-		    {{/each}}
-	   </div>
-    </div> 
+        <h1>{{title}}</h1>
+        {{#if hitSuccess}}
+        <div class="damage-body">
+            <p class="damage-location">
+                <strong>{{localize "WEAPON.DAMAGE_FULL"}}</strong>
+                <span class="location-label">{{localize locationLabelKey}}</span>
+            </p>
+            <p><strong>{{localize "CHAT.DAMAGE"}}:</strong>
+                <span class="damage-total">{{damage.rawRoll}}</span>
+                {{#if damage.primitiveDouble}}({{localize "CHAT.PRIMITIVE_DOUBLE"}}){{/if}}
+                &rarr; <strong class="damage-wounds">{{damage.wounds}}</strong>
+                {{localize "WOUNDS.REDUCED"}}
+            </p>
+            <p><strong>{{localize "WEAPON.PENETRATION_FULL"}}:</strong> {{damage.penApplied}}
+                &middot; <strong>{{localize "WOUNDS.ARMOUR"}}</strong> {{damage.effectiveArmour}}
+                &middot; <strong>{{localize "WOUNDS.SOAK"}}</strong> {{damage.absorbed}}</p>
+            {{#if damage.righteousFury}}
+            <p class="righteous-fury"><strong>{{localize "CHAT.RIGHTEOUS_FURY"}}!</strong></p>
+            {{/if}}
+        </div>
+        {{else}}
+        <p class="damage-miss">{{localize "DAMAGE.MISS"}}</p>
+        {{/if}}
+        <p class="damage-note">{{localize "DAMAGE.APPLY_HINT"}}</p>
+    </div>
 </div>

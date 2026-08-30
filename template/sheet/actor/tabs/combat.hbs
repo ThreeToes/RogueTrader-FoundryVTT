@@ -2,7 +2,7 @@
     <div class="combat border">
         <h1>{{localize "TAB.ARMOUR"}}</h1>
         {{#if armourLocations}}
-        <div class="armour-body" data-tooltip="ARMOUR.TOTAL_TOOLTIP">
+        <div class="armour-body" data-tooltip="{{localize "ARMOUR.TOTAL_TOOLTIP"}}">
             <div class="body-row head-row">
                 {{#with armourLocations.head}}
                 <div class="body-part head" data-location="head">
@@ -12,8 +12,8 @@
                 {{/with}}
             </div>
             <div class="body-row">
-                {{#with armourLocations.leftArm}}
-                <div class="body-part" data-location="leftArm">
+                {{#with (lookup armourLocations "left-arm")}}
+                <div class="body-part" data-location="left-arm">
                     <span class="part-label">{{localize "BODY_LOCATION.LEFT_ARM"}}</span>
                     <span class="part-ap">{{ap}}</span>
                 </div>
@@ -24,28 +24,57 @@
                     <span class="part-ap">{{ap}}</span>
                 </div>
                 {{/with}}
-                {{#with armourLocations.rightArm}}
-                <div class="body-part" data-location="rightArm">
+                {{#with (lookup armourLocations "right-arm")}}
+                <div class="body-part" data-location="right-arm">
                     <span class="part-label">{{localize "BODY_LOCATION.RIGHT_ARM"}}</span>
                     <span class="part-ap">{{ap}}</span>
                 </div>
                 {{/with}}
             </div>
             <div class="body-row legs-row">
-                {{#with armourLocations.leftLeg}}
-                <div class="body-part" data-location="leftLeg">
+                {{#with (lookup armourLocations "left-leg")}}
+                <div class="body-part" data-location="left-leg">
                     <span class="part-label">{{localize "BODY_LOCATION.LEFT_LEG"}}</span>
                     <span class="part-ap">{{ap}}</span>
                 </div>
                 {{/with}}
-                {{#with armourLocations.rightLeg}}
-                <div class="body-part" data-location="rightLeg">
+                {{#with (lookup armourLocations "right-leg")}}
+                <div class="body-part" data-location="right-leg">
                     <span class="part-label">{{localize "BODY_LOCATION.RIGHT_LEG"}}</span>
                     <span class="part-ap">{{ap}}</span>
                 </div>
                 {{/with}}
             </div>
         </div>
+        {{/if}}
+
+        <h1>{{localize "TAB.WEAPONS"}}</h1>
+        {{#if weapons.length}}
+        <ol class="weapon-list">
+            {{#each weapons as |w|}}
+            <li class="weapon-row" data-item-id="{{w.id}}">
+                <a class="char-roll weapon-roll" data-action="rollWeapon"
+                    data-tooltip="{{localize "WEAPON.ATTACK"}}"
+                ><i class="fa-solid fa-dice-d10"></i></a>
+                <span class="weapon-name" data-action="openItem"
+                    data-tooltip="{{localize "GEAR.OPEN_SHEET"}}"
+                >{{w.name}}</span>
+                <span class="weapon-class" data-tooltip="{{localize "WEAPON.CLASS"}}">{{localize w.classLabel}}</span>
+                <span class="weapon-stat" data-tooltip="{{localize "WEAPON.DAMAGE_FULL"}}">
+                    <i class="fa-solid fa-burst weapon-icon"></i>{{w.damage}}
+                </span>
+                <span class="weapon-stat" data-tooltip="{{localize "WEAPON.PENETRATION_FULL"}}">{{w.penetration}}</span>
+                {{#if w.isRanged}}
+                <span class="weapon-stat rof" data-tooltip="{{localize "RANGED_WEAPON.RATE_OF_FIRE"}}">
+                    {{w.rof.singleShot}}/{{w.rof.burst}}/{{w.rof.fullAuto}}
+                </span>
+                <span class="weapon-stat" data-tooltip="{{localize "RANGED_WEAPON.CLIP"}}">{{w.clip}}</span>
+                {{/if}}
+            </li>
+            {{/each}}
+        </ol>
+        {{else}}
+        <p class="untrained-hint">{{localize "COMBAT.NO_WEAPONS"}}</p>
         {{/if}}
     </div>
 </section>

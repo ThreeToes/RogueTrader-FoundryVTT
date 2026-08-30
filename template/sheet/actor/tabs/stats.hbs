@@ -25,53 +25,5 @@
             </div>
             {{/each}}
         </div>
-
-        <div class="stat-footer">
-            <div class="stat-chip">
-                <span class="chip-label">{{localize "TITLE.WOUNDS"}}</span>
-                <div class="chip-value">
-                    <input name="system.wounds.value" type="number" min="0" value="{{source.system.wounds.value}}" />
-                    <span class="chip-sep">/</span>
-                    <input name="system.wounds.max" type="number" min="0" value="{{source.system.wounds.max}}" />
-                </div>
-            </div>
-            {{#if isPC}}
-            <div class="stat-chip">
-                <span class="chip-label">{{localize "CHARACTER.FATE"}}</span>
-                <div class="chip-value">
-                    <input name="system.fate.value" type="number" min="0" value="{{source.system.fate.value}}" />
-                    <span class="chip-sep">/</span>
-                    <input name="system.fate.max" type="number" min="0" value="{{source.system.fate.max}}" />
-                </div>
-            </div>
-            {{else}}
-            <div class="stat-chip">
-                <span class="chip-label">{{localize "NPC.THREAT_LEVEL"}}</span>
-                <div class="chip-value">
-                    <input name="system.threatLevel" type="text" value="{{source.system.threatLevel}}" />
-                </div>
-            </div>
-            {{/if}}
-            <div class="stat-chip">
-                <span class="chip-label">{{localize "CHARACTER.FATIGUE"}}</span>
-                <div class="chip-value">
-                    <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
-                </div>
-            </div>
-            {{#if isPC}}
-            <div class="stat-chip">
-                <span class="chip-label">{{localize "CHARACTER.INSANITY"}}</span>
-                <div class="chip-value">
-                    <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
-                </div>
-            </div>
-            <div class="stat-chip">
-                <span class="chip-label">{{localize "CHARACTER.CORRUPTION"}}</span>
-                <div class="chip-value">
-                    <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
-                </div>
-            </div>
-            {{/if}}
-        </div>
     </div>
 </section>

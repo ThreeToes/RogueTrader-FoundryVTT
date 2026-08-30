@@ -71,6 +71,11 @@
                 "htmlFields": [
                     "description"
                 ]
+            },
+            "vehicle": {
+                "htmlFields": [
+                    "description"
+                ]
             }
         },
         "Item": {
@@ -94,7 +99,8 @@
                     "description"
                 ]
             },
-            "skill": {}
+            "skill": {},
+            "talent": {}
         }
     },
     "gridDistance": 1,

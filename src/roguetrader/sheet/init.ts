@@ -1,17 +1,22 @@
 import { Character } from "../data/actor/character";
+import { Vehicle } from "../data/actor/vehicle";
 import { Armour } from "../data/item/armour";
 import { Gear } from "../data/item/gear";
 import { MeleeWeapon } from "../data/item/melee-weapon";
 import { RangedWeapon } from "../data/item/ranged-weapon";
 import { Skill } from "../data/item/skill";
+import { Talent } from "../data/item/talent";
 import { attachRegistriesToConfig } from "../registry";
 import { rollSkill, rollTest } from "../rules/adapter";
+import { testContributors } from "../rules/funnel";
 import { defaultSkillItems } from "../rules/default-skills";
 import { CharacterSheet } from "./actor/character-sheet";
+import { VehicleSheet } from "./actor/vehicle-sheet";
 import { registerConfigHelper } from "./handlebars";
 import { ArmourSheet } from "./item/armour-sheet";
 import { GearSheet } from "./item/gear-sheet";
 import { SkillSheet } from "./item/skill-sheet";
+import { TalentSheet } from "./item/talent-sheet";
 import { WeaponSheet } from "./item/weapon-sheet";
 
 type AnySheetCtor = new (...args: unknown[]) => object;
@@ -28,13 +33,24 @@ export function sheetInit() {
 		git.rogueTrader.rollTest = rollTest;
 		git.rogueTrader.rollSkill = rollSkill;
 
+		// Module extension point for test modifiers (funnel v2, see rules/funnel.ts).
+		const rtc = CONFIG as unknown as {
+			ROGUE_TRADER?: {
+				testContributors?: typeof testContributors;
+			};
+		};
+		rtc.ROGUE_TRADER ??= {};
+		rtc.ROGUE_TRADER.testContributors = testContributors;
+
 		CONFIG.Item.dataModels.gear = Gear;
 		CONFIG.Item.dataModels["ranged-weapon"] = RangedWeapon;
 		CONFIG.Item.dataModels["melee-weapon"] = MeleeWeapon;
 		CONFIG.Item.dataModels.armour = Armour;
 		CONFIG.Item.dataModels.skill = Skill;
+		CONFIG.Item.dataModels.talent = Talent;
 		CONFIG.Actor.dataModels.pc = Character;
 		CONFIG.Actor.dataModels.npc = Character;
+		CONFIG.Actor.dataModels.vehicle = Vehicle;
 		registerConfigHelper();
 
 		const registerSheet = (
@@ -81,6 +97,12 @@ export function sheetInit() {
 			["skill"],
 			"ROGUE_TRADER.SKILL.SHEET",
 		);
+		registerSheet(
+			foundry.documents.Item,
+			TalentSheet as unknown as AnySheetCtor,
+			["talent"],
+			"ROGUE_TRADER.TALENT.SHEET",
+		);
 
 		// Pre-warm the skills pack for the createActor grant hook (the sheet
 		// backfill path loads the pack on demand and does not need this cache).
@@ -121,6 +143,12 @@ export function sheetInit() {
 			CharacterSheet as unknown as AnySheetCtor,
 			["pc", "npc"],
 			"ROGUE_TRADER.CHARACTER.SHEET",
+		);
+		registerSheet(
+			foundry.documents.Actor,
+			VehicleSheet as unknown as AnySheetCtor,
+			["vehicle"],
+			"ROGUE_TRADER.VEHICLE.SHEET",
 		);
 	});
 }

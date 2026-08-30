@@ -2,25 +2,40 @@
     <div class="inventory border">
         <h1>{{localize "TAB.INVENTORY"}}</h1>
 
-        <div class="encumbrance-bar">
+        <div class="encumbrance-bar state-{{encumbrance.state}}">
             <span class="chip-label">{{localize "INVENTORY.CAPACITY"}}</span>
             <div class="chip-value">
                 <input name="system.maxCarriage" type="number" min="0"
                     value="{{source.system.maxCarriage}}" data-tooltip="{{localize "INVENTORY.CAPACITY_HINT"}}" />
                 <span class="unit">kg</span>
             </div>
-            <span class="capacity-note" data-tooltip="{{localize "INVENTORY.CALC_NOTES"}}">
-                <i class="fa-solid fa-circle-info"></i> {{localize "INVENTORY.NOT_CALCULATED"}}
-            </span>
+            <div class="encumbrance-progress">
+                <div class="bar">
+                    <div class="fill" style="width: {{#if encumbrance.capacity}}{{encumbrance.percent}}{{else}}0{{/if}}%"></div>
+                </div>
+                <span class="encumbrance-text">{{encumbrance.weight}} / {{encumbrance.capacity}} kg ({{encumbrance.percent}}%) {{localize (concat "INVENTORY.STATE_" encumbrance.state)}}</span>
+            </div>
         </div>
 
         {{#each inventory as |group|}}
+        {{#if group.addLabel}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize group.label}}</h2>
+            <button type="button" class="ladder-option" data-action="{{group.addAction}}">
+                <i class="fas fa-plus"></i> {{localize group.addLabel}}
+            </button>
+        </div>
+        {{/if}}
         {{#if group.items.length}}
         <h2 class="inv-group-label">{{localize group.label}}</h2>
         <ol class="inv-list">
             {{#each group.items as |item|}}
             <li class="inv-row draggable" data-item-id="{{item.id}}" data-item-uuid="{{item.uuid}}">
                 <span class="inv-grab"><i class="fa-solid fa-grip-vertical"></i></span>
+                <a class="equip-toggle {{#if item.equipped}}equipped{{/if}}"
+                    data-action="toggleEquip"
+                    data-tooltip="{{localize (concat "EQUIP_STATE." item.equipState)}}"
+                ><i class="fa-solid fa-circle-check"></i></a>
                 <span class="inv-name" data-action="openItem" data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{item.name}}</span>
                 <span class="inv-weight" title="{{localize "GEAR.WEIGHT"}}">{{item.weight}} kg</span>
                 <a class="inv-delete" data-action="deleteItem" data-tooltip="{{localize "GEAR.DELETE"}}"

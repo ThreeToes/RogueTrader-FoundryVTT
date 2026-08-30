@@ -1,0 +1,81 @@
+<section class="tab {{tabs.status.cssClass}}" data-group="primary" data-tab="status">
+    <div class="stats border">
+        <h1>{{localize "TAB.STATUS"}}</h1>
+
+        <div class="armour-body">
+            <div class="body-row head-row">
+                {{#each facings as |f|}}
+                {{#if (eq f.key "front")}}
+                <div class="body-part head" data-facing="{{f.key}}">
+                    <span class="part-label">{{localize f.label}}</span>
+                    <input class="facing-ap" name="system.armour.{{f.key}}" type="number" min="0" value="{{f.ap}}" />
+                </div>
+                {{/if}}
+                {{/each}}
+            </div>
+            <div class="body-row">
+                {{#each facings as |f|}}
+                {{#if (or (eq f.key "left") (eq f.key "right"))}}
+                <div class="body-part" data-facing="{{f.key}}">
+                    <span class="part-label">{{localize f.label}}</span>
+                    <input class="facing-ap" name="system.armour.{{f.key}}" type="number" min="0" value="{{f.ap}}" />
+                </div>
+                {{/if}}
+                {{/each}}
+            </div>
+            <div class="body-row">
+                {{#each facings as |f|}}
+                {{#if (eq f.key "rear")}}
+                <div class="body-part head" data-facing="{{f.key}}">
+                    <span class="part-label">{{localize f.label}}</span>
+                    <input class="facing-ap" name="system.armour.{{f.key}}" type="number" min="0" value="{{f.ap}}" />
+                </div>
+                {{/if}}
+                {{/each}}
+            </div>
+            <div class="body-row legs-row">
+                {{#each facings as |f|}}
+                {{#if (or (eq f.key "top") (eq f.key "bottom"))}}
+                <div class="body-part" data-facing="{{f.key}}">
+                    <span class="part-label">{{localize f.label}}</span>
+                    <input class="facing-ap" name="system.armour.{{f.key}}" type="number" min="0" value="{{f.ap}}" />
+                </div>
+                {{/if}}
+                {{/each}}
+            </div>
+        </div>
+
+        {{#if systemRows.length}}
+        <div class="systems-block">
+            <h2 class="inv-group-label">{{localize "VEHICLE.SYSTEMS"}}</h2>
+            {{#each systemRows as |s|}}
+            <div class="inv-row system-row">
+                <span class="inv-name">{{localize s.label}}</span>
+                <label class="system-rating">
+                    <span class="system-rating-label">{{localize "VEHICLE.RATING"}}</span>
+                    <input name="system.systems.{{s.key}}.rating" type="number" min="0" value="{{s.rating}}" />
+                </label>
+                <label class="system-damaged">
+                    <input type="checkbox" name="system.systems.{{s.key}}.damaged" {{checked s.damaged}} />
+                    <span>{{localize "VEHICLE.DAMAGED"}}</span>
+                </label>
+            </div>
+            {{/each}}
+        </div>
+        {{/if}}
+
+        <div class="crew-block">
+            <h2 class="inv-group-label">{{localize "VEHICLE.CREW"}}</h2>
+            {{#if crewRows.length}}
+            {{#each crewRows as |c|}}
+            <div class="inv-row" data-uuid="{{c.uuid}}">
+                <span class="inv-name">{{c.name}}</span>
+                <a class="inv-delete" data-action="removeCrew" data-tooltip="{{localize "GEAR.DELETE"}}"><i class="fa-solid fa-xmark"></i></a>
+            </div>
+            {{/each}}
+            {{else}}
+            <p class="untrained-hint">{{localize "VEHICLE.CREW_HINT"}}</p>
+            {{/if}}
+        </div>
+    </div>
+</section>

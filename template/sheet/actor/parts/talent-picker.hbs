@@ -1,0 +1,16 @@
+<div class="skill-picker">
+    <div class="catalog">
+        <h2>{{localize "TALENT.CATALOG"}}</h2>
+        {{#each catalog as |talent|}}
+        <div class="catalog-row {{#if talent.owned}}owned{{/if}}">
+            <span class="name">{{talent.name}}</span>
+            {{#if talent.owned}}
+            <span class="owned-marker">{{localize "SKILL.OWNED"}}</span>
+            {{else}}
+            <a class="add-row" data-action="addCatalog" data-key="{{talent.key}}"
+                data-tooltip="{{localize "TALENT.ADD"}}"><i class="fas fa-plus"></i></a>
+            {{/if}}
+        </div>
+        {{/each}}
+    </div>
+</div>

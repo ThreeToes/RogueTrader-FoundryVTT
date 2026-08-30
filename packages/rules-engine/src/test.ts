@@ -60,3 +60,12 @@ export function resolveTest(request: TestRequest): TestOutcome {
 		critical: profile.critOnDouble && success && double,
 	};
 }
+
+/**
+ * Hit location from the to-hit d100 tens digit, per the profile's table.
+ * Pure table lookup; falls back to "body" for unknown digits.
+ */
+export function locationForHit(hitRoll: number, profile: RuleProfile): string {
+	const tens = String(Math.floor(Math.abs(hitRoll) / 10) % 10);
+	return profile.hitLocations?.[tens] ?? "body";
+}

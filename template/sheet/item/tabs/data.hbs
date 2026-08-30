@@ -14,6 +14,12 @@
                     {{selectOptions (config "availability") selected=source.system.availability localize=true}}
                 </select>
             </div>
+            <div class="stat equip-state">
+                <label>{{localize "GEAR.EQUIP_STATE"}}</label>
+                <select name="system.equipState">
+                    {{selectOptions (config "equipStates") selected=source.system.equipState localize=true}}
+                </select>
+            </div>
             <div class="stat weight">
                 <label>{{localize "GEAR.WEIGHT"}}</label>
                 <input name="system.weight" type="number" value="{{source.system.weight}}" />

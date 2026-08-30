@@ -1,0 +1,35 @@
+<section class="tab {{tabs.data.cssClass}}" data-group="primary" data-tab="data">
+    <div class="stats border">
+        <h1>{{localize "TALENT.HEADER"}}</h1>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "TALENT.CATEGORY"}}</label>
+                <select name="system.category">
+                    {{selectOptions categoryChoices selected=source.system.category localize=true}}
+                </select>
+            </div>
+            <div class="stat">
+                <label>{{localize "GEAR.SHORT_DESCRIPTION"}}</label>
+                <input name="system.shortDescription" type="text"
+                    value="{{source.system.shortDescription}}" />
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat talents-effects">
+                <label>{{localize "TALENT.EFFECTS"}}</label>
+                <p class="untrained-hint">{{localize "TALENT.EFFECTS_HINT"}}</p>
+                {{#each source.system.effects as |effect i|}}
+                <div class="stats-row">
+                    <input name="system.effects.{{i}}.testKey" type="text" value="{{effect.testKey}}"
+                        placeholder="{{localize "TALENT.TEST_KEY"}}"
+                        data-tooltip="{{localize "TALENT.TEST_KEY_HINT"}}" />
+                    <input name="system.effects.{{i}}.value" type="number" value="{{effect.value}}"
+                        data-tooltip="{{localize "TALENT.VALUE_HINT"}}" />
+                    <input name="system.effects.{{i}}.label" type="text" value="{{effect.label}}"
+                        data-tooltip="{{localize "ROLL.LABEL"}}" />
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </div>
+</section>

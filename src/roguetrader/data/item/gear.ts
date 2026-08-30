@@ -1,3 +1,4 @@
+import { equipStates } from "../../registry";
 import { Availability } from "./availability";
 import { Craftsmanship } from "./craftsmanship";
 
@@ -12,6 +13,19 @@ export class Gear extends foundry.abstract.TypeDataModel<
 			availability: new foundry.data.fields.StringField({
 				choices: Object.values(Availability),
 				initial: Availability.Common,
+				required: true,
+				nullable: false,
+			}),
+			/**
+			 * Carrying state (item-side equip model): stowed / carried for
+			 * weapons+gear, worn for armour. Existing items default to stowed
+			 * via schema initial (no migration script needed; attacks require
+			 * the weapon to be carried, see rules/adapter). Modules add states
+			 * via CONFIG.ROGUE_TRADER.equipStates at init.
+			 */
+			equipState: new foundry.data.fields.StringField({
+				choices: equipStates.choices,
+				initial: "stowed",
 				required: true,
 				nullable: false,
 			}),

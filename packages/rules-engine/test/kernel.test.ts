@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { resolveDamage } from "../src/damage";
 import { sumModifiers } from "../src/modifier";
 import { rtCore } from "../src/profile";
-import { resolveTest } from "../src/test";
+import { locationForHit, resolveTest } from "../src/test";
 
 describe("resolveTest (rt-core)", () => {
 	test("exact target is one degree of success", () => {
@@ -81,34 +81,117 @@ describe("sumModifiers", () => {
 });
 
 describe("resolveDamage (rt-core)", () => {
-	const armour = { head: 3, body: 5 };
-
-	test("soak reduces damage per location, penetration reduces armour only", () => {
+	test("soak = effective armour + TB, pen reduces armour only", () => {
 		const outcome = resolveDamage({
 			roll: 12,
 			penetration: 2,
 			toughnessBonus: 3,
-			armour,
+			location: "body",
+			armourValue: 5,
+			profile: rtCore,
 		});
-		const body = outcome.locations.find((l) => l.location === "body")!;
-		// effective armour 5-2=3, soak 3+3=6, damage 12-6=6
-		expect(body.soak).toBe(6);
-		expect(body.damage).toBe(6);
-		// head: armour 3-2=1, soak 3+1=4 -> damage 8
-		const head = outcome.locations.find((l) => l.location === "head");
-		expect(head?.damage).toBe(8);
+		expect(outcome.effectiveArmour).toBe(3);
+		expect(outcome.soak).toBe(6);
+		expect(outcome.wounds).toBe(6);
+		expect(outcome.absorbed).toBe(6);
+		expect(outcome.penApplied).toBe(2);
 	});
 
-	test("damage never goes negative and soak never below TB", () => {
+	test("damage never negative, penetration bounded by armour", () => {
 		const outcome = resolveDamage({
 			roll: 2,
 			penetration: 5,
 			toughnessBonus: 4,
-			armour,
+			location: "head",
+			armourValue: 3,
+			profile: rtCore,
 		});
-		const body = outcome.locations.find((l) => l.location === "body")!;
-		expect(body.effectiveArmour).toBe(0);
-		expect(body.soak).toBe(4);
-		expect(body.damage).toBe(0);
+		expect(outcome.penApplied).toBe(3);
+		expect(outcome.effectiveArmour).toBe(0);
+		expect(outcome.soak).toBe(4);
+		expect(outcome.wounds).toBe(0);
+	});
+
+	test("righteous fury flags damaging hits only", () => {
+		const damaging = resolveDamage({
+			roll: 10,
+			toughnessBonus: 1,
+			location: "body",
+			armourValue: 0,
+			profile: rtCore,
+		});
+		expect(damaging.righteousFury).toBe(true);
+
+		const soaked = resolveDamage({
+			roll: 10,
+			toughnessBonus: 4,
+			location: "body",
+			armourValue: 6,
+			profile: rtCore,
+		});
+		expect(soaked.righteousFury).toBe(false);
+	});
+
+	test("primitive armour rule doubles wounds (non-primitive vs primitive armour)", () => {
+		const request = {
+			roll: 4,
+			penetration: 0,
+			toughnessBonus: 0,
+			location: "body",
+			armourValue: 2,
+			weaponPrimitive: false,
+			armourPrimitive: true,
+			profile: rtCore,
+		};
+		const doubled = resolveDamage(request);
+		expect(doubled.primitiveDouble).toBe(true);
+		expect(doubled.wounds).toBe(4);
+
+		const plain = resolveDamage({
+			...request,
+			profile: { ...rtCore, primitiveArmourDouble: false },
+		});
+		expect(plain.primitiveDouble).toBe(false);
+		expect(plain.wounds).toBe(2);
+	});
+
+	test("primitive weapons never trigger primitive-armour doubling", () => {
+		const outcome = resolveDamage({
+			roll: 6,
+			toughnessBonus: 0,
+			location: "body",
+			armourValue: 2,
+			weaponPrimitive: true,
+			armourPrimitive: true,
+			profile: rtCore,
+		});
+		expect(outcome.primitiveDouble).toBe(false);
+		expect(outcome.wounds).toBe(4);
+	});
+
+	test("kernel flags, not resolves: no HP concepts leak in", () => {
+		const outcome = resolveDamage({
+			roll: 8,
+			toughnessBonus: 2,
+			location: "body",
+			armourValue: 3,
+			profile: rtCore,
+		});
+		expect(outcome.wounds).toBe(3);
+		expect(Object.keys(outcome)).not.toContain("actor");
+	});
+});
+
+describe("locationForHit (rt-core)", () => {
+	test("tens digit maps through the profile table", () => {
+		expect(locationForHit(10, rtCore)).toBe("head");
+		expect(locationForHit(23, rtCore)).toBe("right-arm");
+		expect(locationForHit(66, rtCore)).toBe("body");
+		expect(locationForHit(89, rtCore)).toBe("right-leg");
+		expect(locationForHit(5, rtCore)).toBe("left-leg");
+	});
+
+	test("unknown digits fall back to body", () => {
+		expect(locationForHit(5, { ...rtCore, hitLocations: {} })).toBe("body");
 	});
 });

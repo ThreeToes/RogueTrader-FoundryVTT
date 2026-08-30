@@ -4,7 +4,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "gear"],
-		position: { width: 500, height: 369 },
+		position: { width: 500, height: "auto" },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 	};

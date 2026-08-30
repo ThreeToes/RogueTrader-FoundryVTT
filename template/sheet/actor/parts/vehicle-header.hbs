@@ -1,0 +1,45 @@
+<div class="header border">
+    <div class="header-grid">
+        <div class="header-portrait">
+            <img class="profile-img" src="{{document.img}}" data-action="editImage" data-field="img"
+                alt="{{document.name}}" title="{{document.name}}" />
+        </div>
+        <div class="header-line line-1">
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.NAME"}}</label>
+                <input name="name" type="text" value="{{document.name}}" />
+            </div>
+            <div class="header-cell">
+                <label>{{localize "VEHICLE.CLASS"}}</label>
+                <select name="system.vehicleClass">
+                    {{selectOptions classChoices selected=source.system.vehicleClass localize=true}}
+                </select>
+            </div>
+            <div class="header-cell">
+                <label>{{localize "VEHICLE.SIZE"}}</label>
+                <input name="system.size" type="text" value="{{source.system.size}}" />
+            </div>
+        </div>
+        <div class="header-line line-2">
+            <div class="header-cell">
+                <label>{{localize "VEHICLE.STRUCTURAL_INTEGRITY"}}</label>
+                <div class="paired">
+                    <input name="system.structuralIntegrity.value" type="number" min="0"
+                        value="{{source.system.structuralIntegrity.value}}" />
+                    <span class="pair-sep">/</span>
+                    <input name="system.structuralIntegrity.max" type="number" min="0"
+                        value="{{source.system.structuralIntegrity.max}}" />
+                </div>
+            </div>
+            <div class="header-cell">
+                <label>{{localize "VEHICLE.HANDLING"}}</label>
+                <input name="system.handling" type="number" min="-100" max="100"
+                    value="{{source.system.handling}}" />
+            </div>
+            <div class="header-cell">
+                <label>{{localize "VEHICLE.SPEED"}}</label>
+                <input name="system.speed" type="number" min="0" value="{{source.system.speed}}" />
+            </div>
+        </div>
+    </div>
+</div>

@@ -71,9 +71,28 @@ terminology has not been native-review-checked here.
 Visual conventions (palette, typography, layout patterns, sizing): see
 [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md) — match its tokens whenever restyling.
 
+**i18n audit checklist** (rerunnable, per bead 201): (1) extract `localize ""`
+from all `template/**.hbs` + `i18n.localize|format ""` from `src/**` + quoted
+registry-family keys; (2) diff against `en` — every used key must exist there;
+(3) diff `en` against `es/fr/pl` — every used or registry-family key must exist
+in all four; (4) treat registry-seeded key families (QUALITY.*, CLASS.*,
+BODY_LOCATION.*, VEHICLE_*, TALENT*, EQUIP_STATE.*) as used-by-construction;
+(5) check duplicate keys per file (JSON parsers silently swallow them);
+(6) legacy DH-fork keys exist that are unused but NOT deleted (risky) — flagged
+in bead 201. Re-run after every lang edit and before releases.
+
 ## 8. Verification discipline
 
 `bun` tests green + bundle built + biome clean does **NOT** prove Foundry-runtime
 behavior. UI/lifecycle changes require a live-world check per
 [QA-CHECKLIST.md](QA-CHECKLIST.md), or an explicit
 `UNVERIFIED IN WORLD: <what to check>` note when closing the bead. Never silently.
+
+## 9. data-action attribute pairing convention
+
+Action handlers read state from `target.dataset.*`. The template's `data-*`
+attribute names MUST exactly match what the handler reads — a mismatch is a
+silent no-op (e.g. `data-value` vs `dataset.ladder` broke every skill ladder
+button). When adding an action: write the handler first, copy its expected
+dataset keys into the template, then grep the template for that `data-action`
+to confirm every call site supplies them.

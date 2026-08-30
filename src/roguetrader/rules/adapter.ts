@@ -1,12 +1,16 @@
 import type { Actor } from "fvtt-types/documents";
 import {
+	locationForHit,
 	type Modifier,
+	resolveDamage,
 	resolveTest,
 	rtCore,
 	sumModifiers,
+	type TestOutcome,
 } from "../../../packages/rules-engine/src/index";
 import type { Character } from "../../data/actor/character";
-import { collectTestModifiers } from "./funnel";
+import { TestDialog } from "./test-dialog";
+import { collectTestModifiers, type TestKind } from "./funnel";
 
 /**
  * Thin Foundry adapter: the ONLY runtime Foundry-coupled rolling code.
@@ -35,31 +39,20 @@ export async function rollTest(
 		return;
 	}
 
-	const modifiers = [...(options.modifiers ?? [])];
+	let modifiers = [...(options.modifiers ?? [])];
+	const title = `${actor.name} — ${game.i18n.localize(`CHARACTERISTIC.${key.toUpperCase()}`)}`;
 
 	if (!options.skipDialog) {
-		const input = await foundry.applications.api.DialogV2.input({
-			window: {
-				title: `${actor.name} — ${game.i18n.localize(`CHARACTERISTIC.${key.toUpperCase()}`)}`,
-			},
-			content: `<input name="modifier" type="number" step="10" value="0" min="-100" max="100"
-				placeholder="${game.i18n.localize("ROLL.MODIFIERS")}">`,
-			ok: { label: "OK" },
+		const result = await TestDialog.show({
+			title,
+			baseTarget: characteristic.value,
+			contributors: modifiers,
 		});
-		if (input === null) return;
-		const value = Number(input);
-		if (Number.isFinite(value) && value !== 0) {
-			modifiers.push({
-				id: "dialog",
-				source: { type: "dialog", label: game.i18n.localize("ROLL.DIALOG") },
-				label: game.i18n.localize("ROLL.DIALOG"),
-				value,
-			});
-		}
+		if (result === null) return;
+		modifiers = result.modifiers;
 	}
 
-	const title = `${actor.name} — ${game.i18n.localize(`CHARACTERISTIC.${key.toUpperCase()}`)}`;
-	await postTest(actor, title, characteristic.value, modifiers);
+	await postTest(actor, title, characteristic.value, modifiers, "characteristic", key);
 }
 
 /**
@@ -71,8 +64,15 @@ export async function postTest(
 	title: string,
 	baseTarget: number,
 	modifiers: Modifier[],
+	kind: TestKind = "characteristic",
+	key = title,
+	weapon: { type: string; special?: string[] } | null = null,
 ): Promise<void> {
-	const collected = collectTestModifiers(actor, title, modifiers);
+	const collected = collectTestModifiers(
+		actor,
+		{ kind, key, weapon },
+		modifiers,
+	);
 	const totalModifier = sumModifiers(collected);
 	const target = Math.min(100, Math.max(1, baseTarget + totalModifier));
 
@@ -104,6 +104,7 @@ export async function postTest(
 		speaker: foundry.documents.ChatMessage.getSpeaker({ actor }),
 		content,
 	});
+	return outcome;
 }
 
 /**
@@ -126,14 +127,22 @@ export async function rollSkillUntrained(
 		);
 		return;
 	}
-	await postTest(actor, `${actor.name} — ${label}`, characteristic.value, [
-		{
-			id: "untrained",
-			source: { type: "skill", label: "Skill" },
-			label: game.i18n.localize("ROLL.UNTRAINED"),
-			value: -10,
-		},
-	]);
+	const kind = "skill" as const;
+	await postTest(
+		actor,
+		`${actor.name} — ${label}`,
+		characteristic.value,
+		[
+			{
+				id: "untrained",
+				source: { type: "skill", label: "Skill" },
+				label: game.i18n.localize("ROLL.UNTRAINED"),
+				value: -10,
+			},
+		],
+		kind,
+		characteristicKey,
+	);
 }
 
 /** Roll a skill item test: target = characteristic value + ladder bonus. */
@@ -164,5 +173,143 @@ export async function rollSkill(
 
 	const modifiers = [...(options.modifiers ?? [])];
 	const baseTarget = characteristic.value + (skill.ladder - 1) * 10;
-	await postTest(actor, `${actor.name} — ${item.name}`, baseTarget, modifiers);
+	await postTest(
+		actor,
+		`${actor.name} — ${item.name}`,
+		baseTarget,
+		modifiers,
+		"skill",
+		skill.characteristic,
+	);
+}
+
+/** Roll a weapon attack's to-hit test (v1: to-hit only, no damage, no equip gating). */
+export async function rollWeaponAttack(
+	actor: Actor,
+	weaponId: string,
+	options: RollTestOptions = {},
+): Promise<void> {
+	const item = actor.items.get(weaponId);
+	const type = item?.type as string | undefined;
+	if (!item || (type !== "melee-weapon" && type !== "ranged-weapon")) {
+		ui.notifications?.warn(game.i18n.localize("ROLL.UNKNOWN_SKILL"));
+		return;
+	}
+
+	// Equip-state gate: attacks require the weapon to be carried (the ready
+	// state for weapons; armour is worn and cannot attack).
+	const equipState =
+		(item.system as unknown as { equipState?: string }).equipState ?? "stowed";
+	if (equipState !== "carried") {
+		ui.notifications?.warn(
+			game.i18n.format("ROLL.NOT_CARRIED", { weapon: item.name }),
+		);
+		return;
+	}
+	const system = actor.system as unknown as Character;
+	const key = type === "melee-weapon" ? "ws" : "bs";
+	const characteristic = system.characteristics[key];
+	if (!characteristic) return;
+
+	let { modifiers = [] } = options;
+	const special = (
+		(item.system as unknown as { special?: string[] }).special ?? []
+	).map(String);
+
+	if (!options.skipDialog) {
+		const result = await TestDialog.show({
+			title: `${actor.name} — ${item.name}`,
+			baseTarget: characteristic.value,
+			contributors: modifiers,
+		});
+		if (result === null) return;
+		modifiers = result.modifiers;
+	}
+
+	const outcome = await postTest(
+		actor,
+		`${actor.name} — ${item.name}`,
+		characteristic.value,
+		modifiers,
+		"attack",
+		key,
+		{ type, special },
+	);
+
+	// Damage flow (b02/1h2): on a successful to-hit, roll the weapon damage
+	// formula, pick location from the hit roll's tens digit (profile table),
+	// and resolve vs the target's worn armour + toughness bonus. Display-only:
+	// the card reports wounds; apply-damage buttons land later.
+	if (outcome.success) {
+		const target = (
+			game as unknown as { targets?: Set<{ actor?: Actor }> }
+		).targets?.values()?.next()?.value?.actor;
+		await postWeaponDamage(actor, (target ?? actor) as Actor, item, outcome);
+	}
+}
+
+/**
+ * b02/1h2 damage handoff: roll the weapon's damage formula, determine hit
+ * location from the to-hit tens digit, resolve via the kernel against the
+ * target's worn armour and toughness bonus, and post the damage card. The
+ * card is display-only - no HP mutation (apply-damage buttons later).
+ */
+async function postWeaponDamage(
+	attacker: Actor,
+	target: Actor,
+	weapon: foundry.documents.Item,
+	hit: TestOutcome,
+): Promise<void> {
+	const weaponSys = weapon.system as unknown as {
+		damage?: string;
+		penetration?: number;
+	};
+	const damageRoll = new foundry.dice.Roll(weaponSys.damage || "1d5");
+	await damageRoll.evaluate();
+	const damageTotal = damageRoll.total ?? 0;
+
+	const location = locationForHit(hit.roll ?? 0, rtCore);
+	const wornArmour = target.items.filter(
+		(i) =>
+			(i.type as string) === "armour" &&
+			(i.system as unknown as { equipState?: string }).equipState === "worn",
+	);
+	const armourValue = Math.max(
+		0,
+		...wornArmour.map((i) =>
+			(i.system as unknown as { armourAt(loc: string): number }).armourAt(
+				location,
+			),
+		),
+	);
+	const toughnessBonus = Math.floor(
+		(
+			(target.system as unknown as Character).characteristics.t?.value ?? 0
+		) / 10,
+	);
+
+	const damage = resolveDamage({
+		roll: damageTotal,
+		penetration: weaponSys.penetration ?? 0,
+		toughnessBonus,
+		location,
+		armourValue,
+		profile: rtCore,
+	});
+
+	const locationLabelKey = `BODY_LOCATION.${location.replace(/-(.)/g, (_, c: string) => c.toUpperCase())}`;
+	const content = await foundry.applications.handlebars.renderTemplate(
+		"systems/rogue-trader/template/chat/damage.hbs",
+		{
+			title: `${attacker.name} → ${target.name} — ${weapon.name}`,
+			hitSuccess: true,
+			locationLabelKey,
+			damage,
+		},
+	);
+
+	await foundry.documents.ChatMessage.create({
+		speaker: foundry.documents.ChatMessage.getSpeaker({ actor: attacker }),
+		content,
+	});
 }

@@ -36,6 +36,147 @@
 	margin: auto;
 }
 
+/* Compact item-sheet header: small icon inline with the name field */
+
+.rogue-trader.sheet .header.compact {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 8px;
+}
+
+.rogue-trader.sheet .header.compact .profile-img {
+	width: 48px;
+	height: 48px;
+	object-fit: cover;
+	border: none;
+	flex: none;
+}
+
+.rogue-trader.sheet .header.compact .header-cell {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+/* Shared header-grid pattern (character + vehicle sheets):
+   portrait 30% column spanning all rows, N equal-spaced info lines */
+
+.rogue-trader.sheet .header .header-grid {
+	padding-bottom: 6px;
+}
+
+.rogue-trader.sheet .header-grid {
+	display: grid;
+	grid-template-columns: 30% 1fr;
+	grid-template-rows: repeat(3, auto);
+	gap: 8px 14px;
+	align-content: space-between;
+	align-items: center;
+}
+
+.rogue-trader.sheet .header-grid .header-portrait {
+	grid-row: 1 / -1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.rogue-trader.sheet .header-grid .profile-img {
+	max-width: 100%;
+	max-height: 160px;
+	width: auto;
+	height: auto;
+	object-fit: contain;
+	border: none;
+}
+
+.rogue-trader.sheet .header-line {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.rogue-trader.sheet .header-line .header-cell {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.rogue-trader.sheet .header-grid label {
+	font-size: 0.78em;
+	font-weight: bold;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: #b8860b;
+}
+
+.rogue-trader.sheet .header-cell input,
+.rogue-trader.sheet .header-cell select {
+	min-width: 0;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.rogue-trader.sheet .header-cell .paired {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.rogue-trader.sheet .paired .pair-sep {
+	color: #7a6a53;
+}
+
+/* Quality toggle-chips */
+
+.rogue-trader.sheet .chip-select {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 4px;
+	padding: 5px 6px;
+	background: rgba(0, 0, 0, 0.2);
+}
+
+.rogue-trader.sheet .chip-option {
+	display: inline-flex;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet .chip-option input {
+	position: absolute;
+	opacity: 0;
+	width: 1px;
+	height: 1px;
+}
+
+.rogue-trader.sheet .chip-option .chip {
+	font-size: 0.8em;
+	padding: 1px 8px;
+	border: 1px solid #7a6a53;
+	border-radius: 3px;
+	color: #7a6a53;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+.rogue-trader.sheet .chip-option:hover .chip {
+	border-color: #b8860b;
+	color: #b8860b;
+}
+
+.rogue-trader.sheet .chip-option input:checked + .chip {
+	background: #b8860b;
+	border-color: #b8860b;
+	color: #fff;
+}
+
 /* Design tokens: consistent labels/inputs across all system sheets */
 
 .rogue-trader.sheet .stats h1 {
@@ -101,8 +242,8 @@
 }
 
 .rogue-trader.sheet .stats-row .stat.weight input {
-	width: 4em;
-	text-align: center;
+	flex: 1;
+	min-width: 3.5em;
 }
 
 .rogue-trader.sheet .stats-row .stat.short-description {
@@ -165,6 +306,11 @@
 	padding-right: 1.1em;
 }
 
+.rogue-trader.sheet .rof-num.has-zero input {
+	color: transparent;
+	caret-color: currentColor;
+}
+
 .rogue-trader.sheet .rof-zero {
 	position: absolute;
 	left: 50%;
@@ -181,6 +327,12 @@
 	min-height: 420px;
 }
 
+.rogue-trader.sheet.gear,
+.rogue-trader.sheet.armour {
+	min-width: 480px;
+	min-height: 320px;
+}
+
 .rogue-trader.gear .tab[data-tab="notes"] .notes-editor {
 	height: 100%;
 	display: flex;
@@ -189,4 +341,68 @@
 
 .rogue-trader.gear .notes-editor prose-mirror {
 	flex-grow: 1;
+}
+
+/* Shared armour-body component (combat tab + vehicle status + armour sheet) */
+
+.rogue-trader.sheet .armour-body {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-width: 420px;
+	margin: 0 auto;
+}
+
+.rogue-trader.sheet .body-row {
+	display: flex;
+	justify-content: center;
+	gap: 8px;
+}
+
+.rogue-trader.sheet .body-row.legs-row {
+	justify-content: space-evenly;
+}
+
+.rogue-trader.sheet .body-part {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	flex: 1 1 0;
+	max-width: 120px;
+	padding: 6px 4px;
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 5px;
+	background: rgba(0, 0, 0, 0.2);
+}
+
+.rogue-trader.sheet .part-label {
+	font-size: 0.72em;
+	font-weight: bold;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: #b8860b;
+	white-space: nowrap;
+}
+
+.rogue-trader.sheet .chip-label {
+	font-size: 0.78em;
+	font-weight: bold;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: #b8860b;
+}
+
+.rogue-trader.sheet .inv-group-label {
+	margin: 8px 0 0;
+	font-size: 0.9em;
+	text-transform: uppercase;
+	color: #7a6a53;
+}
+
+.rogue-trader.sheet .inv-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0 2px 2px;
 }

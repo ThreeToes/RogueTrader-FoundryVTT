@@ -1,12 +1,11 @@
-import { Armour } from "../../data/item/armour";
-import { bodyLocations } from "../../registry";
+import { talentCategories } from "../../registry";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
-export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "armour"],
+		classes: ["rogue-trader", "sheet", "talent"],
 		position: { width: 500, height: "auto" },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
@@ -20,7 +19,7 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
 		},
 		data: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/armour-data.hbs",
+			template: "systems/rogue-trader/template/sheet/item/tabs/talent-data.hbs",
 		},
 		notes: {
 			template: "systems/rogue-trader/template/sheet/item/tabs/notes.hbs",
@@ -39,15 +38,16 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	async _prepareContext(options: object = {}) {
 		const context = await super._prepareContext(options);
-		const system = this.document.system as Armour;
-
-		// Complete per-location record so every registry location shows a box.
-		context.armourPoints = Object.fromEntries(
-			bodyLocations
-				.keys()
-				.map((location) => [location, system.armourPoints[location] ?? 0]),
-		);
-
+		context.tabs = this._prepareTabs("primary");
+		context.categoryChoices = Object.fromEntries(talentCategories.entries());
+		context.descriptionHTML =
+			await foundry.applications.ux.TextEditor.enrichHTML(
+				this.document.system.description,
+				{
+					secrets: this.document.isOwner,
+					relativeTo: this.document,
+				},
+			);
 		return context;
 	}
 }

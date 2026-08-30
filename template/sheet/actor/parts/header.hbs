@@ -1,12 +1,81 @@
-<div class="header border flex row">
-    <div class="avatar">
-        <img class="profile-img" src="{{document.img}}" data-action="editImage" data-field="img"
-            alt="{{document.name}}" title="{{document.name}}" />
-    </div>
-    <div class="flex column grow justify-center">
-        <div class="name header-row">
-            <label>{{localize "ITEM.NAME"}}</label>
-            <input name="name" type="text" value="{{document.name}}" />
+<div class="header border">
+    <div class="header-grid">
+        <div class="header-portrait">
+            <img class="profile-img" src="{{document.img}}" data-action="editImage" data-field="img"
+                alt="{{document.name}}" title="{{document.name}}" />
         </div>
+        <div class="header-line line-1">
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.NAME"}}</label>
+                <input name="name" type="text" value="{{document.name}}" data-tooltip="{{localize "CHARACTER.NAME"}}" />
+            </div>
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.CAREER"}}</label>
+                <input name="system.career" type="text" value="{{source.system.career}}"
+                    data-tooltip="{{localize "CHARACTER.CAREER"}}" />
+            </div>
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.XP"}}</label>
+                <div class="paired">
+                    <input name="system.xp.spent" type="number" min="0" value="{{source.system.xp.spent}}"
+                        data-tooltip="{{localize "CHARACTER.XP_SPENT"}}" />
+                    <span class="pair-sep">/</span>
+                    <input name="system.xp.total" type="number" min="0" value="{{source.system.xp.total}}"
+                        data-tooltip="{{localize "CHARACTER.XP_TOTAL"}}" />
+                </div>
+            </div>
+        </div>
+        <div class="header-line line-2">
+            <div class="header-cell">
+                <label>{{localize "TITLE.WOUNDS"}}</label>
+                <div class="paired">
+                    <input name="system.wounds.value" type="number" min="0"
+                        value="{{source.system.wounds.value}}" />
+                    <span class="pair-sep">/</span>
+                    <input name="system.wounds.max" type="number" min="0"
+                        value="{{source.system.wounds.max}}" />
+                </div>
+            </div>
+            {{#if isPC}}
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.FATE"}}</label>
+                <div class="paired">
+                    <input name="system.fate.value" type="number" min="0"
+                        value="{{source.system.fate.value}}" />
+                    <span class="pair-sep">/</span>
+                    <input name="system.fate.max" type="number" min="0"
+                        value="{{source.system.fate.max}}" />
+                </div>
+            </div>
+            {{else}}
+            <div class="header-cell">
+                <label>{{localize "NPC.THREAT_LEVEL"}}</label>
+                <input name="system.threatLevel" type="text" value="{{source.system.threatLevel}}" />
+            </div>
+            {{/if}}
+        </div>
+        {{#if isPC}}
+        <div class="header-line line-3">
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.INSANITY"}}</label>
+                <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
+            </div>
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.CORRUPTION"}}</label>
+                <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
+            </div>
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.FATIGUE"}}</label>
+                <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
+            </div>
+        </div>
+        {{else}}
+        <div class="header-line line-3">
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.FATIGUE"}}</label>
+                <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
+            </div>
+        </div>
+        {{/if}}
     </div>
 </div>

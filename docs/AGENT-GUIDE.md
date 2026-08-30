@@ -68,6 +68,9 @@ All new keys go into **en, es, fr, pl in one change**. Missing keys fall back to
 Best-effort translations of es/fr/pl should be flagged as such — machine translation
 terminology has not been native-review-checked here.
 
+Visual conventions (palette, typography, layout patterns, sizing): see
+[DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md) — match its tokens whenever restyling.
+
 ## 8. Verification discipline
 
 `bun` tests green + bundle built + biome clean does **NOT** prove Foundry-runtime

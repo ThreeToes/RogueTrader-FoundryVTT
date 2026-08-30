@@ -1,0 +1,51 @@
+<section class="tab {{tabs.combat.cssClass}}" data-group="primary" data-tab="combat">
+    <div class="combat border">
+        <h1>{{localize "TAB.ARMOUR"}}</h1>
+        {{#if armourLocations}}
+        <div class="armour-body" data-tooltip="ARMOUR.TOTAL_TOOLTIP">
+            <div class="body-row head-row">
+                {{#with armourLocations.head}}
+                <div class="body-part head" data-location="head">
+                    <span class="part-label">{{localize "BODY_LOCATION.HEAD"}}</span>
+                    <span class="part-ap">{{ap}}</span>
+                </div>
+                {{/with}}
+            </div>
+            <div class="body-row">
+                {{#with armourLocations.leftArm}}
+                <div class="body-part" data-location="leftArm">
+                    <span class="part-label">{{localize "BODY_LOCATION.LEFT_ARM"}}</span>
+                    <span class="part-ap">{{ap}}</span>
+                </div>
+                {{/with}}
+                {{#with armourLocations.body}}
+                <div class="body-part body-torso" data-location="body">
+                    <span class="part-label">{{localize "BODY_LOCATION.BODY"}}</span>
+                    <span class="part-ap">{{ap}}</span>
+                </div>
+                {{/with}}
+                {{#with armourLocations.rightArm}}
+                <div class="body-part" data-location="rightArm">
+                    <span class="part-label">{{localize "BODY_LOCATION.RIGHT_ARM"}}</span>
+                    <span class="part-ap">{{ap}}</span>
+                </div>
+                {{/with}}
+            </div>
+            <div class="body-row legs-row">
+                {{#with armourLocations.leftLeg}}
+                <div class="body-part" data-location="leftLeg">
+                    <span class="part-label">{{localize "BODY_LOCATION.LEFT_LEG"}}</span>
+                    <span class="part-ap">{{ap}}</span>
+                </div>
+                {{/with}}
+                {{#with armourLocations.rightLeg}}
+                <div class="body-part" data-location="rightLeg">
+                    <span class="part-label">{{localize "BODY_LOCATION.RIGHT_LEG"}}</span>
+                    <span class="part-ap">{{ap}}</span>
+                </div>
+                {{/with}}
+            </div>
+        </div>
+        {{/if}}
+    </div>
+</section>

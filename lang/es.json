@@ -242,6 +242,7 @@
     "SPECIAL_ABILITY.BENEFIT": "Beneficio",
     "TAB.STATS": "STATS",
     "TAB.COMBAT": "COMBATE",
+    "TAB.ARMOUR": "ARMADURA",
     "TAB.ABILITIES": "HABILIDADES",
     "TAB.PSYCHIC_POWERS": "PSIQUÍCO",
     "TAB.GEAR": "EQUIPO",
@@ -421,5 +422,12 @@
     "ROLL.UNTRAINED": "Sin entrenar (-10)",
     "CHARACTER.UNNATURAL": "No natural",
     "CHARACTER.BONUS_TOOLTIP": "Bonus derivado: +{bonus}",
-    "CHARACTER.UNNATURAL_TOOLTIP": "No natural: x{mult}"
+    "CHARACTER.UNNATURAL_TOOLTIP": "No natural: x{mult}",
+    "TAB.INVENTORY": "INVENTARIO",
+    "INVENTORY.CAPACITY": "Capacidad de carga",
+    "INVENTORY.CAPACITY_HINT": "Peso máximo que puede llevar el personaje (entrada manual hasta que llegue la automatización)",
+    "INVENTORY.NOT_CALCULATED": "Sobrecarga aún no calculada",
+    "INVENTORY.CALC_NOTES": "Los pesos agregados y los estados de sobrecarga llegarán con una actualización posterior de reglas.",
+    "GEAR.OPEN_SHEET": "Abrir ficha del objeto",
+    "GEAR.DELETE": "Borrar"
 }

@@ -285,6 +285,7 @@
     "SPECIAL_ABILITY.BENEFIT": "Benefit",
     "TAB.STATS": "Statystyka",
     "TAB.COMBAT": "WALKA",
+    "TAB.ARMOUR": "PANCERZ",
     "TAB.ABILITIES": "UMIEJĘTNOŚCI",
     "TAB.PSYCHIC_POWERS": "PSIONICZNE",
     "TAB.GEAR": "WYPOSAŻENIE",
@@ -481,5 +482,12 @@
     "ROLL.UNTRAINED": "Bez treningu (-10)",
     "CHARACTER.UNNATURAL": "Nienaturalna",
     "CHARACTER.BONUS_TOOLTIP": "Premia pochodna: +{bonus}",
-    "CHARACTER.UNNATURAL_TOOLTIP": "Nienaturalna: x{mult}"
+    "CHARACTER.UNNATURAL_TOOLTIP": "Nienaturalna: x{mult}",
+    "TAB.INVENTORY": "EKWIPUNEK",
+    "INVENTORY.CAPACITY": "Udźwig",
+    "INVENTORY.CAPACITY_HINT": "Maksymalna waga jaką postać może nieść (ręcznie, do czasu automatyzacji)",
+    "INVENTORY.NOT_CALCULATED": "Obciążenie jeszcze nie liczone",
+    "INVENTORY.CALC_NOTES": "Zagregowane wagi i stany obciążenia pojawią się w późniejszej aktualizacji zasad.",
+    "GEAR.OPEN_SHEET": "Otwórz kartę przedmiotu",
+    "GEAR.DELETE": "Usuń"
 }

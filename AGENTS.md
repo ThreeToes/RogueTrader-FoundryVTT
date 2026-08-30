@@ -11,6 +11,9 @@ This project is to create a system for FoundryVTT for the Rogue Trader RPG.
 - Use `bun run lint` before declaring any typescript changes done
 - When implementing UIs, always make sure the window is resizable
 - When modifying i18n strings, update all different translations
+- **DO NOT** invoke bash if you have a tool available to achieve your goal
+- **DO NOT** invoke bash or write scripts to edit files, use built in
+  editing tools instead
 
 ## Beads Issue Tracker
 
@@ -22,7 +25,8 @@ This project uses **bd (beads)** for issue tracking. Review available tools for 
 
 ## Agent Context Profiles
 
-Agent onboarding: see [docs/AGENT-GUIDE.md](docs/AGENT-GUIDE.md). Before closing UI or
+Agent onboarding: see [docs/AGENT-GUIDE.md](docs/AGENT-GUIDE.md) and the visual
+conventions in [docs/DESIGN-LANGUAGE.md](docs/DESIGN-LANGUAGE.md). Before closing UI or
 lifecycle beads, run the manual pass in [docs/QA-CHECKLIST.md](docs/QA-CHECKLIST.md).
 
 The managed Beads block is task-tracking guidance, not permission to override repository, user, or orchestrator instructions.

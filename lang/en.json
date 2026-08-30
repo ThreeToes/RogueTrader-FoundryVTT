@@ -392,6 +392,7 @@
     "SPECIAL_ABILITY.BENEFIT": "Benefit",
     "TAB.STATS": "STATS",
     "TAB.COMBAT": "COMBAT",
+    "TAB.ARMOUR": "ARMOUR",
     "TAB.ABILITIES": "ABILITIES",
     "TAB.PSYCHIC_POWERS": "PSYCHIC",
     "TAB.GEAR": "GEAR",
@@ -526,5 +527,12 @@
     "ROLL.UNTRAINED": "Untrained (-10)",
     "CHARACTER.UNNATURAL": "Unnatural",
     "CHARACTER.BONUS_TOOLTIP": "Derived bonus: +{bonus}",
-    "CHARACTER.UNNATURAL_TOOLTIP": "Unnatural: x{mult}"
+    "CHARACTER.UNNATURAL_TOOLTIP": "Unnatural: x{mult}",
+    "TAB.INVENTORY": "INVENTORY",
+    "INVENTORY.CAPACITY": "Carrying Capacity",
+    "INVENTORY.CAPACITY_HINT": "Maximum weight the character can carry (manual entry until automation lands)",
+    "INVENTORY.NOT_CALCULATED": "Encumbrance not calculated yet",
+    "INVENTORY.CALC_NOTES": "Aggregated item weights and encumbrance states come with a later rules update.",
+    "GEAR.OPEN_SHEET": "Open item sheet",
+    "GEAR.DELETE": "Delete"
 }

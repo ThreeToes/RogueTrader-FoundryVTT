@@ -256,6 +256,7 @@
     "SPECIAL_ABILITY.BENEFIT": "Effet",
     "TAB.STATS": "Caractéristiques",
     "TAB.COMBAT": "Combat",
+    "TAB.ARMOUR": "ARMURE",
     "TAB.ABILITIES": "Capacités",
     "TAB.PSYCHIC_POWERS": "Psyker",
     "TAB.GEAR": "Équipement",
@@ -435,5 +436,12 @@
     "ROLL.UNTRAINED": "Non entraîné (-10)",
     "CHARACTER.UNNATURAL": "Non naturel",
     "CHARACTER.BONUS_TOOLTIP": "Bonus dérivé : +{bonus}",
-    "CHARACTER.UNNATURAL_TOOLTIP": "Non naturel : x{mult}"
+    "CHARACTER.UNNATURAL_TOOLTIP": "Non naturel : x{mult}",
+    "TAB.INVENTORY": "INVENTAIRE",
+    "INVENTORY.CAPACITY": "Capacité de chargement",
+    "INVENTORY.CAPACITY_HINT": "Poids maximum porté par le personnage (saisie manuelle en attendant l'automatisation)",
+    "INVENTORY.NOT_CALCULATED": "Encombrement pas encore calculé",
+    "INVENTORY.CALC_NOTES": "Les poids agrégés et les états d'encombrement arriveront avec une mise à jour ultérieure des règles.",
+    "GEAR.OPEN_SHEET": "Ouvrir la fiche de l'objet",
+    "GEAR.DELETE": "Supprimer"
 }

@@ -36,6 +36,47 @@
 	margin: auto;
 }
 
+/* Design tokens: consistent labels/inputs across all system sheets */
+
+.rogue-trader.sheet .stats h1 {
+	margin-bottom: 8px;
+}
+
+.rogue-trader.sheet .stats-row .stat > label,
+.rogue-trader.sheet .rate-of-fire > label {
+	font-size: 0.78em;
+	font-weight: bold;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: #b8860b;
+}
+
+.rogue-trader.sheet .stats-row input,
+.rogue-trader.sheet .stats-row select {
+	border-radius: 3px;
+}
+
+/* Rows: scoped to all sheets so weapons/armour get them too */
+
+.rogue-trader.sheet .stats-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 4px;
+}
+
+.rogue-trader.sheet .stats-row .stat {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+}
+
+.rogue-trader.sheet .grow-2 {
+	flex: 2 1 0;
+}
+
 .rogue-trader.gear .stats {
 	align-content: baseline;
 }
@@ -54,18 +95,90 @@
 	flex: 1;
 }
 
-.rogue-trader.gear .stats-row .stat.craftsmanship select,
-.rogue-trader.gear .stats-row .stat.availability select {
-	width: 8em;
+.rogue-trader.sheet .stats-row .stat.craftsmanship select,
+.rogue-trader.sheet .stats-row .stat.availability select {
+	width: 100%;
 }
 
-.rogue-trader.gear .stats-row .stat.weight input {
+.rogue-trader.sheet .stats-row .stat.weight input {
 	width: 4em;
 	text-align: center;
 }
 
-.rogue-trader.gear .stats-row .stat.short-description {
+.rogue-trader.sheet .stats-row .stat.short-description {
 	flex: 1;
+}
+
+/* Rate-of-fire composite group: book format S/2/3 */
+
+.rogue-trader.sheet .rof-composite {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 4px;
+	padding: 3px 10px;
+	background: rgba(0, 0, 0, 0.2);
+}
+
+.rogue-trader.sheet .rof-single {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet .rof-single input {
+	position: absolute;
+	opacity: 0;
+	width: 1px;
+	height: 1px;
+}
+
+.rogue-trader.sheet .rof-s {
+	font-weight: bold;
+	font-size: 1.05em;
+	color: #b8860b;
+	line-height: 1.4;
+}
+
+.rogue-trader.sheet .rof-s.off {
+	color: #5a4f3f;
+}
+
+.rogue-trader.sheet .rof-sep {
+	color: #7a6a53;
+	font-weight: bold;
+}
+
+.rogue-trader.sheet .rof-num {
+	position: relative;
+	display: inline-flex;
+}
+
+.rogue-trader.sheet .rof-num input {
+	width: 2.4em;
+	text-align: center;
+	border: none;
+	background: transparent;
+	font-weight: bold;
+	padding-right: 1.1em;
+}
+
+.rogue-trader.sheet .rof-zero {
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	color: #5a4f3f;
+	font-weight: bold;
+	pointer-events: none;
+}
+
+/* min window sizes */
+
+.rogue-trader.sheet.weapon {
+	min-width: 500px;
+	min-height: 420px;
 }
 
 .rogue-trader.gear .tab[data-tab="notes"] .notes-editor {

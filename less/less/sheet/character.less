@@ -226,24 +226,7 @@
 }
 
 
-/* Unnatural pips: suffix cluster, hidden at natural unless row hovered */
-
-.rogue-trader.sheet.character .unnatural-pips {
-	display: inline-flex;
-	gap: 3px;
-	align-items: center;
-}
-
-.rogue-trader.sheet.character .unnatural-pips:not(.has-mult),
-.rogue-trader.sheet.character .unnatural-pips:not(.has-mult) .pip {
-	visibility: hidden;
-}
-
-.rogue-trader.sheet.character .characteristic:hover .unnatural-pips,
-.rogue-trader.sheet.character .characteristic:hover .unnatural-pips .pip {
-	visibility: visible;
-}
-
+/* Unnatural pips: always visible with new 2-column layout */
 .rogue-trader.sheet.character .unnatural-pips .pip {
 	appearance: none;
 	flex: none;
@@ -263,6 +246,157 @@
 
 .rogue-trader.sheet.character .unnatural-pips .pip.lit {
 	background: #b8860b;
+}
+
+/* Combat tab: armour body layout */
+
+.rogue-trader.sheet.character .combat h1 {
+	margin-bottom: 8px;
+}
+
+.rogue-trader.sheet.character .armour-body {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-width: 420px;
+	margin: 0 auto;
+}
+
+.rogue-trader.sheet.character .body-row {
+	display: flex;
+	justify-content: center;
+	gap: 8px;
+}
+
+.rogue-trader.sheet.character .body-row.legs-row {
+	justify-content: space-evenly;
+}
+
+.rogue-trader.sheet.character .body-part {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	flex: 1 1 0;
+	max-width: 120px;
+	padding: 6px 4px;
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 5px;
+	background: rgba(0, 0, 0, 0.2);
+}
+
+.rogue-trader.sheet.character .body-part.head,
+.rogue-trader.sheet.character .body-part.body-torso {
+	flex: 1 1 0;
+}
+
+.rogue-trader.sheet.character .part-label {
+	font-size: 0.72em;
+	font-weight: bold;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: #b8860b;
+	white-space: nowrap;
+}
+
+.rogue-trader.sheet.character .part-ap {
+	font-size: 1.15em;
+	font-weight: bold;
+}
+
+.rogue-trader.sheet.character .body-part[data-location="head"] {
+	min-width: 90px;
+}
+
+/* Inventory tab */
+
+.rogue-trader.sheet.character .inventory h1 {
+	margin-bottom: 8px;
+}
+
+.rogue-trader.sheet.character .encumbrance-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 8px;
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 5px;
+	background: rgba(0, 0, 0, 0.2);
+	margin-bottom: 10px;
+}
+
+.rogue-trader.sheet.character .encumbrance-bar .chip-value input {
+	width: 4em;
+	text-align: center;
+}
+
+.rogue-trader.sheet.character .encumbrance-bar .unit {
+	color: #7a6a53;
+	font-size: 0.85em;
+}
+
+.rogue-trader.sheet.character .capacity-note {
+	font-size: 0.8em;
+	color: #7a6a53;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+}
+
+.rogue-trader.sheet.character .inv-group-label {
+	margin: 8px 0 2px;
+	font-size: 0.9em;
+	text-transform: uppercase;
+	color: #7a6a53;
+}
+
+.rogue-trader.sheet.character .inv-list {
+	padding: 0;
+	margin: 0;
+}
+
+.rogue-trader.sheet.character .inv-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0;
+	padding-left: 2px;
+}
+
+.rogue-trader.sheet.character .inv-row.draggable {
+	cursor: grab;
+}
+
+.rogue-trader.sheet.character .inv-grab {
+	color: #7a6a53;
+	width: 1.2em;
+	text-align: center;
+}
+
+.rogue-trader.sheet.character .inv-name {
+	flex: 1;
+	cursor: pointer;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.rogue-trader.sheet.character .inv-name:hover {
+	color: #b8860b;
+}
+
+.rogue-trader.sheet.character .inv-weight {
+	font-size: 0.85em;
+	color: #7a6a53;
+}
+
+.rogue-trader.sheet.character .inv-delete {
+	width: 1.2em;
+	text-align: center;
+	color: #8b5e52;
+	cursor: pointer;
 }
 
 /* Stat chip footer */

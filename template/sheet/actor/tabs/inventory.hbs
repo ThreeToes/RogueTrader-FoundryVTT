@@ -1,0 +1,34 @@
+<section class="tab {{tabs.inventory.cssClass}}" data-group="primary" data-tab="inventory">
+    <div class="inventory border">
+        <h1>{{localize "TAB.INVENTORY"}}</h1>
+
+        <div class="encumbrance-bar">
+            <span class="chip-label">{{localize "INVENTORY.CAPACITY"}}</span>
+            <div class="chip-value">
+                <input name="system.maxCarriage" type="number" min="0"
+                    value="{{source.system.maxCarriage}}" data-tooltip="{{localize "INVENTORY.CAPACITY_HINT"}}" />
+                <span class="unit">kg</span>
+            </div>
+            <span class="capacity-note" data-tooltip="{{localize "INVENTORY.CALC_NOTES"}}">
+                <i class="fa-solid fa-circle-info"></i> {{localize "INVENTORY.NOT_CALCULATED"}}
+            </span>
+        </div>
+
+        {{#each inventory as |group|}}
+        {{#if group.items.length}}
+        <h2 class="inv-group-label">{{localize group.label}}</h2>
+        <ol class="inv-list">
+            {{#each group.items as |item|}}
+            <li class="inv-row draggable" data-item-id="{{item.id}}" data-item-uuid="{{item.uuid}}">
+                <span class="inv-grab"><i class="fa-solid fa-grip-vertical"></i></span>
+                <span class="inv-name" data-action="openItem" data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{item.name}}</span>
+                <span class="inv-weight" title="{{localize "GEAR.WEIGHT"}}">{{item.weight}} kg</span>
+                <a class="inv-delete" data-action="deleteItem" data-tooltip="{{localize "GEAR.DELETE"}}"
+                ><i class="fa-solid fa-xmark"></i></a>
+            </li>
+            {{/each}}
+        </ol>
+        {{/if}}
+        {{/each}}
+    </div>
+</section>

@@ -37,8 +37,32 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			setUnnatural: CharacterSheet.#onSetUnnatural,
 			setLadder: CharacterSheet.#onSetLadder,
 			deleteSkill: CharacterSheet.#onDeleteSkill,
+			openItem: CharacterSheet.#onOpenItem,
+			deleteItem: CharacterSheet.#onDeleteItem,
 		},
 	};
+
+	static async #onOpenItem(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		if (!itemId) return;
+		const item = this.actor.items.get(itemId);
+		if (item) item.sheet?.render(true);
+	}
+
+	/** Delete an owned inventory item. */
+	static async #onDeleteItem(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		if (!itemId) return;
+		await this.actor.items.get(itemId)?.delete();
+	}
 
 	/**
 	 * Click a characteristic to roll it.
@@ -144,6 +168,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		stats: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/stats.hbs",
 		},
+		combat: {
+			template: "systems/rogue-trader/template/sheet/actor/tabs/combat.hbs",
+		},
+		inventory: {
+			template: "systems/rogue-trader/template/sheet/actor/tabs/inventory.hbs",
+		},
 		skills: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/skills.hbs",
 		},
@@ -156,12 +186,45 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		primary: {
 			tabs: [
 				{ id: "data", group: "primary", label: "TAB.STATS" },
+				{ id: "combat", group: "primary", label: "TAB.COMBAT" },
 				{ id: "skills", group: "primary", label: "TAB.SKILLS" },
+				{ id: "inventory", group: "primary", label: "TAB.INVENTORY" },
 				{ id: "notes", group: "primary", label: "TAB.NOTES" },
 			],
 			initial: "data",
 		},
 	};
+
+	/**
+	 * Inventory rows carry their item uuid; drag transfers core {type, uuid}
+	 * data so rows can be dropped onto other sheets/hotbars.
+	 */
+	protected _onDragStart(event: DragEvent): void {
+		const row = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+			"[data-item-uuid]",
+		);
+		if (!row?.dataset.itemUuid) return;
+		event.dataTransfer?.setData(
+			"text/plain",
+			JSON.stringify({ type: "Item", uuid: row.dataset.itemUuid }),
+		);
+	}
+
+	/**
+	 * Drop an external Item onto the inventory to copy it into the actor.
+	 * Drops of uuids already owned are no-ops (reordering comes later).
+	 */
+	protected async _onDrop(event: DragEvent): Promise<unknown> {
+		const data = foundry.applications.ux.TextEditor.getDragEventData(event) as {
+			type?: string;
+			uuid?: string;
+		};
+		if (data.type !== "Item" || !data.uuid) return;
+		const source = await foundry.utils.fromUuid(data.uuid);
+		if (!(source instanceof foundry.documents.Item)) return;
+		if (this.actor.items.find((item) => item.uuid === source.uuid)) return;
+		return this.actor.createEmbeddedDocuments("Item", [source.toObject()]);
+	}
 
 	/**
 	 * Lazy default-skill backfill: a pc/npc opened with zero skills receives
@@ -282,7 +345,50 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		});
 
 		context.isPC = this.actor.type === "pc";
-		context.descriptionHTML =
+
+		// Inventory: all non-skill owned items grouped by family. Weight display
+		// only - aggregation/encumbrance is deliberately NOT calculated here yet.
+		const byType = (types: string[]) =>
+			this.actor.items
+				.filter((item) => types.includes(item.type as string))
+				.map((item) => ({
+					id: item.id,
+					name: item.name,
+					uuid: item.uuid,
+					weight: (item.system as unknown as { weight?: number }).weight ?? 0,
+				}));
+		context.inventory = [
+			{
+				label: "WEAPON.HEADER",
+				items: byType(["melee-weapon", "ranged-weapon"]),
+			},
+			{ label: "ARMOUR.SHEET", items: byType(["armour"]) },
+			{ label: "GEAR.HEADER", items: byType(["gear"]) },
+		];
+
+		// Armour: highest AP per body location across owned armour items.
+		// TODO(equip-state): once item-side equipState lands (bead n7m), filter to
+		// equipped armour only. Stacking rules intentionally not modelled yet.
+		const armourItems = this.actor.items.filter((item) => item.type === "armour");
+		const LOCATIONS = [
+			"head",
+			"leftArm",
+			"body",
+			"rightArm",
+			"leftLeg",
+			"rightLeg",
+		] as const;
+		context.armourLocations = Object.fromEntries(
+			LOCATIONS.map((loc) => {
+				const ap = Math.max(
+					0,
+					...armourItems.map((item) =>
+						(item.system as unknown as { armourAt(loc: string): number }).armourAt(loc),
+					),
+				);
+				return [loc, { ap }];
+			}),
+		);		context.descriptionHTML =
 			await foundry.applications.ux.TextEditor.enrichHTML(system.description, {
 				secrets: this.actor.isOwner,
 				relativeTo: this.actor,

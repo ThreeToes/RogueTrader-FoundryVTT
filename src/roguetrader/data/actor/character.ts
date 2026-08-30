@@ -105,6 +105,14 @@ export class Character extends foundry.abstract.TypeDataModel<
 				integer: true,
 				initial: 0,
 			}),
+			/**
+			 * Carrying capacity in kg. Manual entry for now: aggregation and
+			 * encumbrance states are rules-layer work (bead nju).
+			 */
+			maxCarriage: new foundry.data.fields.NumberField({
+				min: 0,
+				initial: 0,
+			}),
 			/** NPC threat level (e.g. "Trivial", or a descriptive rating). */
 			threatLevel: new foundry.data.fields.StringField({
 				initial: "",

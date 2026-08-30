@@ -52,7 +52,8 @@ function toSourceDocument(entry: Record<string, unknown>) {
 		name: entry.name,
 		type: "Item",
 		system: entry.system ?? {},
-		effects: entry.effects ?? [],
+		effects: Array.isArray(entry.effects) ? entry.effects : [],
+		description: typeof entry.description === "string" ? entry.description : "",
 		_stats: entry._stats ?? { coreVersion: 14 },
 		flags: entry.flags ?? {},
 	};

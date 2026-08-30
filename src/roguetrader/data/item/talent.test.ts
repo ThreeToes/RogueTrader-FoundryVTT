@@ -34,15 +34,26 @@ describe("Talent data model", () => {
 		expect(talents.keys().length).toBeGreaterThan(5);
 	});
 
-	test("effectsWithTestKey matches empty testKey as wildcard", () => {
-		const t = Object.create(Talent.prototype) as Talent & {
-			effects: Array<{ testKey: string; value: number; label: string }>;
-		};
+	describe("canGrant", () => {
+		const T = Talent;
+		test("no prereq always grants", () => {
+			expect(T.canGrant(undefined, new Set())).toBe(true);
+			expect(T.canGrant("", new Set())).toBe(true);
+		});
+
+		test("prereq met only when owned", () => {
+			expect(T.canGrant("frenzy", new Set(["frenzy"]))).toBe(true);
+			expect(T.canGrant("frenzy", new Set(["hip-shooting"]))).toBe(false);
+		});
+	});
+
+	test("effectsForKind filters by kind", () => {
+		const t = Object.create(Talent.prototype) as InstanceType<typeof Talent>;
 		t.effects = [
-			{ testKey: "", value: 5, label: "All tests" },
-			{ testKey: "bs", value: 10, label: "BS only" },
+			{ kind: "test-modifier", testKey: "bs", value: 10, label: "BS only" },
+			{ kind: "wounds-max", testKey: "", value: 1, label: "Wounds" },
 		];
-		expect(t.effectsWithTestKey("ws")).toHaveLength(1);
-		expect(t.effectsWithTestKey("bs")).toHaveLength(2);
+		expect(t.effectsForKind("test-modifier")).toHaveLength(1);
+		expect(t.effectsForKind("wounds-max")).toHaveLength(1);
 	});
 });

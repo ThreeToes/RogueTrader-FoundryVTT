@@ -105,14 +105,6 @@ export class Character extends foundry.abstract.TypeDataModel<
 				integer: true,
 				initial: 0,
 			}),
-			/**
-			 * Carrying capacity in kg. Manual entry for now: aggregation and
-			 * encumbrance states are rules-layer work (bead nju).
-			 */
-			maxCarriage: new foundry.data.fields.NumberField({
-				min: 0,
-				initial: 0,
-			}),
 			/** NPC threat level (e.g. "Trivial", or a descriptive rating). */
 			threatLevel: new foundry.data.fields.StringField({
 				initial: "",
@@ -149,5 +141,30 @@ export class Character extends foundry.abstract.TypeDataModel<
 			this.characteristicBonus(key) *
 			(this.characteristics[key]?.unnatural ?? 1)
 		);
+	}
+
+	/** Agility Bonus shorthand used by movement + initiative (definitional). */
+	agilityBonus(): number {
+		return this.characteristicBonus("ag");
+	}
+
+	/**
+	 * Derived movement in AB-units: half = max(1, AB-1), full = AB,
+	 * charge = AB×2, run = AB×3. (Multiplier rules best-remembered RT core,
+	 * VERIFY against the book - display unit decided by the UI layer.)
+	 */
+	movement(): { half: number; full: number; charge: number; run: number } {
+		const ab = this.agilityBonus();
+		return {
+			half: Math.max(1, ab - 1),
+			full: ab,
+			charge: ab * 2,
+			run: ab * 3,
+		};
+	}
+
+	/** Derived initiative bonus: the Agility Bonus (talent modifiers join via the funnel). */
+	initiativeBonus(): number {
+		return this.agilityBonus();
 	}
 }

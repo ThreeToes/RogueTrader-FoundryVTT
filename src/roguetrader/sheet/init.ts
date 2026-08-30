@@ -9,6 +9,7 @@ import { Talent } from "../data/item/talent";
 import { attachRegistriesToConfig } from "../registry";
 import { rollSkill, rollTest } from "../rules/adapter";
 import { testContributors } from "../rules/funnel";
+import { talentEffectHandlers } from "../rules/talent-effects";
 import { defaultSkillItems } from "../rules/default-skills";
 import { CharacterSheet } from "./actor/character-sheet";
 import { VehicleSheet } from "./actor/vehicle-sheet";
@@ -37,10 +38,12 @@ export function sheetInit() {
 		const rtc = CONFIG as unknown as {
 			ROGUE_TRADER?: {
 				testContributors?: typeof testContributors;
+				talentEffectHandlers?: typeof talentEffectHandlers;
 			};
 		};
 		rtc.ROGUE_TRADER ??= {};
 		rtc.ROGUE_TRADER.testContributors = testContributors;
+		rtc.ROGUE_TRADER.talentEffectHandlers = talentEffectHandlers;
 
 		CONFIG.Item.dataModels.gear = Gear;
 		CONFIG.Item.dataModels["ranged-weapon"] = RangedWeapon;

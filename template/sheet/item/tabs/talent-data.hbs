@@ -20,6 +20,12 @@
                 <p class="untrained-hint">{{localize "TALENT.EFFECTS_HINT"}}</p>
                 {{#each source.system.effects as |effect i|}}
                 <div class="stats-row">
+                    <select name="system.effects.{{i}}.kind"
+                        data-tooltip="{{localize "TALENT.KIND_HINT"}}">
+                        {{#each ../kindChoices as |choice|}}
+                        <option value="{{choice}}" {{#if (eq effect.kind choice)}}selected{{/if}}>{{choice}}</option>
+                        {{/each}}
+                    </select>
                     <input name="system.effects.{{i}}.testKey" type="text" value="{{effect.testKey}}"
                         placeholder="{{localize "TALENT.TEST_KEY"}}"
                         data-tooltip="{{localize "TALENT.TEST_KEY_HINT"}}" />

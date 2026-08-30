@@ -1,4 +1,5 @@
 import { talentCategories } from "../../registry";
+import { talentEffectHandlers } from "../../rules/talent-effects";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -40,6 +41,11 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		const context = await super._prepareContext(options);
 		context.tabs = this._prepareTabs("primary");
 		context.categoryChoices = Object.fromEntries(talentCategories.entries());
+		// Effect-kind choices: test-modifier (funnel) + any registered handler kinds.
+		context.kindChoices = [
+			"test-modifier",
+			...talentEffectHandlers.kinds().filter((k) => k !== "test-modifier"),
+		];
 		context.descriptionHTML =
 			await foundry.applications.ux.TextEditor.enrichHTML(
 				this.document.system.description,

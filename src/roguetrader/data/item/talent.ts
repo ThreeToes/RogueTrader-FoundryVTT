@@ -1,4 +1,4 @@
-import { talents, talentCategories } from "../../registry";
+import { talentCategories } from "../../registry";
 
 /**
  * Talents as Items (content-as-data, mirroring Skill): actors own `talent`
@@ -19,7 +19,10 @@ export class Talent extends foundry.abstract.TypeDataModel<
 	static LOCALIZATION_PREFIXES = ["TALENT"];
 
 	declare category: string;
+	declare tier: number;
+	declare prereqTalent: string;
 	declare effects: Array<{
+		kind: string;
 		testKey: string | null;
 		value: number;
 		label: string;
@@ -39,13 +42,32 @@ export class Talent extends foundry.abstract.TypeDataModel<
 				nullable: false,
 			}),
 			/**
-			 * Test-modifier effects: {testKey: characteristic key or null for
-			 * all tests, value: additive modifier, label: breakdown text}.
-			 * Raw capture only - the funnel contributor maps these to
-			 * Modifier[] per test kind. Non-modifier effects are future work.
+			 * Effect list: {kind, testKey, value, label}. `kind` selects which
+			 * registered talentEffectHandler consumes the entry ("test-modifier"
+			 * is the funnel contributor default; other kinds are registered
+			 * handler kinds, e.g. "wounds-max"). Raw capture only.
 			 */
+			/**
+			 * Tier (1 = basic) and prerequisite talent registry key. Used by the
+			 * picker for chain gating (canGrant); rules themselves are data,
+			 * chains are defined by authors/modules. (VERIFY per-talent prereq
+			 * rules against the book before extending the seed.)
+			 */
+			tier: new foundry.data.fields.NumberField({
+				min: 1,
+				integer: true,
+				initial: 1,
+			}),
+			prereqTalent: new foundry.data.fields.StringField({
+				initial: "",
+			}),
 			effects: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.SchemaField({
+					kind: new foundry.data.fields.StringField({
+						initial: "test-modifier",
+						required: true,
+						nullable: false,
+					}),
 					testKey: new foundry.data.fields.StringField({
 						initial: "",
 					}),
@@ -66,14 +88,23 @@ export class Talent extends foundry.abstract.TypeDataModel<
 		};
 	}
 
-	/** Effects matching a test's characteristic key (or null-testKey for all). */
-	effectsWithTestKey(testKey: string): Array<{
-		testKey: string;
-		value: number;
-		label: string;
-	}> {
-		return (this.effects ?? []).filter(
-			(effect) => effect.testKey === "" || effect.testKey === testKey,
-		);
+	/** Effects fed to the test-modifier handler matching a characteristic key (or empty = all). */
+	effectsForKind(
+		kind: string,
+	): Array<{ kind: string; testKey: string | null; value: number; label: string }> {
+		return (this.effects ?? []).filter((effect) => effect.kind === kind);
+	}
+
+	/**
+	 * Whether this talent can be granted given owned talent registry keys:
+	 * met when there is no prerequisite, or when the prerequisite key is
+	 * among the owned set. Pure + testable.
+	 */
+	static canGrant(
+		prereqTalent: string | undefined,
+		ownedPrereqKeys: ReadonlySet<string>,
+	): boolean {
+		if (!prereqTalent) return true;
+		return ownedPrereqKeys.has(prereqTalent);
 	}
 }

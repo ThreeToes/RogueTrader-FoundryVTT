@@ -43,6 +43,9 @@ export class TalentPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 				.filter((item) => item.type === "talent")
 				.map((item) => item.name),
 		);
+		// NOTE(prereqs): per-entry prerequisite gating (Talent.canGrant) activates
+		// once the registry carries per-entry metadata (key -> {label, prereq} instead
+		// of key -> label only); the base seed defines no chains, so all entries grant.
 		context.catalog = talents
 			.entries()
 			.map(([key, labelKey]) => ({

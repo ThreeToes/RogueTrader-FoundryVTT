@@ -16,9 +16,10 @@
         "@biomejs/biome": "2.5.8",
         "@league-of-foundry-developers/foundry-vtt-types": "^13.341.1",
         "fvtt-types": "npm:@league-of-foundry-developers/foundry-vtt-types",
-        "less": "^4.9.0",
-        "nedb": "^1.8.0",
-        "yaml-js": "^0.3.1"
+        "less": "^4.9.0"
     },
-    "dependencies": {}
+    "dependencies": {
+        "classic-level": "3.0.0",
+        "yaml": "^2"
+    }
 }

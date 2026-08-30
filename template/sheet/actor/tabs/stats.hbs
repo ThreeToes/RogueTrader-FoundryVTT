@@ -25,5 +25,38 @@
             </div>
             {{/each}}
         </div>
+
+        <div class="stat-footer derived-row">
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "DERIVED.MOVEMENT"}}</span>
+                <div class="chip-value">
+                    <span class="derived-value"
+                        data-tooltip="{{localize "DERIVED.HINT_MOVEMENT"}}"
+                    >{{derived.half}}/{{derived.full}}/{{derived.charge}}/{{derived.run}}</span>
+                </div>
+            </div>
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "DERIVED.INITIATIVE"}}</span>
+                <div class="chip-value">
+                    <span class="derived-value">+{{derived.initiative}}</span>
+                </div>
+            </div>
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "DERIVED.WOUNDS_MAX"}}</span>
+                <div class="chip-value">
+                    <span class="derived-value"
+                        data-tooltip="{{localize "DERIVED.HINT_WOUNDS"}}"
+                    >{{derived.woundsMax}}</span>
+                </div>
+            </div>
+            <div class="stat-chip">
+                <span class="chip-label">{{localize "DERIVED.FATIGUE_MAX"}}</span>
+                <div class="chip-value">
+                    <span class="derived-value"
+                        data-tooltip="{{localize "DERIVED.HINT_FATIGUE"}}"
+                    >{{derived.fatigueMax}}</span>
+                </div>
+            </div>
+        </div>
     </div>
 </section>

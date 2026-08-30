@@ -195,6 +195,7 @@ dark-heresy.zip
 css/
 release/
 packs/
+src/packs/
 
 # Slop management
 .beads/

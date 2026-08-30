@@ -88,7 +88,32 @@ behavior. UI/lifecycle changes require a live-world check per
 [QA-CHECKLIST.md](QA-CHECKLIST.md), or an explicit
 `UNVERIFIED IN WORLD: <what to check>` note when closing the bead. Never silently.
 
-## 9. data-action attribute pairing convention
+## 9. Authoring compendium packs (local workflow)
+The packer (`bun run build:packs`, utils/compendia.ts) converts YAML to Foundry 14
+native LevelDB packs. **Authoring sources are local-only** — `src/packs/` is
+gitignored and NO copyrighted game data (RT book skill/talent/lists) may be
+committed or shipped. Input contract, per `src/packs/<pack>/*.yaml`:
+
+```yaml
+- name: My Talent          # becomes the item name; deterministic id derived
+  type: Item
+  system:
+    category: offence      # talentCategories registry key (talent packs)
+    tier: 1
+    prereqTalent: ""       # registry key of a prerequisite talent (optional)
+    effects:               # kind selects the consuming handler/contributor
+      - kind: test-modifier
+        testKey: ""        # empty = all tests; else characteristic key
+        value: 10
+        label: My Talent
+```
+
+Emit: `release/packs/<pack>` LevelDB (keys `!items!<id>`). Add a matching `packs`
+entry to the dev manifest (system-manifests/dev.json) when authoring a new pack.
+Users who want official book lists import them via Foundry's own compendium
+importer themselves — the system ships the machinery, not the data.
+
+## 10. data-action attribute pairing convention
 
 Action handlers read state from `target.dataset.*`. The template's `data-*`
 attribute names MUST exactly match what the handler reads — a mismatch is a

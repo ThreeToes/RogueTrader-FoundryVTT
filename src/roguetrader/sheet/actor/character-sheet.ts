@@ -1,6 +1,7 @@
 import { Character } from "../../data/actor/character";
 import { rollSkill, rollSkillUntrained, rollTest, rollWeaponAttack } from "../../rules/adapter";
 import { deriveCapacity, resolveEncumbrance } from "../../rules/encumbrance";
+import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { defaultSkillItems } from "../../rules/default-skills";
 import { getSkillCatalog } from "./skill-catalog";
 import { SkillPicker } from "./skill-picker";
@@ -409,7 +410,19 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 						equipped: equipState === "carried" || equipState === "worn",
 					};
 				});
-		context.inventory = [
+		const inventory: Array<{
+			label: string;
+			items: Array<{
+				id: string | null;
+				name: string | null;
+				uuid: string;
+				weight: number;
+				equipState: string;
+				equipped: boolean;
+			}>;
+			addLabel?: string;
+			addAction?: string;
+		}> = [
 			{
 				label: "WEAPON.HEADER",
 				items: byType(["melee-weapon", "ranged-weapon"]),
@@ -480,26 +493,33 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			})
 			.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
 
-		context.inventory.unshift({
+		inventory.unshift({
 			label: "TYPES.Item.talent",
 			items: byType(["talent"]),
 			addLabel: "TALENT.ADD",
 			addAction: "openTalentPicker",
 		});
+		context.inventory = inventory;
 
-		// Encumbrance v2: carried weight vs capacity - manual maxCarriage wins;
-		// otherwise derive from Strength Bonus (rules/encumbrance.ts, VERIFY book).
+		// Encumbrance: carried weight vs capacity derived from Strength Bonus
+		// (rules/encumbrance.ts deriveCapacity, VERIFY book rule).
 		const carried = [
 			...byType(["melee-weapon", "ranged-weapon"]),
 			...byType(["armour"]),
 			...byType(["gear"]),
 		].reduce((sum, item) => sum + Number(item.weight ?? 0), 0);
-		const strengthBonus = system.characteristicBonus("s");
-		const capacity =
-			(system.maxCarriage ?? 0) > 0
-				? (system.maxCarriage ?? 0)
-				: deriveCapacity(strengthBonus);
+		const capacity = deriveCapacity(system.characteristicBonus("s"));
 		context.encumbrance = resolveEncumbrance(carried, capacity);
+		// Derived values (read-only): definitional + rules-layer, no writeback.
+		context.derived = {
+			...system.movement(),
+			initiative: system.initiativeBonus(),
+			woundsMax: woundsMax(system, this.actor.items
+				.filter((item) => item.type === "talent")
+				.map((item) => item.system as never)),
+			fatigueMax: fatigueThreshold(system),
+		};
+
 		context.descriptionHTML =
 			await foundry.applications.ux.TextEditor.enrichHTML(system.description, {
 				secrets: this.actor.isOwner,

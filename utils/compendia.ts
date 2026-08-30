@@ -1,79 +1,130 @@
-// TODO: move this to the new DB format
-import { mkdir, readdir, readFile } from "node:fs/promises";
+// New packer: YAML sources -> Foundry 14 native LevelDB compendium packs.
+//
+// IMPORTANT: authoring sources are LOCAL ONLY - src/packs/ is gitignored so
+// no copyrighted game content (RT book skill/talent lists etc.) is ever
+// committed. The pipeline works fine with an empty src/packs/ (no packs are
+// emitted); locally authored YAML is packed the same way.
+//
+// Format verified against a Foundry-migrated pack (old nedb .db auto-migration):
+// - each pack is a plain classic-level DB at release/packs/<pack>
+// - valueEncoding json; documents keyed `!items!<16-char id>` (abstract-level
+//   sublevel prefix for the items collection)
+// - document shape: {_id, name, type, system, effects: [], _stats:{coreVersion}}
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
-import yaml from "js-yaml";
-import Datastore from "nedb";
+import { ClassicLevel } from "classic-level";
+import yaml from "yaml";
 
 const PACK_SRC = "./src/packs";
 const PACK_DEST = "./release/packs";
 
-async function purgeDatabase(database: Datastore) {
-	await new Promise<void>((resolve, reject) => {
-		database.remove({}, { multi: true }, (error: Error) => {
-			if (error) {
-				reject(error);
-				return;
-			}
+/** Foundry randomID charset (16 chars). */
+const ID_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-			database.persistence.compactDatafile();
-
-			resolve();
-		});
-	});
+/** Stable ids: honor an explicit _id in the YAML, else deterministic from name. */
+function documentId(name: string, declared?: string): string {
+	if (declared) return declared;
+	// Deterministic hash of the name so rebuilds keep the same ids.
+	let hash = 0;
+	for (const char of name) {
+		hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+	}
+	let id = "";
+	for (let i = 0; i < 16; i++) {
+		id += ID_CHARS[hash % ID_CHARS.length];
+		// xorshift-ish step so consecutive names do not map to similar ids
+		hash ^= hash << 13;
+		hash ^= hash >>> 17;
+		hash ^= hash << 5;
+		hash >>>= 0;
+	}
+	return id;
 }
 
-async function insertDocument(database: Datastore, document: object) {
-	await new Promise<void>((resolve, reject) => {
-		database.insert(document, (error: Error) => {
-			if (error) {
-				reject(error);
-				return;
-			}
-
-			resolve();
-		});
-	});
+/** Shape a YAML entry into a Foundry Item source document. */
+function toSourceDocument(entry: Record<string, unknown>) {
+	const id = documentId(
+		String(entry.name ?? "unnamed"),
+		entry._id as string | undefined,
+	);
+	return {
+		_id: id,
+		name: entry.name,
+		type: "Item",
+		system: entry.system ?? {},
+		effects: entry.effects ?? [],
+		_stats: entry._stats ?? { coreVersion: 14 },
+		flags: entry.flags ?? {},
+	};
 }
 
-async function buildPack(folder: string) {
-	const filename = path.resolve(PACK_DEST, `${folder}.db`);
+async function buildPack(
+	folder: string,
+	ClassicLevelCtor: typeof ClassicLevel,
+): Promise<number> {
+	const packPath = path.resolve(PACK_DEST, folder);
 
-	const database = new Datastore({
-		filename,
-		autoload: true,
+	// Recreate: our builds fully own the LevelDB dir (gitignored artifacts).
+	await rm(packPath, { recursive: true, force: true });
+	await mkdir(packPath, { recursive: true });
+
+	const database = new ClassicLevelCtor(packPath, {
+		keyEncoding: "utf8",
+		valueEncoding: "json",
 	});
-
-	await purgeDatabase(database);
+	await database.open();
 
 	const files = await readdir(path.join(PACK_SRC, folder));
+	const sourceFiles = files.filter((file) => file.endsWith(".yaml"));
 
-	for (const file of files) {
-		if (!file.endsWith(".yaml")) continue;
+	const batch = database.batch();
+	let count = 0;
 
-		const filename = path.join(PACK_SRC, folder, file);
-		const contents = await readFile(filename, "utf8");
-		const documents = yaml.loadAll(contents) as object[];
-
-		// Insert one document at a time: Foundry's NeDB format is
-		// newline-delimited (one document per line), never a top-level array.
-		for (const document of documents) {
-			await insertDocument(database, document);
+	for (const file of sourceFiles) {
+		const contents = await readFile(
+			path.join(PACK_SRC, folder, file),
+			"utf8",
+		);
+		const documents = yaml.parseAllDocuments(contents) as Array<{
+			toJSON: () => Record<string, unknown>;
+		}>;
+		for (const parsed of documents) {
+			const value = (parsed as unknown as { toJSON: () => unknown }).toJSON?.call(parsed);
+			// Sources may be a top-level array of entries or ---separated docs.
+			const entries = Array.isArray(value) ? value : [value];
+			for (const entry of entries) {
+				if (!entry) continue;
+				const doc = toSourceDocument(
+					entry as Record<string, unknown>,
+				);
+				batch.put(`!items!${doc._id}`, doc);
+				count++;
+			}
 		}
+	}
+
+	await batch.write();
+	await database.close();
+	return count;
+}
+
+async function main() {
+	const folders = (await readdir(PACK_SRC, { withFileTypes: true }))
+		.filter((d) => d.isDirectory())
+		.map((d) => d.name);
+
+	for (const folder of folders) {
+		const count = await buildPack(folder, ClassicLevel);
+		// Legacy nedb artifact: Foundry prefers the LevelDB dir when CURRENT
+		// exists, but delete the stale .db so there is a single source of truth.
+		await rm(path.resolve(PACK_DEST, `${folder}.db`), { force: true });
+		console.log(`[packs] ${folder}: ${count} documents -> LevelDB`);
 	}
 }
 
-export async function bundlePacks() {
-	await mkdir(PACK_DEST, { recursive: true });
-
-	const entries = await readdir(PACK_SRC, {
-		withFileTypes: true,
-	});
-
-	const folders = entries
-		.filter((entry) => entry.isDirectory())
-		.map((entry) => entry.name);
-
-	await Promise.all(folders.map(buildPack));
+/** Build entry used by `bun run build` (utils/build.ts). */
+export async function bundlePacks(): Promise<void> {
+	await main();
 }
 
 if (import.meta.main) {

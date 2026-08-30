@@ -4,11 +4,9 @@
 
         <div class="encumbrance-bar state-{{encumbrance.state}}">
             <span class="chip-label">{{localize "INVENTORY.CAPACITY"}}</span>
-            <div class="chip-value">
-                <input name="system.maxCarriage" type="number" min="0"
-                    value="{{source.system.maxCarriage}}" data-tooltip="{{localize "INVENTORY.CAPACITY_HINT"}}" />
-                <span class="unit">kg</span>
-            </div>
+            <a class="capacity-note" data-tooltip="{{localize "INVENTORY.CAPACITY_HINT"}}">
+                <i class="fa-solid fa-circle-info"></i>
+            </a>
             <div class="encumbrance-progress">
                 <div class="bar">
                     <div class="fill" style="width: {{#if encumbrance.capacity}}{{encumbrance.percent}}{{else}}0{{/if}}%"></div>

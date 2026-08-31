@@ -58,9 +58,10 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 		// Quality toggle-chips: lookup map so `checked` marks existing picks.
 		context.specialFlags = Object.fromEntries(
-			((this.document.system as unknown as { special?: string[] }).special ?? []).map(
-				(q) => [q, true],
-			),
+			(
+				(this.document.system as unknown as { special?: string[] }).special ??
+				[]
+			).map((q) => [q, true]),
 		);
 
 		// Normalized rate of fire record so all fields exist for ranged weapons.

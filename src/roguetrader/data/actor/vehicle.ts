@@ -28,7 +28,7 @@ export class Vehicle extends foundry.abstract.TypeDataModel<
 	declare vehicleClass: string;
 	declare traits: string[];
 	declare systems: Record<string, { rating: number; damaged: boolean }>;
-declare crew: string[];
+	declare crew: string[];
 	declare mountedWeapons: Array<{ uuid: string; facing: string }>;
 	declare description: string;
 

@@ -70,7 +70,10 @@ describe("contributor registry", () => {
 				value: 5,
 			},
 		]);
-		const mods = testContributors.run({}, { kind: "characteristic", key: "ws" });
+		const mods = testContributors.run(
+			{},
+			{ kind: "characteristic", key: "ws" },
+		);
 		expect(mods).toHaveLength(1);
 		expect(mods[0].id).toBe("custom");
 	});
@@ -180,20 +183,30 @@ describe("talent contributor", () => {
 		});
 		const t = mods.find((m) => m.id === "talent:any:Sure Hand");
 		expect(t?.value).toBe(5);
-		expect(mods.find((m) => m.id === "talent:any:zero ignored")).toBeUndefined();
+		expect(
+			mods.find((m) => m.id === "talent:any:zero ignored"),
+		).toBeUndefined();
 	});
 
 	test("keyed effect only applies to matching tests", () => {
 		const bs = collectTestModifiers(talentActor, { kind: "attack", key: "bs" });
-		expect(bs.find((m) => m.id === "talent:bs:Deadeye Shooter")?.value).toBe(10);
+		expect(bs.find((m) => m.id === "talent:bs:Deadeye Shooter")?.value).toBe(
+			10,
+		);
 		const ws = collectTestModifiers(talentActor, { kind: "attack", key: "ws" });
-		expect(ws.find((m) => m.id === "talent:bs:Deadeye Shooter")).toBeUndefined();
+		expect(
+			ws.find((m) => m.id === "talent:bs:Deadeye Shooter"),
+		).toBeUndefined();
 		expect(ws.find((m) => m.id === "talent:any:Sure Hand")?.value).toBe(5);
 	});
 
 	test("non-talent items are ignored", () => {
 		const mods = collectTestModifiers(
-			{ items: [{ type: "gear", system: { effects: [{ testKey: "", value: 99 }] } }] },
+			{
+				items: [
+					{ type: "gear", system: { effects: [{ testKey: "", value: 99 }] } },
+				],
+			},
 			{ kind: "characteristic", key: "ws" },
 		);
 		expect(mods.filter((m) => m.id.startsWith("talent:"))).toHaveLength(0);

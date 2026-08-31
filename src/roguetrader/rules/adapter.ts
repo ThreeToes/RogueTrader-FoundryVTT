@@ -52,7 +52,14 @@ export async function rollTest(
 		modifiers = result.modifiers;
 	}
 
-	await postTest(actor, title, characteristic.value, modifiers, "characteristic", key);
+	await postTest(
+		actor,
+		title,
+		characteristic.value,
+		modifiers,
+		"characteristic",
+		key,
+	);
 }
 
 /**
@@ -67,7 +74,13 @@ export async function postTest(
 	kind: TestKind = "characteristic",
 	key = title,
 	weapon: { type: string; special?: string[] } | null = null,
-): Promise<void> {
+	extras: {
+		/** Extra template vars for the roll card (e.g. showDamageButton). */
+		templateVars?: Record<string, unknown>;
+		/** Extra message flags (e.g. rogue-trader.damageRoll button data). */
+		flags?: Record<string, Record<string, unknown>>;
+	} = {},
+): Promise<{ outcome: TestOutcome; messageId: string | null }> {
 	const collected = collectTestModifiers(
 		actor,
 		{ kind, key, weapon },
@@ -97,14 +110,16 @@ export async function postTest(
 			outcomeClass: outcome.success ? "success" : "failure",
 			critical: outcome.critical,
 			isDouble: outcome.isDouble,
+			...extras.templateVars,
 		},
 	);
 
-	await foundry.documents.ChatMessage.create({
+	const message = (await foundry.documents.ChatMessage.create({
 		speaker: foundry.documents.ChatMessage.getSpeaker({ actor }),
 		content,
-	});
-	return outcome;
+		...(extras.flags ? { flags: extras.flags } : {}),
+	})) as { id?: string } | undefined;
+	return { outcome, messageId: message?.id ?? null };
 }
 
 /**
@@ -183,8 +198,7 @@ export async function rollSkill(
 	);
 }
 
-/** Roll a weapon attack's to-hit test (v1: to-hit only, no damage, no equip gating). */
-export async function rollWeaponAttack(
+/** Roll a weapon attack's to-hit test (v1: to-hit only, no damage, no equip gating). */ export async function rollWeaponAttack(
 	actor: Actor,
 	weaponId: string,
 	options: RollTestOptions = {},
@@ -226,7 +240,19 @@ export async function rollWeaponAttack(
 		modifiers = result.modifiers;
 	}
 
-	const outcome = await postTest(
+	// Damage flow (b02/1h2, owner redesign): the to-hit card carries a
+	// "Roll Damage" button; damage rolls on click, not automatically.
+	// The button's flag data is attached at attack time (data-only kernel:
+	// the displayed to-hit outcome feeds the later damage location roll).
+	const target = (
+		game as unknown as {
+			user?: { targets?: Set<{ actor?: Actor }> };
+		}
+	).user?.targets
+		?.values()
+		?.next()?.value?.actor;
+
+	const { outcome, messageId } = await postTest(
 		actor,
 		`${actor.name} — ${item.name}`,
 		characteristic.value,
@@ -234,17 +260,158 @@ export async function rollWeaponAttack(
 		"attack",
 		key,
 		{ type, special },
+		{
+			templateVars: { showDamageButton: true },
+		},
 	);
 
-	// Damage flow (b02/1h2): on a successful to-hit, roll the weapon damage
-	// formula, pick location from the hit roll's tens digit (profile table),
-	// and resolve vs the target's worn armour + toughness bonus. Display-only:
-	// the card reports wounds; apply-damage buttons land later.
-	if (outcome.success) {
-		const target = (
-			game as unknown as { targets?: Set<{ actor?: Actor }> }
-		).targets?.values()?.next()?.value?.actor;
-		await postWeaponDamage(actor, (target ?? actor) as Actor, item, outcome);
+	// Attach the damage-button flag now that the to-hit outcome exists
+	// (data-only kernel: the displayed roll feeds the damage location).
+	if (outcome.success && messageId) {
+		const chatMessage = foundry.documents.ChatMessage.get(messageId) as
+			| { update?: (u: object) => Promise<void> }
+			| undefined;
+		await chatMessage?.update?.({
+			flags: {
+				"rogue-trader": {
+					damageRoll: {
+						attackerUuid: actor.uuid,
+						weaponUuid: item.uuid,
+						targetUuid: target?.uuid ?? null,
+						hitRoll: outcome.roll,
+						rolled: false,
+					},
+				},
+			},
+		});
+	}
+
+	// Evasion (bead 97a): decision DIALOG again, but informational only
+	// - it posts the defender's reaction test card and does NOT feed
+	// the damage calculation (resolution stays manual for now).
+	if (outcome.success && target && target !== actor) {
+		try {
+			await resolveEvasion(target, type);
+		} catch (error) {
+			console.error("rogue-trader: evasion roll failed", error);
+		}
+	}
+}
+
+/** Card button data for the manual damage roll. */
+interface DamageRollFlag {
+	attackerUuid?: string;
+	weaponUuid?: string;
+	targetUuid?: string | null;
+	hitRoll?: number;
+	rolled?: boolean;
+}
+
+/**
+ * Damage roll triggered from the to-hit card's button (owner redesign).
+ * Consumes the flag data set at attack time; rolls the weapon's damage
+ * formula, picks the hit location, resolves vs armour/toughness and
+ * posts the damage card with the apply-damage button.
+ */
+export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
+	const attacker = data.attackerUuid
+		? (foundry.utils.fromUuidSync(data.attackerUuid) as unknown as Actor | null)
+		: null;
+	const weapon = data.weaponUuid
+		? (foundry.utils.fromUuidSync(
+				data.weaponUuid,
+			) as unknown as foundry.documents.Item | null)
+		: null;
+	if (!attacker || !weapon) return;
+	const target = data.targetUuid
+		? (foundry.utils.fromUuidSync(data.targetUuid) as unknown as Actor | null)
+		: null;
+	await postWeaponDamage(
+		attacker,
+		(target ?? attacker) as Actor,
+		weapon,
+		data.hitRoll ?? 0,
+	);
+}
+
+/**
+ * Evasion dialog + reaction roll (bead 97a, owner-requested restore).
+ * INFORMATIONAL ONLY: posts the defender's reaction test card; it does
+ * not modify or cancel the damage flow (manual resolution for now).
+ * Rules flags VERIFY: reaction-per-round accounting is not tracked;
+ * untrained fallback is characteristic-only at -10.
+ */
+async function resolveEvasion(
+	defender: Actor,
+	attackType: string,
+): Promise<void> {
+	// Vehicles have no reactions (SI damage is a separate follow-up).
+	const system = defender.system as unknown as Character;
+	if (!system?.wounds) return;
+
+	const isMelee = attackType === "melee-weapon";
+	const skillName = isMelee ? "Parry" : "Dodge";
+	const owned = defender.items.find(
+		(i) =>
+			(i.type as string) === "skill" &&
+			(i as { name?: string }).name === skillName,
+	);
+
+	const evasionLabel = game.i18n.localize("DIALOG.EVASION");
+	const skillLabel = owned
+		? ((owned as { name?: string }).name ?? skillName)
+		: `${skillName} (${game.i18n.localize("ROLL.UNTRAINED")})`;
+	const choice = await foundry.applications.api.DialogV2.wait({
+		window: { title: `${defender.name} — ${evasionLabel}` },
+		content: `<p>${evasionLabel}: ${skillLabel}</p>`,
+		buttons: [
+			{
+				action: "nothing",
+				label: game.i18n.localize("EVASION.DO_NOTHING"),
+				callback: () => "nothing",
+			},
+			{
+				action: "react",
+				label: skillLabel,
+				callback: () => "react",
+			},
+		],
+	});
+	if (choice !== "react") return;
+
+	// Roll the chosen reaction (the postTest card records the attempt; the
+	// result is NOT fed into the damage calculation - manual resolution).
+	if (owned) {
+		const skill = owned.system as unknown as {
+			characteristic: string;
+			ladder: number;
+		};
+		const characteristic = system.characteristics[skill.characteristic];
+		if (!characteristic) return;
+		await postTest(
+			defender,
+			`${defender.name} — ${skillName}`,
+			characteristic.value + (skill.ladder - 1) * 10,
+			[],
+			"skill",
+			skill.characteristic,
+		);
+	} else {
+		await postTest(
+			defender,
+			`${defender.name} — ${skillName}`,
+			system.characteristics[skillName === "Parry" ? "ws" : "ag"]?.value ?? 0,
+			[
+				{
+					id: "untrained",
+					source: { type: "skill", label: "Skill" },
+					label: game.i18n.localize("ROLL.UNTRAINED"),
+					value: -10,
+				},
+			],
+			"skill",
+			skillName === "Parry" ? "ws" : "ag",
+		);
 	}
 }
 
@@ -258,7 +425,7 @@ async function postWeaponDamage(
 	attacker: Actor,
 	target: Actor,
 	weapon: foundry.documents.Item,
-	hit: TestOutcome,
+	hitRoll = 0,
 ): Promise<void> {
 	const weaponSys = weapon.system as unknown as {
 		damage?: string;
@@ -268,7 +435,7 @@ async function postWeaponDamage(
 	await damageRoll.evaluate();
 	const damageTotal = damageRoll.total ?? 0;
 
-	const location = locationForHit(hit.roll ?? 0, rtCore);
+	const location = locationForHit(hitRoll ?? 0, rtCore);
 	const wornArmour = target.items.filter(
 		(i) =>
 			(i.type as string) === "armour" &&
@@ -283,9 +450,8 @@ async function postWeaponDamage(
 		),
 	);
 	const toughnessBonus = Math.floor(
-		(
-			(target.system as unknown as Character).characteristics.t?.value ?? 0
-		) / 10,
+		((target.system as unknown as Character).characteristics.t?.value ?? 0) /
+			10,
 	);
 
 	const damage = resolveDamage({
@@ -305,11 +471,25 @@ async function postWeaponDamage(
 			hitSuccess: true,
 			locationLabelKey,
 			damage,
+			targetUuid: target.uuid,
 		},
 	);
 
 	await foundry.documents.ChatMessage.create({
 		speaker: foundry.documents.ChatMessage.getSpeaker({ actor: attacker }),
 		content,
+		// Apply-damage button data (bead ncc): the card stays a data-only
+		// kernel consumer - the flag carries the displayed outcome so the
+		// click handler never recomputes, plus an application marker so the
+		// button cannot fire twice.
+		flags: {
+			"rogue-trader": {
+				damageApply: {
+					wounds: damage.wounds,
+					targetUuid: target.uuid,
+					applied: false,
+				},
+			},
+		},
 	});
 }

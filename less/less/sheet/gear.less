@@ -345,6 +345,16 @@
 
 /* Shared armour-body component (combat tab + vehicle status + armour sheet) */
 
+.rogue-trader.sheet .armour-points {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.rogue-trader.sheet .armour-points .inv-group-label {
+	text-align: center;
+}
+
 .rogue-trader.sheet .armour-body {
 	display: flex;
 	flex-direction: column;
@@ -364,6 +374,7 @@
 }
 
 .rogue-trader.sheet .body-part {
+	text-align: center;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -374,6 +385,11 @@
 	border: 1px solid rgba(122, 106, 83, 0.5);
 	border-radius: 5px;
 	background: rgba(0, 0, 0, 0.2);
+}
+
+/* Armour value inputs: centre the number in the box. */
+.rogue-trader.sheet .body-part input {
+	text-align: center;
 }
 
 .rogue-trader.sheet .part-label {

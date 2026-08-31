@@ -1,0 +1,56 @@
+<section class="tab {{tabs.data.cssClass}}" data-group="primary" data-tab="data">
+    <div class="stats border">
+        <h1>{{localize "PSYCHIC_POWER.HEADER"}}</h1>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "PSYCHIC_POWER.CLASS"}}</label>
+                <select name="system.powerClass">
+                    {{selectOptions powerClassChoices selected=source.system.powerClass localize=true}}
+                </select>
+            </div>
+            <div class="stat">
+                <label>{{localize "PSYCHIC_POWER.SUBTYPE"}}</label>
+                <select name="system.subtype">
+                    {{selectOptions subtypeChoices selected=source.system.subtype localize=true}}
+                </select>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "PSYCHIC_POWER.PREREQUISITE"}}</label>
+                <input name="system.prerequisite" type="text" value="{{source.system.prerequisite}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "GEAR.SHORT_DESCRIPTION"}}</label>
+                <input name="system.shortDescription" type="text"
+                    value="{{source.system.shortDescription}}" />
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "PSYCHIC_POWER.RATING"}}</label>
+                <input name="system.rating" type="number" min="0" value="{{source.system.rating}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "PSYCHIC_POWER.RANGE"}}</label>
+                <input name="system.range" type="text" value="{{source.system.range}}" />
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "PSYCHIC_POWER.DAMAGE"}}</label>
+                <input name="system.damage" type="text" value="{{source.system.damage}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "PSYCHIC_POWER.DAMAGE_TYPE"}}</label>
+                <select name="system.damageType">
+                    {{selectOptions damageTypeChoices selected=source.system.damageType localize=true}}
+                </select>
+            </div>
+            <div class="stat">
+                <label>{{localize "PSYCHIC_POWER.SUSTAINED"}}</label>
+                <input name="system.sustained" type="checkbox" {{#if source.system.sustained}}checked{{/if}} />
+            </div>
+        </div>
+    </div>
+</section>

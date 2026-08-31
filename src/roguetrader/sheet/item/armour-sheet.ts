@@ -48,6 +48,21 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 				.map((location) => [location, system.armourPoints[location] ?? 0]),
 		);
 
+		// Explicit row membership so template order cannot be re-ordered by
+		// config iteration order (head / left arm | body | right arm / legs, bead tr4).
+		const row = (locations: string[], cssClass?: string) => ({
+			cssClass,
+			parts: locations.map((location) => ({
+				location,
+				label: bodyLocations.get(location) ?? location,
+			})),
+		});
+		context.armourRows = [
+			row(["head"], "head"),
+			row(["left-arm", "body", "right-arm"]),
+			row(["left-leg", "right-leg"], "legs-row"),
+		];
+
 		return context;
 	}
 }

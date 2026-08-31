@@ -3,9 +3,7 @@ await import("../../../../tests/helpers/foundry-schema-stub");
 const { Character } = await import("./character");
 
 /** Minimal character with set characteristic values (test helper). */
-function makeCharacter(
-	characteristics: Record<string, number>,
-): Character {
+function makeCharacter(characteristics: Record<string, number>): Character {
 	return Object.create(Character.prototype) as Character & {
 		characteristics: Record<string, { value: number; unnatural: number }>;
 	};
@@ -13,15 +11,14 @@ function makeCharacter(
 
 function charWith(values: Record<string, number>): Character {
 	const c = Object.create(Character.prototype) as Character;
-	const characteristics: Record<
-		string,
-		{ value: number; unnatural: number }
-	> = {};
+	const characteristics: Record<string, { value: number; unnatural: number }> =
+		{};
 	for (const [key, value] of Object.entries(values)) {
 		characteristics[key] = { value, unnatural: 1 };
 	}
-	(c as unknown as { characteristics: typeof characteristics }).characteristics =
-		characteristics;
+	(
+		c as unknown as { characteristics: typeof characteristics }
+	).characteristics = characteristics;
 	return c;
 }
 

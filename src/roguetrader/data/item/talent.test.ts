@@ -21,7 +21,10 @@ describe("Talent data model", () => {
 	});
 
 	test("effects are array-of-schema with the expected fields", () => {
-		const schema = Talent.defineSchema() as unknown as Record<string, StubField>;
+		const schema = Talent.defineSchema() as unknown as Record<
+			string,
+			StubField
+		>;
 		const effects = schema.effects as unknown as { of: unknown };
 		const slot = effects.of as {
 			fields: Record<string, StubField>;

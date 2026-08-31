@@ -30,10 +30,16 @@
             {{#each group.items as |item|}}
             <li class="inv-row draggable" data-item-id="{{item.id}}" data-item-uuid="{{item.uuid}}">
                 <span class="inv-grab"><i class="fa-solid fa-grip-vertical"></i></span>
+                {{#if item.isWeapon}}
+                <a class="char-roll weapon-roll" data-action="rollWeapon"
+                    data-tooltip="{{localize "WEAPON.ATTACK"}}"
+                ><i class="fa-solid fa-dice-d10"></i></a>
+                {{else}}
                 <a class="equip-toggle {{#if item.equipped}}equipped{{/if}}"
                     data-action="toggleEquip"
                     data-tooltip="{{localize (concat "EQUIP_STATE." item.equipState)}}"
                 ><i class="fa-solid fa-circle-check"></i></a>
+                {{/if}}
                 <span class="inv-name" data-action="openItem" data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{item.name}}</span>
                 <span class="inv-weight" title="{{localize "GEAR.WEIGHT"}}">{{item.weight}} kg</span>
                 <a class="inv-delete" data-action="deleteItem" data-tooltip="{{localize "GEAR.DELETE"}}"

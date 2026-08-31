@@ -170,12 +170,17 @@ testContributors.register("effect", (actor) => {
 // ---------------------------------------------------------------------------
 interface ItemLike {
 	type?: string;
-	system?: { effects?: Array<{ kind?: string; testKey?: string; value?: number; label?: string }> };
+	system?: {
+		effects?: Array<{
+			kind?: string;
+			testKey?: string;
+			value?: number;
+			label?: string;
+		}>;
+	};
 }
 testContributors.register("talent", (actor, context) => {
-	const items = (
-		actor as { items?: Array<ItemLike> }
-	).items;
+	const items = (actor as { items?: Array<ItemLike> }).items;
 	if (!items) return [];
 	const list = items;
 	const mods: Modifier[] = [];
@@ -185,7 +190,8 @@ testContributors.register("talent", (actor, context) => {
 			// Only test-modifier effects feed the funnel; other kinds belong to
 			// their registered handlers (rules/talent-effects.ts).
 			const kind = (effect as { kind?: string }).kind;
-			if (kind !== undefined && kind !== "" && kind !== "test-modifier") continue;
+			if (kind !== undefined && kind !== "" && kind !== "test-modifier")
+				continue;
 			const key = effect.testKey;
 			if (key !== "" && key !== undefined && key !== context.key) continue;
 			const value = Number(effect.value);

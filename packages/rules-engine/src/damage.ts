@@ -52,11 +52,7 @@ export interface DamageOutcome {
 }
 
 export function resolveDamage(request: DamageRequest): DamageOutcome {
-	const {
-		roll,
-		location,
-		profile,
-	} = request;
+	const { roll, location, profile } = request;
 	const penetration = Math.max(0, request.penetration ?? 0);
 	const armourValue = Math.max(0, request.armourValue ?? 0);
 	const toughnessBonus = Math.max(0, request.toughnessBonus);

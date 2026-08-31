@@ -22,5 +22,10 @@
             {{/each}}
         </ul>
         {{/if}}
+        {{#if (and showDamageButton (eq outcomeClass "success"))}}
+        <div class="centerBtn">
+            <button class="rt-roll-damage">{{localize "CHAT.ROLL_DAMAGE"}}</button>
+        </div>
+        {{/if}}
     </div>
 </div>

@@ -1,0 +1,49 @@
+import { describe, expect, test } from "bun:test";
+import { StubField } from "../../../../tests/helpers/foundry-schema-stub";
+
+await import("../../../../tests/helpers/foundry-schema-stub");
+
+const { PsychicPower } = await import("./psychic-power");
+import { DamageType } from "./damage-types";
+
+describe("PsychicPower data model", () => {
+	const schema = PsychicPower.defineSchema() as unknown as Record<
+		string,
+		StubField
+	>;
+
+	test("powerClass choices are bound/unbound, initial bound", () => {
+		const powerClass = schema.powerClass as StubField;
+		expect(powerClass.opts.choices).toEqual(["bound", "unbound"]);
+		expect(powerClass.opts.initial).toBe("bound");
+	});
+
+	test("subtype choices are focus/bolt/barrage/storm/zone, initial focus", () => {
+		const subtype = schema.subtype as StubField;
+		expect(subtype.opts.choices).toEqual([
+			"focus",
+			"bolt",
+			"barrage",
+			"storm",
+			"zone",
+		]);
+		expect(subtype.opts.initial).toBe("focus");
+	});
+
+	test("damageType choices come from DamageType, initial Energy", () => {
+		const damageType = schema.damageType as StubField;
+		expect(damageType.opts.choices).toEqual(Object.values(DamageType));
+		expect(damageType.opts.initial).toBe(DamageType.Energy);
+	});
+
+	test("numeric and boolean initials", () => {
+		expect((schema.rating as StubField).opts.initial).toBe(0);
+		expect((schema.sustained as StubField).opts.initial).toBe(false);
+	});
+
+	test("free-text fields default to empty string", () => {
+		for (const key of ["prerequisite", "range", "damage", "shortDescription"]) {
+			expect((schema[key] as StubField).opts.initial).toBe("");
+		}
+	});
+});

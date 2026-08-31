@@ -1,5 +1,10 @@
 import { Vehicle } from "../../data/actor/vehicle";
-import { vehicleClasses, vehicleFacings, vehicleSystems, vehicleTraits } from "../../registry";
+import {
+	vehicleClasses,
+	vehicleFacings,
+	vehicleSystems,
+	vehicleTraits,
+} from "../../registry";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -78,10 +83,11 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			(system.traits ?? []).map((t) => [t, true]),
 		);
 		context.facingChoices = Object.fromEntries(vehicleFacings.entries());
-		context.descriptionHTML = await foundry.applications.ux.TextEditor.enrichHTML(
-			system.description,
-			{ secrets: this.actor.isOwner, relativeTo: this.actor },
-		);
+		context.descriptionHTML =
+			await foundry.applications.ux.TextEditor.enrichHTML(system.description, {
+				secrets: this.actor.isOwner,
+				relativeTo: this.actor,
+			});
 
 		// Crew rows (resolved names from Actor UUIDs - references, not embedded).
 		context.crewRows = (system.crew ?? []).map((uuid) => ({
@@ -124,7 +130,12 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		if (data.type === "Item") {
 			const doc = await foundry.utils.fromUuid(data.uuid);
 			if (!(doc instanceof foundry.documents.Item)) return;
-			if (!((doc.type as string) === "melee-weapon" || (doc.type as string) === "ranged-weapon")) {
+			if (
+				!(
+					(doc.type as string) === "melee-weapon" ||
+					(doc.type as string) === "ranged-weapon"
+				)
+			) {
 				return;
 			}
 			return this.actor.update({

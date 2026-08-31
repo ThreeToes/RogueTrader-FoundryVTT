@@ -20,8 +20,11 @@
             <p class="righteous-fury"><strong>{{localize "CHAT.RIGHTEOUS_FURY"}}!</strong></p>
             {{/if}}
         </div>
+        <div class="centerBtn">
+            <button class="apply-damage" data-target="{{targetUuid}}" data-wounds="{{damage.wounds}}">{{localize "CHAT.CONTEXT.APPLY_DAMAGE"}}</button>
+        </div>
         {{else}}
-        <p class="damage-miss">{{localize "DAMAGE.MISS"}}</p>
+        <p class="damage-miss">{{#if evaded}}{{localize "DAMAGE.EVADED"}}{{else}}{{localize "DAMAGE.MISS"}}{{/if}}</p>
         {{/if}}
         <p class="damage-note">{{localize "DAMAGE.APPLY_HINT"}}</p>
     </div>

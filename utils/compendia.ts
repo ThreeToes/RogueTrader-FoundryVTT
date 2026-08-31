@@ -11,6 +11,7 @@
 //   sublevel prefix for the items collection)
 // - document shape: {_id, name, type, system, effects: [], _stats:{coreVersion}}
 import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { ClassicLevel } from "classic-level";
 import yaml from "yaml";
@@ -19,10 +20,11 @@ const PACK_SRC = "./src/packs";
 const PACK_DEST = "./release/packs";
 
 /** Foundry randomID charset (16 chars). */
-const ID_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const ID_CHARS =
+	"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 /** Stable ids: honor an explicit _id in the YAML, else deterministic from name. */
-function documentId(name: string, declared?: string): string {
+export function documentId(name: string, declared?: string): string {
 	if (declared) return declared;
 	// Deterministic hash of the name so rebuilds keep the same ids.
 	let hash = 0;
@@ -41,8 +43,35 @@ function documentId(name: string, declared?: string): string {
 	return id;
 }
 
+/**
+ * Legacy authored sources declare `type: Item` (generic nedb-era marker) or
+ * omit the type. Map those to the real item type the system registers,
+ * otherwise the emitted document has no data model and no sheet, and opening
+ * it from a compendium crashes (DocumentSheetConfig.getSheetClassesForSubType).
+ */
+const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
+	skills: "skill",
+	talents: "talent",
+	aptitudes: "aptitude",
+};
+
+/** Work out the real item type for an authored entry. */
+export function resolveEntryType(
+	entry: Record<string, unknown>,
+	folder: string,
+): string {
+	const declared = typeof entry.type === "string" ? entry.type : "";
+	if (declared && declared !== "Item") return declared;
+	if (folder === "weapons") {
+		// Weapon sources distinguish only by system.class (melee vs ranged).
+		const weaponClass = (entry.system as { class?: string } | undefined)?.class;
+		return weaponClass === "melee" ? "melee-weapon" : "ranged-weapon";
+	}
+	return FOLDER_TYPE_DEFAULTS[folder] ?? "gear";
+}
+
 /** Shape a YAML entry into a Foundry Item source document. */
-function toSourceDocument(entry: Record<string, unknown>) {
+function toSourceDocument(entry: Record<string, unknown>, folder: string) {
 	const id = documentId(
 		String(entry.name ?? "unnamed"),
 		entry._id as string | undefined,
@@ -50,7 +79,7 @@ function toSourceDocument(entry: Record<string, unknown>) {
 	return {
 		_id: id,
 		name: entry.name,
-		type: "Item",
+		type: resolveEntryType(entry, folder),
 		system: entry.system ?? {},
 		effects: Array.isArray(entry.effects) ? entry.effects : [],
 		description: typeof entry.description === "string" ? entry.description : "",
@@ -82,22 +111,19 @@ async function buildPack(
 	let count = 0;
 
 	for (const file of sourceFiles) {
-		const contents = await readFile(
-			path.join(PACK_SRC, folder, file),
-			"utf8",
-		);
+		const contents = await readFile(path.join(PACK_SRC, folder, file), "utf8");
 		const documents = yaml.parseAllDocuments(contents) as Array<{
 			toJSON: () => Record<string, unknown>;
 		}>;
 		for (const parsed of documents) {
-			const value = (parsed as unknown as { toJSON: () => unknown }).toJSON?.call(parsed);
+			const value = (
+				parsed as unknown as { toJSON: () => unknown }
+			).toJSON?.call(parsed);
 			// Sources may be a top-level array of entries or ---separated docs.
 			const entries = Array.isArray(value) ? value : [value];
 			for (const entry of entries) {
 				if (!entry) continue;
-				const doc = toSourceDocument(
-					entry as Record<string, unknown>,
-				);
+				const doc = toSourceDocument(entry as Record<string, unknown>, folder);
 				batch.put(`!items!${doc._id}`, doc);
 				count++;
 			}
@@ -109,12 +135,50 @@ async function buildPack(
 	return count;
 }
 
+/**
+ * Governance check (bead 8uh): an authored pack folder that has no packs[]
+ * entry in the dev manifest is invisible in Foundry. Warn (do not fail).
+ */
+export async function warnUnregisteredPacks(): Promise<void> {
+	const manifestPath = "./system-manifests/dev.json";
+	if (!existsSync(manifestPath)) return;
+	const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+		packs?: Array<{ name?: string }>;
+	};
+	const registered = new Set(
+		(manifest.packs ?? []).map((pack) => pack.name).filter(Boolean),
+	);
+	const folders = (await readdir(PACK_SRC, { withFileTypes: true }))
+		.filter((d) => d.isDirectory() && !d.name.startsWith("."))
+		.map((d) => d.name);
+	const packFolders: string[] = [];
+	for (const folder of folders) {
+		const files = await readdir(path.join(PACK_SRC, folder));
+		if (!files.some((file) => file.endsWith(".yaml"))) continue;
+		packFolders.push(folder);
+	}
+	for (const folder of packFolders) {
+		if (!registered.has(folder)) {
+			console.warn(
+				`[packs] WARNING: pack "${folder}" has no entry in system-manifests/dev.json and will be invisible in Foundry. Add to "packs":\n` +
+					`    { "name": "${folder}", "label": "${folder}", "system": "rogue-trader", "path": "packs/${folder}", "type": "Item" }`,
+			);
+		}
+	}
+}
+
 async function main() {
 	const folders = (await readdir(PACK_SRC, { withFileTypes: true }))
-		.filter((d) => d.isDirectory())
+		.filter((d) => d.isDirectory() && !d.name.startsWith("."))
 		.map((d) => d.name);
 
+	await warnUnregisteredPacks();
+
 	for (const folder of folders) {
+		const sourceFiles = (await readdir(path.join(PACK_SRC, folder))).filter(
+			(file) => file.endsWith(".yaml"),
+		);
+		if (sourceFiles.length === 0) continue;
 		const count = await buildPack(folder, ClassicLevel);
 		// Legacy nedb artifact: Foundry prefers the LevelDB dir when CURRENT
 		// exists, but delete the stale .db so there is a single source of truth.

@@ -36,12 +36,8 @@ export function woundsMax(
 	character: CharacterSystemLike,
 	talents: OwnedTalentLike[] = [],
 ): number {
-	const tb = Math.floor(
-		(character.characteristics.t?.value ?? 0) / 10,
-	);
-	const sb = Math.floor(
-		(character.characteristics.s?.value ?? 0) / 10,
-	);
+	const tb = Math.floor((character.characteristics.t?.value ?? 0) / 10);
+	const sb = Math.floor((character.characteristics.s?.value ?? 0) / 10);
 	const levels = talents.reduce((total, talent) => {
 		for (const effect of talent.system?.effects ?? []) {
 			if (effect.kind !== "wounds-max") continue;

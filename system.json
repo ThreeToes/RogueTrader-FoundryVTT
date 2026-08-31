@@ -1,93 +1,110 @@
 {
-    "id": "rogue-trader",
-    "title": "Rogue Trader",
-    "description": "Unofficial Foundry VTT System for Rogue Trader.",
-    "version": "4.4.0.1",
-    "minimumCoreVersion": 13,
-    "compatibility": {
-        "minimum": 13,
-        "verified": 14,
-        "maximum": 14
-    },
-    "templateVersion": 2,
-    "authors": [
-        {
-            "name": "JeansenVaars"
-        },
-        {
-            "name": "Moo Man",
-            "email": "russellt@cubicle7games.com",
-            "discord": "Moo Man#7518",
-            "reddit": "u/mooman10"
-        },
-        {
-            "name": "fredthedeadhead"
-        },
-        {
-            "name": "Perfectro"
-        },
-        {
-            "name": "Vendare",
-            "discord": "Vendare#4014"
-        },
-        {
-            "name": "Silver292"
-        },
-        {
-            "name": "Giddy"
-        },
-        {
-            "name": "Dazzerix"
-        },
-        {
-            "name": "FilippoPolo"
-        }
-    ],
-    "scripts": [],
-    "esmodules": [
-        "release/script/rogue-trader.js"
-    ],
-    "styles": [
-        "release/css/rogue-trader.css"
-    ],
-    "packs": [
-        {
-            "name": "character-aptitudes",
-            "label": "Character Aptitudes",
-            "system": "rogue-trader",
-            "path": "./packs/aptitudes.db",
-            "type": "Item"
-        }
-    ],
-    "languages": [
-        {
-            "lang": "en",
-            "name": "English",
-            "path": "lang/en.json"
-        },
-        {
-            "lang": "es",
-            "name": "Español",
-            "path": "lang/es.json"
-        },
-        {
-            "lang": "fr",
-            "name": "Français",
-            "path": "lang/fr.json"
-        },
-        {
-            "lang": "pl",
-            "name": "Polski",
-            "path": "lang/pl.json"
-        }
-    ],
-    "gridDistance": 1,
-    "gridUnits": "m",
-    "primaryTokenAttribute": null,
-    "secondaryTokenAttribute": null,
-    "url": "https://github.com/ThreeToes/RogueTrader-FoundryVTT",
-    "socket": true,
-    "manifest": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/system.json",
-    "download": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/rogue-trader.zip",
-    "license": "LICENSE.txt"
+	"id": "rogue-trader",
+	"title": "Rogue Trader",
+	"description": "Unofficial Foundry VTT System for Rogue Trader.",
+	"version": "4.4.0.1",
+	"minimumCoreVersion": 13,
+	"compatibility": {
+		"minimum": 13,
+		"verified": 14,
+		"maximum": 14
+	},
+	"templateVersion": 2,
+	"authors": [
+		{
+			"name": "JeansenVaars"
+		},
+		{
+			"name": "Moo Man",
+			"email": "russellt@cubicle7games.com",
+			"discord": "Moo Man#7518",
+			"reddit": "u/mooman10"
+		},
+		{
+			"name": "fredthedeadhead"
+		},
+		{
+			"name": "Perfectro"
+		},
+		{
+			"name": "Vendare",
+			"discord": "Vendare#4014"
+		},
+		{
+			"name": "Silver292"
+		},
+		{
+			"name": "Giddy"
+		},
+		{
+			"name": "Dazzerix"
+		},
+		{
+			"name": "FilippoPolo"
+		}
+	],
+	"scripts": [],
+	"esmodules": ["release/script/rogue-trader.js"],
+	"styles": ["release/css/rogue-trader.css"],
+	"packs": [
+		{
+			"name": "aptitudes",
+			"label": "Character Aptitudes",
+			"system": "rogue-trader",
+			"path": "packs/aptitudes",
+			"type": "Item"
+		},
+		{
+			"name": "skills",
+			"label": "Rogue Trader Skills",
+			"system": "rogue-trader",
+			"path": "packs/skills",
+			"type": "Item"
+		},
+		{
+			"name": "talents",
+			"label": "Rogue Trader Talents",
+			"system": "rogue-trader",
+			"path": "packs/talents",
+			"type": "Item"
+		},
+		{
+			"name": "weapons",
+			"label": "Rogue Trader Weapons",
+			"system": "rogue-trader",
+			"path": "packs/weapons",
+			"type": "Item"
+		}
+	],
+	"languages": [
+		{
+			"lang": "en",
+			"name": "English",
+			"path": "lang/en.json"
+		},
+		{
+			"lang": "es",
+			"name": "Español",
+			"path": "lang/es.json"
+		},
+		{
+			"lang": "fr",
+			"name": "Français",
+			"path": "lang/fr.json"
+		},
+		{
+			"lang": "pl",
+			"name": "Polski",
+			"path": "lang/pl.json"
+		}
+	],
+	"gridDistance": 1,
+	"gridUnits": "m",
+	"primaryTokenAttribute": null,
+	"secondaryTokenAttribute": null,
+	"url": "https://github.com/ThreeToes/RogueTrader-FoundryVTT",
+	"socket": true,
+	"manifest": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/system.json",
+	"download": "https://github.com/Vendare/DarkHeresy2E-FoundryVTT/releases/download/4.4.0.1/rogue-trader.zip",
+	"license": "LICENSE.txt"
 }

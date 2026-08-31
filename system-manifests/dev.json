@@ -1,113 +1,133 @@
 {
-    "id": "rogue-trader",
-    "title": "Rogue Trader",
-    "description": "Unofficial Foundry VTT System for Rogue Trader.",
-    "version": "0.0.1",
-    "minimumCoreVersion": 13,
-    "compatibility": {
-        "minimum": 13,
-        "verified": 14,
-        "maximum": 14
-    },
-    "templateVersion": 2,
-    "authors": [
-        {
-            "name": "ThreeToes"
-        }
-    ],
-    "scripts": [],
-    "esmodules": [
-        "./entry-point.js"
-    ],
-    "styles": [
-        "./rogue-trader.css"
-    ],
-    "packs": [
-        {
-            "name": "character-aptitudes",
-            "label": "Character Aptitudes",
-            "system": "rogue-trader",
-            "path": "./packs/aptitudes.db",
-            "type": "Item"
-        },
-        {
-            "name": "skills",
-            "label": "Rogue Trader Skills",
-            "system": "rogue-trader",
-            "path": "./packs/skills.db",
-            "type": "Item"
-        }
-    ],
-    "languages": [
-        {
-            "lang": "en",
-            "name": "English",
-            "path": "lang/en.json"
-        },
-        {
-            "lang": "es",
-            "name": "Espa\u00f1ol",
-            "path": "lang/es.json"
-        },
-        {
-            "lang": "fr",
-            "name": "Fran\u00e7ais",
-            "path": "lang/fr.json"
-        },
-        {
-            "lang": "pl",
-            "name": "Polski",
-            "path": "lang/pl.json"
-        }
-    ],
-    "documentTypes": {
-        "Actor": {
-            "pc": {
-                "htmlFields": [
-                    "description"
-                ]
-            },
-            "npc": {
-                "htmlFields": [
-                    "description"
-                ]
-            },
-            "vehicle": {
-                "htmlFields": [
-                    "description"
-                ]
-            }
-        },
-        "Item": {
-            "gear": {
-                "htmlFields": [
-                    "description"
-                ]
-            },
-            "ranged-weapon": {
-                "htmlFields": [
-                    "description"
-                ]
-            },
-            "melee-weapon": {
-                "htmlFields": [
-                    "description"
-                ]
-            },
-            "armour": {
-                "htmlFields": [
-                    "description"
-                ]
-            },
-            "skill": {},
-            "talent": {}
-        }
-    },
-    "gridDistance": 1,
-    "gridUnits": "m",
-    "primaryTokenAttribute": null,
-    "secondaryTokenAttribute": null,
-    "url": "https://github.com/ThreeToes/RogueTrader-FoundryVTT",
-    "socket": true,
-    "license": "LICENSE.md"
+	"id": "rogue-trader",
+	"title": "Rogue Trader",
+	"description": "Unofficial Foundry VTT System for Rogue Trader.",
+	"version": "0.0.1",
+	"minimumCoreVersion": 13,
+	"compatibility": {
+		"minimum": 13,
+		"verified": 14,
+		"maximum": 14
+	},
+	"templateVersion": 2,
+	"authors": [
+		{
+			"name": "ThreeToes"
+		}
+	],
+	"scripts": [],
+	"esmodules": ["./entry-point.js"],
+	"styles": ["./rogue-trader.css"],
+	"packs": [
+		{
+			"name": "aptitudes",
+			"label": "Character Aptitudes",
+			"system": "rogue-trader",
+			"path": "packs/aptitudes",
+			"type": "Item"
+		},
+		{
+			"name": "skills",
+			"label": "Rogue Trader Skills",
+			"system": "rogue-trader",
+			"path": "packs/skills",
+			"type": "Item"
+		},
+		{
+			"name": "talents",
+			"label": "Rogue Trader Talents",
+			"system": "rogue-trader",
+			"path": "packs/talents",
+			"type": "Item"
+		},
+		{
+			"name": "weapons",
+			"label": "Rogue Trader Weapons",
+			"system": "rogue-trader",
+			"path": "packs/weapons",
+			"type": "Item"
+		}
+	],
+	"languages": [
+		{
+			"lang": "en",
+			"name": "English",
+			"path": "lang/en.json"
+		},
+		{
+			"lang": "es",
+			"name": "Espa\u00f1ol",
+			"path": "lang/es.json"
+		},
+		{
+			"lang": "fr",
+			"name": "Fran\u00e7ais",
+			"path": "lang/fr.json"
+		},
+		{
+			"lang": "pl",
+			"name": "Polski",
+			"path": "lang/pl.json"
+		}
+	],
+	"documentTypes": {
+		"Actor": {
+			"pc": {
+				"htmlFields": ["description"]
+			},
+			"npc": {
+				"htmlFields": ["description"]
+			},
+			"vehicle": {
+				"htmlFields": ["description"]
+			}
+		},
+		"Item": {
+			"gear": {
+				"htmlFields": ["description"]
+			},
+			"ranged-weapon": {
+				"htmlFields": ["description"]
+			},
+			"melee-weapon": {
+				"htmlFields": ["description"]
+			},
+			"armour": {
+				"htmlFields": ["description"]
+			},
+			"skill": {},
+			"talent": {},
+			"psychicpower": {
+				"htmlFields": ["description"]
+			},
+			"ammunition": {
+				"htmlFields": ["description"]
+			},
+			"force-field": {
+				"htmlFields": ["description"]
+			},
+			"weapon-modification": {
+				"htmlFields": ["description"]
+			},
+			"tool": {
+				"htmlFields": ["description"]
+			},
+			"drug": {
+				"htmlFields": ["description"]
+			},
+			"special-ability": {
+				"htmlFields": ["description"]
+			},
+			"aptitude": {
+				"htmlFields": ["description"]
+			}
+		}
+	},
+	"gridDistance": 1,
+	"gridUnits": "m",
+	"primaryTokenAttribute": null,
+	"secondaryTokenAttribute": null,
+	"url": "https://github.com/ThreeToes/RogueTrader-FoundryVTT",
+	"socket": true,
+	"license": "LICENSE.md"
 }

@@ -79,7 +79,10 @@ in all four; (4) treat registry-seeded key families (QUALITY.*, CLASS.*,
 BODY_LOCATION.*, VEHICLE_*, TALENT*, EQUIP_STATE.*) as used-by-construction;
 (5) check duplicate keys per file (JSON parsers silently swallow them);
 (6) legacy DH-fork keys exist that are unused but NOT deleted (risky) — flagged
-in bead 201. Re-run after every lang edit and before releases.
+in bead 201. Re-run after every lang edit and before releases. **Gotcha**
+(bead 9n3): extraction regexes must allow keys spanning lines/nested quotes —
+`localize "X"` inside `{{#if}}` blocks or `concat` calls is easily missed;
+when in doubt, quote-strip and rerun rather than trusting a first-pass gap list.
 
 ## 8. Verification discipline
 

@@ -28,13 +28,11 @@
                     {{#if skill.owned}}
                     {{#each skill.ladderOptions as |opt|}}
                     <button type="button" class="ladder-option {{#if (eq skill.ladder opt.value)}}active{{/if}}"
-                        data-action="setLadder" data-item="{{skill.id}}" data-value="{{opt.value}}">
+                        data-action="setLadder" data-item="{{skill.id}}" data-value="{{opt.value}}"
+                        {{#if (eq skill.ladder opt.value)}}data-tooltip="{{localize "SKILL.OWNED_TOGGLE_HINT"}}"{{/if}}>
                         {{localize opt.label}}
                     </button>
                     {{/each}}
-                    <a class="skill-delete" data-action="deleteSkill" data-item="{{skill.id}}"
-                        data-tooltip="{{localize "DOCUMENT.Delete"}}"
-                    ><i class="fas fa-trash"></i></a>
                     {{else}}
                     {{#each skill.ladderOptions as |opt|}}
                     <button type="button" class="ladder-option" data-action="ownSkill" data-name="{{skill.name}}"

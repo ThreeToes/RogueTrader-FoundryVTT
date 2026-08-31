@@ -1,13 +1,17 @@
 import { Character } from "../data/actor/character";
 import { Vehicle } from "../data/actor/vehicle";
 import { Armour } from "../data/item/armour";
+import { Ammunition } from "../data/item/ammunition";
+import { ForceField } from "../data/item/force-field";
 import { Gear } from "../data/item/gear";
 import { MeleeWeapon } from "../data/item/melee-weapon";
+import { PsychicPower } from "../data/item/psychic-power";
+import { WeaponModification } from "../data/item/weapon-modification";
 import { RangedWeapon } from "../data/item/ranged-weapon";
 import { Skill } from "../data/item/skill";
 import { Talent } from "../data/item/talent";
 import { attachRegistriesToConfig } from "../registry";
-import { rollSkill, rollTest } from "../rules/adapter";
+import { rollDamageForCard, rollSkill, rollTest } from "../rules/adapter";
 import { testContributors } from "../rules/funnel";
 import { talentEffectHandlers } from "../rules/talent-effects";
 import { defaultSkillItems } from "../rules/default-skills";
@@ -16,6 +20,7 @@ import { VehicleSheet } from "./actor/vehicle-sheet";
 import { registerConfigHelper } from "./handlebars";
 import { ArmourSheet } from "./item/armour-sheet";
 import { GearSheet } from "./item/gear-sheet";
+import { PsychicPowerSheet } from "./item/psychic-power-sheet";
 import { SkillSheet } from "./item/skill-sheet";
 import { TalentSheet } from "./item/talent-sheet";
 import { WeaponSheet } from "./item/weapon-sheet";
@@ -23,6 +28,134 @@ import { WeaponSheet } from "./item/weapon-sheet";
 type AnySheetCtor = new (...args: unknown[]) => object;
 
 let commonSkillCatalog: object[] = [];
+
+interface DamageApplyFlag {
+	wounds?: number;
+	targetUuid?: string;
+	applied?: boolean;
+}
+
+/**
+ * Apply the wounds shown on a damage chat card to the flagged target
+ * (bead ncc). Consumes the card's data-only kernel outcome; guards
+ * double-application via the message flag; ownership enforced here.
+ */
+async function applyDamageFromCard(button: HTMLButtonElement): Promise<void> {
+	const messageEl = button.closest<HTMLElement>(".message");
+	const messageId = messageEl?.dataset.messageId;
+	const message = messageId
+		? (foundry.documents.ChatMessage.get(messageId) as unknown as {
+				flags?: Record<string, Record<string, unknown>>;
+				update: (u: object) => Promise<void>;
+			})
+		: undefined;
+	const data = message?.flags?.["rogue-trader"]?.damageApply as
+		| DamageApplyFlag
+		| undefined;
+	if (!message || !data || data.applied) {
+		// Fallback: the button itself carries the outcome (data-target /
+		// data-wounds) - usable even when the message flag is missing, e.g.
+		// on cards created before the flag existed.
+		const fallbackWounds = Number(button.dataset.wounds ?? 0);
+		const fallbackTarget = button.dataset.target;
+		if (!fallbackTarget || !fallbackWounds) return;
+		applyToTarget(fallbackTarget, fallbackWounds, message, button).catch(
+			(error) => console.error("rogue-trader: apply-damage failed", error),
+		);
+		return;
+	}
+	await applyToTarget(
+		data.targetUuid ?? "",
+		Number(data.wounds ?? 0),
+		message,
+		button,
+		{ ...data },
+	);
+}
+
+/** Shared apply path: resolve target, enforce ownership, clamp, update. */
+async function applyToTarget(
+	targetUuid: string,
+	woundsAmount: number,
+	message:
+		| {
+				flags?: Record<string, Record<string, unknown>>;
+				update: (u: object) => Promise<void>;
+		  }
+		| undefined,
+	button: HTMLButtonElement,
+	existing?: DamageApplyFlag,
+): Promise<void> {
+	const target = targetUuid
+		? (foundry.utils.fromUuidSync(targetUuid) as unknown as {
+				system?: { wounds?: { value: number; max: number } };
+				isOwner?: boolean;
+				update: (u: object) => Promise<void>;
+			} | null)
+		: null;
+	const wounds = target?.system?.wounds;
+	if (!target || !wounds) return;
+	// Only the defender's owner (or a GM) may apply the wounds.
+	const user = game as unknown as { user?: { isGM?: boolean } };
+	if (!target.isOwner && !user.user?.isGM) return;
+
+	const current = Number(wounds.value ?? 0);
+	const applied = Math.min(Number(woundsAmount ?? 0), current);
+	const next = Math.max(0, current - applied);
+	button.disabled = true;
+	await target.update({ system: { wounds: { value: next } } });
+	if (message) {
+		await message.update({
+			flags: {
+				"rogue-trader": {
+					damageApply: {
+						wounds: woundsAmount,
+						targetUuid,
+						applied: true,
+						...existing,
+					},
+				},
+			},
+		});
+	}
+	ui.notifications?.info(
+		game.i18n.format("DAMAGE.APPLIED", { wounds: applied }),
+	);
+}
+
+/**
+ * Roll damage from the to-hit card's button (owner redesign): reads the
+ * damageRoll flag set at attack time, guards double-rolls via the
+ * rolled marker, and delegates to the adapter's damage flow.
+ */
+async function rollDamageButton(button: HTMLButtonElement): Promise<void> {
+	const messageEl = button.closest<HTMLElement>(".message");
+	const messageId = messageEl?.dataset.messageId;
+	const message = messageId
+		? (foundry.documents.ChatMessage.get(messageId) as unknown as {
+				flags?: Record<string, Record<string, unknown>>;
+				update: (u: object) => Promise<void>;
+			})
+		: undefined;
+	const data = message?.flags?.["rogue-trader"]?.damageRoll as
+		| {
+				attackerUuid?: string;
+				weaponUuid?: string;
+				targetUuid?: string | null;
+				rolled?: boolean;
+		  }
+		| undefined;
+	if (!message || !data || data.rolled) return;
+	button.disabled = true;
+	await rollDamageForCard(data as never);
+	await message.update({
+		flags: {
+			"rogue-trader": {
+				damageRoll: { ...data, rolled: true },
+			},
+		},
+	});
+}
 
 export function sheetInit() {
 	Hooks.once("init", () => {
@@ -51,6 +184,19 @@ export function sheetInit() {
 		CONFIG.Item.dataModels.armour = Armour;
 		CONFIG.Item.dataModels.skill = Skill;
 		CONFIG.Item.dataModels.talent = Talent;
+		// Compendium-sourced aptitudes are description-only items; reuse the
+		// Gear model (all fields have initials) and its generic sheet so opening
+		// them does not crash DocumentSheetConfig (bead r7w).
+		CONFIG.Item.dataModels.aptitude = Gear;
+		CONFIG.Item.dataModels.psychicpower = PsychicPower;
+		CONFIG.Item.dataModels.ammunition = Ammunition;
+		CONFIG.Item.dataModels["force-field"] = ForceField;
+		CONFIG.Item.dataModels["weapon-modification"] = WeaponModification;
+		// No extra schema needed: reuse the Gear model for the plain-Gear
+		// subtypes the packs reference (bead 5p8 scope note).
+		CONFIG.Item.dataModels.tool = Gear;
+		CONFIG.Item.dataModels.drug = Gear;
+		CONFIG.Item.dataModels["special-ability"] = Gear;
 		CONFIG.Actor.dataModels.pc = Character;
 		CONFIG.Actor.dataModels.npc = Character;
 		CONFIG.Actor.dataModels.vehicle = Vehicle;
@@ -105,6 +251,55 @@ export function sheetInit() {
 			TalentSheet as unknown as AnySheetCtor,
 			["talent"],
 			"ROGUE_TRADER.TALENT.SHEET",
+		);
+		registerSheet(
+			foundry.documents.Item,
+			PsychicPowerSheet as unknown as AnySheetCtor,
+			["psychicpower"],
+			"TYPES.Item.psychicpower",
+		);
+		// Apply-damage button on attack damage cards (bead ncc): an
+		// adapter-layer action that consumes the displayed outcome - the flag
+		// carries the computed wounds; nothing is recomputed here. Delegated
+		// listener (registered once) so it works regardless of which chat
+		// render hook fires.
+		Hooks.once("ready", () => {
+			document.body.addEventListener("click", (event) => {
+				const target = event.target as HTMLElement | null;
+				const applyButton = target?.closest<HTMLButtonElement>(
+					"button.apply-damage",
+				);
+				if (applyButton) {
+					if (!applyButton.disabled) {
+						applyDamageFromCard(applyButton).catch((error) =>
+							console.error("rogue-trader: apply-damage failed", error),
+						);
+					}
+					return;
+				}
+				// Manual damage roll from the to-hit card (owner redesign).
+				const damageButton = target?.closest<HTMLButtonElement>(
+					"button.rt-roll-damage",
+				);
+				if (!damageButton || damageButton.disabled) return;
+				rollDamageButton(damageButton).catch((error) =>
+					console.error("rogue-trader: damage roll failed", error),
+				);
+			});
+		});
+		registerSheet(
+			foundry.documents.Item,
+			GearSheet as unknown as AnySheetCtor,
+			[
+				"aptitude",
+				"ammunition",
+				"force-field",
+				"weapon-modification",
+				"tool",
+				"drug",
+				"special-ability",
+			],
+			"ROGUE_TRADER.GEAR.SHEET",
 		);
 
 		// Pre-warm the skills pack for the createActor grant hook (the sheet

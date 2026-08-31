@@ -73,7 +73,9 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	/** Show the dialog; resolves null on cancel/close. */
-	static async show(request: TestDialogRequest): Promise<TestDialogResult | null> {
+	static async show(
+		request: TestDialogRequest,
+	): Promise<TestDialogResult | null> {
 		const dialog = new TestDialog({ request });
 		return await dialog.#promise();
 	}

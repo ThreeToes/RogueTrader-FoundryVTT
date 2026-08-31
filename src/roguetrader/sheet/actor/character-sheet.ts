@@ -1,5 +1,10 @@
 import { Character } from "../../data/actor/character";
-import { rollSkill, rollSkillUntrained, rollTest, rollWeaponAttack } from "../../rules/adapter";
+import {
+	rollSkill,
+	rollSkillUntrained,
+	rollTest,
+	rollWeaponAttack,
+} from "../../rules/adapter";
 import { deriveCapacity, resolveEncumbrance } from "../../rules/encumbrance";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { defaultSkillItems } from "../../rules/default-skills";
@@ -39,7 +44,6 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			addSkill: CharacterSheet.#onAddSkill,
 			setUnnatural: CharacterSheet.#onSetUnnatural,
 			setLadder: CharacterSheet.#onSetLadder,
-			deleteSkill: CharacterSheet.#onDeleteSkill,
 			openItem: CharacterSheet.#onOpenItem,
 			deleteItem: CharacterSheet.#onDeleteItem,
 			rollWeapon: CharacterSheet.#onRollWeapon,
@@ -53,7 +57,8 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId =
+			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
 		const item = this.actor.items.get(itemId);
 		if (item) item.sheet?.render(true);
@@ -65,7 +70,8 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId =
+			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
 		await this.actor.items.get(itemId)?.delete();
 	}
@@ -76,14 +82,15 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId =
+			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
 		await rollWeaponAttack(this.actor, itemId);
 	}
 
-	static async #onOpenTalentPicker(
-		this: { actor: foundry.documents.Actor },
-	): Promise<void> {
+	static async #onOpenTalentPicker(this: {
+		actor: foundry.documents.Actor;
+	}): Promise<void> {
 		await new TalentPicker({ actor: this.actor }).render({ force: true });
 	}
 
@@ -96,14 +103,21 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId =
+			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
 		const item = this.actor.items.get(itemId);
 		if (!item) return;
 		const type = item.type as string;
-		if (!(["weapon", "melee-weapon", "ranged-weapon", "armour", "gear"].includes(type))) return;
+		if (
+			!["weapon", "melee-weapon", "ranged-weapon", "armour", "gear"].includes(
+				type,
+			)
+		)
+			return;
 		const current =
-			(item.system as unknown as { equipState?: string }).equipState ?? "stowed";
+			(item.system as unknown as { equipState?: string }).equipState ??
+			"stowed";
 		const readyState = type === "armour" ? "worn" : "carried";
 		const next = current === readyState ? "stowed" : readyState;
 		await item.update({ system: { equipState: next } });
@@ -173,7 +187,16 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const itemId = target.dataset.item;
 		const value = Number(target.dataset.value);
 		if (!itemId || Number.isNaN(value)) return;
-		await this.actor.items.get(itemId)?.update({ system: { ladder: value } });
+		const item = this.actor.items.get(itemId);
+		if (!item) return;
+		const current = (item as { system?: { ladder?: number } }).system?.ladder;
+		// Click-to-own toggle (bead tnw): clicking the skill's active ladder
+		// again removes it (no separate trash icon on the row).
+		if (current === value) {
+			await item.delete();
+			return;
+		}
+		await item.update({ system: { ladder: value } });
 	}
 
 	/** Set the unnatural multiplier from a clicked pip; clicking the last lit pip resets to natural. */
@@ -194,16 +217,6 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		});
 	}
 
-	static async #onDeleteSkill(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const itemId = target.dataset.item;
-		if (!itemId) return;
-		await this.actor.items.get(itemId)?.delete();
-	}
-
 	static PARTS = {
 		header: {
 			template: "systems/rogue-trader/template/sheet/actor/parts/header.hbs",
@@ -220,6 +233,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		inventory: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/inventory.hbs",
 		},
+		talents: {
+			template: "systems/rogue-trader/template/sheet/actor/tabs/talents.hbs",
+		},
 		skills: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/skills.hbs",
 		},
@@ -234,6 +250,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				{ id: "data", group: "primary", label: "TAB.STATS" },
 				{ id: "combat", group: "primary", label: "TAB.COMBAT" },
 				{ id: "skills", group: "primary", label: "TAB.SKILLS" },
+				{ id: "talents", group: "primary", label: "TAB.TALENTS" },
 				{ id: "inventory", group: "primary", label: "TAB.INVENTORY" },
 				{ id: "notes", group: "primary", label: "TAB.NOTES" },
 			],
@@ -398,16 +415,21 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			this.actor.items
 				.filter((item) => types.includes(item.type as string))
 				.map((item) => {
-					const equipState = (item.system as unknown as { equipState?: string })
-						.equipState;
+					const equipState = (
+						item.system as unknown as { equipState?: string }
+					).equipState;
+					const type = item.type as string;
 					return {
 						id: item.id,
 						name: item.name,
 						uuid: item.uuid,
-						weight:
-							(item.system as unknown as { weight?: number }).weight ?? 0,
+						weight: (item.system as unknown as { weight?: number })
+							.weight ?? 0,
 						equipState: equipState ?? "stowed",
 						equipped: equipState === "carried" || equipState === "worn",
+						// Weapons get the inline attack/damage roll button.
+						isWeapon:
+							type === "melee-weapon" || type === "ranged-weapon",
 					};
 				});
 		const inventory: Array<{
@@ -434,7 +456,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Armour: highest AP per body location across owned armour items.
 		// TODO(equip-state): once item-side equipState lands (bead n7m), filter to
 		// equipped armour only. Stacking rules intentionally not modelled yet.
-		const armourItems = this.actor.items.filter((item) => item.type === "armour");
+		const armourItems = this.actor.items.filter(
+			(item) => item.type === "armour",
+		);
 		const LOCATIONS = [
 			"head",
 			"left-arm",
@@ -448,7 +472,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				const ap = Math.max(
 					0,
 					...armourItems.map((item) =>
-						(item.system as unknown as { armourAt(loc: string): number }).armourAt(loc),
+						(
+							item.system as unknown as { armourAt(loc: string): number }
+						).armourAt(loc),
 					),
 				);
 				return [loc, { ap }];
@@ -482,24 +508,20 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 					penetration: sys.penetration ?? 0,
 					isRanged,
 					rof: {
-						singleShot:
-							sys.rateOfFire?.singleShot ? "S" : "\u2013",
-							burst: sys.rateOfFire?.burst || "\u2013",
-							fullAuto:
-							sys.rateOfFire?.fullAuto || "\u2013",
+						singleShot: sys.rateOfFire?.singleShot ? "S" : "\u2013",
+						burst: sys.rateOfFire?.burst || "\u2013",
+						fullAuto: sys.rateOfFire?.fullAuto || "\u2013",
 					},
 					clip: sys.clip ?? 0,
 				};
 			})
 			.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
 
-		inventory.unshift({
-			label: "TYPES.Item.talent",
-			items: byType(["talent"]),
-			addLabel: "TALENT.ADD",
-			addAction: "openTalentPicker",
-		});
 		context.inventory = inventory;
+
+		// Talents: dedicated first-class tab (bead 7gb), sharing the inventory
+		// row anatomy.
+		context.talentRows = byType(["talent"]);
 
 		// Encumbrance: carried weight vs capacity derived from Strength Bonus
 		// (rules/encumbrance.ts deriveCapacity, VERIFY book rule).
@@ -514,9 +536,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.derived = {
 			...system.movement(),
 			initiative: system.initiativeBonus(),
-			woundsMax: woundsMax(system, this.actor.items
-				.filter((item) => item.type === "talent")
-				.map((item) => item.system as never)),
+			woundsMax: woundsMax(
+				system,
+				this.actor.items
+					.filter((item) => item.type === "talent")
+					.map((item) => item.system as never),
+			),
 			fatigueMax: fatigueThreshold(system),
 		};
 

@@ -4,39 +4,18 @@
         <div class="armour-points">
             <h2 class="inv-group-label">{{localize "ARMOUR.ARMOUR_POINTS"}}</h2>
             <div class="armour-body">
-                <div class="body-row">
-                    {{#each (config "bodyLocations") as |label key|}}
-                    {{#if (eq key "head")}}
-                    <div class="body-part head" data-location="{{key}}">
-                        <label class="part-label" for="ap-{{key}}">{{localize label}}</label>
-                        <input id="ap-{{key}}" name="system.armourPoints.{{key}}" type="number" min="0"
-                            value="{{lookup ../armourPoints key}}" />
+                {{#each armourRows as |row|}}
+                <div class="body-row {{#if (eq row.cssClass "legs-row")}}legs-row{{/if}}">
+                    {{#each row.parts as |part|}}
+                    <div class="body-part {{#if (eq part.location "head")}}head{{/if}}"
+                        data-location="{{part.location}}">
+                        <label class="part-label" for="ap-{{part.location}}">{{localize part.label}}</label>
+                        <input id="ap-{{part.location}}" name="system.armourPoints.{{part.location}}" type="number"
+                            min="0" value="{{lookup ../../armourPoints part.location}}" />
                     </div>
-                    {{/if}}
                     {{/each}}
                 </div>
-                <div class="body-row">
-                    {{#each (config "bodyLocations") as |label key|}}
-                    {{#if (or (eq key "left-arm") (eq key "body") (eq key "right-arm"))}}
-                    <div class="body-part" data-location="{{key}}">
-                        <label class="part-label" for="ap-{{key}}">{{localize label}}</label>
-                        <input id="ap-{{key}}" name="system.armourPoints.{{key}}" type="number" min="0"
-                            value="{{lookup ../armourPoints key}}" />
-                    </div>
-                    {{/if}}
-                    {{/each}}
-                </div>
-                <div class="body-row legs-row">
-                    {{#each (config "bodyLocations") as |label key|}}
-                    {{#if (or (eq key "left-leg") (eq key "right-leg"))}}
-                    <div class="body-part" data-location="{{key}}">
-                        <label class="part-label" for="ap-{{key}}">{{localize label}}</label>
-                        <input id="ap-{{key}}" name="system.armourPoints.{{key}}" type="number" min="0"
-                            value="{{lookup ../armourPoints key}}" />
-                    </div>
-                    {{/if}}
-                    {{/each}}
-                </div>
+                {{/each}}
             </div>
         </div>
         <div class="stats-row">

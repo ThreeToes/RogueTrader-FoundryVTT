@@ -1,4 +1,5 @@
 import { qualities } from "../../registry";
+import { DamageType } from "./damage-types";
 import { Gear } from "./gear";
 import { WeaponClass } from "./weapon-class";
 
@@ -34,10 +35,17 @@ export abstract class Weapon extends Gear {
 				initial: 0,
 				required: true,
 			}),
-			/** Damage formula, e.g. "1d10+4 E". */
+			/** Damage formula, e.g. "1d10+4" (type is a separate field). */
 			damage: new foundry.data.fields.StringField({
 				required: true,
 				initial: "",
+			}),
+			/** Damage type the formula deals (E/I/R/X in book notation). */
+			damageType: new foundry.data.fields.StringField({
+				choices: Object.values(DamageType),
+				initial: DamageType.Impact,
+				required: true,
+				nullable: false,
 			}),
 			penetration: new foundry.data.fields.NumberField({
 				min: 0,

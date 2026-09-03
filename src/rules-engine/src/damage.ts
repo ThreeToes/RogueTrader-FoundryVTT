@@ -16,6 +16,37 @@
  */
 import type { RuleProfile } from "./profile";
 
+/**
+ * Strip a trailing Rogue Trader damage-type token from a weapon damage
+ * string (e.g. "1d10+4 E" -> formula "1d10+4", type "Energy") so the residue
+ * is safe for Foundry's Roll parser, which throws on the letter suffix.
+ *
+ * The RT core book uses damage types E(nergy), I(mpact), R(end), X(plosive);
+ * legacy sources also use S for slash/rending. A trailing whitespace-
+ * separated single letter is treated as the type suffix and normalised to
+ * the system's canonical DamageType value; anything else is left untouched.
+ */
+export function parseDamageFormula(damage: string): {
+	formula: string;
+	type: "Energy" | "Impact" | "Rending" | "Explosive" | null;
+} {
+	const trimmed = damage.trim();
+	const match = /^(?<formula>.*?)(?:\s+(?<type>[EIRSX]))$/i.exec(trimmed);
+	if (!match?.groups?.formula) return { formula: trimmed, type: null };
+	const formula = match.groups.formula.trim();
+	if (!formula) return { formula: trimmed, type: null };
+	const letter = match.groups.type.toUpperCase();
+	const type =
+		letter === "E"
+			? "Energy"
+			: letter === "I"
+				? "Impact"
+				: letter === "R" || letter === "S"
+					? "Rending"
+					: "Explosive";
+	return { formula, type };
+}
+
 export interface DamageRequest {
 	/** Total rolled damage for this hit. */
 	roll: number;
@@ -30,6 +61,13 @@ export interface DamageRequest {
 	armourValue?: number;
 	/** Whether the armour is_primitive (affects the primitive armour rule). */
 	armourPrimitive?: boolean;
+	/**
+	 * Whether the raw damage dice showed the profile's Righteous Fury trigger
+	 * (e.g. a natural 10 on a damage die). The kernel cannot inspect the
+	 * Foundry roll itself, so the adapter reports the trigger here; without
+	 * this the fury never fires.
+	 */
+	righteousFuryTriggered?: boolean;
 	profile: RuleProfile;
 }
 
@@ -74,11 +112,13 @@ export function resolveDamage(request: DamageRequest): DamageOutcome {
 	}
 
 	// Righteous Fury: kernel only flags triggering hits; the extra damage roll
-	// belongs to the adapter (Foundry dice, user-visible).
+	// belongs to the adapter (Foundry dice, user-visible). Requires BOTH a
+	// damaging hit AND the raw-dice trigger reported by the adapter (bead fix:
+	// previously every damaging hit was flagged).
 	const righteousFury =
 		(profile.righteousFury?.enabled ?? false) &&
-		wounds > 0 &&
-		profile.righteousFury?.trigger === "damaging-hit";
+		request.righteousFuryTriggered === true &&
+		wounds > 0;
 
 	return {
 		location,

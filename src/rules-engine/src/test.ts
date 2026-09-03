@@ -19,6 +19,8 @@ export interface TestRequest {
 }
 
 export interface TestOutcome {
+	/** The raw d100 roll (echoed so adapters can use it, e.g. hit location). */
+	roll: number;
 	/** Did the roll meet the target (also true for exact match)? */
 	success: boolean;
 	/** Degrees of success (0 on failure). */
@@ -53,6 +55,7 @@ export function resolveTest(request: TestRequest): TestOutcome {
 	const double = isDouble(roll);
 
 	return {
+		roll,
 		success,
 		degrees,
 		margin: target - roll,

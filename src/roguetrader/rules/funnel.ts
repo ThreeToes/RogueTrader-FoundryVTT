@@ -1,4 +1,4 @@
-import type { Modifier } from "../../../packages/rules-engine/src/modifier";
+import type { Modifier } from "../../rules-engine/src/modifier";
 
 /**
  * Modifier funnel: the single collection point between the system's data and

@@ -70,6 +70,86 @@ export function resolveEntryType(
 	return FOLDER_TYPE_DEFAULTS[folder] ?? "gear";
 }
 
+/**
+ * Packs whose documents are RollTables rather than Items. Foundry LevelDB
+ * packs key each collection by document class: items live under `!items!`,
+ * roll tables under `!tables!`.
+ */
+export const TABLE_PACKS: ReadonlySet<string> = new Set(["criticals"]);
+
+/** A single authored result row: string shorthand or a partial result. */
+type ResultRow =
+	| string
+	| {
+			text?: string;
+			weight?: number;
+			range?: [number, number];
+	  };
+
+/**
+ * Build the `results` array for a RollTable source. Rows are auto-ranged
+ * cumulatively (d10 severity order); explicit `range`/`weight` override.
+ * A table with no results but a `pending` count gets clearly-labelled
+ * placeholder rows so the scaffold is rollable but never silently wrong.
+ */
+export function buildTableResults(
+	entry: { results?: ResultRow[]; pending?: number; name?: string },
+): Array<Record<string, unknown>> {
+	const authored = Array.isArray(entry.results) ? entry.results : [];
+	const rows: Array<{
+		text?: string;
+		weight?: number;
+		range?: [number, number];
+	}> =
+		authored.length > 0
+			? authored.map((r) => (typeof r === "string" ? { text: r } : r))
+			: Array.from(
+					{ length: Math.max(0, Number(entry.pending ?? 0)) },
+					(_, i) => ({
+						text: `Critical effect pending extraction (severity ${i + 1})`,
+					}),
+				);
+
+	let next = 1;
+	return rows.map((row, i) => {
+		const weight = Math.max(1, Number(row.weight ?? 1));
+		const end = Array.isArray(row.range) ? row.range[1] : next + weight - 1;
+		const start = Array.isArray(row.range) ? row.range[0] : next;
+		next = end + 1;
+		return {
+			_id: documentId(`${entry.name ?? "table"}:${i}`),
+			type: 0, // CONST.TABLE_RESULT_TYPES.TEXT
+			text: row.text ?? "",
+			img: null,
+			documentCollection: null,
+			documentId: null,
+			weight,
+			range: [start, end],
+		};
+	});
+}
+
+/** Shape a YAML entry into a Foundry RollTable source document. */
+export function toTableSourceDocument(entry: Record<string, unknown>) {
+	const name = String(entry.name ?? "unnamed");
+	return {
+		_id: documentId(name, entry._id as string | undefined),
+		name,
+		formula: typeof entry.formula === "string" ? entry.formula : "1d10",
+		replacement: entry.replacement ?? true,
+		displayRoll: entry.displayRoll ?? true,
+		description: typeof entry.description === "string" ? entry.description : "",
+		results: buildTableResults(
+			entry as { results?: ResultRow[]; pending?: number; name?: string },
+		),
+		img: entry.img ?? null,
+		folder: null,
+		sort: 0,
+		_stats: entry._stats ?? { coreVersion: 14 },
+		flags: entry.flags ?? {},
+	};
+}
+
 /** Shape a YAML entry into a Foundry Item source document. */
 function toSourceDocument(entry: Record<string, unknown>, folder: string) {
 	const id = documentId(
@@ -92,6 +172,7 @@ async function buildPack(
 	folder: string,
 	ClassicLevelCtor: typeof ClassicLevel,
 ): Promise<number> {
+	const isTablePack = TABLE_PACKS.has(folder);
 	const packPath = path.resolve(PACK_DEST, folder);
 
 	// Recreate: our builds fully own the LevelDB dir (gitignored artifacts).
@@ -123,8 +204,14 @@ async function buildPack(
 			const entries = Array.isArray(value) ? value : [value];
 			for (const entry of entries) {
 				if (!entry) continue;
-				const doc = toSourceDocument(entry as Record<string, unknown>, folder);
-				batch.put(`!items!${doc._id}`, doc);
+				const source = entry as Record<string, unknown>;
+				const doc: Record<string, unknown> = isTablePack
+					? toTableSourceDocument(source)
+					: toSourceDocument(source, folder);
+				batch.put(
+					`${isTablePack ? "!tables!" : "!items!"}${String(doc._id)}`,
+					doc as unknown as string,
+				);
 				count++;
 			}
 		}

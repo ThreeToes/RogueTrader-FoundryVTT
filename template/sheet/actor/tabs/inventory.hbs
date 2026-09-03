@@ -11,7 +11,7 @@
                 <div class="bar">
                     <div class="fill" style="width: {{#if encumbrance.capacity}}{{encumbrance.percent}}{{else}}0{{/if}}%"></div>
                 </div>
-                <span class="encumbrance-text">{{encumbrance.weight}} / {{encumbrance.capacity}} kg ({{encumbrance.percent}}%) {{localize (concat "INVENTORY.STATE_" encumbrance.state)}}</span>
+                <span class="encumbrance-text">{{encumbrance.weight}} / {{encumbrance.capacity}} kg ({{encumbrance.percent}}%) {{localize encumbrance.stateLabel}}</span>
             </div>
         </div>
 
@@ -31,8 +31,13 @@
             <li class="inv-row draggable" data-item-id="{{item.id}}" data-item-uuid="{{item.uuid}}">
                 <span class="inv-grab"><i class="fa-solid fa-grip-vertical"></i></span>
                 {{#if item.isWeapon}}
-                <a class="char-roll weapon-roll" data-action="rollWeapon"
-                    data-tooltip="{{localize "WEAPON.ATTACK"}}"
+                <a class="equip-toggle {{#if item.equipped}}equipped{{/if}}"
+                    data-action="toggleEquip"
+                    data-tooltip="{{localize (concat "EQUIP_STATE." item.equipState)}}"
+                ><i class="fa-solid fa-circle-check"></i></a>
+                <a class="char-roll weapon-roll {{#unless item.equipped}}unequipped{{/unless}}"
+                    data-action="rollWeapon"
+                    data-tooltip="{{#if item.equipped}}{{localize "WEAPON.ATTACK"}}{{else}}{{localize "EQUIP_STATE.STOWED"}}{{/if}}"
                 ><i class="fa-solid fa-dice-d10"></i></a>
                 {{else}}
                 <a class="equip-toggle {{#if item.equipped}}equipped{{/if}}"

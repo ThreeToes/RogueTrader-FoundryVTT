@@ -22,6 +22,8 @@ export interface EncumbranceOutcome {
 	percent: number;
 	/** ok < ENCUMBERED_AT, encumbered from ENCUMBERED_AT, over past 100%. */
 	state: "ok" | "encumbered" | "over";
+	/** i18n key for the state label (keys are uppercase in the lang files). */
+	stateLabel: "INVENTORY.STATE_OK" | "INVENTORY.STATE_ENCUMBERED" | "INVENTORY.STATE_OVER";
 }
 
 export const ENCUMBERED_AT = 0.8; // fraction of capacity (VERIFY)
@@ -48,5 +50,6 @@ export function resolveEncumbrance(
 	let state: EncumbranceOutcome["state"] = "ok";
 	if (capacity > 0 && ratio > 1) state = "over";
 	else if (capacity > 0 && ratio >= ENCUMBERED_AT) state = "encumbered";
-	return { weight, capacity, ratio, percent, state };
+	const stateLabel = `INVENTORY.STATE_${state.toUpperCase()}` as EncumbranceOutcome["stateLabel"];
+	return { weight, capacity, ratio, percent, state, stateLabel };
 }

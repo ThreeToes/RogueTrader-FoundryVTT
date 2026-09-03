@@ -46,6 +46,13 @@
 			"system": "rogue-trader",
 			"path": "packs/weapons",
 			"type": "Item"
+		},
+		{
+			"name": "criticals",
+			"label": "Critical Hit Effects",
+			"system": "rogue-trader",
+			"path": "packs/criticals",
+			"type": "RollTable"
 		}
 	],
 	"languages": [

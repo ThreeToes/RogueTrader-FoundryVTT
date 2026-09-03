@@ -1,6 +1,7 @@
 export {
 	type DamageOutcome,
 	type DamageRequest,
+	parseDamageFormula,
 	resolveDamage,
 } from "./damage";
 export { type Modifier, sumModifiers } from "./modifier";

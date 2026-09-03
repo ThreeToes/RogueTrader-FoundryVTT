@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolveDamage } from "../src/damage";
+import { parseDamageFormula, resolveDamage } from "../src/damage";
 import { sumModifiers } from "../src/modifier";
 import { rtCore } from "../src/profile";
 import { locationForHit, resolveTest } from "../src/test";
@@ -57,6 +57,12 @@ describe("resolveTest (rt-core)", () => {
 			resolveTest({ target: 60, roll: 22, profile: rtCore }).critical,
 		).toBe(true);
 	});
+
+	test("echoes the raw roll on the outcome (bead vul)", () => {
+		expect(resolveTest({ target: 60, roll: 37, profile: rtCore }).roll).toBe(
+			37,
+		);
+	});
 });
 
 describe("sumModifiers", () => {
@@ -112,24 +118,37 @@ describe("resolveDamage (rt-core)", () => {
 		expect(outcome.wounds).toBe(0);
 	});
 
-	test("righteous fury flags damaging hits only", () => {
+	test("righteous fury requires trigger + damaging hit", () => {
 		const damaging = resolveDamage({
+			roll: 10,
+			toughnessBonus: 1,
+			location: "body",
+			armourValue: 0,
+			righteousFuryTriggered: true,
+			profile: rtCore,
+		});
+		expect(damaging.righteousFury).toBe(true);
+
+		// Triggered dice but fully soaked: no fury.
+		const soaked = resolveDamage({
+			roll: 10,
+			toughnessBonus: 4,
+			location: "body",
+			armourValue: 6,
+			righteousFuryTriggered: true,
+			profile: rtCore,
+		});
+		expect(soaked.righteousFury).toBe(false);
+
+		// Damaging hit but the dice never showed the trigger: no fury.
+		const untriggered = resolveDamage({
 			roll: 10,
 			toughnessBonus: 1,
 			location: "body",
 			armourValue: 0,
 			profile: rtCore,
 		});
-		expect(damaging.righteousFury).toBe(true);
-
-		const soaked = resolveDamage({
-			roll: 10,
-			toughnessBonus: 4,
-			location: "body",
-			armourValue: 6,
-			profile: rtCore,
-		});
-		expect(soaked.righteousFury).toBe(false);
+		expect(untriggered.righteousFury).toBe(false);
 	});
 
 	test("primitive armour rule doubles wounds (non-primitive vs primitive armour)", () => {
@@ -193,5 +212,36 @@ describe("locationForHit (rt-core)", () => {
 
 	test("unknown digits fall back to body", () => {
 		expect(locationForHit(5, { ...rtCore, hitLocations: {} })).toBe("body");
+	});
+});
+
+describe("parseDamageFormula (bead 6tr)", () => {
+	test("strips a trailing damage-type letter and normalises it", () => {
+		expect(parseDamageFormula("1d10+4 E")).toEqual({
+			formula: "1d10+4",
+			type: "Energy",
+		});
+	});
+
+	test("maps each type letter to its canonical value", () => {
+		expect(parseDamageFormula("2d5 I").type).toBe("Impact");
+		expect(parseDamageFormula("1d10 R").type).toBe("Rending");
+		expect(parseDamageFormula("1d10 S").type).toBe("Rending");
+		expect(parseDamageFormula("1d10+2 X").type).toBe("Explosive");
+	});
+
+	test("leaves bare formulas untouched", () => {
+		expect(parseDamageFormula("1d10+4")).toEqual({
+			formula: "1d10+4",
+			type: null,
+		});
+		expect(parseDamageFormula("1d5")).toEqual({ formula: "1d5", type: null });
+	});
+
+	test("does not eat letters inside the formula", () => {
+		expect(parseDamageFormula("1d10+SB")).toEqual({
+			formula: "1d10+SB",
+			type: null,
+		});
 	});
 });

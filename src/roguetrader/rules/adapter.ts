@@ -2,14 +2,17 @@ import type { Actor } from "fvtt-types/documents";
 import {
 	locationForHit,
 	type Modifier,
+	parseDamageFormula,
 	resolveDamage,
 	resolveTest,
 	rtCore,
 	sumModifiers,
 	type TestOutcome,
-} from "../../../packages/rules-engine/src/index";
+} from "../../rules-engine/src/index";
 import type { Character } from "../../data/actor/character";
+import { DamageType, normaliseDamageType } from "../data/item/damage-types";
 import { TestDialog } from "./test-dialog";
+import { bodyLocationLabelKey } from "./labels";
 import { collectTestModifiers, type TestKind } from "./funnel";
 
 /**
@@ -298,6 +301,48 @@ export async function rollSkill(
 	}
 }
 
+/**
+ * Quick damage roll from the sheet's weapon row: rolls a fresh d100 for the
+ * hit location plus the weapon damage and posts the damage card directly
+ * (no to-hit test). Carry gating matches rollWeaponAttack.
+ */
+export async function rollWeaponDamage(
+	actor: Actor,
+	weaponId: string,
+): Promise<void> {
+	const item = actor.items.get(weaponId);
+	const type = item?.type as string | undefined;
+	if (!item || (type !== "melee-weapon" && type !== "ranged-weapon")) {
+		ui.notifications?.warn(game.i18n.localize("ROLL.UNKNOWN_SKILL"));
+		return;
+	}
+	const equipState =
+		(item.system as unknown as { equipState?: string }).equipState ?? "stowed";
+	if (equipState !== "carried") {
+		ui.notifications?.warn(
+			game.i18n.format("ROLL.NOT_CARRIED", { weapon: item.name }),
+		);
+		return;
+	}
+	// Hit location needs a d100; a direct damage roll has no to-hit test, so
+	// roll a throwaway d100 purely for the location table.
+	const locationRoll = new foundry.dice.Roll("1d100");
+	await locationRoll.evaluate();
+	const target = (
+		game as unknown as {
+			user?: { targets?: Set<{ actor?: Actor }> };
+		}
+	).user?.targets
+		?.values()
+		?.next()?.value?.actor;
+	await postWeaponDamage(
+		actor,
+		(target ?? actor) as Actor,
+		item as foundry.documents.Item,
+		locationRoll.total ?? 0,
+	);
+}
+
 /** Card button data for the manual damage roll. */
 interface DamageRollFlag {
 	attackerUuid?: string;
@@ -429,11 +474,40 @@ async function postWeaponDamage(
 ): Promise<void> {
 	const weaponSys = weapon.system as unknown as {
 		damage?: string;
+		damageType?: string;
 		penetration?: number;
 	};
-	const damageRoll = new foundry.dice.Roll(weaponSys.damage || "1d5");
+	// RT notation allows a trailing damage-type suffix ("1d10+4 E") which
+	// Foundry's Roll parser rejects - strip it first (bead 6tr); the parsed
+	// type also backfills weapons that never had the schema field set.
+	const parsed = parseDamageFormula(weaponSys.damage || "1d5");
+	const damageType =
+		normaliseDamageType(weaponSys.damageType) ??
+		parsed.type ??
+		DamageType.Impact;
+	const damageTypeLabelKey = `DAMAGE_TYPE.${damageType.toUpperCase()}_SHORT`;
+	const { formula } = parsed;
+	const damageRoll = new foundry.dice.Roll(formula);
 	await damageRoll.evaluate();
 	const damageTotal = damageRoll.total ?? 0;
+
+	// Righteous Fury trigger (RT core, VERIFY wording): a natural 10 on a
+	// damage die. Inspect the rolled dice terms - the kernel cannot see the
+	// Foundry roll, so the trigger is reported as a boolean flag.
+	const dieTerms =
+		(damageRoll as unknown as {
+			terms?: Array<{
+				class?: string;
+				faces?: number;
+				results?: Array<{ result: number; discarded?: boolean }>;
+			}>;
+		}).terms ?? [];
+	const righteousFuryTriggered = dieTerms.some(
+		(term) =>
+			term.class === "Die" &&
+			term.faces === 10 &&
+			(term.results ?? []).some((r) => !r.discarded && r.result === 10),
+	);
 
 	const location = locationForHit(hitRoll ?? 0, rtCore);
 	const wornArmour = target.items.filter(
@@ -460,16 +534,18 @@ async function postWeaponDamage(
 		toughnessBonus,
 		location,
 		armourValue,
+		righteousFuryTriggered,
 		profile: rtCore,
 	});
 
-	const locationLabelKey = `BODY_LOCATION.${location.replace(/-(.)/g, (_, c: string) => c.toUpperCase())}`;
+	const locationLabelKey = bodyLocationLabelKey(location);
 	const content = await foundry.applications.handlebars.renderTemplate(
 		"systems/rogue-trader/template/chat/damage.hbs",
 		{
 			title: `${attacker.name} → ${target.name} — ${weapon.name}`,
 			hitSuccess: true,
 			locationLabelKey,
+			damageTypeLabelKey,
 			damage,
 			targetUuid: target.uuid,
 		},

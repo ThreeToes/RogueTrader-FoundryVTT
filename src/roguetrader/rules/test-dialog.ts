@@ -1,5 +1,5 @@
-import type { Modifier } from "../../../packages/rules-engine/src/modifier";
-import { sumModifiers } from "../../../packages/rules-engine/src/index";
+import type { Modifier } from "../../rules-engine/src/modifier";
+import { sumModifiers } from "../../rules-engine/src/index";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -59,8 +59,10 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	#resolve: ((result: TestDialogResult | null) => void) | null = null;
 
 	constructor(options: { request: TestDialogRequest }) {
-		super(options);
 		const request = options.request;
+		// Merge the request title into the window options so the dialog window
+		// shows the test name instead of the default (bead uc5).
+		super({ ...options, window: { title: request.title } });
 		this.#baseTarget = request.baseTarget;
 		this.#contributors = (request.contributors ?? []).map((m) => ({
 			label: m.label,
@@ -187,7 +189,12 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	override async close(options: { force?: boolean } = {}): Promise<void> {
-		if (this.#resolve) this.#finish(null);
+		// Delegate exactly once: a pending promise resolves to null (cancel)
+		// and #finish performs the forced close itself (bead uc5).
+		if (this.#resolve) {
+			this.#finish(null);
+			return;
+		}
 		await super.close(options);
 	}
 }

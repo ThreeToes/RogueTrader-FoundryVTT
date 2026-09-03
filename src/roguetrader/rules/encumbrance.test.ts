@@ -33,6 +33,16 @@ describe("resolveEncumbrance", () => {
 		expect(out.capacity).toBe(0);
 		expect(out.state).toBe("ok");
 	});
+
+	test("stateLabel keys match the uppercase lang-file keys (bead n84)", () => {
+		expect(resolveEncumbrance(40, 100).stateLabel).toBe("INVENTORY.STATE_OK");
+		expect(resolveEncumbrance(80, 100).stateLabel).toBe(
+			"INVENTORY.STATE_ENCUMBERED",
+		);
+		expect(resolveEncumbrance(120, 100).stateLabel).toBe(
+			"INVENTORY.STATE_OVER",
+		);
+	});
 });
 
 describe("deriveCapacity", () => {

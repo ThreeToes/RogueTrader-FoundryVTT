@@ -109,10 +109,10 @@ async function applyToTarget(
 			flags: {
 				"rogue-trader": {
 					damageApply: {
+						...existing,
 						wounds: woundsAmount,
 						targetUuid,
 						applied: true,
-						...existing,
 					},
 				},
 			},

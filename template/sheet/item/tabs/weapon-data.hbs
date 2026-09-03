@@ -22,6 +22,12 @@
                 <label>{{localize "WEAPON.DAMAGE_FULL"}}</label>
                 <input name="system.damage" type="text" value="{{source.system.damage}}" />
             </div>
+            <div class="stat damage-type">
+                <label>{{localize "WEAPON.DAMAGE_TYPE"}}</label>
+                <select name="system.damageType">
+                    {{selectOptions damageTypeChoices selected=source.system.damageType localize=true}}
+                </select>
+            </div>
             <div class="stat penetration">
                 <label>{{localize "WEAPON.PENETRATION_FULL"}}</label>
                 <input name="system.penetration" type="number" value="{{source.system.penetration}}" />

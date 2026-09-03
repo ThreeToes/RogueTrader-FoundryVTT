@@ -164,8 +164,7 @@ const TALENT_CATEGORIES = {
  */
 const TALENTS = {
 	ambidextrous: "TALENT.AMBIDEXTROUS",
-	ambidextrous: "TALENT.AMBIDEXTROUS",
-	deadeyeShotter: "TALENT.DEADEYE_SHOOTER", // VERIFY name
+	deadeyeShot: "TALENT.DEADEYE_SHOOTER",
 	eagerForDanger: "TALENT.EAGER_FOR_DANGER",
 	frenzy: "TALENT.FRENZY",
 	furiousAssault: "TALENT.FURIOUS_ASSAULT",

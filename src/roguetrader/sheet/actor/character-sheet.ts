@@ -4,6 +4,7 @@ import {
 	rollSkillUntrained,
 	rollTest,
 	rollWeaponAttack,
+	rollWeaponDamage,
 } from "../../rules/adapter";
 import { deriveCapacity, resolveEncumbrance } from "../../rules/encumbrance";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
@@ -47,6 +48,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			openItem: CharacterSheet.#onOpenItem,
 			deleteItem: CharacterSheet.#onDeleteItem,
 			rollWeapon: CharacterSheet.#onRollWeapon,
+			rollDamage: CharacterSheet.#onRollDamage,
 			openTalentPicker: CharacterSheet.#onOpenTalentPicker,
 			toggleEquip: CharacterSheet.#onToggleEquip,
 		},
@@ -86,6 +88,18 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
 		await rollWeaponAttack(this.actor, itemId);
+	}
+
+	/** Quick damage roll from a weapon row (no to-hit test). */
+	static async #onRollDamage(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId =
+			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		if (!itemId) return;
+		await rollWeaponDamage(this.actor, itemId);
 	}
 
 	static async #onOpenTalentPicker(this: {
@@ -449,7 +463,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				label: "WEAPON.HEADER",
 				items: byType(["melee-weapon", "ranged-weapon"]),
 			},
-			{ label: "ARMOUR.SHEET", items: byType(["armour"]) },
+			{ label: "ARMOUR.HEADER", items: byType(["armour"]) },
 			{ label: "GEAR.HEADER", items: byType(["gear"]) },
 		];
 

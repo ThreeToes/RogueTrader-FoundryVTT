@@ -1,4 +1,5 @@
 import { RangedWeapon } from "../../data/item/ranged-weapon";
+import { DamageType } from "../../data/item/damage-types";
 import {
 	MELEE_CLASSES,
 	RANGED_CLASSES,
@@ -55,6 +56,14 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 		context.isRanged = this.document.type === "ranged-weapon";
 		context.isMelee = this.document.type === "melee-weapon";
+
+		// Damage type choices mirror the schema (E/I/R/X book types).
+		context.damageTypeChoices = Object.fromEntries(
+			Object.values(DamageType).map((value) => [
+				value,
+				`DAMAGE_TYPE.${value.toUpperCase()}`,
+			]),
+		);
 
 		// Quality toggle-chips: lookup map so `checked` marks existing picks.
 		context.specialFlags = Object.fromEntries(

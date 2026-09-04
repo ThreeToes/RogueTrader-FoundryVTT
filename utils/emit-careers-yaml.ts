@@ -177,15 +177,137 @@ function keyAdvance(
 	return { key: "", name: clean, multiplier };
 }
 
+/**
+ * Curated paragraph starts (owner-approved editorial grouping): each entry is
+ * a verbatim sentence prefix at which a NEW paragraph begins. The text content
+ * is unaltered - only <p> boundaries. Markers fail loudly if prose drifts.
+ */
+const PARAGRAPH_STARTS: Record<string, string[]> = {
+	"rogue-trader": [
+		"Despite the fact that the weight of such responsibility",
+		"Rogue Traders must always look to their own abilities",
+	],
+	"arch-militant": ["The Arch-militant is an expert in every form of combat"],
+	"astropath-transcendent": [
+		"Each year, uncounted millions of psykers",
+		"Those chosen to become Astropaths undergo the ritual",
+		"Relying as heavily as the Imperium does on the warp",
+		"It is a rare Astropath indeed who rises beyond",
+		"The duties of the Astropath Transcendent are a microcosm",
+	],
+	explorator: [
+		"The lost achievements of Mankind\u2019s Dark Age of Technology",
+		"In truth, Explorators are on the frontline of perils",
+		"When an Explorator accompanies a Rogue Trader",
+	],
+	missionary: [
+		"Missionaries are commonly dispatched to serve alongside Rogue Traders",
+		"However, only a rare few of the Ecclesiarchy\u2019s officers",
+		"A common method for conversion is to seek out parallels",
+		"Through years of experience and natural talent",
+		"In addition to their task of converting the lost",
+	],
+	navigator: [
+		"The Navigator is the scion of one of the great Navigator clans",
+		"The life of a Navigator is one of duty and service",
+		"Each Navigator perceives the warp in an entirely subjective manner",
+		"But even for those so designed on a genetic level",
+		"Conversely, those newly come into their calling",
+	],
+	seneschal: [
+		"The best Seneschal knows every detail of trade",
+		"Many Seneschals maintain a tightly controlled network",
+		"As a result, many are masters of disguise and duplicity",
+	],
+	"void-master": [
+		"The Imperium of Mankind is an interstellar empire",
+		"While the average subject of the Imperium might be blissfully ignorant",
+	],
+};
+
+/**
+ * Split a body block into paragraphs at the curated markers. Sentences are
+ * reassembled verbatim; the only change is <p> boundaries.
+ */
+function splitParagraphs(block: string, markers: string[]): string[] {
+	const sentences =
+		block.match(/[^.!?]*[.!?]+[\u201d\u2019]?|[^.!?]+$/g)?.map((s) => s.trim()).filter(Boolean) ?? [
+			block,
+		];
+	const out: string[] = [];
+	let current: string[] = [];
+	for (const sentence of sentences) {
+		if (current.length && markers.some((m) => sentence.startsWith(m))) {
+			out.push(current.join(" "));
+			current = [];
+		}
+		current.push(sentence);
+	}
+	if (current.length) out.push(current.join(" "));
+	return out.length ? out : [block];
+}
+
+/**
+ * Prose -> HTML. Structure the text layer gives us: an epigraph quote, an
+ * attribution line, then the career body paragraphs. Epigraph + attribution
+ * are wrapped in a blockquote (styled on the sheet); body blocks become <p>
+ * (enrichHTML collapses bare newlines). Finer paragraph breaks are a manual curation pass — the
+ * raw text layer carries no in-paragraph markers.
+ */
+function toDescriptionHtml(prose: string, careerKey: string): string {
+	const paragraphs = prose.split(/\n\n+/).filter(Boolean);
+	const out: string[] = [];
+	let i = 0;
+	const epigraphSplit = (p0: string): [string, string] | null => {
+		// Attribution inline with the quote (Astropath): split at the
+		// attribution dash; text content unaltered, only the break added.
+		const dash = p0.lastIndexOf(" –");
+		return dash > 0 ? [p0.slice(0, dash), p0.slice(dash + 1)] : null;
+	};
+	if (
+		paragraphs.length > 1 &&
+		paragraphs[0].startsWith("“") &&
+		paragraphs[1].startsWith("–")
+	) {
+		out.push(
+			`\u003cblockquote class="epigraph"\u003e\u003cp>${paragraphs[0]}\u003c/p>\u003cp class="attribution">${paragraphs[1]}\u003c/p>\u003c/blockquote>`,
+		);
+		i = 2;
+	} else if (paragraphs[0]?.startsWith("“")) {
+		const split = epigraphSplit(paragraphs[0]);
+		if (split) {
+			out.push(
+				`\u003cblockquote class="epigraph"\u003e\u003cp>${split[0]}\u003c/p>\u003cp class="attribution">${split[1]}\u003c/p>\u003c/blockquote>`,
+			);
+			i = 1;
+		}
+	}
+	const markers = PARAGRAPH_STARTS[careerKey] ?? [];
+	for (; i < paragraphs.length; i += 1) {
+		for (const p of splitParagraphs(paragraphs[i], markers)) {
+			out.push(`<p>${p}</p>`);
+		}
+	}
+	// Loud failure: every marker must have produced a break (prose drift?).
+	const html = out.join("\n");
+	for (const marker of markers) {
+		if (!html.includes(marker)) {
+			throw new Error(
+				`paragraph marker not matched (prose drift?): "${marker.slice(0, 50)}"`,
+			);
+		}
+	}
+	return html;
+}
+
 const documents = parsed.map((career) => ({
 	name: career.name,
 	type: "Item",
-	description: career.description,
+	description: toDescriptionHtml(career.description ?? "", career.key),
 	system: {
 		key: career.key,
 		shortDescription: career.shortDescription,
-		source: { book: "rt_core", page: career.page },
-		aptitudes: [],
+		source: { book: "Core Rulebook", page: career.page },
 		characteristicAdvances: career.characteristicAdvances,
 		startingSkills: career.startingSkills,
 		startingTalents: career.startingTalents,
@@ -214,8 +336,7 @@ const header = `# Careers pack (beads 2n5/rcv): core-8 from rt_core Chapter II
 # the career sections, rank tables p41-72). Rank xpLevel stored per-rank
 # (owner option a). Advance "key" fields resolve against the skills/talents
 # packs; rows the packs cannot resolve keep the verbatim name (see unkeyed
-# report). Aptitudes are unpopulated: the book does not list per-career
-# aptitudes in Chapter II (curation pending owner input).
+# report).
 
 `;
 

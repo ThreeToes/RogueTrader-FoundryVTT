@@ -34,7 +34,6 @@ describe("Career data model", () => {
 			"shortDescription",
 			"description",
 			"source",
-			"aptitudes",
 			"characteristicAdvances",
 			"startingSkills",
 			"startingTalents",

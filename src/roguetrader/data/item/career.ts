@@ -20,7 +20,6 @@ export class Career extends foundry.abstract.TypeDataModel<
 	declare shortDescription: string;
 	declare description: string;
 	declare source: { book: string; page: number };
-	declare aptitudes: string[];
 	declare characteristicAdvances: Record<
 		string,
 		{ simple: number; intermediate: number; trained: number; expert: number }
@@ -46,18 +45,13 @@ export class Career extends foundry.abstract.TypeDataModel<
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
 			/** Citation: which book/page this career (or alt-rank set) came from. */
 			source: new foundry.data.fields.SchemaField({
-				book: new foundry.data.fields.StringField({ initial: "rt_core" }),
+				book: new foundry.data.fields.StringField({ initial: "Core Rulebook" }),
 				page: new foundry.data.fields.NumberField({
 					integer: true,
 					min: 0,
 					initial: 0,
 				}),
 			}),
-			/** Keys into the aptitudes registry (the career's 2 aptitudes). */
-			aptitudes: new foundry.data.fields.ArrayField(
-				new foundry.data.fields.StringField(),
-				{ initial: () => [] },
-			),
 			/**
 			 * Characteristic Advance Scheme: per-characteristic XP costs for the
 			 * four book progression levels (Simple/Intermediate/Trained/Expert).

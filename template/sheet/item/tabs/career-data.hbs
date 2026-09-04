@@ -1,0 +1,103 @@
+<section class="tab {{tabs.data.cssClass}}" data-group="primary" data-tab="data">
+    <div class="stats border">
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "CAREER.STARTING_KIT"}}</label>
+                <table class="career-table starting-kit">
+                    <tbody>
+                        <tr>
+                            <th>{{localize "CAREER.TYPE_SKILL"}}</th>
+                            <td>
+                                <ul class="kit-list">
+                                    {{#each startingSkills as |item|}}<li>{{item}}</li>{{/each}}
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>{{localize "CAREER.TYPE_TALENT"}}</th>
+                            <td>
+                                <ul class="kit-list">
+                                    {{#each startingTalents as |item|}}<li>{{item}}</li>{{/each}}
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>{{localize "CAREER.STARTING_GEAR"}}</th>
+                            <td>
+                                <ul class="kit-list">
+                                    {{#each startingGear as |item|}}<li>{{item}}</li>{{/each}}
+                                </ul>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "CAREER.CHARACTERISTIC_ADVANCES"}}</label>
+                <table class="career-table char-advances">
+                    <thead>
+                        <tr>
+                            <th>{{localize "CAREER.CHARACTERISTIC"}}</th>
+                            <th>{{localize "CAREER.LEVEL_SIMPLE"}}</th>
+                            <th>{{localize "CAREER.LEVEL_INTERMEDIATE"}}</th>
+                            <th>{{localize "CAREER.LEVEL_TRAINED"}}</th>
+                            <th>{{localize "CAREER.LEVEL_EXPERT"}}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each charAdvanceRows as |row|}}
+                        <tr>
+                            <th scope="row">{{row.char}}</th>
+                            <td class="num">{{row.costs.simple}}</td>
+                            <td class="num">{{row.costs.intermediate}}</td>
+                            <td class="num">{{row.costs.trained}}</td>
+                            <td class="num">{{row.costs.expert}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "CAREER.RANKS"}}</label>
+                {{#each rankRows as |rank|}}
+                <h3 class="rank-heading">{{localize "CAREER.RANK"}} {{rank.rank}}
+                    <span class="rank-xp">&middot; {{localize "CAREER.XP_LEVEL"}} {{rank.xpLevel}}</span></h3>
+                <table class="career-table rank-advances">
+                    <thead>
+                        <tr>
+                            <th>{{localize "CAREER.ADVANCE"}}</th>
+                            <th>{{localize "CAREER.COST"}}</th>
+                            <th>{{localize "CAREER.TYPE"}}</th>
+                            <th>{{localize "CAREER.PREREQUISITES"}}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each rank.advances as |adv|}}
+                        <tr>
+                            <td>
+                                {{#if adv.uuid}}
+                                <a class="advance-link" data-uuid="{{adv.uuid}}" data-action="openAdvance"
+                                    data-tooltip="{{localize "CAREER.OPEN_ITEM_HINT"}}">{{adv.label}}</a>
+                                {{else}}
+                                {{adv.label}}
+                                {{/if}}
+                                {{#if (gt adv.multiplier 1)}}<span class="advance-mult">x{{adv.multiplier}}</span>{{/if}}
+                            </td>
+                            <td class="num">{{adv.cost}}</td>
+                            <td>{{adv.typeLabel}}</td>
+                            <td class="prereq">{{adv.prerequisites}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+                {{/each}}
+            </div>
+        </div>
+    </div>
+</section>

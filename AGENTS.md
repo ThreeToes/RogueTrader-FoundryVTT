@@ -15,6 +15,63 @@ This project is to create a system for FoundryVTT for the Rogue Trader RPG.
 - **DO NOT** invoke bash or write scripts to edit files, use built in
   editing tools instead
 
+- **DO NOT** invoke bash if you have a tool available to achieve your goal
+- **DO NOT** invoke bash or write scripts to edit files, use built in
+  editing tools instead
+
+# Extraction & rules-engine decisions (apply to future 40k systems)
+
+Conventions decided during the Rogue Trader core-rulebook extraction; reuse
+them for any other FFG 40k system brought into this repo (Dark Heresy, Only
+War, Black Crusade...).
+
+## Extraction conventions
+
+- **PDFs are machine-local.** Book content lives in the private `src/packs`
+  repo and never ships; commit machinery + our own YAML only.
+- **Trust the raw text layer over `-layout`** for clipped columns:
+  `-layout` silently width-truncates long table cells (see the talents
+  "Benefi" header — that truncation is in the BOOK, but other clipped text
+  is a layout artifact; verify with raw mode before re-extracting).
+- **Verify ambiguous extraction with the owner** — log ambiguity as beads
+  WITH page references and sample rows (e.g. "Air of Authority, p92") so the
+  owner can eyeball the PDF; never guess at book content. Confirmations are
+  recorded on the bead before closing it.
+- **Curation patches are config entries, not code** (see
+  `src/packs/.extraction-src/parse-tables.yaml`): every hand-set value must
+  carry a comment citing where it was verified (page + line). Unmapped
+  values fail loudly (emit script throws) — never silently drop.
+- **Table parsing patterns that recur across FFG books**: header-offset
+  column slicing, per-page repeated table headers = one table, wrapped names
+  (prefix/suffix/paren forms), above/below split cell values, name/class
+  column overlap recovery, footnote-terminated table regions. All handled in
+  `parse-table.mjs` — extend it, don't fork it per book.
+- Spot-check every table against the PDF (3-5 rows) before dropping DRAFT
+  markers; run `bun run build:packs`, `bun test`, `bun run lint` before
+  closing extraction beads.
+
+## Rules-engine design decisions
+
+- **Schema-first, book-notation at the edges**: data models use structured
+  fields (e.g. `rateOfFire {singleShot,burst,fullAuto}`, string
+  `reload`/`range`); extraction emits schema shape via mapping tables with
+  loud failures.
+- **Item descriptions come in both flavours**: terse table text (short) AND
+  full prose (long) — the group argues rules from item sheets, so terse-only
+  is never acceptable.
+- **Effect machinery before content authoring**: extend the effect-kind
+  machinery (attack-modifier, damage-flat, critical-damage, conditional
+  kinds) before mass-authoring talent/power effects.
+- **Homebrew is a seam, not a fork**: house rules (e.g. tuning the silly
+  burst/full-auto BS bonuses) are data-driven RuleProfile/funnel overrides,
+  GM-configurable — never edit core rules code for house rules.
+- **No fabricated taxonomy**: the book defines no talent tiers; don't invent
+  metadata fields the book doesn't support without an explicit owner
+  decision.
+- **Modifiers are visible**: every test path shows contributor breakdowns in
+  the TestDialog (skill rolls currently bypass it — bead 02u); silent
+  modifiers are bugs.
+
 ## Beads Issue Tracker
 
 This project uses **bd (beads)** for issue tracking. Review available tools for details.

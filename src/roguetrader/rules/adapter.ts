@@ -1,4 +1,5 @@
 import type { Actor } from "fvtt-types/documents";
+import type { Character } from "../../data/actor/character";
 import {
 	locationForHit,
 	type Modifier,
@@ -9,11 +10,10 @@ import {
 	sumModifiers,
 	type TestOutcome,
 } from "../../rules-engine/src/index";
-import type { Character } from "../../data/actor/character";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
-import { TestDialog } from "./test-dialog";
-import { bodyLocationLabelKey } from "./labels";
 import { collectTestModifiers, type TestKind } from "./funnel";
+import { bodyLocationLabelKey } from "./labels";
+import { TestDialog } from "./test-dialog";
 
 /**
  * Thin Foundry adapter: the ONLY runtime Foundry-coupled rolling code.
@@ -134,6 +134,7 @@ export async function rollSkillUntrained(
 	actor: Actor,
 	label: string,
 	characteristicKey: string,
+	options: RollTestOptions = {},
 ): Promise<void> {
 	const system = actor.system as unknown as Character;
 	const characteristic = system.characteristics[characteristicKey];
@@ -146,18 +147,30 @@ export async function rollSkillUntrained(
 		return;
 	}
 	const kind = "skill" as const;
+	const untrainedModifier: Modifier = {
+		id: "untrained",
+		source: { type: "skill", label: "Skill" },
+		label: game.i18n.localize("ROLL.UNTRAINED"),
+		value: -10,
+	};
+	let modifiers: Modifier[] = [untrainedModifier];
+	const title = `${actor.name} — ${label}`;
+
+	if (!options?.skipDialog) {
+		const result = await TestDialog.show({
+			title,
+			baseTarget: characteristic.value,
+			contributors: modifiers,
+		});
+		if (result === null) return;
+		modifiers = result.modifiers;
+	}
+
 	await postTest(
 		actor,
-		`${actor.name} — ${label}`,
+		title,
 		characteristic.value,
-		[
-			{
-				id: "untrained",
-				source: { type: "skill", label: "Skill" },
-				label: game.i18n.localize("ROLL.UNTRAINED"),
-				value: -10,
-			},
-		],
+		modifiers,
 		kind,
 		characteristicKey,
 	);
@@ -189,11 +202,25 @@ export async function rollSkill(
 		return;
 	}
 
-	const modifiers = [...(options.modifiers ?? [])];
+	let modifiers = [...(options.modifiers ?? [])];
 	const baseTarget = characteristic.value + (skill.ladder - 1) * 10;
+	const title = `${actor.name} — ${item.name}`;
+
+	if (!options.skipDialog) {
+		// Bead 02u: skill tests show the same modify dialog as characteristics
+		// and attacks so talent/other funnel contributors are visible.
+		const result = await TestDialog.show({
+			title,
+			baseTarget,
+			contributors: modifiers,
+		});
+		if (result === null) return;
+		modifiers = result.modifiers;
+	}
+
 	await postTest(
 		actor,
-		`${actor.name} — ${item.name}`,
+		title,
 		baseTarget,
 		modifiers,
 		"skill",
@@ -426,6 +453,9 @@ async function resolveEvasion(
 
 	// Roll the chosen reaction (the postTest card records the attempt; the
 	// result is NOT fed into the damage calculation - manual resolution).
+	const title = `${defender.name} — ${skillName}`;
+	let modifiers: Modifier[] = [];
+
 	if (owned) {
 		const skill = owned.system as unknown as {
 			characteristic: string;
@@ -433,31 +463,49 @@ async function resolveEvasion(
 		};
 		const characteristic = system.characteristics[skill.characteristic];
 		if (!characteristic) return;
+		const baseTarget = characteristic.value + (skill.ladder - 1) * 10;
+		// Bead 02u: show the modify dialog for the reaction roll too.
+		const result = await TestDialog.show({
+			title,
+			baseTarget,
+			contributors: modifiers,
+		});
+		if (result === null) return;
+		modifiers = result.modifiers;
 		await postTest(
 			defender,
-			`${defender.name} — ${skillName}`,
-			characteristic.value + (skill.ladder - 1) * 10,
-			[],
+			title,
+			baseTarget,
+			modifiers,
 			"skill",
 			skill.characteristic,
 		);
-	} else {
-		await postTest(
-			defender,
-			`${defender.name} — ${skillName}`,
-			system.characteristics[skillName === "Parry" ? "ws" : "ag"]?.value ?? 0,
-			[
-				{
-					id: "untrained",
-					source: { type: "skill", label: "Skill" },
-					label: game.i18n.localize("ROLL.UNTRAINED"),
-					value: -10,
-				},
-			],
-			"skill",
-			skillName === "Parry" ? "ws" : "ag",
-		);
+		return;
 	}
+
+	modifiers = [
+		{
+			id: "untrained",
+			source: { type: "skill", label: "Skill" },
+			label: game.i18n.localize("ROLL.UNTRAINED"),
+			value: -10,
+		},
+	];
+	const untrainedResult = await TestDialog.show({
+		title,
+		baseTarget:
+			system.characteristics[skillName === "Parry" ? "ws" : "ag"]?.value ?? 0,
+		contributors: modifiers,
+	});
+	if (untrainedResult === null) return;
+	await postTest(
+		defender,
+		title,
+		system.characteristics[skillName === "Parry" ? "ws" : "ag"]?.value ?? 0,
+		untrainedResult.modifiers,
+		"skill",
+		skillName === "Parry" ? "ws" : "ag",
+	);
 }
 
 /**
@@ -495,13 +543,15 @@ async function postWeaponDamage(
 	// damage die. Inspect the rolled dice terms - the kernel cannot see the
 	// Foundry roll, so the trigger is reported as a boolean flag.
 	const dieTerms =
-		(damageRoll as unknown as {
-			terms?: Array<{
-				class?: string;
-				faces?: number;
-				results?: Array<{ result: number; discarded?: boolean }>;
-			}>;
-		}).terms ?? [];
+		(
+			damageRoll as unknown as {
+				terms?: Array<{
+					class?: string;
+					faces?: number;
+					results?: Array<{ result: number; discarded?: boolean }>;
+				}>;
+			}
+		).terms ?? [];
 	const righteousFuryTriggered = dieTerms.some(
 		(term) =>
 			term.class === "Die" &&

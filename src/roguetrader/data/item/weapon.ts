@@ -1,4 +1,3 @@
-import { qualities } from "../../registry";
 import { DamageType } from "./damage-types";
 import { Gear } from "./gear";
 import { WeaponClass } from "./weapon-class";
@@ -28,12 +27,10 @@ export abstract class Weapon extends Gear {
 				required: true,
 				nullable: false,
 			}),
-			/** Effective range in metres. */
-			range: new foundry.data.fields.NumberField({
-				min: 0,
-				integer: true,
-				initial: 0,
+			/** Effective range: metres ("90"), formula ("SBx3"), or "—". */
+			range: new foundry.data.fields.StringField({
 				required: true,
+				initial: "—",
 			}),
 			/** Damage formula, e.g. "1d10+4" (type is a separate field). */
 			damage: new foundry.data.fields.StringField({
@@ -55,7 +52,9 @@ export abstract class Weapon extends Gear {
 			}),
 			special: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.StringField({
-					choices: qualities.choices,
+					// Registry keys (QUALITIES seed); no `choices` constraint so
+					// parameterised entries like "blast-4" validate. Authoring
+					// correctness is enforced by the emit script's mapping table.
 					required: true,
 					nullable: false,
 					initial: "",

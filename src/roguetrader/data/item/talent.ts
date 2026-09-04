@@ -21,6 +21,7 @@ export class Talent extends foundry.abstract.TypeDataModel<
 	declare category: string;
 	declare tier: number;
 	declare prereqTalent: string;
+	declare shortDescription: string;
 	declare effects: Array<{
 		kind: string;
 		testKey: string | null;

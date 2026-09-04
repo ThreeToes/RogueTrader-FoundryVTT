@@ -31,7 +31,7 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		primary: {
 			tabs: [
 				{ id: "data", group: "primary", label: "TAB.DATA" },
-				{ id: "notes", group: "primary", label: "TAB.NOTES" },
+				{ id: "notes", group: "primary", label: "TAB.DESCRIPTION" },
 			],
 			initial: "data",
 		},

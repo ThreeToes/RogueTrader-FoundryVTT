@@ -58,7 +58,10 @@ describe("EntryRegistry", () => {
 			expect(qualities.get(key)).toMatch(/^QUALITY\./);
 		}
 		expect(qualities.has("accurate")).toBe(true);
-		expect(qualities.has("tearing")).toBe(false);
+		// Widened in bead rss: tearing/primitive/snare/etc. now seeded.
+		expect(qualities.has("tearing")).toBe(true);
+		expect(qualities.has("primitive")).toBe(true);
+		expect(qualities.has("snare")).toBe(true);
 	});
 
 	test("protection types include primitive and non-primitive", () => {

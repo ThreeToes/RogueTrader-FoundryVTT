@@ -2,7 +2,8 @@
     <img class="profile-img" src="{{document.img}}" data-action="editImage" data-field="img"
         alt="{{document.name}}" title="{{document.name}}" />
     <div class="name header-cell grow">
-        <label>{{localize "ITEM.NAME"}}</label>
-        <input name="name" type="text" value="{{document.name}}" />
+        <input class="name-input" name="name" type="text" value="{{document.name}}" />
+        <input class="short-description" name="system.shortDescription" type="text"
+            value="{{source.system.shortDescription}}" placeholder="{{localize "GEAR.SHORT_DESCRIPTION"}}" />
     </div>
 </div>

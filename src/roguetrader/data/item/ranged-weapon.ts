@@ -38,11 +38,10 @@ export class RangedWeapon extends Weapon {
 				initial: 0,
 				required: true,
 			}),
-			reload: new foundry.data.fields.NumberField({
-				min: 0,
-				integer: true,
-				initial: 0,
+			/** Reload time in book notation: "Full", "2 Full", "Half", "—". */
+			reload: new foundry.data.fields.StringField({
 				required: true,
+				initial: "—",
 			}),
 		};
 	}

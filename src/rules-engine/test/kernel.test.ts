@@ -118,6 +118,56 @@ describe("resolveDamage (rt-core)", () => {
 		expect(outcome.wounds).toBe(0);
 	});
 
+	test("flat damage (talent, Crushing Blow) joins the roll before soak", () => {
+		// 1d10 roll of 7 + Crushing Blow's +2 = 9 total damage, all soaked
+		// normally by armour + toughness.
+		const outcome = resolveDamage({
+			roll: 7,
+			flatDamage: 2,
+			toughnessBonus: 2,
+			location: "body",
+			armourValue: 5,
+			profile: rtCore,
+		});
+		expect(outcome.flatDamage).toBe(2);
+		expect(outcome.soak).toBe(7);
+		expect(outcome.absorbed).toBe(7);
+		expect(outcome.wounds).toBe(2);
+	});
+
+	test("critical damage (talent, Crack Shot) applies only on critical hits", () => {
+		const base = {
+			roll: 8,
+			criticalDamage: 2,
+			toughnessBonus: 1,
+			location: "body",
+			armourValue: 0,
+			profile: rtCore,
+		};
+		const critical = resolveDamage({ ...base, isCritical: true });
+		expect(critical.criticalDamage).toBe(2);
+		expect(critical.wounds).toBe(9); // 8 + 2 - 1 TB
+
+		const plain = resolveDamage({ ...base, isCritical: false });
+		expect(plain.criticalDamage).toBe(0);
+		expect(plain.wounds).toBe(7); // 8 - 1 TB
+	});
+
+	test("flat + critical damage are themselves soakable", () => {
+		const outcome = resolveDamage({
+			roll: 3,
+			flatDamage: 2,
+			criticalDamage: 4,
+			isCritical: true,
+			toughnessBonus: 3,
+			location: "body",
+			armourValue: 8,
+			profile: rtCore,
+		});
+		expect(outcome.soak).toBe(11);
+		expect(outcome.wounds).toBe(0); // 3 + 2 + 4 fully soaked
+	});
+
 	test("righteous fury requires trigger + damaging hit", () => {
 		const damaging = resolveDamage({
 			roll: 10,

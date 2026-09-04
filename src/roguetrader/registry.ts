@@ -196,8 +196,22 @@ export const vehicleClasses = new EntryRegistry(VEHICLE_CLASSES);
 export const vehicleFacings = new EntryRegistry(VEHICLE_FACINGS);
 export const vehicleTraits = new EntryRegistry(VEHICLE_TRAITS);
 export const vehicleSystems = new EntryRegistry(VEHICLE_SYSTEMS);
+/**
+ * Guarded test-modifier conditions (bead czx): keys a talent effect's
+ * `condition` field can reference; the funnel evaluates them against the
+ * TestModifierContext flags. Seed is not exhaustive - extend via the
+ * registry or modules.
+ */
+const TALENT_CONDITIONS = {
+	charging: "CONDITION.CHARGING",
+	frenzied: "CONDITION.FRENZIED",
+	aimed: "CONDITION.AIMED",
+	opposed: "CONDITION.OPPOSED",
+} as const;
+
 export const talentCategories = new EntryRegistry(TALENT_CATEGORIES);
 export const talents = new EntryRegistry(TALENTS);
+export const talentConditions = new EntryRegistry(TALENT_CONDITIONS);
 export const equipStates = new EntryRegistry(EQUIP_STATES);
 
 type RogueTraderRegistries = {

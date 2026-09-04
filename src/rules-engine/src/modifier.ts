@@ -15,6 +15,8 @@ export interface Modifier {
 	/** Localized label shown on chat cards. */
 	label: string;
 	value: number;
+	/** Optional guard display (CONDITION.* i18n key), e.g. "when charging". */
+	condition?: string;
 	/** Reserved for future stacking semantics. */
 	stacking?: string;
 }

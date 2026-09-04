@@ -17,6 +17,14 @@
             <p><strong>{{localize "WEAPON.PENETRATION_FULL"}}:</strong> {{damage.penApplied}}
                 &middot; <strong>{{localize "WOUNDS.ARMOUR"}}</strong> {{damage.effectiveArmour}}
                 &middot; <strong>{{localize "WOUNDS.SOAK"}}</strong> {{damage.absorbed}}</p>
+            {{#if damageContributors.length}}
+            <ul class="modifier-breakdown">
+                {{localize "ROLL.MODIFIERS"}}:
+                {{#each damageContributors as |mod|}}
+                <li>{{mod.label}}: {{mod.value}}{{#if mod.condition}} ({{mod.condition}}){{/if}}</li>
+                {{/each}}
+            </ul>
+            {{/if}}
             {{#if damage.righteousFury}}
             <p class="righteous-fury"><strong>{{localize "CHAT.RIGHTEOUS_FURY"}}!</strong></p>
             {{/if}}

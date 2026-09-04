@@ -181,23 +181,23 @@ describe("talent contributor", () => {
 			kind: "characteristic",
 			key: "fel",
 		});
-		const t = mods.find((m) => m.id === "talent:any:Sure Hand");
+		const t = mods.find((m) => m.id === "talent:any:Sure Hand:any");
 		expect(t?.value).toBe(5);
 		expect(
-			mods.find((m) => m.id === "talent:any:zero ignored"),
+			mods.find((m) => m.id === "talent:any:zero ignored:any"),
 		).toBeUndefined();
 	});
 
 	test("keyed effect only applies to matching tests", () => {
 		const bs = collectTestModifiers(talentActor, { kind: "attack", key: "bs" });
-		expect(bs.find((m) => m.id === "talent:bs:Deadeye Shooter")?.value).toBe(
+		expect(bs.find((m) => m.id === "talent:bs:Deadeye Shooter:any")?.value).toBe(
 			10,
 		);
 		const ws = collectTestModifiers(talentActor, { kind: "attack", key: "ws" });
 		expect(
-			ws.find((m) => m.id === "talent:bs:Deadeye Shooter"),
+			ws.find((m) => m.id === "talent:bs:Deadeye Shooter:any"),
 		).toBeUndefined();
-		expect(ws.find((m) => m.id === "talent:any:Sure Hand")?.value).toBe(5);
+		expect(ws.find((m) => m.id === "talent:any:Sure Hand:any")?.value).toBe(5);
 	});
 
 	test("non-talent items are ignored", () => {
@@ -210,5 +210,118 @@ describe("talent contributor", () => {
 			{ kind: "characteristic", key: "ws" },
 		);
 		expect(mods.filter((m) => m.id.startsWith("talent:"))).toHaveLength(0);
+	});
+
+	// Guarded effects (bead czx): a condition field gates the effect on a
+	// TestModifierContext flag, matching the talentConditions registry.
+	const guardedActor = {
+		items: [
+			{
+				type: "talent",
+				system: {
+					effects: [
+						{ testKey: "ws", value: 20, label: "Berserk Charge", condition: "charging" },
+					],
+				},
+			},
+		],
+	};
+
+	test("guarded effect skipped when the context flag is unset", () => {
+		const mods = collectTestModifiers(guardedActor, {
+			kind: "attack",
+			key: "ws",
+		});
+		expect(mods.find((m) => m.label === "Berserk Charge")).toBeUndefined();
+	});
+
+	test("guarded effect applies with its condition when the flag is set", () => {
+		const mods = collectTestModifiers(guardedActor, {
+			kind: "attack",
+			key: "ws",
+			flags: { charging: true },
+		});
+		const mod = mods.find((m) => m.label === "Berserk Charge");
+		expect(mod?.value).toBe(20);
+		expect(mod?.condition).toBe("charging");
+	});
+
+	test("guarded effect applies only to matching tests", () => {
+		const mods = collectTestModifiers(guardedActor, {
+			kind: "attack",
+			key: "bs",
+			flags: { charging: true },
+		});
+		expect(mods.find((m) => m.label === "Berserk Charge")).toBeUndefined();
+	});
+
+	// Attack-modifier kind (bead fjw/x0v): talents like Berserk Charge modify
+	// the attack roll only - never plain characteristic/skill tests.
+	const attackModifierActor = {
+		items: [
+			{
+				type: "talent",
+				system: {
+					effects: [
+						{
+							kind: "attack-modifier",
+							testKey: "ws",
+							value: 20,
+							label: "Berserk Charge",
+							condition: "charging",
+						},
+					],
+				},
+			},
+		],
+	};
+
+	test("attack-modifier applies to attack tests when the flag is set", () => {
+		const mods = collectTestModifiers(attackModifierActor, {
+			kind: "attack",
+			key: "ws",
+			flags: { charging: true },
+		});
+		const mod = mods.find((m) => m.label === "Berserk Charge");
+		expect(mod?.value).toBe(20);
+		expect(mod?.id).toBe("talent:attack:Berserk Charge:charging");
+	});
+
+	test("attack-modifier never applies to non-attack tests", () => {
+		const mods = collectTestModifiers(attackModifierActor, {
+			kind: "characteristic",
+			key: "ws",
+			flags: { charging: true },
+		});
+		expect(mods.find((m) => m.label === "Berserk Charge")).toBeUndefined();
+	});
+
+	describe("attack-context contributor (bead hyv)", () => {
+		test("semi-auto burst adds +10, full auto +20 on attack tests", () => {
+			const burst = collectTestModifiers(
+				{},
+				{ kind: "attack", key: "bs", fireMode: "burst" },
+			);
+			expect(
+				burst.find((m) => m.id === "attack:fire-mode:burst")?.value,
+			).toBe(10);
+			const full = collectTestModifiers(
+				{},
+				{ kind: "attack", key: "bs", fireMode: "full" },
+			);
+			expect(
+				full.find((m) => m.id === "attack:fire-mode:full")?.value,
+			).toBe(20);
+		});
+
+		test("fire-mode modifiers never apply to non-attack tests", () => {
+			const mods = collectTestModifiers(
+				{},
+				{ kind: "characteristic", key: "bs", fireMode: "full" },
+			);
+			expect(
+				mods.find((m) => m.id.startsWith("attack:fire-mode")),
+			).toBeUndefined();
+		});
 	});
 });

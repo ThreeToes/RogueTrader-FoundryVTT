@@ -62,6 +62,22 @@ export interface DamageRequest {
 	/** Whether the armour is_primitive (affects the primitive armour rule). */
 	armourPrimitive?: boolean;
 	/**
+	 * Item-sourced flat damage (talent effects like Crushing Blow, +2 melee
+	 * damage) added to the rolled damage BEFORE soak, so it interacts with
+	 * armour/toughness in the normal way.
+	 */
+	flatDamage?: number;
+	/**
+	 * Item-sourced critical-damage bonus (talent effects like Crack Shot,
+	 * +2 critical damage). Applied only when `isCritical` is true.
+	 */
+	criticalDamage?: number;
+	/**
+	 * Whether the to-hit test flagged this hit as critical (adapter reports
+	 * the outcome; the kernel cannot see the test). Gates criticalDamage.
+	 */
+	isCritical?: boolean;
+	/**
 	 * Whether the raw damage dice showed the profile's Righteous Fury trigger
 	 * (e.g. a natural 10 on a damage die). The kernel cannot inspect the
 	 * Foundry roll itself, so the adapter reports the trigger here; without
@@ -83,6 +99,9 @@ export interface DamageOutcome {
 	absorbed: number;
 	/** Damage that got through = wounds reduction (data; caller mutates HP). */
 	wounds: number;
+	/** Echo of the request's flatDamage/criticalDamage (card breakdown). */
+	flatDamage: number;
+	criticalDamage: number;
 	/** True when the primitive-armour doubling rule was applied (VERIFY). */
 	primitiveDouble: boolean;
 	/** True when Righteous Fury triggered (adapter resolves the extra die). */
@@ -97,9 +116,16 @@ export function resolveDamage(request: DamageRequest): DamageOutcome {
 
 	const penApplied = Math.min(penetration, armourValue);
 	const effectiveArmour = armourValue - penApplied;
+	const flatDamage = Math.max(0, request.flatDamage ?? 0);
+	const criticalDamage =
+		Math.max(0, request.criticalDamage ?? 0) *
+		(request.isCritical === true ? 1 : 0);
+	// Flat/critical damage join the rolled total BEFORE soak: they are part of
+	// the hit's damage, so armour and toughness reduce them normally.
+	const totalDamage = roll + flatDamage + criticalDamage;
 	const soak = toughnessBonus + effectiveArmour;
-	const absorbed = Math.min(roll, soak);
-	let wounds = Math.max(0, roll - soak);
+	const absorbed = Math.min(totalDamage, soak);
+	let wounds = Math.max(0, totalDamage - soak);
 
 	// Primitive armour rule (profile data; VERIFY book wording): non-primitive
 	// weapons double WOUNDS against primitive armour.
@@ -123,6 +149,8 @@ export function resolveDamage(request: DamageRequest): DamageOutcome {
 	return {
 		location,
 		rawRoll: roll,
+		flatDamage,
+		criticalDamage,
 		penApplied,
 		armour: armourValue,
 		effectiveArmour,

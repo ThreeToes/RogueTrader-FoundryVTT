@@ -27,6 +27,8 @@ export class Talent extends foundry.abstract.TypeDataModel<
 		testKey: string | null;
 		value: number;
 		label: string;
+		/** Guard: only applies when the matching context flag is set. */
+		condition: string;
 	}>;
 
 	static get categoryChoices(): Record<string, string> {
@@ -77,6 +79,9 @@ export class Talent extends foundry.abstract.TypeDataModel<
 						initial: 0,
 					}),
 					label: new foundry.data.fields.StringField({
+						initial: "",
+					}),
+					condition: new foundry.data.fields.StringField({
 						initial: "",
 					}),
 				}),

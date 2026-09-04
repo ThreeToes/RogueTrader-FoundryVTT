@@ -3,6 +3,13 @@ import type { Modifier } from "../../rules-engine/src/modifier";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
+export interface TestDialogAttackContext {
+	/** Ranged weapon: show the fire-mode select (single/burst/full). */
+	ranged: boolean;
+	/** Melee weapon: show the charge checkbox (talent conditions gate on it). */
+	melee: boolean;
+}
+
 export interface TestDialogRequest {
 	/** Window title. */
 	title: string;
@@ -10,11 +17,26 @@ export interface TestDialogRequest {
 	baseTarget: number;
 	/** Pre-collected contributor modifiers (shown as fixed rows). */
 	contributors?: Modifier[];
+	/** Bead hyv: attack-context selectors (fire mode, aim, charge). */
+	attackContext?: TestDialogAttackContext;
+}
+
+export interface TestDialogAttackSelection {
+	/** Ranged fire mode; undefined = standard/single. */
+	fireMode?: "single" | "burst" | "full";
+	/** Aim action taken (half = +10, full = +20, p237). */
+	aimed?: boolean;
+	/** Aim was a Full Action (+20 instead of +10). */
+	aimFull?: boolean;
+	/** Charge action flag (melee; Berserk Charge replaces the base +10). */
+	flags?: Record<string, boolean>;
 }
 
 export interface TestDialogResult {
 	/** Contributor + custom modifiers to feed the funnel. */
 	modifiers: Modifier[];
+	/** Attack-context selection (bead hyv), when applicable. */
+	attack?: TestDialogAttackSelection;
 }
 
 /**
@@ -56,6 +78,9 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		sourceLabel: string;
 	}>;
 	#custom: modifiersRow[];
+	#attackContext: TestDialogAttackContext | null;
+	// Bead hyv: attack-context selection state (read at roll time).
+	#attack: TestDialogAttackSelection = {};
 	#resolve: ((result: TestDialogResult | null) => void) | null = null;
 
 	constructor(options: { request: TestDialogRequest }) {
@@ -64,6 +89,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		// shows the test name instead of the default (bead uc5).
 		super({ ...options, window: { title: request.title } });
 		this.#baseTarget = request.baseTarget;
+		this.#attackContext = request.attackContext ?? null;
 		this.#contributors = (request.contributors ?? []).map((m) => ({
 			label: m.label,
 			value: m.value,
@@ -148,6 +174,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		context.baseTarget = this.#baseTarget;
 		context.contributors = this.#contributors;
 		context.customModifiers = this.#custom;
+		context.attackContext = this.#attackContext;
 		context.previewTarget = Math.min(
 			100,
 			Math.max(1, this.#baseTarget + this.#totalModifier()),
@@ -181,7 +208,26 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	static async #onRoll(this: TestDialog): Promise<void> {
-		this.#finish({ modifiers: this.#collectModifiers() });
+		// Bead hyv: read attack-context selectors, if shown.
+		if (this.#attackContext) {
+			const root = this.element;
+			const fireMode = root?.querySelector<HTMLSelectElement>("[data-fire-mode]")
+				?.value as TestDialogAttackSelection["fireMode"];
+			const aim = root?.querySelector<HTMLSelectElement>("[data-aim]")?.value;
+			const charge = root?.querySelector<HTMLInputElement>("[data-charge]")?.checked;
+			this.#attack = {
+				...(this.#attackContext.ranged && fireMode !== "single"
+					? { fireMode }
+					: {}),
+				...(aim === "half" ? { aimed: true } : {}),
+				...(aim === "full" ? { aimed: true, aimFull: true } : {}),
+				...(charge ? { flags: { charging: true } } : {}),
+			};
+		}
+		this.#finish({
+			modifiers: this.#collectModifiers(),
+			...(this.#attackContext ? { attack: this.#attack } : {}),
+		});
 	}
 
 	static async #onCancel(this: TestDialog): Promise<void> {

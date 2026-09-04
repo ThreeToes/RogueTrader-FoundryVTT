@@ -34,6 +34,8 @@ export interface TestModifierContext {
 	/** Attack context flags. */
 	aimed?: boolean;
 	fireMode?: "single" | "burst" | "full";
+	/** Guarded-effect flags (talentConditions keys), e.g. { charging: true }. */
+	flags?: Record<string, boolean>;
 }
 
 export type TestContributor = (
@@ -131,6 +133,38 @@ testContributors.register("weapon-qualities", (_actor, context) => {
 });
 
 // ---------------------------------------------------------------------------
+// Built-in contributor: attack action modifiers (bead hyv). Values VERIFIED
+// against the core action table (p237):
+//   Semi-Auto Burst: "+10 to BS, additional hit for every two degrees"
+//   Full Auto Burst: "+20 to BS, additional hit for every degree"
+// Additional hits are out of scope here (to-hit modifier only).
+// Aim (+10/+20) is surfaced as a dialog-contributed modifier in the adapter;
+// charge (+10 WS, Berserk Charge replaces it with +20) is a condition flag,
+// see the talent contributor below.
+// ---------------------------------------------------------------------------
+testContributors.register("attack-context", (_actor, context) => {
+	if (context.kind !== "attack") return [];
+	const mods: Modifier[] = [];
+	if (context.fireMode === "burst") {
+		mods.push({
+			id: "attack:fire-mode:burst",
+			source: { type: "item", label: "ROLL.FIRE_MODE_BURST" },
+			label: "Semi-Auto Burst",
+			value: 10,
+		});
+	}
+	if (context.fireMode === "full") {
+		mods.push({
+			id: "attack:fire-mode:full",
+			source: { type: "item", label: "ROLL.FIRE_MODE_FULL" },
+			label: "Full Auto Burst",
+			value: 20,
+		});
+	}
+	return mods;
+});
+
+// ---------------------------------------------------------------------------
 // Built-in contributor: ActiveEffect changes keyed `system.testModifier`.
 // ---------------------------------------------------------------------------
 testContributors.register("effect", (actor) => {
@@ -167,6 +201,14 @@ testContributors.register("effect", (actor) => {
 // Modifier[]; empty testKey acts as wildcard across all tests. Attack tests
 // carry context.key = "bs"/"ws", so keyed effects only apply to matching
 // tests - mirror of the weapon-qualities contributor.
+//
+// Kinds handled here (bead fjw):
+// - "test-modifier": applies to every test kind (default/legacy shape).
+// - "attack-modifier": applies to ATTACK tests only (Berserk Charge +20 when
+//   charging, Gunslinger, ...). Verified against prose p95-99: these talents
+//   modify the attack roll, not arbitrary characteristic/skill tests.
+// Other kinds (damage-flat, critical-damage, wounds-max, ...) belong to their
+// registered handlers / the damage pipeline (rules/talent-effects.ts).
 // ---------------------------------------------------------------------------
 interface ItemLike {
 	type?: string;
@@ -176,6 +218,7 @@ interface ItemLike {
 			testKey?: string;
 			value?: number;
 			label?: string;
+			condition?: string;
 		}>;
 	};
 }
@@ -187,20 +230,31 @@ testContributors.register("talent", (actor, context) => {
 	for (const item of list) {
 		if (item.type !== "talent") continue;
 		for (const effect of item.system?.effects ?? []) {
-			// Only test-modifier effects feed the funnel; other kinds belong to
-			// their registered handlers (rules/talent-effects.ts).
+			// Only test-modifier kinds feed the funnel; damage kinds belong to
+			// the damage pipeline (collectTalentDamageEffects) and other kinds
+			// to their registered handlers (rules/talent-effects.ts).
 			const kind = (effect as { kind?: string }).kind;
-			if (kind !== undefined && kind !== "" && kind !== "test-modifier")
-				continue;
+			const isTestModifier = kind === undefined || kind === "" || kind === "test-modifier";
+			const isAttackModifier =
+				kind === "attack-modifier" && context.kind === "attack";
+			if (!isTestModifier && !isAttackModifier) continue;
 			const key = effect.testKey;
 			if (key !== "" && key !== undefined && key !== context.key) continue;
+			// Guarded effects (bead czx) only apply when the matching context
+			// flag is set; the condition label rides on the Modifier for the
+			// chat/dialog breakdown.
+			const condition = (effect as { condition?: string }).condition;
+			if (condition) {
+				if (!context.flags?.[condition]) continue;
+			}
 			const value = Number(effect.value);
 			if (!Number.isFinite(value) || value === 0) continue;
 			mods.push({
-				id: `talent:${key || "any"}:${effect.label ?? ""}`,
+				id: `talent:${kind === "attack-modifier" ? "attack" : key || "any"}:${effect.label ?? ""}:${condition || "any"}`,
 				source: { type: "talent", label: "TALENT.HEADER" },
 				label: effect.label || "Talent",
 				value,
+				...(condition ? { condition } : {}),
 			});
 		}
 	}

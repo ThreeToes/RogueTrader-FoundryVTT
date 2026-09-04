@@ -1,4 +1,35 @@
 <div class="test-dialog">
+    {{#if attackContext}}
+    <div class="attack-context">
+        {{#if attackContext.ranged}}
+        <div class="modifier-row fixed">
+            <span class="modifier-label">{{localize "ROLL.FIRE_MODE"}}</span>
+            <select class="attack-select" data-fire-mode>
+                <option value="single">{{localize "ROLL.FIRE_MODE_SINGLE"}}</option>
+                <option value="burst">{{localize "ROLL.FIRE_MODE_BURST"}} (+10)</option>
+                <option value="full">{{localize "ROLL.FIRE_MODE_FULL"}} (+20)</option>
+            </select>
+        </div>
+        {{/if}}
+        <div class="modifier-row fixed">
+            <span class="modifier-label">{{localize "ROLL.AIM"}}</span>
+            <select class="attack-select" data-aim>
+                <option value="none">{{localize "ROLL.AIM_NONE"}}</option>
+                <option value="half">{{localize "ROLL.AIM_HALF"}} (+10)</option>
+                <option value="full">{{localize "ROLL.AIM_FULL"}} (+20)</option>
+            </select>
+        </div>
+        {{#if attackContext.melee}}
+        <div class="modifier-row fixed">
+            <label class="attack-check">
+                <input type="checkbox" data-charge />
+                {{localize "ROLL.CHARGE"}}
+            </label>
+        </div>
+        {{/if}}
+    </div>
+    {{/if}}
+
     <div class="modifier-list">
         <h3 class="inv-group-label">{{localize "ROLL.MODIFIERS"}}</h3>
         {{#if contributors.length}}

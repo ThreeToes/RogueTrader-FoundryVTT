@@ -10,11 +10,28 @@
  * mutate documents.
  */
 
+import type { Modifier } from "../../rules-engine/src/modifier";
+
+interface ItemLike {
+	type?: string;
+	system?: {
+		effects?: Array<{
+			kind?: string;
+			testKey?: string;
+			value?: number;
+			label?: string;
+			condition?: string;
+		}>;
+	};
+}
+
 export interface TalentEffectLike {
 	kind?: string;
 	testKey?: string | null;
 	value?: number;
 	label?: string;
+	/** Guard from the talentConditions registry; empty = unconditional. */
+	condition?: string;
 }
 
 export interface TalentLike {
@@ -71,3 +88,83 @@ talentEffectHandlers.register("skill-rank", (_actor, _talent, effect) => {
 	const value = Number(effect.value ?? 0);
 	return Number.isFinite(value) && value !== 0 ? value : null;
 });
+
+// ---------------------------------------------------------------------------
+// Damage-pipeline kinds (bead fjw). These are consumed by the adapter's
+// damage flow via collectTalentDamageEffects below; the reference handlers
+// here just expose the raw values through the registry so the kinds are
+// discoverable (talentEffectHandlers.kinds()) and reusable by modules.
+//
+// VERIFY against prose p95-99: Crushing Blow (S 40) "+2 to damage inflicted
+// in melee"; Crack Shot (BS 40) "+2 to the Damage when his ranged attack
+// causes Critical Damage"; Crippling Strike (WS 50) "+4 Damage" on melee
+// criticals.
+// ---------------------------------------------------------------------------
+talentEffectHandlers.register("damage-flat", (_actor, _talent, effect) => {
+	const value = Number(effect.value ?? 0);
+	return Number.isFinite(value) && value !== 0 ? value : null;
+});
+talentEffectHandlers.register("critical-damage", (_actor, _talent, effect) => {
+	const value = Number(effect.value ?? 0);
+	return Number.isFinite(value) && value !== 0 ? value : null;
+});
+
+// ---------------------------------------------------------------------------
+// Pure collection helper for the damage pipeline (adapter-side; the kernel
+// stays Foundry-free and receives plain numbers).
+//
+// testKey semantics for damage effects (set by pack authors from the table
+// benefit text):
+//   ""/undefined  wildcard - applies to melee AND ranged damage
+//   "melee"       melee-weapon attacks only (Crushing Blow, Crippling Strike)
+//   "ranged"      ranged-weapon attacks only (Crack Shot)
+// `condition` guards on the talentConditions registry via flags, mirroring
+// the funnel's test-modifier behaviour.
+// ---------------------------------------------------------------------------
+export interface TalentDamageCollection {
+	/** kind "damage-flat" contributors (added before soak). */
+	damage: Modifier[];
+	/** kind "critical-damage" contributors (applied on critical hits). */
+	critical: Modifier[];
+}
+
+export function collectTalentDamageEffects(
+	actor: unknown,
+	opts: { attackType: "melee-weapon" | "ranged-weapon"; flags?: Record<string, boolean> },
+): TalentDamageCollection {
+	const out: TalentDamageCollection = { damage: [], critical: [] };
+	const items = (actor as { items?: Array<ItemLike> }).items;
+	if (!items) return out;
+	for (const item of items) {
+		if (item.type !== "talent") continue;
+		for (const effect of item.system?.effects ?? []) {
+			const kind = effect.kind ?? "";
+			const isDamage = kind === "damage-flat";
+			const isCritical = kind === "critical-damage";
+			if (!isDamage && !isCritical) continue;
+			const key = effect.testKey ?? "";
+			const bucket =
+				key === ""
+					? "any"
+					: key === "melee"
+						? "melee-weapon"
+						: key === "ranged"
+							? "ranged-weapon"
+							: key;
+			if (bucket !== "any" && bucket !== opts.attackType) continue;
+			const condition = effect.condition ?? "";
+			if (condition && !opts.flags?.[condition]) continue;
+			const value = Number(effect.value);
+			if (!Number.isFinite(value) || value === 0) continue;
+			const mod: Modifier = {
+				id: `talent-damage:${kind}:${effect.label ?? ""}:${condition || "any"}`,
+				source: { type: "talent", label: "TALENT.HEADER" },
+				label: effect.label || "Talent",
+				value,
+				...(condition ? { condition } : {}),
+			};
+			(isDamage ? out.damage : out.critical).push(mod);
+		}
+	}
+	return out;
+}

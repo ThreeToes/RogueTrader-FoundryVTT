@@ -11,8 +11,21 @@
             </div>
             <div class="header-cell">
                 <label>{{localize "CHARACTER.CAREER"}}</label>
-                <input name="system.career" type="text" value="{{source.system.career}}"
-                    data-tooltip="{{localize "CHARACTER.CAREER"}}" />
+                {{#if editable}}
+                <select name="system.careerKey">
+                    {{selectOptions careerChoices selected=source.system.careerKey blank="" localize=false}}
+                </select>
+                {{else}}
+                <p class="static-value">{{careerLabel}}</p>
+                {{/if}}
+            </div>
+            <div class="header-cell">
+                <label>{{localize "CAREER.RANK"}}</label>
+                {{#if editable}}
+                <input name="system.rank" type="number" min="1" value="{{source.system.rank}}" />
+                {{else}}
+                <p class="static-value">{{source.system.rank}}</p>
+                {{/if}}
             </div>
             <div class="header-cell">
                 <label>{{localize "CHARACTER.XP"}}</label>

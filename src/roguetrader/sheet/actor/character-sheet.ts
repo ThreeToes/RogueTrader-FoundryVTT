@@ -1,4 +1,5 @@
 import { Character } from "../../data/actor/character";
+import { careers } from "../../registry";
 import {
 	rollSkill,
 	rollSkillUntrained,
@@ -340,6 +341,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			unknown
 		>;
 		const system = this.actor.system as Character;
+
+		// Career picker (bead 0ib): choices from the careers registry; the
+		// read-only label resolves via the registry so homebrew careers work.
+		context.careerChoices = Object.fromEntries(careers.entries());
+		context.careerLabel = system.careerKey
+			? (careers.get(system.careerKey) ?? system.careerKey)
+			: "";
 
 		context.characteristics = Object.entries(system.characteristics).map(
 			([key, data]): CharacteristicView => {

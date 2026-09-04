@@ -8,6 +8,8 @@
  * effective bonus = bonus x unnatural multiplier).
  */
 
+import { careers } from "../../registry";
+
 export const CHARACTERISTIC_KEYS = [
 	"ws",
 	"bs",
@@ -109,9 +111,26 @@ export class Character extends foundry.abstract.TypeDataModel<
 			threatLevel: new foundry.data.fields.StringField({
 				initial: "",
 			}),
-			/** Career/rank label (free text, displayed in the sheet header). */
-			career: new foundry.data.fields.StringField({
+			/**
+			 * Career reference: registry key into CONFIG.ROGUE_TRADER.careers
+			 * (bead 0ib). Homebrew careers registered at init are pickable too;
+			 * the label resolves via the registry, not stored text.
+			 */
+			careerKey: new foundry.data.fields.StringField({
+				choices: careers.choices,
 				initial: "",
+				// No career selected yet (new PC / pre-creator) is valid.
+				blank: true,
+			}),
+			/**
+			 * Current rank within the career (1-8 in core; splat books may add
+			 * more). XP-derived rank suggestion is display-only until an
+			 * advancement engine exists — multiple eligible ranks are a choice.
+			 */
+			rank: new foundry.data.fields.NumberField({
+				min: 1,
+				integer: true,
+				initial: 1,
 			}),
 			/** Experience points: spent and total, header display as spent/total. */
 			xp: new foundry.data.fields.SchemaField({

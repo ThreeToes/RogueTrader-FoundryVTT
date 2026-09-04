@@ -103,6 +103,11 @@ export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		},
 	};
 
+	/** Foundry 14's type-label derivation shows "undefined" for career; use our own. */
+	override get title(): string {
+		return `${game.i18n.localize("CAREER.HEADER")}: ${this.document.name}`;
+	}
+
 	static TABS = {
 		primary: {
 			tabs: [

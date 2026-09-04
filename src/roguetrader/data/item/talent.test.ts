@@ -4,6 +4,7 @@ import { StubField } from "../../../../tests/helpers/foundry-schema-stub";
 await import("../../../../tests/helpers/foundry-schema-stub");
 
 const { Talent } = await import("./talent");
+
 import { talentCategories, talents } from "../../registry";
 
 describe("Talent data model", () => {

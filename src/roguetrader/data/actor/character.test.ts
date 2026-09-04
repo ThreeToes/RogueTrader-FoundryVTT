@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
+
 await import("../../../../tests/helpers/foundry-schema-stub");
 const { Character } = await import("./character");
 
 /** Minimal character with set characteristic values (test helper). */
-function makeCharacter(characteristics: Record<string, number>): Character {
+function _makeCharacter(characteristics: Record<string, number>): Character {
 	return Object.create(Character.prototype) as Character & {
 		characteristics: Record<string, { value: number; unnatural: number }>;
 	};

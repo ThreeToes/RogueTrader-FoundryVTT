@@ -20,6 +20,17 @@ Foundry throws `DataModelValidationError: may not be a blank string`.
 - Expose derived/computed data via explicitly named context properties added in the
   sheet's `_prepareContext` override.
 
+## 1b. Sheet classes sharing templates must each provide their context
+
+Item tab templates are shared across sheet classes, but every sheet class
+computes its own context — extending nothing for free. Example (bead f65
+follow-up): the item Description tab (notes.hbs) reads `descriptionHTML` and
+`editable`, but only GearSheet/TalentSheet/PsychicPowerSheet computed
+`descriptionHTML`; WeaponSheet and ArmourSheet extend ItemSheetV2 directly and
+silently rendered an empty tab despite the pack data being correct. When adding
+a context key consumed by a shared template, grep the registered sheet classes
+for that template and add the computation to every one of them.
+
 ## 2. Tab switching
 
 Tabs dispatch via `data-action="tab"` ONLY (core `#onClickAction` → `case 'tab'` →
@@ -28,6 +39,25 @@ Tabs dispatch via `data-action="tab"` ONLY (core `#onClickAction` → `case 'tab
 ```hbs
 <button type="button" data-action="tab" data-tab="skills" data-group="primary">…</button>
 ```
+
+## 2b. LevelDB packs: embedded collections need sublevel records
+
+Foundry v14 compendium packs store embedded collections (e.g. RollTable
+`results`) as a SUBLEVEL, not inline. Abstract-level's sublevel separator is
+"!", so the layout is:
+
+- `!tables!<tableId>` -> the RollTable source, with `results` = an array of
+  result _ids (NOT the inline objects);
+- `!tables.results!<tableId>.<resultId>` -> each result record
+  ({_id, type: 0, text, img, documentCollection: null, documentId: null,
+  weight, range: [start, end]}).
+
+Inline result objects or strings in the table doc are dropped on load and
+Foundry warns "N embedded results records ... were undefined and not retrieved
+from the tables.results sublevel". Items have no embedded collections, which
+is why the flat `!items!<id>` form works. utils/compendia.ts buildPack handles
+the split for table packs — keep it that way when adding new pack document
+types with embedded collections (e.g. actors with items).
 
 ## 3. Foundry hooks are NEVER awaited
 

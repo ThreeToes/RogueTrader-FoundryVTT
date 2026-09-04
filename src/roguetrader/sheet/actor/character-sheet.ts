@@ -6,9 +6,9 @@ import {
 	rollWeaponAttack,
 	rollWeaponDamage,
 } from "../../rules/adapter";
-import { deriveCapacity, resolveEncumbrance } from "../../rules/encumbrance";
-import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { defaultSkillItems } from "../../rules/default-skills";
+import { fatigueThreshold, woundsMax } from "../../rules/derived";
+import { deriveCapacity, resolveEncumbrance } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
 import { SkillPicker } from "./skill-picker";
 import { TalentPicker } from "./talent-picker";
@@ -429,21 +429,18 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			this.actor.items
 				.filter((item) => types.includes(item.type as string))
 				.map((item) => {
-					const equipState = (
-						item.system as unknown as { equipState?: string }
-					).equipState;
+					const equipState = (item.system as unknown as { equipState?: string })
+						.equipState;
 					const type = item.type as string;
 					return {
 						id: item.id,
 						name: item.name,
 						uuid: item.uuid,
-						weight: (item.system as unknown as { weight?: number })
-							.weight ?? 0,
+						weight: (item.system as unknown as { weight?: number }).weight ?? 0,
 						equipState: equipState ?? "stowed",
 						equipped: equipState === "carried" || equipState === "worn",
 						// Weapons get the inline attack/damage roll button.
-						isWeapon:
-							type === "melee-weapon" || type === "ranged-weapon",
+						isWeapon: type === "melee-weapon" || type === "ranged-weapon",
 					};
 				});
 		const inventory: Array<{

@@ -7,8 +7,8 @@ export {
 export { type Modifier, sumModifiers } from "./modifier";
 export { type RuleProfile, rtCore } from "./profile";
 export {
-	resolveTest,
 	locationForHit,
+	resolveTest,
 	type TestOutcome,
 	type TestRequest,
 } from "./test";

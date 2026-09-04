@@ -1,5 +1,5 @@
-import type { Modifier } from "../../rules-engine/src/modifier";
 import { sumModifiers } from "../../rules-engine/src/index";
+import type { Modifier } from "../../rules-engine/src/modifier";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 

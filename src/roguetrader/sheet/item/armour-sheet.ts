@@ -63,6 +63,16 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			row(["left-leg", "right-leg"], "legs-row"),
 		];
 
+		// Description tab: enriched HTML from the system description
+		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).
+		context.descriptionHTML =
+			await foundry.applications.ux.TextEditor.enrichHTML(
+				this.document.system.description,
+				{
+					secrets: this.document.isOwner,
+					relativeTo: this.document,
+				},
+			);
 		return context;
 	}
 }

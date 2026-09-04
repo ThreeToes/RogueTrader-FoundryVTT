@@ -90,9 +90,7 @@ export class Talent extends foundry.abstract.TypeDataModel<
 	}
 
 	/** Effects fed to the test-modifier handler matching a characteristic key (or empty = all). */
-	effectsForKind(
-		kind: string,
-	): Array<{
+	effectsForKind(kind: string): Array<{
 		kind: string;
 		testKey: string | null;
 		value: number;

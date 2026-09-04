@@ -44,7 +44,10 @@ interface Options {
 }
 
 const SCRIPT_DIR = dirname(import.meta.path);
-const DEFAULT_BOOKS = resolve(SCRIPT_DIR, "../src/packs/.extraction-src/books.yaml");
+const DEFAULT_BOOKS = resolve(
+	SCRIPT_DIR,
+	"../src/packs/.extraction-src/books.yaml",
+);
 
 function parseArgs(argv: string[]): Options {
 	let book: string | undefined;
@@ -112,7 +115,10 @@ export function layoutLines(text: string): string[] {
 }
 
 function run(command: string, args: string[]): string {
-	const proc = Bun.spawnSync([command, ...args], { stdout: "pipe", stderr: "pipe" });
+	const proc = Bun.spawnSync([command, ...args], {
+		stdout: "pipe",
+		stderr: "pipe",
+	});
 	if (proc.exitCode !== 0) {
 		throw new Error(
 			`${command} exited ${proc.exitCode}: ${proc.stderr.toString().trim()}`,
@@ -131,7 +137,8 @@ function expandTilde(path: string): string {
 export function pageHeightOf(pdfPath: string): number {
 	const out = run("pdfinfo", [pdfPath]);
 	const size = out.match(/^Page size:\s+([\d.]+) x ([\d.]+)/m);
-	if (!size) throw new Error(`could not read page size from pdfinfo for ${pdfPath}`);
+	if (!size)
+		throw new Error(`could not read page size from pdfinfo for ${pdfPath}`);
 	return Number(size[2]);
 }
 
@@ -155,7 +162,11 @@ export function loadBook(booksPath: string, key: string): BookConfig {
 	return book;
 }
 
-export function extractTablePages(book: BookConfig, pages: number[], outDir: string): void {
+export function extractTablePages(
+	book: BookConfig,
+	pages: number[],
+	outDir: string,
+): void {
 	if (!existsSync(book.pdf)) throw new Error(`not found: ${book.pdf}`);
 	const pageHeight = pageHeightOf(book.pdf);
 	mkdirSync(outDir, { recursive: true });
@@ -168,17 +179,27 @@ export function extractTablePages(book: BookConfig, pages: number[], outDir: str
 				"-layout",
 				// All four rect values are mandatory for poppler: -x/-W alone
 				// silently yields empty output. -y 0/-H page height = full page.
-				"-x", String(Math.round(col.x)),
-				"-y", "0",
-				"-W", String(Math.round(col.w)),
-				"-H", String(Math.round(pageHeight)),
+				"-x",
+				String(Math.round(col.x)),
+				"-y",
+				"0",
+				"-W",
+				String(Math.round(col.w)),
+				"-H",
+				String(Math.round(pageHeight)),
 				book.pdf,
 				"-",
 			]);
-			Bun.write(`${outDir}/page-${String(page).padStart(4, "0")}-col${index}.txt`, text);
+			Bun.write(
+				`${outDir}/page-${String(page).padStart(4, "0")}-col${index}.txt`,
+				text,
+			);
 			columns.push(layoutLines(text));
 		}
-		Bun.write(`${outDir}/page-${String(page).padStart(4, "0")}.rows.txt`, stitchColumns(columns));
+		Bun.write(
+			`${outDir}/page-${String(page).padStart(4, "0")}.rows.txt`,
+			stitchColumns(columns),
+		);
 	}
 	const manifest = {
 		source: book.pdf,
@@ -186,8 +207,13 @@ export function extractTablePages(book: BookConfig, pages: number[], outDir: str
 		pages,
 		extractedAt: new Date().toISOString(),
 	};
-	Bun.write(`${outDir}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
-	console.log(`[tables] ${basename(book.pdf)}: ${pages.length} pages x ${book.columns.length} columns -> ${outDir}`);
+	Bun.write(
+		`${outDir}/manifest.json`,
+		`${JSON.stringify(manifest, null, 2)}\n`,
+	);
+	console.log(
+		`[tables] ${basename(book.pdf)}: ${pages.length} pages x ${book.columns.length} columns -> ${outDir}`,
+	);
 }
 
 if (import.meta.main) {
@@ -195,8 +221,13 @@ if (import.meta.main) {
 		const options = parseArgs(Bun.argv.slice(2));
 		const book = loadBook(options.booksPath, options.book);
 		// Page-count check via pdfinfo so a bad --pages spec fails early.
-		const pageCount = Number(run("pdfinfo", [book.pdf]).match(/^Pages:\s+(\d+)$/m)?.[1]);
-		const pages = (await import("./extract-text")).parsePageSpec(options.pages, pageCount);
+		const pageCount = Number(
+			run("pdfinfo", [book.pdf]).match(/^Pages:\s+(\d+)$/m)?.[1],
+		);
+		const pages = (await import("./extract-text")).parsePageSpec(
+			options.pages,
+			pageCount,
+		);
 		extractTablePages(book, pages, options.outDir);
 	} catch (error) {
 		console.error(`[tables] failed: ${(error as Error).message}`);

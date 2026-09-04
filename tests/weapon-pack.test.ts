@@ -29,7 +29,10 @@ describe("parseRateOfFire (book notation -> schema record)", () => {
 
 describe("parseQualities (book names -> registry keys)", () => {
 	test("simple list", () => {
-		expect(parseQualities("Accurate, Reliable")).toEqual(["accurate", "reliable"]);
+		expect(parseQualities("Accurate, Reliable")).toEqual([
+			"accurate",
+			"reliable",
+		]);
 	});
 
 	test("strips footnote daggers and maps display names", () => {
@@ -40,7 +43,10 @@ describe("parseQualities (book names -> registry keys)", () => {
 	});
 
 	test("parameterised Blast becomes blast-N", () => {
-		expect(parseQualities("Blast (1), Tearing")).toEqual(["blast-1", "tearing"]);
+		expect(parseQualities("Blast (1), Tearing")).toEqual([
+			"blast-1",
+			"tearing",
+		]);
 	});
 
 	test("Overheat maps to the overheats registry key", () => {
@@ -53,6 +59,8 @@ describe("parseQualities (book names -> registry keys)", () => {
 	});
 
 	test("unmapped qualities throw loudly", () => {
-		expect(() => parseQualities("Made-up Quality")).toThrow(/unmapped weapon quality/);
+		expect(() => parseQualities("Made-up Quality")).toThrow(
+			/unmapped weapon quality/,
+		);
 	});
 });

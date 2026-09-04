@@ -1,10 +1,11 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
+
+import { DamageType } from "../../data/item/damage-types";
 import {
 	psychicPowerClasses,
 	psychicPowerSubtypes,
 } from "../../data/item/psychic-power";
-import { DamageType } from "../../data/item/damage-types";
 
 const labeled = (values: readonly string[]) =>
 	Object.fromEntries(

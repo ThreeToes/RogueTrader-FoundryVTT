@@ -1,5 +1,5 @@
-import { RangedWeapon } from "../../data/item/ranged-weapon";
 import { DamageType } from "../../data/item/damage-types";
+import { RangedWeapon } from "../../data/item/ranged-weapon";
 import {
 	MELEE_CLASSES,
 	RANGED_CLASSES,
@@ -80,6 +80,16 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			fullAuto: system.rateOfFire?.fullAuto ?? 0,
 		};
 
+		// Description tab: enriched HTML from the system description
+		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).
+		context.descriptionHTML =
+			await foundry.applications.ux.TextEditor.enrichHTML(
+				this.document.system.description,
+				{
+					secrets: this.document.isOwner,
+					relativeTo: this.document,
+				},
+			);
 		return context;
 	}
 }

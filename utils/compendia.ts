@@ -10,8 +10,9 @@
 // - valueEncoding json; documents keyed `!items!<16-char id>` (abstract-level
 //   sublevel prefix for the items collection)
 // - document shape: {_id, name, type, system, effects: [], _stats:{coreVersion}}
-import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+
 import { existsSync } from "node:fs";
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { ClassicLevel } from "classic-level";
 import yaml from "yaml";
@@ -92,9 +93,11 @@ type ResultRow =
  * A table with no results but a `pending` count gets clearly-labelled
  * placeholder rows so the scaffold is rollable but never silently wrong.
  */
-export function buildTableResults(
-	entry: { results?: ResultRow[]; pending?: number; name?: string },
-): Array<Record<string, unknown>> {
+export function buildTableResults(entry: {
+	results?: ResultRow[];
+	pending?: number;
+	name?: string;
+}): Array<Record<string, unknown>> {
 	const authored = Array.isArray(entry.results) ? entry.results : [];
 	const rows: Array<{
 		text?: string;
@@ -156,13 +159,23 @@ function toSourceDocument(entry: Record<string, unknown>, folder: string) {
 		String(entry.name ?? "unnamed"),
 		entry._id as string | undefined,
 	);
+	// Top-level `description` is authoring sugar: Foundry item sheets read
+	// `system.description` (Gear/itemDescription template), so nest it there
+	// when the entry didn't already provide one.
+	const system: Record<string, unknown> = { ...(entry.system ?? {}) };
+	if (
+		!system.description &&
+		typeof entry.description === "string" &&
+		entry.description
+	) {
+		system.description = entry.description;
+	}
 	return {
 		_id: id,
 		name: entry.name,
 		type: resolveEntryType(entry, folder),
-		system: entry.system ?? {},
+		system,
 		effects: Array.isArray(entry.effects) ? entry.effects : [],
-		description: typeof entry.description === "string" ? entry.description : "",
 		_stats: entry._stats ?? { coreVersion: 14 },
 		flags: entry.flags ?? {},
 	};
@@ -208,6 +221,27 @@ async function buildPack(
 				const doc: Record<string, unknown> = isTablePack
 					? toTableSourceDocument(source)
 					: toSourceDocument(source, folder);
+				if (isTablePack) {
+					// Foundry stores RollTable results as an EMBEDDED collection:
+					// the table doc carries only the result ids, and each result
+					// record lives in the "tables.results" sublevel (abstract-level
+					// sublevel separator is "!"). Inline results are dropped by
+					// Foundry on load ("9 embedded results records...undefined").
+					const results = doc.results as Array<Record<string, unknown>>;
+					const tableId = String(doc._id);
+					batch.put(`!tables!${tableId}`, {
+						...doc,
+						results: results.map((r) => String(r._id)),
+					} as unknown as string);
+					for (const r of results) {
+						batch.put(
+							`!tables.results!${tableId}.${String(r._id)}`,
+							r as unknown as string,
+						);
+					}
+					count++;
+					continue;
+				}
 				batch.put(
 					`${isTablePack ? "!tables!" : "!items!"}${String(doc._id)}`,
 					doc as unknown as string,

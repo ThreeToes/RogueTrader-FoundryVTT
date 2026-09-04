@@ -110,14 +110,19 @@ export function parsePageSpec(spec: string, pageCount: number): number[] {
 		.filter((p) => Number.isInteger(p) && p >= 1 && p <= pageCount)
 		.sort((a, b) => a - b);
 	if (valid.length === 0) {
-		throw new Error(`page spec "${spec}" selects no valid pages (1-${pageCount})`);
+		throw new Error(
+			`page spec "${spec}" selects no valid pages (1-${pageCount})`,
+		);
 	}
 	return valid;
 }
 
 /** Run a command, capturing stdout; throws with stderr on failure. */
 function run(command: string, args: string[]): string {
-	const proc = Bun.spawnSync([command, ...args], { stdout: "pipe", stderr: "pipe" });
+	const proc = Bun.spawnSync([command, ...args], {
+		stdout: "pipe",
+		stderr: "pipe",
+	});
 	if (proc.exitCode !== 0) {
 		throw new Error(
 			`${command} exited ${proc.exitCode}: ${proc.stderr.toString().trim()}`,
@@ -146,7 +151,17 @@ function extractPage(
 ): string {
 	const args = ["-f", String(page), "-l", String(page)];
 	if (mode === "layout") args.push("-layout");
-	if (rect) args.push("-x", String(rect.x), "-y", String(rect.y), "-W", String(rect.w), "-H", String(rect.h));
+	if (rect)
+		args.push(
+			"-x",
+			String(rect.x),
+			"-y",
+			String(rect.y),
+			"-W",
+			String(rect.w),
+			"-H",
+			String(rect.h),
+		);
 	args.push(pdfPath, "-");
 	return run("pdftotext", args);
 }
@@ -160,7 +175,8 @@ function extractFull(
 ): string {
 	const args: string[] = [];
 	if (mode === "layout") args.push("-layout");
-	if (firstPage > 1 || lastPage > 0) args.push("-f", String(firstPage), "-l", String(lastPage));
+	if (firstPage > 1 || lastPage > 0)
+		args.push("-f", String(firstPage), "-l", String(lastPage));
 	args.push("-nopgbrk", pdfPath, "-");
 	return run("pdftotext", args);
 }
@@ -170,7 +186,9 @@ const PAGE_FILE = (page: number, mode: string) =>
 
 export function extractPdf(pdfPath: string, options: Options): void {
 	if (!existsSync(pdfPath)) throw new Error(`not found: ${pdfPath}`);
-	const stem = basename(pdfPath).replace(/\.pdf$/i, "").replace(/[^\w.-]+/g, "_");
+	const stem = basename(pdfPath)
+		.replace(/\.pdf$/i, "")
+		.replace(/[^\w.-]+/g, "_");
 	const outRoot = resolve(options.outDir, stem);
 	mkdirSync(outRoot, { recursive: true });
 
@@ -213,7 +231,10 @@ export function extractPdf(pdfPath: string, options: Options): void {
 		rect: options.rect ?? null,
 		extractedAt: new Date().toISOString(),
 	};
-	Bun.write(`${outRoot}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
+	Bun.write(
+		`${outRoot}/manifest.json`,
+		`${JSON.stringify(manifest, null, 2)}\n`,
+	);
 
 	console.log(
 		`[extract] ${basename(pdfPath)}: ${pages.length}/${pageCount} pages, modes=${modes.join("+")} -> ${outRoot}`,

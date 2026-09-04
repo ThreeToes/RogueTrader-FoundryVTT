@@ -4,6 +4,7 @@ import { StubField } from "../../../../tests/helpers/foundry-schema-stub";
 await import("../../../../tests/helpers/foundry-schema-stub");
 
 const { PsychicPower } = await import("./psychic-power");
+
 import { DamageType } from "./damage-types";
 
 describe("PsychicPower data model", () => {

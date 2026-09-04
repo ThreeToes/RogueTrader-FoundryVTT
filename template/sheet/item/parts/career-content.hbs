@@ -1,0 +1,76 @@
+<section class="career-content">
+    <div class="stats border">
+        <h1>{{localize "CAREER.HEADER"}}</h1>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "CAREER.KEY"}}</label>
+                {{#if editable}}
+                <input name="system.key" type="text" value="{{source.system.key}}"
+                    placeholder="{{localize "CAREER.KEY_HINT"}}" />
+                {{else}}
+                <p class="static-value">{{source.system.key}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "CAREER.SOURCE"}}</label>
+                {{#if editable}}
+                <input name="system.source.page" type="number" min="0"
+                    value="{{source.system.source.page}}" />
+                {{else}}
+                <p class="static-value">{{source.system.source.book}} p{{source.system.source.page}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "CAREER.APTITUDES"}}</label>
+                <p class="static-value">{{aptitudesText}}</p>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat talents-effects">
+                <label>{{localize "CAREER.CHARACTERISTIC_ADVANCES"}}</label>
+                <ul class="static-effects">
+                    {{#each charAdvanceRows as |row|}}
+                    <li><strong>{{row.char}}</strong>: {{row.costs}}</li>
+                    {{/each}}
+                </ul>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat talents-effects">
+                <label>{{localize "CAREER.RANKS"}}</label>
+                {{#each rankRows as |rank|}}
+                <p class="rank-label"><strong>{{localize "CAREER.RANK"}} {{rank.rank}}</strong>
+                    &middot; {{localize "CAREER.XP_LEVEL"}}: {{rank.xpLevel}}</p>
+                <ul class="static-effects">
+                    {{#each rank.advances as |adv|}}
+                    <li>{{adv.label}} ({{adv.typeLabel}}) {{adv.cost}}{{#if (gt adv.multiplier 1)}} x{{adv.multiplier}}{{/if}}{{#if adv.prerequisites}} &mdash; {{adv.prerequisites}}{{/if}}</li>
+                    {{/each}}
+                </ul>
+                {{/each}}
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "TITLE.DESCRIPTION"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.description"
+                    value="{{source.system.description}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{descriptionHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

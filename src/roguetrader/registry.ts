@@ -214,6 +214,24 @@ export const talents = new EntryRegistry(TALENTS);
 export const talentConditions = new EntryRegistry(TALENT_CONDITIONS);
 export const equipStates = new EntryRegistry(EQUIP_STATES);
 
+/**
+ * Core careers (Table 2-1, rt_core p37). Labels are the career names
+ * themselves (proper nouns, not localized). Splat books and homebrew
+ * register additional careers via CONFIG.ROGUE_TRADER.careers at init.
+ */
+const CAREERS = {
+	"rogue-trader": "Rogue Trader",
+	"arch-militant": "Arch-militant",
+	"astropath-transcendent": "Astropath Transcendent",
+	explorator: "Explorator",
+	missionary: "Missionary",
+	navigator: "Navigator",
+	seneschal: "Seneschal",
+	"void-master": "Void-master",
+} as const;
+
+export const careers = new EntryRegistry(CAREERS);
+
 type RogueTraderRegistries = {
 	bodyLocations: EntryRegistry;
 	qualities: EntryRegistry;
@@ -225,6 +243,7 @@ type RogueTraderRegistries = {
 	talentCategories: EntryRegistry;
 	talents: EntryRegistry;
 	equipStates: EntryRegistry;
+	careers: EntryRegistry;
 };
 
 /**
@@ -251,4 +270,5 @@ export function attachRegistriesToConfig() {
 	rt.talentCategories = talentCategories;
 	rt.talents = talents;
 	rt.equipStates = equipStates;
+	rt.careers = careers;
 }

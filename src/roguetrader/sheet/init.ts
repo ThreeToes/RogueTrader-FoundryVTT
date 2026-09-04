@@ -9,6 +9,7 @@ import { PsychicPower } from "../data/item/psychic-power";
 import { RangedWeapon } from "../data/item/ranged-weapon";
 import { Skill } from "../data/item/skill";
 import { Talent } from "../data/item/talent";
+import { Career } from "../data/item/career";
 import { WeaponModification } from "../data/item/weapon-modification";
 import { attachRegistriesToConfig } from "../registry";
 import { rollDamageForCard, rollSkill, rollTest } from "../rules/adapter";
@@ -23,6 +24,7 @@ import { GearSheet } from "./item/gear-sheet";
 import { PsychicPowerSheet } from "./item/psychic-power-sheet";
 import { SkillSheet } from "./item/skill-sheet";
 import { TalentSheet } from "./item/talent-sheet";
+import { CareerSheet } from "./item/career-sheet";
 import { WeaponSheet } from "./item/weapon-sheet";
 
 type AnySheetCtor = new (...args: unknown[]) => object;
@@ -184,6 +186,7 @@ export function sheetInit() {
 		CONFIG.Item.dataModels.armour = Armour;
 		CONFIG.Item.dataModels.skill = Skill;
 		CONFIG.Item.dataModels.talent = Talent;
+		CONFIG.Item.dataModels.career = Career;
 		// Compendium-sourced aptitudes are description-only items; reuse the
 		// Gear model (all fields have initials) and its generic sheet so opening
 		// them does not crash DocumentSheetConfig (bead r7w).
@@ -251,6 +254,12 @@ export function sheetInit() {
 			TalentSheet as unknown as AnySheetCtor,
 			["talent"],
 			"ROGUE_TRADER.TALENT.SHEET",
+		);
+		registerSheet(
+			foundry.documents.Item,
+			CareerSheet as unknown as AnySheetCtor,
+			["career"],
+			"TYPES.Item.career",
 		);
 		registerSheet(
 			foundry.documents.Item,

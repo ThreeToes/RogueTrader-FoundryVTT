@@ -41,6 +41,13 @@
 			"type": "Item"
 		},
 		{
+			"name": "careers",
+			"label": "Rogue Trader Careers",
+			"system": "rogue-trader",
+			"path": "packs/careers",
+			"type": "Item"
+		},
+		{
 			"name": "weapons",
 			"label": "Rogue Trader Weapons",
 			"system": "rogue-trader",

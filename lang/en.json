@@ -682,5 +682,16 @@
     "INVENTORY.STATE_OVER": "Overloaded",
     "INVENTORY.CALC_NOTES": "Aggregated item weights and encumbrance states come with a later rules update.",
     "GEAR.OPEN_SHEET": "Open item sheet",
-    "GEAR.DELETE": "Delete"
+    "GEAR.DELETE": "Delete",
+    "CAREER.HEADER": "Career",
+    "CAREER.KEY": "Career Key",
+    "CAREER.KEY_HINT": "Stable slug, e.g. rogue-trader",
+    "CAREER.SOURCE": "Source",
+    "CAREER.APTITUDES": "Aptitudes",
+    "CAREER.CHARACTERISTIC_ADVANCES": "Characteristic Advance Scheme",
+    "CAREER.RANKS": "Ranks",
+    "CAREER.RANK": "Rank",
+    "CAREER.XP_LEVEL": "XP Level",
+    "CAREER.TYPE_SKILL": "Skill",
+    "CAREER.TYPE_TALENT": "Talent"
 }

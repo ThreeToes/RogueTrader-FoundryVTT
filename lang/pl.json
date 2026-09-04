@@ -683,5 +683,16 @@
             "Source": "Źródło",
             "Toggle": "Przełącznik"
         }
-    }
+    },
+    "CAREER.HEADER": "Kariera",
+    "CAREER.KEY": "Klucz kariery",
+    "CAREER.KEY_HINT": "Stały slug, np. rogue-trader",
+    "CAREER.SOURCE": "Źródło",
+    "CAREER.APTITUDES": "Aptitud",
+    "CAREER.CHARACTERISTIC_ADVANCES": "Schemat rozwoju cech",
+    "CAREER.RANKS": "Rangi",
+    "CAREER.RANK": "Ranga",
+    "CAREER.XP_LEVEL": "Poziom PD",
+    "CAREER.TYPE_SKILL": "Umiejętność",
+    "CAREER.TYPE_TALENT": "Talent"
 }

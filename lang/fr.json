@@ -683,5 +683,16 @@
             "Source": "Source",
             "Toggle": "Bascule"
         }
-    }
+    },
+    "CAREER.HEADER": "Carrière",
+    "CAREER.KEY": "Clé de carrière",
+    "CAREER.KEY_HINT": "Slug stable, ex. rogue-trader",
+    "CAREER.SOURCE": "Source",
+    "CAREER.APTITUDES": "Aptitudes",
+    "CAREER.CHARACTERISTIC_ADVANCES": "Schéma de progression des caractéristiques",
+    "CAREER.RANKS": "Rangs",
+    "CAREER.RANK": "Rang",
+    "CAREER.XP_LEVEL": "Niveau d'XP",
+    "CAREER.TYPE_SKILL": "Compétence",
+    "CAREER.TYPE_TALENT": "Talent"
 }

@@ -54,6 +54,7 @@ const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
 	skills: "skill",
 	talents: "talent",
 	aptitudes: "aptitude",
+	careers: "career",
 };
 
 /** Work out the real item type for an authored entry. */

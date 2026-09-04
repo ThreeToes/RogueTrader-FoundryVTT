@@ -684,5 +684,16 @@
             "Source": "Fuente",
             "Toggle": "Alternador"
         }
-    }
+    },
+    "CAREER.HEADER": "Carrera",
+    "CAREER.KEY": "Clave de carrera",
+    "CAREER.KEY_HINT": "Slug estable, p. ej. rogue-trader",
+    "CAREER.SOURCE": "Fuente",
+    "CAREER.APTITUDES": "Aptitudes",
+    "CAREER.CHARACTERISTIC_ADVANCES": "Esquema de avance de características",
+    "CAREER.RANKS": "Rangos",
+    "CAREER.RANK": "Rango",
+    "CAREER.XP_LEVEL": "Nivel de PX",
+    "CAREER.TYPE_SKILL": "Habilidad",
+    "CAREER.TYPE_TALENT": "Talento"
 }

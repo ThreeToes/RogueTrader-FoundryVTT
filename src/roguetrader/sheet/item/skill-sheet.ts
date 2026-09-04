@@ -28,6 +28,12 @@ export class SkillSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			{ value: 2, label: "SKILL.LADDER_PLUS_10" },
 			{ value: 3, label: "SKILL.LADDER_PLUS_20" },
 		];
+		// Read-only display labels keyed by ladder value.
+		context.ladderLabels = Object.fromEntries(
+			(context.ladderOptions as Array<{ value: number; label: string }>).map(
+				(o) => [o.value, game.i18n.localize(o.label)],
+			),
+		);
 		return context;
 	}
 }

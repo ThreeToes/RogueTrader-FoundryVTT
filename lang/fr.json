@@ -574,6 +574,8 @@
     "TALENT.CATEGORY": "Catégorie",
     "TALENT.EFFECTS": "Modificateurs de test",
     "TALENT.EFFECTS_HINT": "Modificateurs additifs appliqués par ce talent aux tests. Clé vide → tous les tests ; sinon la clé de caractéristique (ex. bs).",
+    "TALENT.NO_EFFECTS": "Aucun effet mécanique.",
+    "TALENT.DESCRIPTION_HINT": "Description complète du livre (la Description courte contient le texte de la Table 4-1).",
     "TALENT.TEST_KEY": "Clé de test",
     "TALENT.TEST_KEY_HINT": "Clé de caractéristique cible ; vide = tous les tests",
     "TALENT.KIND_HINT": "Type d'effet : test-modifier applique la valeur comme modificateur additif du test ; les autres types proviennent des modules enregistrés",

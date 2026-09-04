@@ -4,6 +4,11 @@ import { talentEffectHandlers } from "../../rules/talent-effects";
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
+/**
+ * Single-section talent sheet (no tabs): header + data + description in one
+ * scrollable element. All fields degrade to read-only HTML when the sheet is
+ * not editable ({{#if editable}} in the templates).
+ */
 export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "talent"],
@@ -16,31 +21,21 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		header: {
 			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
 		},
-		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
-		},
-		data: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/talent-data.hbs",
-		},
-		notes: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/notes.hbs",
-		},
-	};
-
-	static TABS = {
-		primary: {
-			tabs: [
-				{ id: "data", group: "primary", label: "TAB.DATA" },
-				{ id: "notes", group: "primary", label: "TAB.DESCRIPTION" },
-			],
-			initial: "data",
+		content: {
+			template:
+				"systems/rogue-trader/template/sheet/item/parts/talent-content.hbs",
 		},
 	};
 
 	async _prepareContext(options: object = {}) {
 		const context = await super._prepareContext(options);
-		context.tabs = this._prepareTabs("primary");
 		context.categoryChoices = Object.fromEntries(talentCategories.entries());
+		// Read-only display label for the category select.
+		context.categoryLabel = game.i18n.localize(
+			talentCategories.choices[
+				this.document.system.category
+			] as string,
+		);
 		// Effect-kind choices: test-modifier (funnel) + any registered handler kinds.
 		context.kindChoices = [
 			"test-modifier",

@@ -4,45 +4,77 @@
         <div class="stats-row">
             <div class="stat class">
                 <label>{{localize "WEAPON.CLASS"}}</label>
+                {{#if editable}}
                 <select name="system.class">
                     {{selectOptions classChoices selected=source.system.class localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup classChoices source.system.class)}}</p>
+                {{/if}}
             </div>
             <div class="stat range">
                 <label>{{localize "WEAPON.RANGE"}}</label>
+                {{#if editable}}
                 <input name="system.range" type="number" value="{{source.system.range}}" />
+                {{else}}
+                <p class="static-value">{{source.system.range}}</p>
+                {{/if}}
             </div>
             <div class="stat weight">
                 <label>{{localize "GEAR.WEIGHT"}}</label>
+                {{#if editable}}
                 <input name="system.weight" type="number" value="{{source.system.weight}}" />
+                {{else}}
+                <p class="static-value">{{source.system.weight}}</p>
+                {{/if}}
             </div>
         </div>
         <div class="stats-row">
             <div class="stat damage grow-2">
                 <label>{{localize "WEAPON.DAMAGE_FULL"}}</label>
+                {{#if editable}}
                 <input name="system.damage" type="text" value="{{source.system.damage}}" />
+                {{else}}
+                <p class="static-value">{{source.system.damage}}</p>
+                {{/if}}
             </div>
             <div class="stat damage-type">
                 <label>{{localize "WEAPON.DAMAGE_TYPE"}}</label>
+                {{#if editable}}
                 <select name="system.damageType">
                     {{selectOptions damageTypeChoices selected=source.system.damageType localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup damageTypeChoices source.system.damageType)}}</p>
+                {{/if}}
             </div>
             <div class="stat penetration">
                 <label>{{localize "WEAPON.PENETRATION_FULL"}}</label>
+                {{#if editable}}
                 <input name="system.penetration" type="number" value="{{source.system.penetration}}" />
+                {{else}}
+                <p class="static-value">{{source.system.penetration}}</p>
+                {{/if}}
             </div>
             <div class="stat availability">
                 <label>{{localize "GEAR.AVAILABILITY"}}</label>
+                {{#if editable}}
                 <select name="system.availability">
                     {{selectOptions (config "availability") selected=source.system.availability localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "availability") source.system.availability)}}</p>
+                {{/if}}
             </div>
             <div class="stat equip-state">
                 <label>{{localize "GEAR.EQUIP_STATE"}}</label>
+                {{#if editable}}
                 <select name="system.equipState">
                     {{selectOptions (config "equipStates") selected=source.system.equipState localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "equipStates") source.system.equipState)}}</p>
+                {{/if}}
             </div>
         </div>
 
@@ -50,6 +82,7 @@
         <div class="stats-row">
             <div class="stat rate-of-fire grow-2">
                 <label>{{localize "RANGED_WEAPON.RATE_OF_FIRE"}}</label>
+                {{#if editable}}
                 <div class="rof-composite"
                     data-tooltip="{{localize "RANGED_WEAPON.SINGLE_SHOT"}} / {{localize "RANGED_WEAPON.BURST"}} / {{localize "RANGED_WEAPON.FULL_AUTO"}}">
                     <label class="rof-single">
@@ -70,14 +103,30 @@
                         {{#unless source.system.rateOfFire.fullAuto}}<span class="rof-zero">&ndash;</span>{{/unless}}
                     </span>
                 </div>
+                {{else}}
+                <p class="static-value">
+                    {{source.system.rateOfFire.singleShot}}S /
+                    {{source.system.rateOfFire.burst}} /
+                    {{source.system.rateOfFire.fullAuto}}
+                    &middot; {{source.system.clip}} {{localize "RANGED_WEAPON.CLIP"}}
+                </p>
+                {{/if}}
             </div>
             <div class="stat clip">
                 <label>{{localize "RANGED_WEAPON.CLIP"}}</label>
+                {{#if editable}}
                 <input name="system.clip" type="number" min="0" value="{{source.system.clip}}" />
+                {{else}}
+                <p class="static-value">{{source.system.clip}}</p>
+                {{/if}}
             </div>
             <div class="stat reload">
                 <label>{{localize "RANGED_WEAPON.RELOAD"}}</label>
+                {{#if editable}}
                 <input name="system.reload" type="number" min="0" value="{{source.system.reload}}" />
+                {{else}}
+                <p class="static-value">{{source.system.reload}}</p>
+                {{/if}}
             </div>
         </div>
         {{/if}}
@@ -85,15 +134,20 @@
         <div class="stats-row">
             <div class="stat craftsmanship">
                 <label>{{localize "GEAR.CRAFTSMANSHIP"}}</label>
+                {{#if editable}}
                 <select name="system.craftsmanship">
                     {{selectOptions (config "craftsmanship") selected=source.system.craftsmanship localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "craftsmanship") source.system.craftsmanship)}}</p>
+                {{/if}}
             </div>
         </div>
 
         <div class="stats-row">
             <div class="stat special">
                 <label>{{localize "WEAPON.SPECIAL"}}</label>
+                {{#if editable}}
                 <div class="chip-select">
                     {{#each (config "qualities") as |label key|}}
                     <label class="chip-option" data-tooltip="{{localize label}}">
@@ -103,6 +157,9 @@
                     </label>
                     {{/each}}
                 </div>
+                {{else}}
+                <p class="static-value">{{#each specialFlags as |on key|}}{{#if on}}{{localize (lookup (config "qualities") key)}} {{/if}}{{/each}}</p>
+                {{/if}}
             </div>
         </div>
 

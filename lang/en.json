@@ -639,6 +639,8 @@
     "TALENT.CATEGORY": "Category",
     "TALENT.EFFECTS": "Test Modifiers",
     "TALENT.EFFECTS_HINT": "Additive modifiers applied by this talent to tests. Empty Test Key → all tests; otherwise the characteristic key (e.g. bs).",
+    "TALENT.NO_EFFECTS": "No mechanical effects.",
+    "TALENT.DESCRIPTION_HINT": "Full prose description from the rulebook (the Short Description holds the Table 4-1 benefit text).",
     "TALENT.TEST_KEY": "Test Key",
     "TALENT.TEST_KEY_HINT": "Characteristic key this applies to; empty = all tests",
     "TALENT.KIND_HINT": "Effect kind: test-modifier applies the value as an additive test modifier; other kinds come from registered modules",

@@ -10,8 +10,12 @@
                     <div class="body-part {{#if (eq part.location "head")}}head{{/if}}"
                         data-location="{{part.location}}">
                         <label class="part-label" for="ap-{{part.location}}">{{localize part.label}}</label>
+                        {{#if ../../editable}}
                         <input id="ap-{{part.location}}" name="system.armourPoints.{{part.location}}" type="number"
                             min="0" value="{{lookup ../../armourPoints part.location}}" />
+                        {{else}}
+                        <p class="static-value">{{lookup ../../armourPoints part.location}}</p>
+                        {{/if}}
                     </div>
                     {{/each}}
                 </div>
@@ -21,31 +25,51 @@
         <div class="stats-row">
             <div class="stat protection-type">
                 <label>{{localize "ARMOUR.PROTECTION_TYPE"}}</label>
+                {{#if editable}}
                 <select name="system.protectionType">
                     {{selectOptions (config "protectionTypes") selected=source.system.protectionType localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "protectionTypes") source.system.protectionType)}}</p>
+                {{/if}}
             </div>
             <div class="stat max-agility">
                 <label>{{localize "ARMOUR.MAX_AGILITY"}}</label>
+                {{#if editable}}
                 <input name="system.maxAgility" type="number" value="{{source.system.maxAgility}}" />
+                {{else}}
+                <p class="static-value">{{source.system.maxAgility}}</p>
+                {{/if}}
             </div>
         </div>
         <div class="stats-row">
             <div class="stat craftsmanship">
                 <label>{{localize "GEAR.CRAFTSMANSHIP"}}</label>
+                {{#if editable}}
                 <select name="system.craftsmanship">
                     {{selectOptions (config "craftsmanship") selected=source.system.craftsmanship localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "craftsmanship") source.system.craftsmanship)}}</p>
+                {{/if}}
             </div>
             <div class="stat availability">
                 <label>{{localize "GEAR.AVAILABILITY"}}</label>
+                {{#if editable}}
                 <select name="system.availability">
                     {{selectOptions (config "availability") selected=source.system.availability localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "availability") source.system.availability)}}</p>
+                {{/if}}
             </div>
             <div class="stat weight">
                 <label>{{localize "GEAR.WEIGHT"}}</label>
+                {{#if editable}}
                 <input name="system.weight" type="number" value="{{source.system.weight}}" />
+                {{else}}
+                <p class="static-value">{{source.system.weight}}</p>
+                {{/if}}
             </div>
         </div>
     </div>

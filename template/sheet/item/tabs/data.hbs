@@ -4,25 +4,41 @@
         <div class="stats-row">
             <div class="stat craftsmanship">
                 <label>{{localize "GEAR.CRAFTSMANSHIP"}}</label>
+                {{#if editable}}
                 <select name="system.craftsmanship">
                     {{selectOptions (config "craftsmanship") selected=source.system.craftsmanship localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "craftsmanship") source.system.craftsmanship)}}</p>
+                {{/if}}
             </div>
             <div class="stat availability">
                 <label>{{localize "GEAR.AVAILABILITY"}}</label>
+                {{#if editable}}
                 <select name="system.availability">
                     {{selectOptions (config "availability") selected=source.system.availability localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "availability") source.system.availability)}}</p>
+                {{/if}}
             </div>
             <div class="stat equip-state">
                 <label>{{localize "GEAR.EQUIP_STATE"}}</label>
+                {{#if editable}}
                 <select name="system.equipState">
                     {{selectOptions (config "equipStates") selected=source.system.equipState localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "equipStates") source.system.equipState)}}</p>
+                {{/if}}
             </div>
             <div class="stat weight">
                 <label>{{localize "GEAR.WEIGHT"}}</label>
+                {{#if editable}}
                 <input name="system.weight" type="number" value="{{source.system.weight}}" />
+                {{else}}
+                <p class="static-value">{{source.system.weight}}</p>
+                {{/if}}
             </div>
         </div>
     </div>

@@ -562,6 +562,8 @@
     "TALENT.CATEGORY": "Categoría",
     "TALENT.EFFECTS": "Modificadores de tirada",
     "TALENT.EFFECTS_HINT": "Modificadores aditivos que este talento aplica a las tiradas. Clave de tirada vacía → todas; si no, la clave de característica (p. ej. bs).",
+    "TALENT.NO_EFFECTS": "Sin efectos mecánicos.",
+    "TALENT.DESCRIPTION_HINT": "Descripción completa del libro (la Descripción Corta contiene el texto de la Tabla 4-1).",
     "TALENT.TEST_KEY": "Clave de tirada",
     "TALENT.TEST_KEY_HINT": "Clave de característica a la que aplica; vacío = todas",
     "TALENT.KIND_HINT": "Tipo de efecto: test-modifier aplica el valor como modificador aditivo a la tirada; los demás tipos provienen de módulos registrados",

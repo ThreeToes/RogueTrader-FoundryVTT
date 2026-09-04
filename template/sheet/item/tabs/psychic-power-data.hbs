@@ -4,52 +4,88 @@
         <div class="stats-row">
             <div class="stat">
                 <label>{{localize "PSYCHIC_POWER.CLASS"}}</label>
+                {{#if editable}}
                 <select name="system.powerClass">
                     {{selectOptions powerClassChoices selected=source.system.powerClass localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup powerClassChoices source.system.powerClass)}}</p>
+                {{/if}}
             </div>
             <div class="stat">
                 <label>{{localize "PSYCHIC_POWER.SUBTYPE"}}</label>
+                {{#if editable}}
                 <select name="system.subtype">
                     {{selectOptions subtypeChoices selected=source.system.subtype localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup subtypeChoices source.system.subtype)}}</p>
+                {{/if}}
             </div>
         </div>
         <div class="stats-row">
             <div class="stat">
                 <label>{{localize "PSYCHIC_POWER.PREREQUISITE"}}</label>
+                {{#if editable}}
                 <input name="system.prerequisite" type="text" value="{{source.system.prerequisite}}" />
+                {{else}}
+                <p class="static-value">{{source.system.prerequisite}}</p>
+                {{/if}}
             </div>
             <div class="stat">
                 <label>{{localize "GEAR.SHORT_DESCRIPTION"}}</label>
+                {{#if editable}}
                 <input name="system.shortDescription" type="text"
                     value="{{source.system.shortDescription}}" />
+                {{else}}
+                <p class="static-value">{{source.system.shortDescription}}</p>
+                {{/if}}
             </div>
         </div>
         <div class="stats-row">
             <div class="stat">
                 <label>{{localize "PSYCHIC_POWER.RATING"}}</label>
+                {{#if editable}}
                 <input name="system.rating" type="number" min="0" value="{{source.system.rating}}" />
+                {{else}}
+                <p class="static-value">{{source.system.rating}}</p>
+                {{/if}}
             </div>
             <div class="stat">
                 <label>{{localize "PSYCHIC_POWER.RANGE"}}</label>
+                {{#if editable}}
                 <input name="system.range" type="text" value="{{source.system.range}}" />
+                {{else}}
+                <p class="static-value">{{source.system.range}}</p>
+                {{/if}}
             </div>
         </div>
         <div class="stats-row">
             <div class="stat">
                 <label>{{localize "PSYCHIC_POWER.DAMAGE"}}</label>
+                {{#if editable}}
                 <input name="system.damage" type="text" value="{{source.system.damage}}" />
+                {{else}}
+                <p class="static-value">{{source.system.damage}}</p>
+                {{/if}}
             </div>
             <div class="stat">
                 <label>{{localize "PSYCHIC_POWER.DAMAGE_TYPE"}}</label>
+                {{#if editable}}
                 <select name="system.damageType">
                     {{selectOptions damageTypeChoices selected=source.system.damageType localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup damageTypeChoices source.system.damageType)}}</p>
+                {{/if}}
             </div>
             <div class="stat">
                 <label>{{localize "PSYCHIC_POWER.SUSTAINED"}}</label>
+                {{#if editable}}
                 <input name="system.sustained" type="checkbox" {{#if source.system.sustained}}checked{{/if}} />
+                {{else}}
+                <p class="static-value">{{#if source.system.sustained}}{{localize "BUTTON.YES"}}{{else}}{{localize "BUTTON.NO"}}{{/if}}</p>
+                {{/if}}
             </div>
         </div>
     </div>

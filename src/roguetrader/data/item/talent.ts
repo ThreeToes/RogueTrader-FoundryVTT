@@ -22,6 +22,8 @@ export class Talent extends foundry.abstract.TypeDataModel<
 	declare tier: number;
 	declare prereqTalent: string;
 	declare shortDescription: string;
+	/** Long prose description (rulebook talent descriptions, p93-99). */
+	declare description: string;
 	declare effects: Array<{
 		kind: string;
 		testKey: string | null;
@@ -91,6 +93,13 @@ export class Talent extends foundry.abstract.TypeDataModel<
 			shortDescription: new foundry.data.fields.StringField({
 				initial: "",
 			}),
+			/**
+			 * Long prose description (bead 707 decision: talents carry BOTH the
+			 * terse table benefit AND the full rulebook prose). HTML so the
+			 * prose-mirror notes tab round-trips; the compendium packer nests the
+			 * pack entry's top-level `description` here.
+			 */
+			description: new foundry.data.fields.HTMLField({ initial: "" }),
 		};
 	}
 

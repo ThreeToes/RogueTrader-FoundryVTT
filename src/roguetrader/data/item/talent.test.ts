@@ -34,6 +34,19 @@ describe("Talent data model", () => {
 		expect(slot.fields.value.opts.initial).toBe(0);
 	});
 
+	// Bead 707 decision: talents carry BOTH the terse table benefit
+	// (shortDescription) and the full rulebook prose (description).
+	test("has shortDescription and long description fields", () => {
+		const schema = Talent.defineSchema() as unknown as Record<
+			string,
+			StubField
+		>;
+		expect(schema.shortDescription).toBeDefined();
+		expect(schema.description).toBeDefined();
+		expect(schema.shortDescription.opts.initial).toBe("");
+		expect(schema.description.opts.initial).toBe("");
+	});
+
 	test("registry has seeded talents", () => {
 		expect(talents.keys().length).toBeGreaterThan(5);
 	});

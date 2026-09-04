@@ -4,15 +4,23 @@
         <div class="stats-row">
             <div class="stat characteristic">
                 <label>{{localize "SKILL.CHARACTERISTIC"}}</label>
+                {{#if editable}}
                 <select name="system.characteristic">
                     {{selectOptions characteristicChoices selected=source.system.characteristic localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup characteristicChoices source.system.characteristic)}}</p>
+                {{/if}}
             </div>
             <div class="stat ladder">
                 <label>{{localize "SKILL.LADDER"}}</label>
+                {{#if editable}}
                 <select name="system.ladder">
                     {{selectOptions ladderOptions selected=source.system.ladder labelAttr="label" valueAttr="value" localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{lookup ladderLabels source.system.ladder}}</p>
+                {{/if}}
             </div>
         </div>
     </div>

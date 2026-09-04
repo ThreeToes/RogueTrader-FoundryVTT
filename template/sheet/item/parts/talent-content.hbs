@@ -1,22 +1,49 @@
-<section class="tab {{tabs.data.cssClass}}" data-group="primary" data-tab="data">
+<section class="talent-content">
     <div class="stats border">
         <h1>{{localize "TALENT.HEADER"}}</h1>
         <div class="stats-row">
             <div class="stat">
                 <label>{{localize "TALENT.CATEGORY"}}</label>
+                {{#if editable}}
                 <select name="system.category">
                     {{selectOptions categoryChoices selected=source.system.category localize=true}}
                 </select>
+                {{else}}
+                <p class="static-value">{{categoryLabel}}</p>
+                {{/if}}
             </div>
             <div class="stat">
                 <label>{{localize "GEAR.SHORT_DESCRIPTION"}}</label>
+                {{#if editable}}
                 <input name="system.shortDescription" type="text"
                     value="{{source.system.shortDescription}}" />
+                {{else}}
+                <p class="static-value">{{source.system.shortDescription}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "TITLE.DESCRIPTION"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.description"
+                    value="{{source.system.description}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{descriptionHTML}}}</div>
+                {{/if}}
             </div>
         </div>
         <div class="stats-row">
             <div class="stat talents-effects">
                 <label>{{localize "TALENT.EFFECTS"}}</label>
+                {{#if editable}}
                 <p class="untrained-hint">{{localize "TALENT.EFFECTS_HINT"}}</p>
                 {{#each source.system.effects as |effect i|}}
                 <div class="stats-row">
@@ -35,6 +62,17 @@
                         data-tooltip="{{localize "ROLL.LABEL"}}" />
                 </div>
                 {{/each}}
+                {{else}}
+                {{#if source.system.effects.length}}
+                <ul class="static-effects">
+                    {{#each source.system.effects as |effect|}}
+                    <li>{{effect.label}} ({{effect.kind}}{{#if effect.testKey}}: {{effect.testKey}}{{/if}}) {{#if (gt effect.value 0)}}+{{/if}}{{effect.value}}</li>
+                    {{/each}}
+                </ul>
+                {{else}}
+                <p class="untrained-hint">{{localize "TALENT.NO_EFFECTS"}}</p>
+                {{/if}}
+                {{/if}}
             </div>
         </div>
     </div>

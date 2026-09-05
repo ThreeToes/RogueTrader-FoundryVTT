@@ -901,5 +901,7 @@
   "TYPES.Actor.explorer": "Explorer",
   "TYPES.Actor.starship": "Starship",
   "TYPES.Item.ship": "Starship Hull",
-  "TYPES.Item.ship-complication": "Ship Complication"
+  "TYPES.Item.ship-complication": "Ship Complication",
+  "BACKGROUND.OPEN_CAREER_TOOLTIP": "Open the career's full rank tables in the careers compendium",
+  "BACKGROUND.OPEN_CAREER_FAIL": "Could not open the career entry ({uuid}) — see the console (F12) for details"
 }

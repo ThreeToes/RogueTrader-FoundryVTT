@@ -11,37 +11,29 @@
             </div>
             <div class="header-cell">
                 <label>{{localize "CHARACTER.CAREER"}}</label>
-                {{#if editable}}
-                <select name="system.careerKey">
-                    {{selectOptions careerChoices selected=source.system.careerKey blank="" localize=false}}
-                </select>
-                {{else}}
                 <p class="static-value">{{careerLabel}}</p>
-                {{/if}}
             </div>
             <div class="header-cell">
                 <label>{{localize "CAREER.RANK"}}</label>
-                {{#if editable}}
                 <div class="paired">
-                    <input name="system.rank" type="number" min="1" value="{{source.system.rank}}"
-                        {{#if rankDerived}}data-tooltip="{{rankTooltip}}"{{/if}} />
+                    <p class="static-value">{{source.system.rank}}</p>
                     {{#if isPC}}
                     <button type="button" class="advancement-open" data-action="openAdvancement"
-                        data-tooltip="{{localize "ADVANCE.OPEN"}}"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
+                        data-tooltip="{{rankTooltip || localize "ADVANCE.OPEN"}}"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
                     {{/if}}
                 </div>
-                {{else}}
-                <p class="static-value">{{source.system.rank}}</p>
-                {{/if}}
             </div>
             <div class="header-cell">
                 <label>{{localize "CHARACTER.XP"}}</label>
                 <div class="paired">
-                    <input name="system.xp.spent" type="number" min="0" value="{{source.system.xp.spent}}"
-                        data-tooltip="{{localize "CHARACTER.XP_SPENT"}}" />
+                    <p class="static-value" data-tooltip="{{localize "CHARACTER.XP_SPENT"}}">{{xpSpent}}</p>
                     <span class="pair-sep">/</span>
+                    {{#if editable}}
                     <input name="system.xp.total" type="number" min="0" value="{{source.system.xp.total}}"
                         data-tooltip="{{localize "CHARACTER.XP_TOTAL"}}" />
+                    {{else}}
+                    <p class="static-value">{{source.system.xp.total}}</p>
+                    {{/if}}
                 </div>
             </div>
         </div>

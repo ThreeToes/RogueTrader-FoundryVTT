@@ -903,5 +903,7 @@
   "TYPES.Actor.explorer": "Explorador",
   "TYPES.Actor.starship": "Nave estelar",
   "TYPES.Item.ship": "Casco de nave estelar",
-  "TYPES.Item.ship-complication": "Complicación de nave"
+  "TYPES.Item.ship-complication": "Complicación de nave",
+  "BACKGROUND.OPEN_CAREER_TOOLTIP": "Abrir las tablas de rango completas de la carrera en el compendio",
+  "BACKGROUND.OPEN_CAREER_FAIL": "No se pudo abrir la entrada de carrera ({uuid}) — mira la consola (F12) para más detalles"
 }

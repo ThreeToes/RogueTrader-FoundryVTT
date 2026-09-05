@@ -902,5 +902,7 @@
   "TYPES.Actor.explorer": "Odkrywca",
   "TYPES.Actor.starship": "Gwiezdny statek",
   "TYPES.Item.ship": "Kadłub gwiezdnego statku",
-  "TYPES.Item.ship-complication": "Komplikacja statku"
+  "TYPES.Item.ship-complication": "Komplikacja statku",
+  "BACKGROUND.OPEN_CAREER_TOOLTIP": "Otwórz pełne tabele rang kariery w kompendium",
+  "BACKGROUND.OPEN_CAREER_FAIL": "Nie można otworzyć wpisu kariery ({uuid}) — szczegóły w konsoli (F12)"
 }

@@ -114,7 +114,12 @@
         </div>
         <p class="background-career">
             <span class="origin-label">{{localize "CHARACTER.CAREER"}}:</span>
+            {{#if careerItemId}}
+            <a class="origin-name career-link" data-action="openCareerSheet" data-uuid="{{careerItemId}}"
+                data-tooltip="{{localize "BACKGROUND.OPEN_CAREER_TOOLTIP"}}">{{careerLabel}}</a>
+            {{else}}
             <span class="origin-name">{{careerLabel}}</span>
+            {{/if}}
             {{#if careerItemId}}<em class="origin-label">({{localize "BACKGROUND.CAREER_LINKED"}})</em>{{/if}}
         </p>
 

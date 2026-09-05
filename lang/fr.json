@@ -902,5 +902,7 @@
   "TYPES.Actor.explorer": "Explorateur",
   "TYPES.Actor.starship": "Vaisseau",
   "TYPES.Item.ship": "Coque de vaisseau",
-  "TYPES.Item.ship-complication": "Complication de vaisseau"
+  "TYPES.Item.ship-complication": "Complication de vaisseau",
+  "BACKGROUND.OPEN_CAREER_TOOLTIP": "Ouvrir les tables de rang complètes de la carrière dans le compendium",
+  "BACKGROUND.OPEN_CAREER_FAIL": "Impossible d'ouvrir l'entrée de carrière ({uuid}) — voir la console (F12) pour plus de détails"
 }

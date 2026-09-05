@@ -18,6 +18,9 @@ async function copyStaticFiles() {
 		force: true,
 	});
 	await cp("./lang", "./release/lang", { recursive: true, force: true });
+	// template.json (document type declarations) ships with the system; the
+	// create-dialog type lists read it, so a stale copy breaks new types.
+	await cp("./template.json", "./release/template.json", { force: true });
 	// Prune-then-copy: release/template must mirror ./template exactly so
 	// stale legacy templates never ship (release directory cleanup, v9o).
 	await rm("./release/template", { recursive: true, force: true });

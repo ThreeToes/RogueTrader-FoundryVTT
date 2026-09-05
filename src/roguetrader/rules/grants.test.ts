@@ -124,6 +124,6 @@ describe("creator reconcile (iufv)", () => {
 		expect(reconcileForCreator(items, new Set(["Light Sleeper"]))).toEqual({
 			deleteIds: ["a", "b", "d"],
 		});
-		expect(reconcileForCreator(items, new Set())).toEqual({ deleteIds: ["a", "b"] });
+		expect(reconcileForCreator(items, new Set<string>())).toEqual({ deleteIds: ["a", "b"] });
 	});
 });

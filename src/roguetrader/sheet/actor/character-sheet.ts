@@ -153,15 +153,36 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		target: HTMLElement,
 	): Promise<void> {
 		const uuid = target.dataset.uuid;
-		if (!uuid) return;
-		const item = (await foundry.utils.fromUuid(
-			uuid,
-		) as unknown as { sheet?: { render: (options?: object) => unknown } } | null);
-		if (!item) {
-			console.warn(`rogue-trader | career link: fromUuid("${uuid}") resolved to null`);
+		// Bead wwuc: trace entry so an in-world attempt distinguishes
+		// "action never dispatched" from "handler ran and failed".
+		console.log("[career-link] clicked, uuid =", uuid);
+		if (!uuid) {
+			console.warn("rogue-trader | career link: no data-uuid on the clicked element");
 			return;
 		}
-		item.sheet?.render({});
+		try {
+			const item = (await foundry.utils.fromUuid(
+				uuid,
+			) as unknown as {
+				sheet?: { render: (options?: object) => unknown };
+				system?: { ranks?: unknown[] };
+			} | null);
+			if (!item) {
+				ui.notifications?.error(
+					game.i18n!.format("BACKGROUND.OPEN_CAREER_FAIL", { uuid }),
+				);
+				console.warn(`rogue-trader | career link: fromUuid("${uuid}") resolved to null`);
+				return;
+			}
+			await item.sheet?.render({});
+		} catch (error) {
+			// Bead wwuc: surface render failures visibly instead of dying
+			// silently — CareerSheet._prepareContext errors land here.
+			console.error("rogue-trader | career link failed:", error);
+			ui.notifications?.error(
+				game.i18n!.format("BACKGROUND.OPEN_CAREER_FAIL", { uuid }),
+			);
+		}
 	}
 
 	/**
@@ -500,7 +521,6 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 		// Career picker (bead 0ib): choices from the careers registry; the
 		// read-only label resolves via the registry so homebrew careers work.
-		context.careerChoices = Object.fromEntries(careers.entries());
 		context.careerLabel = system.careerKey
 			? (careers.get(system.careerKey) ?? system.careerKey)
 			: "";
@@ -536,6 +556,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				}
 			}
 		}
+
+		// XP (owner cull): spent is DISPLAY-ONLY, derived from the
+		// advancement ledger (totalSpent) — manual editing desynced the pool
+		// from the ledger; the Advancement dialog is the purchase path. The
+		// lifetime total stays editable.
+		context.xpSpent = totalSpent((system.advances ?? []) as AdvanceLedgerEntry[]);
+		context.xpTotal = system.xp?.total ?? 0;
 
 		context.characteristics = Object.entries(system.characteristics).map(
 			([key, data]): CharacteristicView => {

@@ -12,12 +12,16 @@ export class Gear extends foundry.abstract.TypeDataModel<
 	static defineSchema() {
 		return {
 			availability: new foundry.data.fields.StringField({
-				choices: Object.values(Availability),
+				// NO `choices` here (bead h7wl follow-up): Foundry validates
+				// choices against the RAW source before `clean` runs at document
+				// init, so a capitalized legacy value ("Common") bricks the item
+				// with a DataModelValidationError instead of being normalized.
+				// Dropdowns take their options from the `config` helper
+				// (sheet/config.ts); clean normalizes legacy values at
+				// initialize/save with a console warning for unknowns.
 				initial: Availability.Common,
 				required: true,
 				nullable: false,
-				// Normalizes legacy world data ("Common", "—") at load and on
-				// save — see normalizeAvailability (world-load brick fix).
 				clean: normalizeAvailability,
 			}),
 			/**

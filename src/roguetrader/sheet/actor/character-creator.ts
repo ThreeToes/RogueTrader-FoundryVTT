@@ -666,7 +666,7 @@ variants: (entry.variants ?? []).map((v) => ({
 			}
 			await target.update({ name: state.name || this.targetActor.name, system: systemPayload } as never);
 			await this.#applyGrantsAndSummary(target, state, resolved);
-			await this.#applyGroupAndAcquisition(target, state);
+			await this.#applyAcquisition(target, state);
 			this.close();
 			target.sheet?.render({});
 			return;
@@ -685,7 +685,7 @@ variants: (entry.variants ?? []).map((v) => ({
 		if (!actor) return;
 
 		await this.#applyGrantsAndSummary(actor, state, resolved);
-		await this.#applyGroupAndAcquisition(actor, state);
+		await this.#applyAcquisition(actor, state);
 
 		this.close();
 		actor.sheet?.render({});
@@ -697,7 +697,7 @@ variants: (entry.variants ?? []).map((v) => ({
 	 * group's PF/SP are NOT set here — they live on the dynasty document
 	 * (owner redesign: keep group-level decisions out of the creator).
 	 */
-	async #applyGroupAndAcquisition(
+	async #applyAcquisition(
 		actor: unknown,
 		state: CreatorState,
 	): Promise<void> {

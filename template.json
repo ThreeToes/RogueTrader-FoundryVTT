@@ -1202,7 +1202,6 @@
             "malignancy",
             "mentalDisorder",
             "mutation",
-            "psychicPower",
             "specialAbility",
             "talent",
             "tool",
@@ -1211,7 +1210,14 @@
             "weaponModification",
             "psychicpower",
             "ship",
-            "ship-complication"
+            "ship-complication",
+            "skill",
+            "career",
+            "melee-weapon",
+            "ranged-weapon",
+            "origintrait",
+            "madness",
+            "force-field"
         ],
         "templates": {
             "equipment": {
@@ -1289,30 +1295,6 @@
                 "itemDescription"
             ]
         },
-        "psychicPower": {
-            "templates": [
-                "itemDescription"
-            ],
-            "shortDescription": "",
-            "cost": 0,
-            "prerequisite": "",
-            "action": "",
-            "focusPower": {
-                "difficulty": 0,
-                "test": ""
-            },
-            "range": "",
-            "sustained": "",
-            "subtype": "",
-            "effect": "",
-            "damage": {
-                "zone": "bolt",
-                "type": "energy",
-                "formula": "",
-                "penetration": "",
-                "special": ""
-            }
-        },
         "specialAbility": {
             "templates": [
                 "itemDescription"
@@ -1357,6 +1339,13 @@
         },
         "psychicpower": {},
         "ship": {},
-        "ship-complication": {}
+        "ship-complication": {},
+        "skill": {},
+        "career": {},
+        "melee-weapon": {},
+        "ranged-weapon": {},
+        "origintrait": {},
+        "madness": {},
+        "force-field": {}
     }
 }

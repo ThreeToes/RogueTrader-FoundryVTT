@@ -202,23 +202,55 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			return;
 		}
 		try {
-			const item = (await foundry.utils.fromUuid(
-				uuid,
-			) as unknown as {
-				sheet?: { render: (options?: object) => unknown };
-				system?: { ranks?: unknown[] };
-			} | null);
+			// ROOT CAUSE (wwuc, diagnosed in-world 2026-09-05): fromUuid on a
+			// Compendium uuid resolved to undefined even though the pack held
+			// the document (pack getDocuments matched by system.key) — so the
+			// old `item.sheet?.render({})` silently no-oped. Resolve the
+			// document DIRECTLY from the pack instead (uuid format:
+			// "Compendium.<pack>.<type>.<id>"), with fromUuid as fallback.
+			const parts = /^Compendium\.([^.]+)\.([^.]+)\.Item\.([^.]+)$/.exec(uuid);
+			let item: unknown = null;
+			if (parts) {
+				const pack = game.packs?.get(`${parts[1]}.${parts[2]}`);
+				item = pack
+					? await (pack as unknown as {
+							getDocument: (id: string) => Promise<unknown>;
+						}).getDocument(parts[3])
+					: null;
+				if (!item) {
+					console.warn(
+						`rogue-trader | career link: pack document ${parts[3]} not found in ${parts[1]}.${parts[2]}`,
+					);
+				}
+			} else {
+				item = await foundry.utils.fromUuid(uuid);
+			}
 			if (!item) {
 				ui.notifications?.error(
 					game.i18n!.format("BACKGROUND.OPEN_CAREER_FAIL", { uuid }),
 				);
-				console.warn(`rogue-trader | career link: fromUuid("${uuid}") resolved to null`);
+				console.warn(`rogue-trader | career link: "${uuid}" did not resolve`);
 				return;
 			}
-			await item.sheet?.render({});
+			const sheet = (item as {
+				sheet?: { render: (options?: object) => unknown };
+			}).sheet;
+			if (!sheet) {
+				// Never a silent no-op: a document without a sheet binding is a
+				// diagnosable state, not a shrug.
+				console.error(
+					"rogue-trader | career link: resolved document has no sheet:",
+					item,
+				);
+				ui.notifications?.error(
+					game.i18n!.format("BACKGROUND.OPEN_CAREER_FAIL", { uuid }),
+				);
+				return;
+			}
+			await sheet.render({ force: true });
 		} catch (error) {
-			// Bead wwuc: surface render failures visibly instead of dying
-			// silently — CareerSheet._prepareContext errors land here.
+			// Surface render failures visibly instead of dying silently —
+			// CareerSheet._prepareContext errors land here.
 			console.error("rogue-trader | career link failed:", error);
 			ui.notifications?.error(
 				game.i18n!.format("BACKGROUND.OPEN_CAREER_FAIL", { uuid }),

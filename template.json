@@ -1,8 +1,10 @@
 {
     "Actor": {
         "types": [
-            "acolyte",
-            "npc"
+            "explorer",
+            "npc",
+            "dynasty",
+            "starship"
         ],
         "templates": {
             "characteristics": {
@@ -1130,7 +1132,29 @@
                 }
             }
         },
-        "acolyte": {
+        "npc": {
+            "templates": [
+                "characteristics",
+                "skills",
+                "initiative",
+                "wounds",
+                "fatigue",
+                "fate",
+                "psy"
+            ],
+            "experience": {
+                "value": 0
+            },
+            "faction": "",
+            "subfaction": "",
+            "type": "troop",
+            "threatLevel": 0,
+            "size": 4,
+            "notes": ""
+        },
+        "dynasty": {},
+        "starship": {},
+        "explorer": {
             "templates": [
                 "characteristics",
                 "skills",
@@ -1163,26 +1187,6 @@
             "corruption": 0,
             "aptitudes": {},
             "size": 4
-        },
-        "npc": {
-            "templates": [
-                "characteristics",
-                "skills",
-                "initiative",
-                "wounds",
-                "fatigue",
-                "fate",
-                "psy"
-            ],
-            "experience": {
-                "value": 0
-            },
-            "faction": "",
-            "subfaction": "",
-            "type": "troop",
-            "threatLevel": 0,
-            "size": 4,
-            "notes": ""
         }
     },
     "Item": {
@@ -1204,7 +1208,10 @@
             "tool",
             "trait",
             "weapon",
-            "weaponModification"
+            "weaponModification",
+            "psychicpower",
+            "ship",
+            "ship-complication"
         ],
         "templates": {
             "equipment": {
@@ -1347,6 +1354,9 @@
             "templates": [
                 "itemDescription"
             ]
-        }
+        },
+        "psychicpower": {},
+        "ship": {},
+        "ship-complication": {}
     }
 }

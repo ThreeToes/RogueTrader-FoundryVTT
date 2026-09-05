@@ -1,5 +1,14 @@
 import type { Modifier } from "../../rules-engine/src/modifier";
 import { effectsAreLive } from "../data/item/effects";
+import {
+	resolveFireModeBonus,
+	type HomebrewProfile,
+} from "./homebrew";
+import {
+	resolveOriginTraits,
+	traitModifierId,
+	type OriginTraitDef,
+} from "./origin-traits";
 
 /**
  * Modifier funnel: the single collection point between the system's data and
@@ -134,6 +143,42 @@ testContributors.register("weapon-qualities", (_actor, context) => {
 });
 
 // ---------------------------------------------------------------------------
+// Built-in contributor: origin traits (bead tgq9). Traits derive at runtime
+// from Character.system.origins -> cached pack definitions (CONFIG.ROGUE_TRADER
+// .originTraits.getDefs, attached at init). Modifier-kind traits contribute
+// test modifiers with stable ids (additive); grants/notes render on the
+// Background tab and never contribute here.
+// ---------------------------------------------------------------------------
+testContributors.register("origin-traits", (actor, context) => {
+	const getDefs =
+		typeof CONFIG !== "undefined"
+			? (
+					CONFIG as unknown as {
+						ROGUE_TRADER?: {
+							originTraits?: { getDefs?: () => OriginTraitDef[] };
+						};
+					}
+				).ROGUE_TRADER?.originTraits?.getDefs
+			: undefined;
+	const defs = getDefs?.() ?? [];
+	if (defs.length === 0) return [];
+	const origins = (actor as { system?: { origins?: Record<string, unknown> } })
+		.system?.origins as never;
+	if (!origins) return [];
+	// Pure resolution (rules/origin-traits; no import cycle — it does not
+	// import the funnel).
+	const { modifiers } = resolveOriginTraits(origins, defs);
+	return modifiers
+		.filter((m) => m.def.testKey === "" || m.def.testKey === context.key)
+		.map((m) => ({
+			id: traitModifierId(m.def),
+			source: { type: "item", label: "BACKGROUND.ORIGINS" },
+			label: m.def.name,
+			value: m.def.value,
+		}));
+});
+
+// ---------------------------------------------------------------------------
 // Built-in contributor: attack action modifiers (bead hyv). Values VERIFIED
 // against the core action table (p237):
 //   Semi-Auto Burst: "+10 to BS, additional hit for every two degrees"
@@ -146,21 +191,42 @@ testContributors.register("weapon-qualities", (_actor, context) => {
 testContributors.register("attack-context", (_actor, context) => {
 	if (context.kind !== "attack") return [];
 	const mods: Modifier[] = [];
+	// Bead 9if: homebrew profile overrides the core fire-mode bonuses via a
+	// provider attached at init (CONFIG.ROGUE_TRADER.homebrew.getProfile);
+	// absent provider = core rules (rt_core p237). Guarded for pure-test
+	// environments where the Foundry global is absent.
+	const homebrewProvider =
+		typeof CONFIG !== "undefined"
+			? (
+					CONFIG as unknown as {
+						ROGUE_TRADER?: {
+							homebrew?: { getProfile?: () => HomebrewProfile | null };
+						};
+					}
+				).ROGUE_TRADER?.homebrew?.getProfile
+			: undefined;
+	const homebrew = homebrewProvider?.() ?? null;
 	if (context.fireMode === "burst") {
-		mods.push({
-			id: "attack:fire-mode:burst",
-			source: { type: "item", label: "ROLL.FIRE_MODE_BURST" },
-			label: "Semi-Auto Burst",
-			value: 10,
-		});
+		const burst = resolveFireModeBonus(homebrew, "burst");
+		if (burst !== null) {
+			mods.push({
+				id: "attack:fire-mode:burst",
+				source: { type: "item", label: "ROLL.FIRE_MODE_BURST" },
+				label: "Semi-Auto Burst",
+				value: burst,
+			});
+		}
 	}
 	if (context.fireMode === "full") {
-		mods.push({
-			id: "attack:fire-mode:full",
-			source: { type: "item", label: "ROLL.FIRE_MODE_FULL" },
-			label: "Full Auto Burst",
-			value: 20,
-		});
+		const full = resolveFireModeBonus(homebrew, "full");
+		if (full !== null) {
+			mods.push({
+				id: "attack:fire-mode:full",
+				source: { type: "item", label: "ROLL.FIRE_MODE_FULL" },
+				label: "Full Auto Burst",
+				value: full,
+			});
+		}
 	}
 	return mods;
 });

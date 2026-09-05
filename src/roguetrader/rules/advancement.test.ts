@@ -181,6 +181,17 @@ describe("validatePurchase (soft enforcement, g7k 4)", () => {
 		expect(result.reasons).toHaveLength(0);
 	});
 
+	test("prerequisites are the evaluator's job (tfk) — none emitted here", () => {
+		const gated = { ...row, prerequisites: ["Fel 30"] };
+		const result = validatePurchase(gated, {
+			spent: 4500,
+			pool: 500,
+			ledger: [],
+			derivedRank: 1,
+		});
+		expect(result.reasons).toHaveLength(0);
+	});
+
 	test("unaffordable purchase reports the shortfall", () => {
 		const result = validatePurchase(row, {
 			spent: 4500,
@@ -212,7 +223,7 @@ describe("validatePurchase (soft enforcement, g7k 4)", () => {
 		expect(result.ok).toBe(false);
 	});
 
-	test("prerequisites surface as GM-confirm reasons, not hard blocks", () => {
+	test("prereq strings no longer emit reasons here (evaluator owns them, tfk)", () => {
 		const gated = { ...row, prerequisites: ["Fel 40"] };
 		const result = validatePurchase(gated, {
 			spent: 4500,
@@ -220,9 +231,7 @@ describe("validatePurchase (soft enforcement, g7k 4)", () => {
 			ledger: [],
 			derivedRank: 1,
 		});
-		// Soft enforcement: the reason is present; the caller decides to
-		// confirm. The reason names the raw book string for adjudication.
-		expect(result.reasons.join(" ")).toContain("Fel 40");
+		expect(result.reasons).toHaveLength(0);
 	});
 });
 

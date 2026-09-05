@@ -39,6 +39,12 @@ export class Character extends foundry.abstract.TypeDataModel<
 	/** Psyker marker (bead m4me): Navigators count (rt_core p182) even at rating 0. */
 	declare psyker: boolean;
 	declare psyRating: number;
+	declare afflictions: Array<{
+		kind: string;
+		name: string;
+		severity?: string;
+		text?: string;
+	}>;
 	declare threatLevel: string;
 	declare origins: {
 		homeWorld: string;
@@ -46,7 +52,12 @@ export class Character extends foundry.abstract.TypeDataModel<
 		lure: string;
 		trials: string;
 		motivation: string;
+		claims?: Record<string, boolean>;
 	};
+	/** Stage 4 free-text (bead ay0, rt_core p31-34). */
+	declare life: { appearance: string; motivation: string };
+	/** Linked dynasty actor (owner redesign: characters ATTACH to the group's dynasty, one per group by default). */
+	declare dynastyUuid: string;
 	declare careerKey: string;
 	declare rank: number;
 	declare xp: { spent: number; total: number };
@@ -156,7 +167,40 @@ export class Character extends foundry.abstract.TypeDataModel<
 				lure: new foundry.data.fields.StringField({ initial: "" }),
 				trials: new foundry.data.fields.StringField({ initial: "" }),
 				motivation: new foundry.data.fields.StringField({ initial: "" }),
+			/**
+			 * Acquired afflictions ledger (epic 1g2t): disorders, malignancies,
+			 * and mutations gained through the tracks — the g7k audit-trail
+			 * pattern so nothing is silent.
+			 */
+			afflictions: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.SchemaField({
+					kind: new foundry.data.fields.StringField({ initial: "disorder" }),
+					name: new foundry.data.fields.StringField({ initial: "" }),
+					severity: new foundry.data.fields.StringField({ initial: "" }),
+					text: new foundry.data.fields.StringField({ initial: "" }),
+				}),
+				{ initial: () => [] },
+			),
+						/** Claimed pending grants (bead tgq9): traitDefKey -> true. */
+				claims: new foundry.data.fields.TypedObjectField(
+					new foundry.data.fields.BooleanField({ initial: false }),
+					{ initial: () => ({}) },
+				),
 			}),
+			/**
+			 * Stage 4 "Giving Characters Life" (bead ay0, rt_core p31-34):
+			 * free-text appearance and personal motivation, editable on the
+			 * Background tab.
+			 */
+			life: new foundry.data.fields.SchemaField({
+				appearance: new foundry.data.fields.StringField({ initial: "" }),
+				motivation: new foundry.data.fields.StringField({ initial: "" }),
+			}),
+			/**
+			 * Linked dynasty actor uuid (owner redesign): characters attach
+			 * to the group's dynasty record; the PF/SP live there, not here.
+			 */
+			dynastyUuid: new foundry.data.fields.StringField({ initial: "" }),
 			/**
 			 * XP purchase ledger (bead g7k): every advance bought, the audit
 			 * trail behind xp.spent (total = 4,500 creation baseline + ledger

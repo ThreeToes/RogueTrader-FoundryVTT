@@ -228,11 +228,10 @@ export function validatePurchase(
 			`Cost ${row.cost} xp exceeds the remaining pool of ${context.pool} xp.`,
 		);
 	}
-	// Prerequisites are raw book strings (structured parsing arrives with
-	// tfk); they surface in the confirm dialog for GM adjudication.
-	for (const prereq of row.prerequisites) {
-		if (prereq) reasons.push(`Prerequisite to confirm with the GM: ${prereq}`);
-	}
+	// Prerequisites are NOT handled here: bead tfk's structured evaluator
+	// (rules/prereq.ts) owns them — the caller adds only UNMET prereqs to the
+	// confirm reasons (previously this listed all raw strings; the evaluator
+	// supersedes it).
 	return { ok: reasons.length === 0, reasons };
 }
 

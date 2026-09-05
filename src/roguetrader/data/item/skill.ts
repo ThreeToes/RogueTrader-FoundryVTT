@@ -53,6 +53,14 @@ export class Skill extends foundry.abstract.TypeDataModel<
 				initial: false,
 				required: true,
 			}),
+			/**
+			 * Provenance marker (bead iufv): "creator" when the character
+			 * creator granted this item — a creator re-run wipes and re-grants
+			 * flagged items, manual additions (empty) are kept.
+			 */
+			grantedBy: new foundry.data.fields.StringField({
+				initial: "",
+			}),
 		};
 	}
 

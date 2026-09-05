@@ -57,3 +57,26 @@ export function resolveEncumbrance(
 		`INVENTORY.STATE_${state.toUpperCase()}` as EncumbranceOutcome["stateLabel"];
 	return { weight, capacity, ratio, percent, state, stateLabel };
 }
+
+/** Minimal owned-item shape for the equip-state weight filter. */
+export interface CarriedItemLike {
+	type?: string;
+	weight?: number;
+	equipState?: string;
+}
+
+/**
+ * Carried weight (bead yar): only READY items count — carried weapons and
+ * gear, worn armour (the adapter's equip-state model; worn armour is on the
+ * body and weighs on the wearer, VERIFY against the book's carrying rules).
+ * Stowed items contribute nothing, matching the display intent "carried
+ * weight".
+ */
+export function carriedWeight(items: CarriedItemLike[]): number {
+	return items.reduce((sum, item) => {
+		const ready =
+			(item.type === "armour" && item.equipState === "worn") ||
+			(item.type !== "armour" && item.equipState === "carried");
+		return ready ? sum + Math.max(0, item.weight ?? 0) : sum;
+	}, 0);
+}

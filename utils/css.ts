@@ -1,21 +1,30 @@
-import { mkdir, readFile } from "node:fs/promises";
-import less from "less";
-
-const LESS_DEST = "./release/rogue-trader.css";
-const LESS_SRC = "less/rogue-trader.less";
+import { readFile } from "node:fs/promises";
 
 /**
- * Compile the LESS sources into a single CSS file.
+ * Bundle the CSS sources into a single stylesheet (bead 5jv): the sources
+ * were always plain CSS (the Less compile was a passthrough), so the build
+ * is now a plain concatenation — no Less dependency, no compile step.
  */
-export async function bundleCss() {
-	const source = await Bun.file(LESS_SRC).text();
+const SOURCES = [
+	"css/sheet-gear.css",
+	"css/sheet-character.css",
+	"css/chat-roll.css",
+];
+const DEST = "./release/css/rogue-trader.css";
 
-	const result = await less.render(source, {
-		filename: LESS_SRC,
-		relativeUrls: true,
-	});
-
-	await Bun.write(LESS_DEST, result.css);
+const parts: string[] = [];
+for (const src of SOURCES) {
+	const text = await readFile(src, "utf8");
+	parts.push(`/* ${src} */\n${text}`);
 }
 
-await bundleCss();
+await Bun.write(DEST, parts.join("\n"));
+console.log(`[css] bundled ${SOURCES.length} sources -> ${DEST}`);
+
+export async function bundleCss() {
+	const parts: string[] = [];
+	for (const src of SOURCES) {
+		parts.push(`/* ${src} */\n${await readFile(src, "utf8")}`);
+	}
+	await Bun.write(DEST, parts.join("\n"));
+}

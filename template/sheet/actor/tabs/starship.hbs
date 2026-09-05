@@ -1,0 +1,76 @@
+<section class="tab" data-group="primary" data-tab="main">
+    <div class="starship border">
+        {{!-- Hull snapshot (copied from the ships pack when the hull is chosen) --}}
+        <div class="inv-group-header">
+            <h1>{{localize "STARSHIP.HULL"}}</h1>
+        </div>
+        <div class="traits-row">
+            <span class="origin-label">{{localize "STARSHIP.HULL_CLASS"}}:</span>
+            <span class="origin-name">{{system.hullName}}</span>
+            <span class="chip origin-mod">{{system.hullClass}}</span>
+        </div>
+        <div class="traits-row">
+            <span class="origin-label">{{localize "STARSHIP.DIMENSIONS"}}:</span>
+            <span class="origin-name">{{system.dimensions}}</span>
+            <span class="origin-label">{{localize "STARSHIP.MASS"}}:</span>
+            <span class="origin-name">{{system.mass}}</span>
+        </div>
+        <div class="traits-row">
+            <span class="origin-label">{{localize "STARSHIP.CREW_DETAIL"}}:</span>
+            <span class="origin-name">{{system.crew}}</span>
+            <span class="origin-label">{{localize "STARSHIP.ACCEL"}}:</span>
+            <span class="origin-name">{{system.accel}}</span>
+        </div>
+
+        {{!-- Statline --}}
+        <ol class="review-chars">
+            <li><span class="char-label">{{localize "STARSHIP.SPEED"}}</span><input name="system.speed" type="number" min="0" value="{{system.speed}}" /></li>
+            <li><span class="char-label">{{localize "STARSHIP.MANOEUVRAABILITY"}}</span><input name="system.manoeuvrability" type="number" value="{{system.manoeuvrability}}" /></li>
+            <li><span class="char-label">{{localize "STARSHIP.DETECTION"}}</span><input name="system.detection" type="number" value="{{system.detection}}" /></li>
+            <li><span class="char-label">{{localize "STARSHIP.HULL_INTEGRITY"}}</span><input name="system.hullIntegrity.value" type="number" min="0" value="{{system.hullIntegrity.value}}" /> / {{system.hullIntegrity.max}}</li>
+            <li><span class="char-label">{{localize "STARSHIP.ARMOUR"}}</span><input name="system.armour" type="number" min="0" value="{{system.armour}}" /></li>
+            <li><span class="char-label">{{localize "STARSHIP.TURRET_RATING"}}</span><input name="system.turretRating" type="number" min="0" value="{{system.turretRating}}" /></li>
+            <li><span class="char-label">{{localize "STARSHIP.WEAPON_CAPACITY"}}</span><input name="system.weaponCapacity" type="text" value="{{system.weaponCapacity}}" /></li>
+            <li><span class="char-label">{{localize "STARSHIP.SPACE"}}</span><input name="system.space.used" type="number" min="0" value="{{system.space.used}}" /> / <input name="system.space.total" type="number" min="0" value="{{system.space.total}}" /></li>
+            <li><span class="char-label">{{localize "DYNASTY.SHIP_POINTS"}}</span><input name="system.sp.spent" type="number" min="0" value="{{system.sp.spent}}" /> / <input name="system.sp.total" type="number" min="0" value="{{system.sp.total}}" /> ({{spRemaining}} {{localize "DYNASTY.SPENT"}})</li>
+        </ol>
+
+        {{!-- Crew quality (rt_core p193) --}}
+        <div class="traits-row">
+            <span class="origin-label">{{localize "STARSHIP.CREW_QUALITY"}}:</span>
+            <select name="system.crewQuality">
+                {{selectOptions crewQualities selected=system.crewQuality localize=true}}
+            </select>
+            <span class="chip origin-mod">{{localize "STARSHIP.CREW_SKILL"}} {{crewSkill}}</span>
+            <span class="chip origin-mod">{{#if (gt crewSpDelta 0)}}+{{/if}}{{crewSpDelta}} SP</span>
+        </div>
+
+        {{!-- Complications (Tables 8-1 / 8-2) --}}
+        <div class="traits-row">
+            <span class="origin-label">{{localize "STARSHIP.ODDITY"}}:</span>
+            <span class="origin-name">{{system.machineSpiritOddity}}</span>
+            <button type="button" class="ladder-option" data-action="rollOddity"
+                data-tooltip="{{localize "STARSHIP.ROLL_HINT"}}">{{localize "STARSHIP.ROLL"}}</button>
+        </div>
+        <div class="traits-row">
+            <span class="origin-label">{{localize "STARSHIP.HISTORY"}}:</span>
+            <span class="origin-name">{{system.pastHistory}}</span>
+            <button type="button" class="ladder-option" data-action="rollHistory"
+                data-tooltip="{{localize "STARSHIP.ROLL_HINT"}}">{{localize "STARSHIP.ROLL_HISTORY"}}</button>
+        </div>
+
+        {{!-- Hull picker: apply a ships-pack hull to this actor --}}
+        <div class="pick-chips">
+            <span class="pick-label">{{localize "STARSHIP.PICK_HULL"}}</span>
+            {{#each hullOptions as |h|}}
+            <a class="pick-chip {{#if (eq h.name ../system.hullName)}}selected{{/if}}"
+                data-action="pickHull" data-uuid="{{h.uuid}}">{{h.name}} ({{h.sp}} SP)</a>
+            {{/each}}
+        </div>
+
+        <div class="traits-row">
+            <label class="origin-label">{{localize "DYNASTY.NOTES"}}</label>
+        </div>
+        {{editor source.system.notes target="system.notes" button=true editable=editable engine="prosemirror"}}
+    </div>
+</section>

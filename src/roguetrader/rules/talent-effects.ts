@@ -131,13 +131,29 @@ export interface TalentDamageCollection {
 
 export function collectTalentDamageEffects(
 	actor: unknown,
-	opts: { attackType: "melee-weapon" | "ranged-weapon"; flags?: Record<string, boolean> },
+	opts: {
+		attackType: "melee-weapon" | "ranged-weapon";
+		flags?: Record<string, boolean>;
+		/** The attacking weapon's id (bead 2k5): its own damage effects apply. */
+		weaponId?: string;
+	},
 ): TalentDamageCollection {
 	const out: TalentDamageCollection = { damage: [], critical: [] };
-	const items = (actor as { items?: Array<ItemLike> }).items;
+	const items = (actor as { items?: Array<ItemLike & { id?: string; equipState?: string }> })
+		.items;
 	if (!items) return out;
 	for (const item of items) {
-		if (item.type !== "talent") continue;
+		// Bead 2k5: damage effects apply from (a) talents (always live) and
+		// (b) the attacking weapon ITSELF, when carried. Armour/gear damage
+		// effects have no book basis and stay inert (documented decision;
+		// worn armour adding damage is not a RT core rule).
+		const isTalent = item.type === "talent";
+		const isAttackingWeapon =
+			opts.weaponId !== undefined &&
+			item.id === opts.weaponId &&
+			(item.type === "melee-weapon" || item.type === "ranged-weapon") &&
+			(item.equipState === undefined || item.equipState === "carried");
+		if (!isTalent && !isAttackingWeapon) continue;
 		for (const effect of item.system?.effects ?? []) {
 			const kind = effect.kind ?? "";
 			const isDamage = kind === "damage-flat";
@@ -157,11 +173,17 @@ export function collectTalentDamageEffects(
 			if (condition && !opts.flags?.[condition]) continue;
 			const value = Number(effect.value);
 			if (!Number.isFinite(value) || value === 0) continue;
+			const idPrefix = isTalent ? "talent-damage" : "weapon-damage";
+			const sourceLabel = isTalent ? "SOURCE.FROM_TALENTS" : "SOURCE.FROM_WEAPONS";
 			const mod: Modifier = {
-				id: `talent-damage:${kind}:${effect.label ?? ""}:${condition || "any"}`,
-				source: { type: "talent", label: "SOURCE.FROM_TALENTS" },
-				// Unlabelled effects fall back to the talent's name, never a
-				// generic slug.
+				id: `${idPrefix}:${item.name ?? ""}:${kind}:${effect.label ?? ""}:${condition || "any"}`,
+				source: {
+					type: isTalent ? "talent" : "item",
+					label: sourceLabel,
+				},
+				// Unlabelled effects fall back to the owning item's name, never
+				// a generic slug. Item name is in the id so same-shaped effects
+				// on different weapons stay additive (funnel dedupe lesson).
 				label: effect.label || item.name || "",
 				value,
 				...(condition ? { condition } : {}),

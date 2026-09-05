@@ -21,19 +21,28 @@ export interface CharacterSystemLike {
 	characteristics: Record<string, { value: number; unnatural: number }>;
 }
 
+export interface CharacterSystemLike {
+	characteristics: Record<string, { value: number; unnatural: number }>;
+	/** Stored maximum wounds (set at character creation per the Home World
+	 *  formula; bead hbu). Undefined in raw test data = no base available. */
+	wounds?: { max?: number };
+}
+
 /**
- * Derived wounds maximum. Remembered RT core: base (SB + TB) doubled, plus +1
- * wound per level of Sound Constitution (consumed via the wounds-max effect
- * handler, see rules/talent-effects.ts). Owned items contribute only when
- * live (equipped), so a stowed piece of gear with a wounds-max effect does
- * not inflate the maximum.
+ * Derived wounds maximum (bead hbu): the BOOK defines starting wounds via
+ * the Home World formula (double the Toughness Bonus + 1d5(+N), rt_core
+ * p17-24) — applied by the character creator and stored on the actor. The
+ * runtime maximum is that stored base plus +1 wound per live wounds-max
+ * effect (Sound Constitution levels, consumed via the wounds-max effect
+ * handler, see rules/talent-effects.ts). The previous (SB+TB)*2 formula was
+ * Dark-Heresy-style and contradicts every Home World section. Owned items
+ * contribute only when live (equipped).
  */
 export function woundsMax(
 	character: CharacterSystemLike,
 	items: OwnedItemLike[] = [],
 ): number {
-	const tb = Math.floor((character.characteristics.t?.value ?? 0) / 10);
-	const sb = Math.floor((character.characteristics.s?.value ?? 0) / 10);
+	const base = Math.max(0, character.wounds?.max ?? 0);
 	const levels = items.reduce((total, item) => {
 		if (!effectsAreLive(item.type, item.system?.equipState)) return total;
 		for (const effect of item.system?.effects ?? []) {
@@ -45,7 +54,7 @@ export function woundsMax(
 		}
 		return total;
 	}, 0);
-	return (sb + tb) * 2 + levels;
+	return base + levels;
 }
 
 /** Fatigue threshold: the Toughness Bonus. */

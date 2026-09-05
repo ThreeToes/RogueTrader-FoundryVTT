@@ -154,3 +154,47 @@ silent no-op (e.g. `data-value` vs `dataset.ladder` broke every skill ladder
 button). When adding an action: write the handler first, copy its expected
 dataset keys into the template, then grep the template for that `data-action`
 to confirm every call site supplies them.
+## 11. Code map — effect machinery, advancement, origins, homebrew
+
+Session-earned map of where things live (beads fjw/yb6/r1k/bpd/ay0/g7k/tfk/9if):
+
+- **Effect kinds**: registry + handlers = `src/roguetrader/rules/talent-effects.ts`
+  (`talentEffectHandlers` seam, CONFIG-attached in `sheet/init.ts`); test-modifier
+  collection = `rules/funnel.ts` (`collectTestModifiers`, contributor registry
+  `testContributors`); damage pipeline = `rules/adapter.ts` +
+  `collectTalentDamageEffects` (weapon-scoped since 2k5: the attacking weapon's
+  own effects apply, gear/armour damage effects inert); effects schema field on
+  `data/item/gear.ts` (inherited by Weapon/Armour) + `talent.ts`; editor =
+  `template/sheet/item/parts/effect-tab.hbs` + `sheet/item/effect-actions.ts`
+  (kind dropdowns from `talentEffectHandlers.kinds()`).
+  **Rule of thumb**: new effect kind = register handler + (if roll-mechanic)
+  kernel/adapter support — never data-only.
+- **Advancement** (g7k/ayw/clng): pure engine = `rules/advancement.ts` (ledger,
+  derived rank, Table 2-2 thresholds, PRE_SPENT_BASELINE 4500); ledger on
+  `Character.system.advances`; dialog = `sheet/actor/advancement-dialog.ts`
+  (single Foundry-coupled layer); creator sets xp {total: 5000, spent: 4500}.
+- **Character creation** (ay0): origin chart + mechanics = `origins.ts` (30
+  entries, verbatim + structured; chart adjacency from Core Rulebook p16);
+  pure creation logic = `rules/creation.ts`; wizard =
+  `sheet/actor/character-creator.ts` (also updates an existing actor when
+  right-clicked); origin picks persist on `Character.system.origins`;
+  consolidated Background tab shows origins + career link + talents.
+- **Prereqs** (tfk): pure evaluator = `rules/prereq.ts` (grammar: comma = AND,
+  "or" = OR group; characteristic thresholds, "Psy Rating N", talent names,
+  specials-as-names); soft confirm wired into the talent picker (parses
+  "Prerequisites: ..." from the pack description) and the advancement dialog.
+- **Homebrew** (9if): `rules/homebrew.ts` — world setting `homebrewProfile`
+  (JSON) read via `CONFIG.ROGUE_TRADER.homebrew.getProfile` in the funnel;
+  pilot = fire-mode bonuses; add new overrides as profile fields + a resolver,
+  never if/else in contributors.
+- **Encumbrance** (yar): `rules/encumbrance.ts` — `carriedWeight` filters by
+  equip state (carried weapons/gear, worn armour).
+
+## 12. Extraction conventions (pointers)
+The extraction workspace lives in `src/packs/.extraction-src/` (gitignored) —
+read its README first: per-column rectangle technique, parse-tables.yaml
+curation patches (cite page + line, loud failures), spot-check 3-5 rows against
+the PDF, both terse AND prose descriptions per item, verify ambiguity with the
+owner via beads. PDFs are machine-local at ~/Documents (Core Rulebook =
+`rt_core.pdf`, cited as "Core Rulebook" in user-facing text, `rt_core` in code
+comments). Packs register in system.json + system-manifests/dev.json.

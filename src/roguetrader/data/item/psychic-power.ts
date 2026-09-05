@@ -81,6 +81,25 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 			shortDescription: new foundry.data.fields.StringField({
 				initial: "",
 			}),
+			/**
+			 * Full rulebook prose (bead qbha: both flavours — terse table
+			 * data lives in the fields above, effect prose here).
+			 */
+			description: new foundry.data.fields.HTMLField({
+				initial: "",
+			}),
+			/** Focus Power Test characteristic/skill (e.g. "Willpower"). */
+			focusTest: new foundry.data.fields.StringField({
+				initial: "",
+			}),
+			/** Focus time, e.g. "Half Action" (rt_core Tables 6-4..6-15). */
+			focusTime: new foundry.data.fields.StringField({
+				initial: "",
+			}),
+			/** Technique tree ("telepathic-communication", ...). */
+			tree: new foundry.data.fields.StringField({
+				initial: "",
+			}),
 		};
 	}
 }

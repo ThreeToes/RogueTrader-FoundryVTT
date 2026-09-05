@@ -5,6 +5,8 @@
         <span class="step {{#if (eq step 1)}}active{{/if}}">{{localize "CREATOR.STEP_ORIGIN"}}</span>
         <span class="step-sep">→</span>
         <span class="step {{#if (eq step 2)}}active{{/if}}">{{localize "CREATOR.STEP_REVIEW"}}</span>
+        <span class="step-sep">→</span>
+        <span class="step {{#if (eq step 3)}}active{{/if}}">{{localize "CREATOR.STEP_EQUIPMENT"}}</span>
     </nav>
 
     {{!-- Step 0: Stage 1 — Generate Characteristics (Core Rulebook p14) --}}
@@ -89,7 +91,7 @@
                 <div class="pick-chips">
                     <span class="pick-label">{{localize "CREATOR.CHOOSE_RESULT"}}</span>
                     {{#each row.detail.variants as |variant|}}
-                    <a class="pick-chip {{#if (eq variant.key ../row.detail.pickVariant.key)}}selected{{/if}}"
+                    <a class="pick-chip {{#if variant.selected}}selected{{/if}}"
                         data-action="choosePickOption" data-row="{{row.row}}" data-kind="variant" data-value="{{variant.key}}">{{variant.name}}</a>
                     {{/each}}
                 </div>
@@ -101,8 +103,8 @@
                 <div class="pick-chips">
                     <span class="pick-label">{{localize "CREATOR.CHOOSE_ONE"}}</span>
                     {{#each row.detail.options as |option|}}
-                    <a class="pick-chip {{#if (eq option ../row.pickOption)}}selected{{/if}}"
-                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="option" data-value="{{option}}">{{option}}</a>
+                    <a class="pick-chip {{#if option.selected}}selected{{/if}}"
+                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="option" data-value="{{option.value}}">{{option.value}}</a>
                     {{/each}}
                 </div>
                 {{/if}}
@@ -118,9 +120,9 @@
                 {{#if row.detail.hasAlternate}}
                 <div class="pick-chips">
                     <span class="pick-label">{{localize "CREATOR.CHOOSE_ONE"}}</span>
-                    {{#each row.detail.alternates as |alt index|}}
-                    <a class="pick-chip {{#if (eq index ../row.detail.pickAlternate)}}selected{{/if}}"
-                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="alternate" data-value="{{index}}">{{alt.label}}</a>
+                    {{#each row.detail.alternates as |alt|}}
+                    <a class="pick-chip {{#if alt.selected}}selected{{/if}}"
+                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="alternate" data-value="{{alt.index}}">{{alt.label}}</a>
                     {{/each}}
                 </div>
                 {{/if}}
@@ -187,11 +189,28 @@
     </section>
     {{/if}}
 
+    {{!-- Step 3: Stage 6 — Select Equipment (Core Rulebook p33-34): the --}}
+    {{!-- starting free acquisition (total modifier +0 or better, p273). --}}
+    {{!-- The group's Profit Factor / Ship Points (Stage 5) are a GM-level --}}
+    {{!-- decision on the dynasty document, NOT a creator step. --}}
+    {{#if (eq step 3)}}
+    <section class="creator-section border">
+        <h1>{{localize "CREATOR.STEP_EQUIPMENT"}}</h1>
+        <p class="method-hint">{{localize "CREATOR.EQUIPMENT_HINT"}}</p>
+        <div class="origin-options">
+            {{#each acquisitions as |item|}}
+            <a class="origin-chip {{#if item.selected}}selected{{/if}}" data-action="chooseAcquisition" data-payload="{{item.payload}}"
+                data-tooltip="{{item.tooltip}}">{{item.name}}</a>
+            {{/each}}
+        </div>
+    </section>
+    {{/if}}
+
     <footer class="creator-nav">
         {{#unless (eq step 0)}}
         <button type="button" data-action="prev">{{localize "CREATOR.BACK"}}</button>
         {{/unless}}
-        {{#if (eq step 2)}}
+        {{#if (eq step 3)}}
         <button type="button" class="create" data-action="create" {{#unless canCreate}}disabled{{/unless}}>{{localize "CREATOR.CREATE"}}</button>
         {{else}}
         <button type="button" data-action="next">{{localize "CREATOR.NEXT"}}</button>

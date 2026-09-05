@@ -17,6 +17,8 @@ export interface WeaponQuality {
 export abstract class Weapon extends Gear {
 	static LOCALIZATION_PREFIXES = ["WEAPON"];
 
+	declare primitive: boolean;
+
 	static override defineSchema() {
 		return {
 			...super.defineSchema(),
@@ -50,6 +52,14 @@ export abstract class Weapon extends Gear {
 				initial: 0,
 				required: true,
 			}),
+			/**
+			 * Primitive weapon quality (bead xof): gates the primitive-armour
+			 * rule (non-primitive weapons double wounds vs primitive armour).
+			 * The book expresses it as the Primitive (X) quality; the boolean is
+			 * the machine-readable form (the special list containing
+			 * "primitive" also satisfies it at resolve time).
+			 */
+			primitive: new foundry.data.fields.BooleanField({ initial: false }),
 			special: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.StringField({
 					// Registry keys (QUALITIES seed); no `choices` constraint so

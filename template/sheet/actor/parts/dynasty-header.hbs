@@ -1,0 +1,18 @@
+<div class="header border">
+    <div class="header-grid">
+        <div class="header-portrait">
+            <img class="profile-img" src="{{document.img}}" data-action="editImage" data-field="img"
+                alt="{{document.name}}" title="{{document.name}}" />
+        </div>
+        <div class="header-line line-1">
+            <div class="header-cell">
+                <label>{{localize "DYNASTY.NAME"}}</label>
+                <input name="name" type="text" value="{{document.name}}" />
+            </div>
+            <div class="header-cell">
+                <label>{{localize "DYNASTY.PROFIT_FACTOR"}}</label>
+                <input name="system.profitFactor" type="number" min="0" value="{{source.system.profitFactor}}" />
+            </div>
+        </div>
+    </div>
+</div>

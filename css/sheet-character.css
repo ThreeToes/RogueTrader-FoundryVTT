@@ -196,12 +196,14 @@
 
 /* Character creator (Origin Path wizard, bead ay0) */
 
-.rogue-trader.dialog.character-creator {
+.rogue-trader.character-creator {
 	min-width: 560px;
 }
 
-/* Scrollable creator body: long origin lists exceed the fixed window. */
-.rogue-trader.dialog.character-creator .window-content {
+/* Scrollable creator body: long origin lists exceed the fixed window.
+   NOTE: the creator is a plain ApplicationV2 (no "dialog" class on the
+   element), so the selector must match the options.classes only. */
+.rogue-trader.character-creator .window-content {
 	display: flex;
 	flex-direction: column;
 	overflow-y: auto;
@@ -642,6 +644,52 @@
 .rogue-trader .background .background-career em {
 	opacity: 0.7;
 	font-size: 0.85em;
+}
+
+/* Origin traits (bead tgq9) */
+
+.rogue-trader .background .origin-traits {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 4px 0 8px;
+}
+
+.rogue-trader .background .traits-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px;
+}
+
+.rogue-trader .background .traits-row .chip {
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.85em;
+	cursor: help;
+}
+
+.rogue-trader .background .traits-row .chip.grant-resolve,
+.rogue-trader .background .traits-row .chip.grant-ack {
+	cursor: pointer;
+	color: #d9c38a;
+}
+
+.rogue-trader .background .traits-row .chip.claimed {
+	opacity: 0.7;
+}
+
+/* Madness block (epic 1g2t) */
+
+.rogue-trader .background .madness {
+	margin: 8px 0;
+	padding: 4px 8px;
+}
+
+.rogue-trader .background .madness .madness-actions {
+	display: flex;
+	gap: 6px;
 }
 
 /* Test dialog (unified roll dialog) */

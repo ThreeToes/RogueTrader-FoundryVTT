@@ -18,6 +18,12 @@
 	overflow: hidden;
 }
 
+/* Shared sheet tab bar: labels render uppercase regardless of translation
+   case (bead 30sp) — translators keep proper case, presentation is central. */
+.rogue-trader.sheet form .sheet-tabs a {
+	text-transform: uppercase;
+}
+
 .rogue-trader.sheet form .sheet-tabs {
 	flex-grow: 0;
 }

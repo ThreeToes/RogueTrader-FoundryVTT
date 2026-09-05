@@ -11,12 +11,16 @@ const char = {
 		t: { value: 45, unnatural: 1 }, // TB 4
 		s: { value: 30, unnatural: 1 }, // SB 3
 	},
+	// Bead hbu: the book's wounds formula (2xTB + 1d5(+N), rt_core p17-24)
+	// is applied at creation and stored; TB 4 with a rolled 1d5=6 (Death
+	// World, 1d5+2) gives 14 as the stored base.
+	wounds: { max: 14 },
 };
 
 describe("derived character values", () => {
 	describe("woundsMax", () => {
-		test("(SB + TB) x 2 + Sound Constitution levels", () => {
-			expect(woundsMax(char)).toBe(14); // (3+4)*2
+		test("stored base + Sound Constitution levels (bead hbu: book formula)", () => {
+			expect(woundsMax(char)).toBe(14); // stored base (2xTB + 1d5+2)
 			const withTalent = woundsMax(char, [
 				{
 					type: "talent",

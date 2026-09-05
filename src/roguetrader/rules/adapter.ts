@@ -642,6 +642,23 @@ async function postWeaponDamage(
 			(i.type as string) === "armour" &&
 			(i.system as unknown as { equipState?: string }).equipState === "worn",
 	);
+	// Bead xof: primitive-armour rule inputs — armourPrimitive from the worn
+	// armour's protectionType (any piece covering the location), weaponPrimitive
+	// from the weapon's boolean field or its "primitive" special quality.
+	const armourPrimitive = wornArmour.some((i) => {
+		const sys = i.system as unknown as {
+			protectionType?: string;
+			armourAt(loc: string): number;
+		};
+		return sys.protectionType === "primitive" && sys.armourAt(location) > 0;
+	});
+	const weaponSys2 = weapon.system as unknown as {
+		primitive?: boolean;
+		special?: string[];
+	};
+	const weaponPrimitive =
+		weaponSys2.primitive === true ||
+		(weaponSys2.special ?? []).includes("primitive");
 	const armourValue = Math.max(
 		0,
 		...wornArmour.map((i) =>
@@ -660,7 +677,12 @@ async function postWeaponDamage(
 	// Both are item-sourced talent effects, condition-guarded via flags.
 	const attackType =
 		(weapon.type as string) === "melee-weapon" ? "melee-weapon" : "ranged-weapon";
-	const talentDamage = collectTalentDamageEffects(attacker, { attackType });
+	const talentDamage = collectTalentDamageEffects(attacker, {
+		attackType,
+		// Bead 2k5: the attacking weapon's own damage effects apply; note
+		// the weapon item id is needed for per-item matching.
+		weaponId: weapon.id ?? undefined,
+	});
 	// Card breakdown: flat damage always; critical-damage rows only on a
 	// critical hit (they are gated in the kernel by isCritical).
 	const damageContributors = isCritical
@@ -670,6 +692,9 @@ async function postWeaponDamage(
 	const damage = resolveDamage({
 		roll: damageTotal,
 		penetration: weaponSys.penetration ?? 0,
+		// Bead xof: wire the primitive-armour rule through at runtime.
+		weaponPrimitive,
+		armourPrimitive,
 		toughnessBonus,
 		location,
 		armourValue,

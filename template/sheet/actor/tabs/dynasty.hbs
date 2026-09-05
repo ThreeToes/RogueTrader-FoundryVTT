@@ -1,0 +1,23 @@
+<section class="tab" data-group="primary" data-tab="main">
+    <div class="dynasty border">
+        <div class="traits-row">
+            <span class="origin-label">{{localize "DYNASTY.SHIP_POINTS"}}:</span>
+            <span class="chip origin-mod">{{shipPointsRemaining}} / {{shipPoints.total}}
+                ({{localize "DYNASTY.SPENT"}}: {{shipPoints.spent}})</span>
+        </div>
+        <div class="traits-row">
+            <span class="origin-label">{{localize "DYNASTY.SP_TOTAL"}}:</span>
+            <input name="system.shipPoints.total" type="number" min="0" value="{{source.system.shipPoints.total}}" />
+            <span class="origin-label">{{localize "DYNASTY.SP_SPENT"}}:</span>
+            <input name="system.shipPoints.spent" type="number" min="0" value="{{source.system.shipPoints.spent}}" />
+        </div>
+        <div class="traits-row">
+            <button type="button" class="ladder-option" data-action="rollStarting"
+                data-tooltip="{{localize "DYNASTY.ROLL_HINT"}}">{{localize "DYNASTY.ROLL_STARTING"}}</button>
+        </div>
+        <div class="traits-row">
+            <label class="origin-label" for="dynasty-notes">{{localize "DYNASTY.NOTES"}}</label>
+        </div>
+        {{editor source.system.notes target="system.notes" button=true editable=editable engine="prosemirror"}}
+    </div>
+</section>

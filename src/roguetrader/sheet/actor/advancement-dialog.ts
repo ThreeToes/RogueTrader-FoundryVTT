@@ -14,7 +14,12 @@ import {
 	type CharacteristicSchemeLike,
 	type RankThresholdLike,
 } from "../../rules/advancement";
+import {
+	evaluatePrerequisites,
+	parsePrerequisites,
+} from "../../rules/prereq";
 import { CHARACTERISTIC_KEYS } from "../../data/actor/character";
+import { talentGrant, promptParameterisedSubject } from "./grant-helpers";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
@@ -347,6 +352,24 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			ledger,
 			derivedRank: derivedRank(thresholds, spent),
 		});
+		// Bead tfk: structured prereq evaluation joins the confirm reasons —
+		// only UNMET prereqs; unparseable strings stay GM-confirm text.
+		const prereqSnapshot = {
+			characteristics: Object.fromEntries(
+				Object.entries(system.characteristics ?? {}).map(([k, v]) => [k, v.value]),
+			),
+			talents: this.actor.items
+				.filter((item) => (item.type as string) === "talent")
+				.map((item) => item.name ?? ""),
+			psyRating: system.psyRating ?? 0,
+		};
+		const { unmet: unmetPrereqs } = evaluatePrerequisites(
+			parsePrerequisites(row.prerequisites.join(", ")),
+			prereqSnapshot,
+		);
+		for (const unmet of unmetPrereqs) {
+			validation.reasons.push(`Prerequisite: ${unmet}`);
+		}
 		if (!(await this.#confirmReasons(validation.reasons))) return;
 
 		const entry = ledgerEntryFor(row, this.#career.key);
@@ -370,13 +393,20 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			} as never);
 		} else {
 			// Talent: idempotent grant by name (matching the talent picker).
+			// yclz: parameterised rows ("Peer", "Enemy (choose one)") prompt for
+			// their subject first; cancelled prompt = no grant, no ledger entry.
+			let grantName = row.name;
+			const prompted = await promptParameterisedSubject(grantName);
+			if (prompted === null) return;
+			grantName = prompted;
+			// meh0: clone the pack document so granted talents carry their
+			// description/category/effects instead of arriving bare.
+			const payload = await talentGrant(grantName);
 			const owned = this.actor.items.find(
-				(item) => (item.type as string) === "talent" && item.name === row.name,
+				(item) => (item.type as string) === "talent" && item.name === grantName,
 			);
 			if (!owned) {
-				await this.actor.createEmbeddedDocuments("Item", [
-					{ name: row.name, type: "talent", system: {} },
-				] as never);
+				await this.actor.createEmbeddedDocuments("Item", [payload] as never);
 			}
 		}
 

@@ -24,6 +24,22 @@ import {
 	type CatalogSkill,
 } from "../../rules/creation";
 import { careers } from "../../registry";
+import { availabilityModifier } from "../../rules/acquisition";
+import {
+	GRANTED_BY_CREATOR,
+	reconcileForCreator,
+	skillGrantPayload,
+	type GrantPayload,
+} from "../../rules/grants";
+import {
+	talentGrant,
+	promptParameterisedSubject,
+} from "./grant-helpers";
+
+/** yclz: prompt for a parameterised talent's subject; resolved names pass through. */
+async function resolveParameterisedTalent(name: string): Promise<string | null> {
+	return promptParameterisedSubject(name);
+}
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
@@ -53,6 +69,8 @@ interface CreatorState {
 		corruption: number[];
 		corrOrInsanity: number[];
 	};
+	/** Stage 6: the starting free acquisition (item name + pack payload). */
+	acquisition: { name: string; payload: object } | null;
 }
 
 function emptyState(): CreatorState {
@@ -68,6 +86,7 @@ function emptyState(): CreatorState {
 		corrOrInsTrack: {},
 		careerKey: "",
 		rolledDice: { wounds: [], fateD10: null, insanity: [], corruption: [], corrOrInsanity: [] },
+		acquisition: null,
 	};
 }
 
@@ -111,6 +130,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			choosePickOption: CharacterCreator.#onChoosePickOption,
 			chooseCorrIns: CharacterCreator.#onChooseCorrIns,
 			chooseCareer: CharacterCreator.#onChooseCareer,
+			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
 			prev: CharacterCreator.#onPrev,
 			next: CharacterCreator.#onNext,
 			create: CharacterCreator.#onCreate,
@@ -237,14 +257,22 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 				detail = {
 					entry,
 					effect: entry.effect ?? null,
-					variants: entry.variants ?? null,
+variants: (entry.variants ?? []).map((v) => ({
+						...v,
+						selected: pick?.variantKey === v.key,
+					})),
 					pickVariant,
 					pickVariantEffect: pickVariant?.effect ?? null,
 					pickOption: pick?.optionChoice ?? null,
 					pickAlternate: pick?.alternate ?? null,
 					corrIns: state.corrOrInsTrack[entry.key] ?? null,
 					hasOptions: (mechanicsForPick?.optionChoice?.length ?? 0) > 0,
-					options: mechanicsForPick?.optionChoice ?? [],
+					// Selection state precomputed here (not in Handlebars paths):
+					// each-scope relative paths were silently unresolvable.
+					options: (mechanicsForPick?.optionChoice ?? []).map((option) => ({
+						value: option,
+						selected: pick?.optionChoice === option,
+					})),
 					hasCharChoice: (mechanicsForPick?.characteristicChoice?.length ?? 0) > 0,
 					charChoices: (mechanicsForPick?.characteristicChoice ?? []).map(
 						(group: CharMod[]) => ({
@@ -257,7 +285,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 						}),
 					),
 					hasAlternate: (mechanicsForPick?.alternateChoice?.length ?? 0) > 0,
-					alternates: mechanicsForPick?.alternateChoice ?? [],
+					alternates: (mechanicsForPick?.alternateChoice ?? []).map(
+						(alt, index) => ({ ...alt, index, selected: pick?.alternate === index }),
+					),
 					hasCorrIns: (mechanicsForPick?.corruptionOrInsanityDice?.length ?? 0) > 0,
 					corrOrInsDice: mechanicsForPick?.corruptionOrInsanityDice ?? [],
 					skills: mechanicsForPick?.skills ?? [],
@@ -327,12 +357,53 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			? (careers.get(state.careerKey) ?? "")
 			: "";
 
+		// Stage 6 (gjvg): the starting free acquisition — items with a total
+		// modifier of +0 or better need no test (rt_core p273 "Acquisition
+		// and Starting Characters"). Availability modifier ≥ 0 (scarce+).
+		// The group's PF/SP (stage 5) are a GROUP/GM-level decision and live
+		// on the dynasty document, NOT in the creator (owner redesign).
+		context.acquisitions = await this.#startingAcquisitions();
+		context.acquisition = state.acquisition?.name ?? "";
+
 		context.canCreate =
-			state.step === 2 &&
+			state.step === 3 &&
 			ORIGIN_ROWS.every((row) => Boolean(state.picks[row])) &&
 			Boolean(state.careerKey) &&
 			(state.method === "roll" ? true : pointBuy.valid);
 		return context;
+	}
+
+	/**
+	 * Items from the equipment packs qualifying as the starting free
+	 * acquisition (availability modifier >= +0, Table 9-35). Payload carries
+	 * the pack document clone (meh0 flavour) for the grant.
+	 */
+	async #startingAcquisitions(): Promise<Array<Record<string, unknown>>> {
+		const out: Array<Record<string, unknown>> = [];
+		const packs = ["rogue-trader.weapons", "rogue-trader.armour", "rogue-trader.gear", "rogue-trader.drugs", "rogue-trader.tools"];
+		for (const packName of packs) {
+			const pack = game.packs?.get(packName);
+			if (!pack) continue;
+			const docs = (await pack.getDocuments()) as unknown as Array<{
+				name?: string;
+				type?: string;
+				system?: { availability?: string; description?: string };
+				toObject: () => object;
+			}>;
+			for (const doc of docs) {
+				if (!doc.name) continue;
+				const modifier = availabilityModifier(doc.system?.availability ?? "");
+				if (modifier === null || modifier < 0) continue;
+				const payload = doc.toObject() as object;
+				out.push({
+					name: `${doc.name} (${game.i18n!.localize("CREATOR.ACQ_MODIFIER")} ${modifier >= 0 ? "+" : ""}${modifier})`,
+					payload: JSON.stringify(payload),
+					tooltip: (doc.system?.description ?? "").slice(0, 300),
+					selected: this.creatorState.acquisition?.name === doc.name,
+				});
+			}
+		}
+		return out.sort((a, b) => String(a.name).localeCompare(String(b.name)));
 	}
 
 	/** Roll wound/fate/insanity/corruption dice when entering the review. */
@@ -476,9 +547,32 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 	}
 
 	static async #onNext(this: CharacterCreator): Promise<void> {
-		const next = Math.min(2, this.creatorState.step + 1);
+		const next = Math.min(3, this.creatorState.step + 1);
 		if (next === 2) await this.#rollOriginDice();
 		this.creatorState.step = next;
+		this.render({ force: true });
+	}
+
+	/** Stage 6 (p273): choose the single starting free acquisition. */
+	static async #onChooseAcquisition(
+		this: CharacterCreator,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const raw = target.dataset.payload ?? "";
+		if (!raw) {
+			this.creatorState.acquisition = null;
+		} else {
+			try {
+				const payload = JSON.parse(raw) as { name?: string };
+				this.creatorState.acquisition = {
+					name: payload.name ?? "",
+					payload: payload as object,
+				};
+			} catch {
+				this.creatorState.acquisition = null;
+			}
+		}
 		this.render({ force: true });
 	}
 
@@ -548,6 +642,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			const target = this.targetActor as unknown as {
 				update: (data: object) => Promise<unknown>;
 				createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+				deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
 				sheet?: { render: (options?: object) => unknown };
 			};
 			const system = this.targetActor.system as unknown as {
@@ -570,6 +665,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			}
 			await target.update({ name: state.name || this.targetActor.name, system: systemPayload } as never);
 			await this.#applyGrantsAndSummary(target, state, resolved);
+			await this.#applyGroupAndAcquisition(target, state);
 			this.close();
 			target.sheet?.render({});
 			return;
@@ -582,14 +678,36 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 		} as never)) as unknown as {
 			uuid: string;
 			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+			deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
 			sheet?: { render: (options?: object) => unknown };
 		};
 		if (!actor) return;
 
 		await this.#applyGrantsAndSummary(actor, state, resolved);
+		await this.#applyGroupAndAcquisition(actor, state);
 
 		this.close();
 		actor.sheet?.render({});
+	}
+
+	/**
+	 * Stage 6 apply (bead gjvg): grant the character's single starting free
+	 * acquisition (p273, modifier +0 or better — chosen on step 3). The
+	 * group's PF/SP are NOT set here — they live on the dynasty document
+	 * (owner redesign: keep group-level decisions out of the creator).
+	 */
+	async #applyGroupAndAcquisition(
+		actor: unknown,
+		state: CreatorState,
+	): Promise<void> {
+		if (state.acquisition && state.acquisition.payload) {
+			const target = actor as {
+				createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+			};
+			await target.createEmbeddedDocuments("Item", [
+				{ ...state.acquisition.payload, system: { ...(state.acquisition.payload as { system?: object }).system, grantedBy: GRANTED_BY_CREATOR } },
+			] as never);
+		}
 	}
 
 	/**
@@ -599,12 +717,56 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 	async #applyGrantsAndSummary(
 		actor: {
 			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+			deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
+			system?: unknown;
 		},
 		state: CreatorState,
 		resolved: ResolvedOrigin,
 	): Promise<void> {
-		// Grants: catalog-matched skills, then talents (create-by-name),
-		// then unmatched options (talents, or manual if unresolved).
+		// iufv: creator grants carry provenance; a re-run wipes ALL
+		// creator-granted items and re-grants from the new picks (owner
+		// decision: full wipe + re-grant). Manual items (no flag) are kept.
+		// Pre-flag legacy items are identified by name against the OLD picks
+		// and removed by this first re-run (remove-then-regrant).
+		const existing = (this.targetActor?.items ?? []) as unknown as Array<{
+			id?: string;
+			type?: string;
+			name?: string;
+			system?: { grantedBy?: string };
+		}>;
+		const legacyNames = new Set<string>();
+		const oldOrigins = ((this.targetActor?.system ?? {}) as {
+			origins?: Record<string, string>;
+		}).origins;
+		if (oldOrigins) {
+			const oldPicks: Partial<Record<OriginRow, OriginPick>> = {};
+			for (const [row, value] of Object.entries(oldOrigins)) {
+				if (!value || !ORIGIN_ROWS.includes(row as OriginRow)) continue;
+				const [base, variant] = value.split("|");
+				oldPicks[row as OriginRow] = {
+					key: base,
+					...(variant ? { variantKey: variant } : {}),
+				};
+			}
+			if (Object.keys(oldPicks).length > 0) {
+				const legacyResolved = resolveOrigins(oldPicks);
+				for (const name of [
+					...legacyResolved.skills,
+					...legacyResolved.options,
+					...legacyResolved.talents.filter((t) => !isUnresolvedChoice(t)),
+				]) {
+					legacyNames.add(name);
+				}
+			}
+		}
+		const { deleteIds } = reconcileForCreator(existing, legacyNames);
+		if (deleteIds.length > 0) {
+			await actor.deleteEmbeddedDocuments("Item", deleteIds);
+		}
+
+		// Grants: catalog-matched skills, then talents (cloning the pack
+		// document, meh0), then unmatched options (talents, or manual if
+					// unresolved).
 		const catalog: CatalogSkill[] = [];
 		const pack = game.packs!.get("rogue-trader.skills");
 		if (pack) {
@@ -617,18 +779,35 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			}
 		}
 		const { grants, unmatched } = matchOriginSkills(resolved, catalog);
-		const itemGrants: object[] = [...grants];
+		const provenance = { grantedBy: GRANTED_BY_CREATOR };
+		const itemGrants: GrantPayload[] = grants.map((grant) =>
+			skillGrantPayload(grant.name, grant.system.characteristic, provenance),
+		);
 		const manual: string[] = [...resolved.notes];
+		// Dedupe against ourselves and the surviving items (manual items the
+		// player added by hand should not be duplicated by the re-grant).
+		const seenNames = new Set(existing.map((item) => item.name ?? ""));
 		for (const talentName of resolved.talents) {
 			if (isUnresolvedChoice(talentName)) {
 				manual.push(talentName);
 				continue;
 			}
-			itemGrants.push({ name: talentName, type: "talent", system: {} });
+			// yclz: resolve parameterised talents ("Peer (choose one)") to a
+			// concrete subject before granting; cancelled prompt = skipped.
+			const resolvedName = await resolveParameterisedTalent(talentName);
+			if (!resolvedName) continue;
+			if (seenNames.has(resolvedName)) continue;
+			seenNames.add(resolvedName);
+			itemGrants.push(await talentGrant(resolvedName, provenance));
 		}
 		for (const leftover of unmatched) {
 			if (isUnresolvedChoice(leftover)) manual.push(leftover);
-			else itemGrants.push({ name: leftover, type: "talent", system: {} });
+			else if (!seenNames.has(leftover)) {
+				const resolvedName = await resolveParameterisedTalent(leftover);
+				if (!resolvedName) continue;
+				seenNames.add(resolvedName);
+				itemGrants.push(await talentGrant(resolvedName, provenance));
+			}
 		}
 		if (itemGrants.length > 0) {
 			await actor.createEmbeddedDocuments("Item", itemGrants);
@@ -644,9 +823,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			const label = game.i18n!.localize(ORIGIN_ROW_LABEL_KEYS[rowKey]);
 			return `<li><strong>${label}:</strong> ${entry?.name ?? "—"}${variant ? ` (${variant})` : ""}</li>`;
 		}).join("");
-		const notes = manual.length
-			? `<p><strong>${game.i18n!.localize("CREATOR.MANUAL_NOTES")}</strong></p><ul>${manual.map((n) => `<li>${n}</li>`).join("")}</ul>`
-			: "";
+		// Bead ay0: origin trait notes live on the Background tab now (tgq9) —
+		// the card only points there instead of duplicating them.
+		const notes = `<p>${game.i18n!.localize("CREATOR.NOTES_POINTER")}</p>`;
 		const pf = resolved.profitFactor
 			? `<p>${game.i18n!.localize("CREATOR.PROFIT_FACTOR")}: ${resolved.profitFactor > 0 ? "+" : ""}${resolved.profitFactor}</p>`
 			: "";

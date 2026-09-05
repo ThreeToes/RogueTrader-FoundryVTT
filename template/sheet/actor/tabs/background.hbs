@@ -17,10 +17,96 @@
         </ol>
         {{/if}}
 
+        {{#if hasTraits}}
+        <div class="origin-traits">
+            {{#if traitModifiers.length}}
+            <div class="traits-row">
+                <span class="origin-label">{{localize "BACKGROUND.TRAIT_MODIFIERS"}}</span>
+                {{#each traitModifiers as |t|}}
+                <a class="chip origin-mod" data-tooltip="{{t.tooltip}}">{{t.name}} ({{#if (gt t.value 0)}}+{{/if}}{{t.value}}{{#if t.testKeyLabel}} {{t.testKeyLabel}}{{/if}})</a>
+                {{/each}}
+            </div>
+            {{/if}}
+            {{#if traitGrants.length}}
+            <div class="traits-row">
+                <span class="origin-label">{{localize "BACKGROUND.TRAIT_GRANTS"}}</span>
+                {{#each traitGrants as |t|}}
+                {{#if t.claimed}}
+                <span class="chip claimed" data-tooltip="{{t.tooltip}}"><i class="fa-solid fa-check"></i> {{t.name}}</span>
+                {{else if t.resolvable}}
+                <a class="chip grant-resolve" data-action="claimGrant" data-key="{{t.key}}" data-resolvable="true"
+                    data-tooltip="{{t.tooltip}}">{{t.name}} ({{localize "BACKGROUND.CLAIM"}})</a>
+                {{else}}
+                <a class="chip grant-ack" data-action="claimGrant" data-key="{{t.key}}"
+                    data-tooltip="{{t.tooltip}}">{{t.name}} ({{localize "BACKGROUND.ACK"}})</a>
+                {{/if}}
+                {{/each}}
+            </div>
+            {{/if}}
+            {{#if traitNotes.length}}
+            <div class="traits-row">
+                <span class="origin-label">{{localize "BACKGROUND.TRAIT_NOTES"}}</span>
+                {{#each traitNotes as |t|}}
+                <a class="chip origin-note" data-tooltip="{{t.tooltip}}">{{t.name}}</a>
+                {{/each}}
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
+
+        {{!-- Dynasty link (owner redesign): attach the character to the group's dynasty record. --}}
+        <div class="traits-row">
+            <span class="origin-label">{{localize "BACKGROUND.DYNASTY"}}:</span>
+            <select name="system.dynastyUuid">
+                <option value="">{{localize "BACKGROUND.DYNASTY_NONE"}}</option>
+                {{#each dynastyOptions as |d|}}
+                <option value="{{d.uuid}}" {{#if d.selected}}selected{{/if}}>{{d.label}}</option>
+                {{/each}}
+            </select>
+        </div>
+
+        <div class="inv-group-header">
+            <h1>{{localize "BACKGROUND.LIFE"}}</h1>
+        </div>
+        <div class="traits-row life-fields">
+            <span class="origin-label">{{localize "BACKGROUND.APPEARANCE"}}:</span>
+            <input name="system.life.appearance" type="text" value="{{source.system.life.appearance}}"
+                placeholder="{{localize "BACKGROUND.APPEARANCE_HINT"}}" />
+        </div>
+        <div class="traits-row life-fields">
+            <span class="origin-label">{{localize "BACKGROUND.MOTIVATION"}}:</span>
+            <input name="system.life.motivation" type="text" value="{{source.system.life.motivation}}"
+                placeholder="{{localize "BACKGROUND.MOTIVATION_HINT"}}" />
+        </div>
+
+        <div class="madness border">
+            <div class="inv-group-header">
+                <h1>{{localize "MADNESS.HEADER"}}</h1>
+                <span class="madness-actions">
+                    <button type="button" class="ladder-option" data-action="rollTraumaTest"
+                        data-tooltip="{{localize "MADNESS.TRAUMA_HINT"}}">{{localize "MADNESS.TRAUMA_TEST"}}</button>
+                    <button type="button" class="ladder-option" data-action="rollMalignancyTest"
+                        data-tooltip="{{localize "MADNESS.MALIGNANCY_HINT"}}">{{localize "MADNESS.MALIGNANCY_TEST"}}</button>
+                </span>
+            </div>
+            <div class="traits-row">
+                <span class="origin-label">{{localize "MADNESS.INSANITY"}}: {{insanityDegree}}</span>
+                <span class="origin-label">{{localize "MADNESS.CORRUPTION"}}: {{corruptionDegree}}</span>
+                {{#if madness.dueDisorders.length}}
+                <span class="chip grant-ack" data-tooltip="{{localize "MADNESS.DISORDERS_DUE"}}">
+                    {{localize "MADNESS.DISORDERS_DUE"}}
+                </span>
+                {{/if}}
+                {{#each madness.afflictions as |a|}}
+                <a class="chip origin-note" data-tooltip="{{a.text}}">{{a.name}}</a>
+                {{/each}}
+            </div>
+        </div>
+
         <div class="inv-group-header">
             <h1>{{localize "BACKGROUND.CAREER"}}</h1>
             {{#if careerItemId}}
-            <button type="button" class="ladder-option" data-action="openCareerSheet" data-item-id="{{careerItemId}}"
+            <button type="button" class="ladder-option" data-action="openCareerSheet" data-uuid="{{careerItemId}}"
                 data-tooltip="{{localize "BACKGROUND.OPEN_CAREER"}}">
                 <i class="fa-solid fa-book-open"></i> {{localize "BACKGROUND.OPEN_CAREER"}}
             </button>

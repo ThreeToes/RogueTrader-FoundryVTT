@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { deriveCapacity, resolveEncumbrance } from "./encumbrance";
+import { carriedWeight, deriveCapacity, resolveEncumbrance } from "./encumbrance";
 
 describe("resolveEncumbrance", () => {
 	test("no capacity set = ok, ratio 0", () => {
@@ -42,6 +42,38 @@ describe("resolveEncumbrance", () => {
 		expect(resolveEncumbrance(120, 100).stateLabel).toBe(
 			"INVENTORY.STATE_OVER",
 		);
+	});
+});
+
+describe("carriedWeight (bead yar: equip-state filter)", () => {
+	test("carried weapons and gear count, stowed do not", () => {
+		expect(
+			carriedWeight([
+				{ type: "ranged-weapon", weight: 4, equipState: "carried" },
+				{ type: "melee-weapon", weight: 3, equipState: "carried" },
+				{ type: "gear", weight: 10, equipState: "carried" },
+				{ type: "gear", weight: 20, equipState: "stowed" },
+			]),
+		).toBe(17);
+	});
+
+	test("worn armour counts, stowed armour does not", () => {
+		expect(
+			carriedWeight([
+				{ type: "armour", weight: 7, equipState: "worn" },
+				{ type: "armour", weight: 15, equipState: "stowed" },
+			]),
+		).toBe(7);
+	});
+
+	test("worn state on weapons does not count (weapons ready = carried)", () => {
+		expect(
+			carriedWeight([{ type: "ranged-weapon", weight: 4, equipState: "worn" }]),
+		).toBe(0);
+	});
+
+	test("missing equip state counts as stowed (raw data safe default)", () => {
+		expect(carriedWeight([{ type: "gear", weight: 5 }])).toBe(0);
 	});
 });
 

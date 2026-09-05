@@ -6,7 +6,7 @@ import { bundleTypescript } from "./javascript";
 
 const WATCH_PATHS = [
 	"./src",
-	"./less",
+	"./css",
 	"./template",
 	"./lang",
 	"./system-manifests",

@@ -162,3 +162,72 @@ describe("talent effect registry kinds (bead fjw)", () => {
 		expect(crit).toBe(4);
 	});
 });
+// Bead 2k5: the attacking weapon's own damage effects apply; gear/armour
+// damage effects stay inert (no book basis for worn armour adding damage).
+describe("weapon-scoped damage effects (bead 2k5)", () => {
+	const weapon = (equipState?: string) => ({
+		id: "weapon-1",
+		name: "Chainsword",
+		type: "melee-weapon",
+		equipState,
+		system: {
+			effects: [{ kind: "damage-flat", value: 3, label: "Serrated" }],
+		},
+	});
+	const otherWeapon = {
+		id: "weapon-2",
+		name: "Lasgun",
+		type: "ranged-weapon",
+		equipState: "carried",
+		system: { effects: [{ kind: "damage-flat", value: 99, label: "Not This One" }] },
+	};
+	const inertArmour = {
+		id: "armour-1",
+		name: "Flak",
+		type: "armour",
+		equipState: "worn",
+		system: { effects: [{ kind: "damage-flat", value: 50, label: "No Basis" }] },
+	};
+
+	test("the attacking weapon's own damage effects apply", () => {
+		const { damage } = collectTalentDamageEffects(
+			{ items: [weapon("carried"), otherWeapon, inertArmour] },
+			{ attackType: "melee-weapon", weaponId: "weapon-1" },
+		);
+		expect(damage).toHaveLength(1);
+		expect(damage[0].label).toBe("Serrated");
+		expect(damage[0].id).toContain("Chainsword");
+	});
+
+	test("other weapons' effects do not leak into the attack", () => {
+		const { damage } = collectTalentDamageEffects(
+			{ items: [weapon("carried"), otherWeapon] },
+			{ attackType: "melee-weapon", weaponId: "weapon-1" },
+		);
+		expect(damage.find((m) => m.label === "Not This One")).toBeUndefined();
+	});
+
+	test("stowed attacking weapon is not live (equip-state model)", () => {
+		const { damage } = collectTalentDamageEffects(
+			{ items: [weapon("stowed")] },
+			{ attackType: "melee-weapon", weaponId: "weapon-1" },
+		);
+		expect(damage).toHaveLength(0);
+	});
+
+	test("armour/gear damage effects stay inert (documented decision)", () => {
+		const { damage } = collectTalentDamageEffects(
+			{ items: [inertArmour] },
+			{ attackType: "melee-weapon", weaponId: "weapon-1" },
+		);
+		expect(damage).toHaveLength(0);
+	});
+
+	test("talent ids remain stable (no weapon prefix)", () => {
+		const { damage } = collectTalentDamageEffects(
+			{ items: [crushingBlow] },
+			{ attackType: "melee-weapon", weaponId: "weapon-1" },
+		);
+		expect(damage[0].id.startsWith("talent-damage:")).toBe(true);
+	});
+});

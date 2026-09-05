@@ -145,6 +145,15 @@
         </div>
 
         <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "WEAPON.PRIMITIVE"}}</label>
+                {{#if editable}}
+                <input type="checkbox" name="system.primitive" {{checked source.system.primitive}}
+                    data-tooltip="{{localize "WEAPON.PRIMITIVE_HINT"}}" />
+                {{else}}
+                <p class="static-value">{{#if source.system.primitive}}{{localize "WEAPON.PRIMITIVE"}}{{else}}—{{/if}}</p>
+                {{/if}}
+            </div>
             <div class="stat special">
                 <label>{{localize "WEAPON.SPECIAL"}}</label>
                 {{#if editable}}

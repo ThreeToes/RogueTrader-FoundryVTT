@@ -6,19 +6,32 @@ import { ForceField } from "../data/item/force-field";
 import { Gear } from "../data/item/gear";
 import { MeleeWeapon } from "../data/item/melee-weapon";
 import { PsychicPower } from "../data/item/psychic-power";
+import { OriginTrait } from "../data/item/origin-trait";
+import { Mutation } from "../data/item/mutation";
+import { MadnessEntry } from "../data/item/madness";
 import { RangedWeapon } from "../data/item/ranged-weapon";
 import { Skill } from "../data/item/skill";
 import { Talent } from "../data/item/talent";
 import { Career } from "../data/item/career";
+import { Starship, ShipComplication } from "../data/item/starship";
 import { WeaponModification } from "../data/item/weapon-modification";
 import { attachRegistriesToConfig } from "../registry";
 import { rollDamageForCard, rollSkill, rollTest } from "../rules/adapter";
 import { defaultSkillItems } from "../rules/default-skills";
 import { testContributors } from "../rules/funnel";
+import {
+	HOMEBREW_SETTING,
+	parseHomebrewProfile,
+} from "../rules/homebrew";
+import type { OriginTraitDef } from "../rules/origin-traits";
 import { talentEffectHandlers } from "../rules/talent-effects";
 import { CharacterSheet } from "./actor/character-sheet";
 import { CharacterCreator } from "./actor/character-creator";
 import { VehicleSheet } from "./actor/vehicle-sheet";
+import { DynastySheet } from "./actor/dynasty-sheet";
+import { Dynasty } from "../data/actor/dynasty";
+import { StarshipActor } from "../data/actor/starship-actor";
+import { ShipSheet } from "./actor/ship-sheet";
 import { registerConfigHelper } from "./handlebars";
 import { ArmourSheet } from "./item/armour-sheet";
 import { GearSheet } from "./item/gear-sheet";
@@ -175,11 +188,60 @@ export function sheetInit() {
 			ROGUE_TRADER?: {
 				testContributors?: typeof testContributors;
 				talentEffectHandlers?: typeof talentEffectHandlers;
+				homebrew?: { getProfile?: () => unknown };
+				originTraits?: { getDefs?: () => unknown };
+				madness?: { getRows?: () => unknown };
 			};
 		};
 		rtc.ROGUE_TRADER ??= {};
 		rtc.ROGUE_TRADER.testContributors = testContributors;
 		rtc.ROGUE_TRADER.talentEffectHandlers = talentEffectHandlers;
+
+		// Homebrew seam (bead 9if): world setting stores the house-rule
+		// profile; the funnel reads it through this provider. GM-configurable
+		// (Configure Settings -> Rogue Trader -> Homebrew profile JSON).
+		game.settings?.register(game.system?.id ?? "rogue-trader", HOMEBREW_SETTING, {
+			name: "HOMEBREW.PROFILE_NAME",
+			hint: "HOMEBREW.PROFILE_HINT",
+			scope: "world",
+			config: true,
+			type: String,
+			default: "",
+		});
+		rtc.ROGUE_TRADER.homebrew = {
+			getProfile: () =>
+				parseHomebrewProfile(
+					(game.settings as unknown as {
+						get: (ns: string, key: string) => unknown;
+					}).get(game.system?.id ?? "rogue-trader", HOMEBREW_SETTING),
+				),
+		};
+
+		// Origin traits cache (bead tgq9): the funnel contributor is sync, so
+		// pack definitions pre-warm at ready (commonSkillCatalog pattern).
+		let originTraitDefs: OriginTraitDef[] = [];
+		Hooks.once("ready", () => {
+			const pack = game.packs?.get("rogue-trader.origin-traits");
+			if (!pack) return;
+			pack.getDocuments().then((docs) => {
+				originTraitDefs = docs.map((doc) => {
+					const s = doc.system as unknown as Record<string, unknown>;
+					return {
+						name: doc.name ?? "",
+						originKey: String(s.originKey ?? ""),
+						traitKey: String(s.traitKey ?? ""),
+						kind: (String(s.kind ?? "note") as OriginTraitDef["kind"]),
+						testKey: String(s.testKey ?? ""),
+						value: Number(s.value ?? 0),
+						grantKind: String(s.grantKind ?? ""),
+						text: String(s.description ?? s.shortDescription ?? ""),
+					};
+				});
+			});
+		});
+		rtc.ROGUE_TRADER.originTraits = {
+			getDefs: () => originTraitDefs,
+		};
 
 		CONFIG.Item.dataModels.gear = Gear;
 		CONFIG.Item.dataModels["ranged-weapon"] = RangedWeapon;
@@ -188,11 +250,17 @@ export function sheetInit() {
 		CONFIG.Item.dataModels.skill = Skill;
 		CONFIG.Item.dataModels.talent = Talent;
 		CONFIG.Item.dataModels.career = Career;
+		// Starship hulls + complications (bead sl31, Chapter VIII).
+		CONFIG.Item.dataModels.ship = Starship;
+		CONFIG.Item.dataModels["ship-complication"] = ShipComplication;
 		// Compendium-sourced aptitudes are description-only items; reuse the
 		// Gear model (all fields have initials) and its generic sheet so opening
 		// them does not crash DocumentSheetConfig (bead r7w).
 		CONFIG.Item.dataModels.aptitude = Gear;
 		CONFIG.Item.dataModels.psychicpower = PsychicPower;
+		CONFIG.Item.dataModels.origintrait = OriginTrait;
+		CONFIG.Item.dataModels.mutation = Mutation;
+		CONFIG.Item.dataModels.madness = MadnessEntry;
 		CONFIG.Item.dataModels.ammunition = Ammunition;
 		CONFIG.Item.dataModels["force-field"] = ForceField;
 		CONFIG.Item.dataModels["weapon-modification"] = WeaponModification;
@@ -202,8 +270,15 @@ export function sheetInit() {
 		CONFIG.Item.dataModels.drug = Gear;
 		CONFIG.Item.dataModels["special-ability"] = Gear;
 		CONFIG.Actor.dataModels.pc = Character;
+		// "explorer" = the sidebar-creatable character type (owner: rename of
+		// the legacy DH2 "acolyte" entry); "pc" stays for creator-made actors.
+		CONFIG.Actor.dataModels.explorer = Character;
 		CONFIG.Actor.dataModels.npc = Character;
 		CONFIG.Actor.dataModels.vehicle = Vehicle;
+		// Group record for Profit Factor / Ship Points (bead gjvg).
+		CONFIG.Actor.dataModels.dynasty = Dynasty;
+		// Starship actor (bead kwd): dedicated starship sheet.
+		CONFIG.Actor.dataModels.starship = StarshipActor;
 		registerConfigHelper();
 
 		const registerSheet = (
@@ -268,6 +343,26 @@ export function sheetInit() {
 			["psychicpower"],
 			"TYPES.Item.psychicpower",
 		);
+		// Origin traits: plain-Gear reuse (fields have initials) so opening
+		// them does not crash DocumentSheetConfig (pattern of bead r7w).
+		registerSheet(
+			foundry.documents.Item,
+			GearSheet as unknown as AnySheetCtor,
+			["origintrait"],
+			"TYPES.Item.origintrait",
+		);
+		registerSheet(
+			foundry.documents.Item,
+			GearSheet as unknown as AnySheetCtor,
+			["mutation"],
+			"TYPES.Item.mutation",
+		);
+		registerSheet(
+			foundry.documents.Item,
+			GearSheet as unknown as AnySheetCtor,
+			["madnessentry"],
+			"TYPES.Item.madnessentry",
+		);
 		// Apply-damage button on attack damage cards (bead ncc): an
 		// adapter-layer action that consumes the displayed outcome - the flag
 		// carries the computed wounds; nothing is recomputed here. Delegated
@@ -308,6 +403,9 @@ export function sheetInit() {
 				"tool",
 				"drug",
 				"special-ability",
+				"origintrait",
+				"mutation",
+				"madnessentry",
 			],
 			"ROGUE_TRADER.GEAR.SHEET",
 		);
@@ -349,7 +447,7 @@ export function sheetInit() {
 		registerSheet(
 			foundry.documents.Actor,
 			CharacterSheet as unknown as AnySheetCtor,
-			["pc", "npc"],
+			["pc", "npc", "explorer"],
 			"ROGUE_TRADER.CHARACTER.SHEET",
 		);
 		registerSheet(
@@ -357,6 +455,18 @@ export function sheetInit() {
 			VehicleSheet as unknown as AnySheetCtor,
 			["vehicle"],
 			"ROGUE_TRADER.VEHICLE.SHEET",
+		);
+		registerSheet(
+			foundry.documents.Actor,
+			DynastySheet as unknown as AnySheetCtor,
+			["dynasty"],
+			"DYNASTY.SHEET",
+		);
+		registerSheet(
+			foundry.documents.Actor,
+			ShipSheet as unknown as AnySheetCtor,
+			["starship"],
+			"STARSHIP.SHEET",
 		);
 
 		// Character creator (bead ay0): "Create Explorer (Origin Path)" entry

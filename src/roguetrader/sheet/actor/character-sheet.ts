@@ -4,6 +4,18 @@ import { derivedRank, totalSpent } from "../../rules/advancement";
 import { careers, equipStates } from "../../registry";
 import { effectiveMechanics, originByKey } from "../../origins";
 import {
+	resolveOriginTraits,
+	traitDefKey,
+} from "../../rules/origin-traits";
+import {
+	corruptionTrack,
+	dueDisorders,
+	insanityTrack,
+	malignancyTestsDue,
+} from "../../rules/madness";
+import { rollTest } from "../../rules/adapter";
+import type { Modifier } from "../../rules-engine/src/modifier";
+import {
 	rollSkill,
 	rollSkillUntrained,
 	rollTest,
@@ -12,7 +24,7 @@ import {
 } from "../../rules/adapter";
 import { defaultSkillItems } from "../../rules/default-skills";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
-import { deriveCapacity, resolveEncumbrance } from "../../rules/encumbrance";
+import { deriveCapacity, resolveEncumbrance, carriedWeight } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
 import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
@@ -60,6 +72,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			openAdvancement: CharacterSheet.#onOpenAdvancement,
 			openPsychicPicker: CharacterSheet.#onOpenPsychicPicker,
 			openCareerSheet: CharacterSheet.#onOpenCareerSheet,
+			claimGrant: CharacterSheet.#onClaimGrant,
+			rollTraumaTest: CharacterSheet.#onRollTraumaTest,
+			rollMalignancyTest: CharacterSheet.#onRollMalignancyTest,
 		},
 	};
 
@@ -137,12 +152,97 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.dataset.itemId;
-		if (!itemId) return;
-		const item = (await fromUuid(
-			`Item.${itemId}`,
+		const uuid = target.dataset.uuid;
+		if (!uuid) return;
+		const item = (await foundry.utils.fromUuid(
+			uuid,
 		) as unknown as { sheet?: { render: (options?: object) => unknown } } | null);
-		item?.sheet?.render({});
+		if (!item) {
+			console.warn(`rogue-trader | career link: fromUuid("${uuid}") resolved to null`);
+			return;
+		}
+		item.sheet?.render({});
+	}
+
+	/**
+	 * Claim a pending origin grant (bead tgq9): free-skill grants open the
+	 * skill picker; claiming persists in system.origins.claims. Non-resolvable
+	 * grants (bionic/heirloom) only mark acknowledged so the chip stops
+	 * prompting — the underlying system still has to be built.
+	 */
+	static async #onClaimGrant(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const key = target.dataset.key;
+		if (!key) return;
+		const system = this.actor.system as unknown as {
+			origins?: { claims?: Record<string, boolean> };
+		};
+		const claims = { ...(system.origins?.claims ?? {}), [key]: true };
+		await this.actor.update({
+			system: { origins: { claims } },
+		} as never);
+		if (target.dataset.resolvable === "true") {
+			await new SkillPicker({ actor: this.actor }).render({ force: true });
+		}
+		this.render({ force: true } as never);
+	}
+
+	/**
+	 * Trauma Test (epic 1g2t, p296): Willpower test modified by the Insanity
+	 * Track; on failure the GM rolls d100 + 10/degree of failure on Table 10-6
+	 * (the chat card shows the full modifier breakdown).
+	 */
+	static async #onRollTraumaTest(this: {
+		actor: foundry.documents.Actor;
+	}): Promise<void> {
+		const system = this.actor.system as unknown as {
+			insanity?: number;
+		};
+		const rows = (
+			CONFIG as unknown as {
+				ROGUE_TRADER?: { madness?: { getRows?: () => unknown[] } };
+			}
+		).ROGUE_TRADER?.madness?.getRows?.() ?? [];
+		const track = insanityTrack(rows as never, system.insanity ?? 0);
+		const modifiers: Modifier[] = track.modifier
+			? [{
+					id: "trauma:track",
+					source: { type: "item", label: "MADNESS.TRAUMA_MODIFIER" },
+					label: `${track.degree}`,
+					value: track.modifier,
+				}]
+			: [];
+		await rollTest(this.actor, "wp", { modifiers });
+	}
+
+	/**
+	 * Malignancy Test (epic 1g2t, p299): Willpower test modified by the
+	 * Corruption Track; on failure roll on the Malignancies table (manual/GM).
+	 */
+	static async #onRollMalignancyTest(this: {
+		actor: foundry.documents.Actor;
+	}): Promise<void> {
+		const system = this.actor.system as unknown as {
+			corruption?: number;
+		};
+		const rows = (
+			CONFIG as unknown as {
+				ROGUE_TRADER?: { madness?: { getRows?: () => unknown[] } };
+			}
+		).ROGUE_TRADER?.madness?.getRows?.() ?? [];
+		const track = corruptionTrack(rows as never, system.corruption ?? 0);
+		const modifiers: Modifier[] = track.modifier
+			? [{
+					id: "malignancy:track",
+					source: { type: "item", label: "MADNESS.MALIGNANCY_MODIFIER" },
+					label: `${track.degree}`,
+					value: track.modifier,
+				}]
+			: [];
+		await rollTest(this.actor, "wp", { modifiers });
 	}
 
 	/**
@@ -703,32 +803,104 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				["motivation", "ORIGIN.ROW_MOTIVATION"],
 			] as Array<[string, string]>
 		)
-			.map(([field, labelKey]) => ({ field, labelKey, pick: splitPick(originPicks[field as keyof typeof originPicks]) }))
+			.map(([field, labelKey]) => ({
+				field,
+				labelKey,
+				pick: splitPick(
+					(originPicks as Record<string, string | undefined>)[field],
+				),
+			}))
 			.filter((row) => row.pick !== null);
 		context.originRows = originRows;
 		context.hasOrigins = originRows.length > 0;
 
+		// Dynasty link (owner redesign): characters attach to the group's
+		// dynasty actor; PF/SP live there. Picker lists all dynasty actors.
+		context.dynastyUuid = system.dynastyUuid ?? "";
+		context.dynastyOptions = ((game.actors ?? []) as unknown as {
+			contents: Array<{
+				type?: string;
+				uuid: string;
+				name?: string;
+				system?: { profitFactor?: number };
+			}>;
+		}).contents
+			.filter((a) => a.type === "dynasty")
+			.map((a) => ({
+				uuid: a.uuid,
+				name: a.name ?? "",
+				label: a.system?.profitFactor !== undefined ? `${a.name} (PF ${a.system.profitFactor})` : (a.name ?? ""),
+				selected: system.dynastyUuid === a.uuid,
+			}));
+
+		// Origin traits (bead tgq9): modifier/grant/note resolution from the
+		// cached pack defs; grants carry claim state, free-skill grants resolve
+		// via the skill picker.
+		const traitDefs = (
+			CONFIG as unknown as {
+				ROGUE_TRADER?: {
+					originTraits?: { getDefs?: () => unknown[] };
+				};
+			}
+		).ROGUE_TRADER?.originTraits?.getDefs?.() ?? [];
+		const traitResolution = resolveOriginTraits(
+			originPicks as never,
+			traitDefs as never,
+		);
+		context.traitModifiers = traitResolution.modifiers.map((t) => ({
+			name: t.def.name,
+			value: t.def.value,
+			testKeyLabel: t.def.testKey ? t.def.testKey.toUpperCase() : "",
+			tooltip: t.def.text,
+		}));
+		context.traitGrants = traitResolution.grants.map((t) => ({
+			key: `${t.def.originKey}.${t.def.traitKey}`,
+			name: t.def.name,
+			claimed: t.claimed,
+			resolvable: t.def.grantKind === "free-skill" || t.def.grantKind === "extra-common-lore",
+			tooltip: t.def.text,
+		}));
+		context.traitNotes = traitResolution.notes.map((t) => ({
+			name: t.def.name,
+			tooltip: t.def.text,
+		}));
+		context.hasTraits =
+			traitResolution.modifiers.length +
+				traitResolution.grants.length +
+				traitResolution.notes.length >
+			0;
+
 		// Career link: the compendium career item behind the actor's careerKey,
-		// opened via openCareerSheet for the full crunch tables.
+		// opened via openCareerSheet for the full crunch tables. Diagnostic log
+		// when the lookup fails (bead qwp6) — pack missing, or key mismatch.
 		const careerPack = game.packs?.get("rogue-trader.careers");
 		if (careerPack && system.careerKey) {
 			const docs = (await careerPack.getDocuments()) as unknown as Array<{
-				id?: string;
-				sheet?: { render: (options?: object) => unknown };
+				uuid?: string;
 				system: { key: string };
 			}>;
-			context.careerItemId = docs.find((d) => d.system.key === system.careerKey)?.id ?? "";
+			const careerDoc = docs.find((d) => d.system.key === system.careerKey);
+			if (!careerDoc) {
+				console.warn(
+					`rogue-trader | no career doc with system.key "${system.careerKey}" in rogue-trader.careers`,
+				);
+			}
+			context.careerItemId = careerDoc?.uuid ?? "";
 		} else {
+			if (!careerPack) {
+				console.warn("rogue-trader | careers pack not registered (game.packs)");
+			}
 			context.careerItemId = "";
 		}
 
 		// Encumbrance: carried weight vs capacity derived from Strength Bonus
-		// (rules/encumbrance.ts deriveCapacity, VERIFY book rule).
-		const carried = [
+		// (rules/encumbrance.ts deriveCapacity, VERIFY book rule). Only READY
+		// items count (bead yar): carried weapons/gear, worn armour.
+		const carried = carriedWeight([
 			...byType(["melee-weapon", "ranged-weapon"]),
 			...byType(["armour"]),
 			...byType(["gear"]),
-		].reduce((sum, item) => sum + Number(item.weight ?? 0), 0);
+		]);
 		const capacity = deriveCapacity(system.characteristicBonus("s"));
 		context.encumbrance = resolveEncumbrance(carried, capacity);
 		// Derived values (read-only): definitional + rules-layer, no writeback.
@@ -743,6 +915,31 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				})),
 			),
 			fatigueMax: fatigueThreshold(system),
+		};
+
+		// Madness tracks (epic 1g2t): degrees + test modifiers from the cached
+		// madness pack; affliction ledger for display.
+		const madnessRows = (
+			CONFIG as unknown as {
+				ROGUE_TRADER?: {
+					madness?: { getRows?: () => unknown[] };
+				};
+			}
+		).ROGUE_TRADER?.madness?.getRows?.() ?? [];
+		const insanity = insanityTrack(madnessRows as never, system.insanity ?? 0);
+		const corr = corruptionTrack(madnessRows as never, system.corruption ?? 0);
+		context.madness = {
+			insanityDegree: insanity.degree,
+			insanityModifier: insanity.modifier,
+			corruptionDegree: corr.degree,
+			corruptionModifier: corr.modifier,
+			dueDisorders: dueDisorders(system.insanity ?? 0, (system.afflictions ?? []) as never),
+			afflictions: (system.afflictions ?? []) as unknown as Array<{
+				kind: string;
+				name: string;
+				severity?: string;
+				text?: string;
+			}>,
 		};
 
 		context.descriptionHTML =

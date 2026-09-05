@@ -1,0 +1,104 @@
+/**
+ * Shared effect-list machinery for items whose effects are DATA consumed by
+ * the rules layer (bead yb6). Talents pioneered the shape; gear, weapons and
+ * armour share it so pack entries can carry live mechanical effects without
+ * per-type schema forks.
+ *
+ * Consumers:
+ * - rules/funnel.ts: kinds "test-modifier"/"attack-modifier" feed test rolls.
+ * - rules/talent-effects.ts: registered handler kinds ("wounds-max", ...).
+ * - rules/adapter.ts damage pipeline: "damage-flat"/"critical-damage".
+ *
+ * Whether an owned item's effects are live is decided by
+ * {@link effectsAreLive}: talents are always "known"; physical items must be
+ * equipped (worn armour, carried gear/weapons). (Equip-state semantics
+ * VERIFY-flagged per bead yb6 — e.g. consumed drugs will need a use flow.)
+ */
+
+export interface EffectData {
+	kind?: string;
+	testKey?: string | null;
+	value?: number;
+	label?: string;
+	/** Guard: only applies when the matching context flag is set. */
+	condition?: string;
+}
+
+/** Schema factory for the effect list; identical shape across item types. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- matches Talent's inferred field type
+export function effectsField() {
+	return new foundry.data.fields.ArrayField(
+		new foundry.data.fields.SchemaField({
+			kind: new foundry.data.fields.StringField({
+				initial: "test-modifier",
+				required: true,
+				nullable: false,
+			}),
+			testKey: new foundry.data.fields.StringField({
+				initial: "",
+			}),
+			value: new foundry.data.fields.NumberField({
+				integer: true,
+				initial: 0,
+			}),
+			label: new foundry.data.fields.StringField({
+				initial: "",
+			}),
+			condition: new foundry.data.fields.StringField({
+				initial: "",
+			}),
+		}),
+		{ initial: () => [] },
+	);
+}
+
+const EQUIP_STATES_FOR_EFFECTS: Record<string, string[]> = {
+	armour: ["worn"],
+	gear: ["carried"],
+	"melee-weapon": ["carried"],
+	"ranged-weapon": ["carried"],
+};
+
+/**
+ * Whether an owned item of `itemType` in `equipState` contributes its
+ * effects. Talents are always live (known, not carried); physical item types
+ * contribute when equipped. Unknown types never contribute (opt-in via the
+ * table).
+ */
+export function effectsAreLive(
+	itemType: string | undefined,
+	equipState: string | undefined,
+): boolean {
+	if (itemType === "talent") return true;
+	const states = itemType ? EQUIP_STATES_FOR_EFFECTS[itemType] : undefined;
+	return states !== undefined && states.includes(equipState ?? "");
+}
+
+/**
+ * Blank effect row for the sheets' add-effect control; values mirror the
+ * schema defaults (test-modifier, unkeyed, zero).
+ */
+export function blankEffect(): Required<EffectData> {
+	return {
+		kind: "test-modifier",
+		testKey: "",
+		value: 0,
+		label: "",
+		condition: "",
+	};
+}
+
+/** Effects list with a blank row appended (pure; sheet add-effect action). */
+export function withAddedEffect(
+	effects: EffectData[] | undefined,
+): Required<EffectData>[] {
+	return [...(effects ?? []), blankEffect()];
+}
+
+/** Effects list minus the row at `index` (pure; sheet remove control). */
+export function withoutEffectAt(
+	effects: EffectData[],
+	index: number,
+): EffectData[] {
+	return effects.filter((_, i) => i !== index);
+}

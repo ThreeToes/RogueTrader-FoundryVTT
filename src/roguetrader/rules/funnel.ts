@@ -1,4 +1,5 @@
 import type { Modifier } from "../../rules-engine/src/modifier";
+import { effectsAreLive } from "../data/item/effects";
 
 /**
  * Modifier funnel: the single collection point between the system's data and
@@ -196,11 +197,15 @@ testContributors.register("effect", (actor) => {
 });
 
 // ---------------------------------------------------------------------------
-// Built-in contributor: owned talent items -> test modifiers (funnel v2). Each
-// talent's effects (testKey/value/label, see data/item/talent.ts) map to
-// Modifier[]; empty testKey acts as wildcard across all tests. Attack tests
-// carry context.key = "bs"/"ws", so keyed effects only apply to matching
-// tests - mirror of the weapon-qualities contributor.
+// Built-in contributor: owned item effects -> test modifiers (funnel v2).
+// Each item's effects (kind/testKey/value/label, see data/item/effects.ts)
+// map to Modifier[]; empty testKey acts as wildcard across all tests. Attack
+// tests carry context.key = "bs"/"ws", so keyed effects only apply to
+// matching tests - mirror of the weapon-qualities contributor.
+//
+// Items contribute only when live (effectsAreLive, bead yb6): talents are
+// always "known"; physical items must be equipped (worn armour, carried gear
+// and weapons).
 //
 // Kinds handled here (bead fjw):
 // - "test-modifier": applies to every test kind (default/legacy shape).
@@ -211,6 +216,7 @@ testContributors.register("effect", (actor) => {
 // registered handlers / the damage pipeline (rules/talent-effects.ts).
 // ---------------------------------------------------------------------------
 interface ItemLike {
+	name?: string;
 	type?: string;
 	system?: {
 		effects?: Array<{
@@ -220,15 +226,25 @@ interface ItemLike {
 			label?: string;
 			condition?: string;
 		}>;
+		equipState?: string;
 	};
 }
-testContributors.register("talent", (actor, context) => {
+
+const SOURCE_LABELS: Record<string, string> = {
+	talent: "SOURCE.FROM_TALENTS",
+	armour: "SOURCE.FROM_ARMOUR",
+	gear: "SOURCE.FROM_GEAR",
+	"melee-weapon": "SOURCE.FROM_WEAPONS",
+	"ranged-weapon": "SOURCE.FROM_WEAPONS",
+};
+
+testContributors.register("item-effects", (actor, context) => {
 	const items = (actor as { items?: Array<ItemLike> }).items;
 	if (!items) return [];
-	const list = items;
 	const mods: Modifier[] = [];
-	for (const item of list) {
-		if (item.type !== "talent") continue;
+	for (const item of items) {
+		const type = item.type ?? "";
+		if (!effectsAreLive(type, item.system?.equipState)) continue;
 		for (const effect of item.system?.effects ?? []) {
 			// Only test-modifier kinds feed the funnel; damage kinds belong to
 			// the damage pipeline (collectTalentDamageEffects) and other kinds
@@ -249,10 +265,22 @@ testContributors.register("talent", (actor, context) => {
 			}
 			const value = Number(effect.value);
 			if (!Number.isFinite(value) || value === 0) continue;
+			const isTalent = type === "talent";
+			const idPrefix = isTalent ? "talent" : `item:${type}`;
+			// The owning item's name must be part of the id: two different
+			// talents/gear can contribute identical (label, testKey, condition)
+			// triples and every one of them is additive (bug report: only the
+			// first showed). Dedupe must only collapse the SAME source's
+			// re-collected rows across the dialog round-trip.
 			mods.push({
-				id: `talent:${kind === "attack-modifier" ? "attack" : key || "any"}:${effect.label ?? ""}:${condition || "any"}`,
-				source: { type: "talent", label: "TALENT.HEADER" },
-				label: effect.label || "Talent",
+				id: `${idPrefix}:${item.name ?? ""}:${kind === "attack-modifier" ? "attack" : key || "any"}:${effect.label ?? ""}:${condition || "any"}`,
+				source: {
+					type: isTalent ? "talent" : "item",
+					label: SOURCE_LABELS[type] ?? "SOURCE.FROM_GEAR",
+				},
+				// Unlabelled effects fall back to the owning item's name (the
+				// talent/gear name), never the raw type slug.
+				label: effect.label || item.name || "",
 				value,
 				...(condition ? { condition } : {}),
 			});

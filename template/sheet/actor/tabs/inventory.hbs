@@ -33,16 +33,16 @@
                 {{#if item.isWeapon}}
                 <a class="equip-toggle {{#if item.equipped}}equipped{{/if}}"
                     data-action="toggleEquip"
-                    data-tooltip="{{localize (concat "EQUIP_STATE." item.equipState)}}"
+                    data-tooltip="{{item.equipStateLabel}}"
                 ><i class="fa-solid fa-circle-check"></i></a>
                 <a class="char-roll weapon-roll {{#unless item.equipped}}unequipped{{/unless}}"
                     data-action="rollWeapon"
-                    data-tooltip="{{#if item.equipped}}{{localize "WEAPON.ATTACK"}}{{else}}{{localize "EQUIP_STATE.STOWED"}}{{/if}}"
+                    data-tooltip="{{#if item.equipped}}{{localize "WEAPON.ATTACK"}}{{else}}{{item.equipStateLabel}}{{/if}}"
                 ><i class="fa-solid fa-dice-d10"></i></a>
                 {{else}}
                 <a class="equip-toggle {{#if item.equipped}}equipped{{/if}}"
                     data-action="toggleEquip"
-                    data-tooltip="{{localize (concat "EQUIP_STATE." item.equipState)}}"
+                    data-tooltip="{{item.equipStateLabel}}"
                 ><i class="fa-solid fa-circle-check"></i></a>
                 {{/if}}
                 <span class="inv-name" data-action="openItem" data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{item.name}}</span>

@@ -34,6 +34,41 @@ describe("mergeModifiers", () => {
 		expect(merged).toHaveLength(2);
 		expect(merged[0].value).toBe(10);
 	});
+
+	// Roll-dialog round-trip (bead bpd follow-up): the dialog echoes funnel
+	// contributors back with their original ids; postTest re-collects with the
+	// dialog result as extras — same id must collapse, not double-count.
+	test("dialog-echoed funnel contributors dedupe, not double-count", () => {
+		const actor = {
+			items: [
+				{
+					type: "talent",
+					system: {
+						effects: [{ testKey: "", value: 5, label: "Sure Hand" }],
+					},
+				},
+			],
+		};
+		const funnelRun = collectTestModifiers(actor, { kind: "skill", key: "fel" });
+		// Dialog returns the echoed contributor rows + a custom row.
+		const dialogResult = [
+			...funnelRun,
+			{
+				id: "custom:0",
+				source: { type: "dialog" as const, label: "d" },
+				label: "Custom",
+				value: 10,
+			},
+		];
+		const postDialog = collectTestModifiers(
+			actor,
+			{ kind: "skill", key: "fel" },
+			dialogResult,
+		);
+		const sureHand = postDialog.filter((m) => m.label === "Sure Hand");
+		expect(sureHand).toHaveLength(1);
+		expect(postDialog.reduce((sum, m) => sum + m.value, 0)).toBe(15);
+	});
 });
 
 describe("breakdown", () => {
@@ -181,23 +216,54 @@ describe("talent contributor", () => {
 			kind: "characteristic",
 			key: "fel",
 		});
-		const t = mods.find((m) => m.id === "talent:any:Sure Hand:any");
+		const t = mods.find((m) => m.id === "talent::any:Sure Hand:any");
 		expect(t?.value).toBe(5);
 		expect(
-			mods.find((m) => m.id === "talent:any:zero ignored:any"),
+			mods.find((m) => m.id === "talent::any:zero ignored:any"),
 		).toBeUndefined();
 	});
 
 	test("keyed effect only applies to matching tests", () => {
 		const bs = collectTestModifiers(talentActor, { kind: "attack", key: "bs" });
-		expect(bs.find((m) => m.id === "talent:bs:Deadeye Shooter:any")?.value).toBe(
+		expect(bs.find((m) => m.id === "talent::bs:Deadeye Shooter:any")?.value).toBe(
 			10,
 		);
 		const ws = collectTestModifiers(talentActor, { kind: "attack", key: "ws" });
 		expect(
-			ws.find((m) => m.id === "talent:bs:Deadeye Shooter:any"),
+			ws.find((m) => m.id === "talent::bs:Deadeye Shooter:any"),
 		).toBeUndefined();
-		expect(ws.find((m) => m.id === "talent:any:Sure Hand:any")?.value).toBe(5);
+		expect(ws.find((m) => m.id === "talent::any:Sure Hand:any")?.value).toBe(5);
+	});
+
+	// Bug report (owner, 2026-09-05): two talents with identical (empty)
+	// labels/testKeys collapsed into one modifier because the id omitted the
+	// owning item's name. Every distinct talent's modifier is additive.
+	test("two talents with the same effect shape are both additive", () => {
+		const twoTalents = {
+			items: [
+				{ name: "Sure Strike", type: "talent", system: { effects: [{ testKey: "", value: 5 }] } },
+				{ name: "Deadly Aim", type: "talent", system: { effects: [{ testKey: "", value: 10 }] } },
+			],
+		};
+		const mods = collectTestModifiers(twoTalents, {
+			kind: "characteristic",
+			key: "ws",
+		});
+		expect(mods.find((m) => m.id === "talent:Sure Strike:any::any")?.value).toBe(5);
+		expect(mods.find((m) => m.id === "talent:Deadly Aim:any::any")?.value).toBe(10);
+		expect(
+			mods
+				.filter((m) => m.id.startsWith("talent:"))
+				.reduce((sum, m) => sum + m.value, 0),
+		).toBe(15);
+	});
+
+	test("the same talent's re-collected row dedupes across the dialog round-trip", () => {
+		const first = collectTestModifiers(talentActor, { kind: "characteristic", key: "fel" });
+		const second = collectTestModifiers(talentActor, { kind: "characteristic", key: "fel" }, first);
+		expect(second.filter((m) => m.id.startsWith("talent")).length).toBe(
+			first.filter((m) => m.id.startsWith("talent")).length,
+		);
 	});
 
 	test("non-talent items are ignored", () => {
@@ -210,6 +276,63 @@ describe("talent contributor", () => {
 			{ kind: "characteristic", key: "ws" },
 		);
 		expect(mods.filter((m) => m.id.startsWith("talent:"))).toHaveLength(0);
+	});
+
+	// Bead yb6: gear-family effects feed the funnel only when the item is
+	// equipped (carried gear/weapons, worn armour). Items without an equip
+	// state (raw data in tests) count as stowed.
+	describe("gear-family item effects (bead yb6)", () => {
+		const item = (type: string, equipState?: string, value = 5) => ({
+			type,
+			system: {
+				...(equipState ? { equipState } : {}),
+				effects: [{ testKey: "", value, label: "Item Effect" }],
+			},
+		});
+		const collect = (items: unknown[]) =>
+			collectTestModifiers(
+				{ items },
+				{ kind: "characteristic", key: "fel" },
+				// Earlier tests register a global "test-only" contributor; the
+				// label filter isolates this describe's item contributions.
+			).filter((m) => m.label === "Item Effect");
+
+		test("carried gear and ready weapons contribute", () => {
+			const mods = collect([
+				item("gear", "carried"),
+				item("melee-weapon", "carried"),
+				item("ranged-weapon", "carried"),
+			]);
+			expect(mods).toHaveLength(3);
+			expect(mods.every((m) => m.id.startsWith("item:"))).toBe(true);
+		});
+
+		test("worn armour contributes, stowed armour does not", () => {
+			expect(collect([item("armour", "worn")])).toHaveLength(1);
+			expect(collect([item("armour", "stowed")])).toHaveLength(0);
+		});
+
+		test("stowed gear and unequipped items are ignored", () => {
+			expect(collect([item("gear", "stowed")])).toHaveLength(0);
+			expect(collect([item("gear")])).toHaveLength(0);
+		});
+
+		test("non-contributing item types are ignored even when carried", () => {
+			expect(collect([item("psychic-power", "carried")])).toHaveLength(0);
+		});
+
+		test("source label names the item type for the breakdown", () => {
+			const [gearMod] = collect([item("gear", "carried")]);
+			expect(gearMod?.source).toEqual({
+				type: "item",
+				label: "SOURCE.FROM_GEAR",
+			});
+			const [weaponMod] = collect([item("ranged-weapon", "carried")]);
+			expect(weaponMod?.source).toEqual({
+				type: "item",
+				label: "SOURCE.FROM_WEAPONS",
+			});
+		});
 	});
 
 	// Guarded effects (bead czx): a condition field gates the effect on a
@@ -284,7 +407,7 @@ describe("talent contributor", () => {
 		});
 		const mod = mods.find((m) => m.label === "Berserk Charge");
 		expect(mod?.value).toBe(20);
-		expect(mod?.id).toBe("talent:attack:Berserk Charge:charging");
+		expect(mod?.id).toBe("talent::attack:Berserk Charge:charging");
 	});
 
 	test("attack-modifier never applies to non-attack tests", () => {

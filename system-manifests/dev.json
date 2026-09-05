@@ -60,6 +60,41 @@
 			"system": "rogue-trader",
 			"path": "packs/criticals",
 			"type": "RollTable"
+		},
+		{
+			"name": "armour",
+			"label": "Rogue Trader Armour",
+			"system": "rogue-trader",
+			"path": "packs/armour",
+			"type": "Item"
+		},
+		{
+			"name": "gear",
+			"label": "Rogue Trader Gear",
+			"system": "rogue-trader",
+			"path": "packs/gear",
+			"type": "Item"
+		},
+		{
+			"name": "drugs",
+			"label": "Rogue Trader Drugs and Consumables",
+			"system": "rogue-trader",
+			"path": "packs/drugs",
+			"type": "Item"
+		},
+		{
+			"name": "tools",
+			"label": "Rogue Trader Tools",
+			"system": "rogue-trader",
+			"path": "packs/tools",
+			"type": "Item"
+		},
+		{
+			"name": "cybernetics",
+			"label": "Rogue Trader Cybernetics",
+			"system": "rogue-trader",
+			"path": "packs/cybernetics",
+			"type": "Item"
 		}
 	],
 	"languages": [

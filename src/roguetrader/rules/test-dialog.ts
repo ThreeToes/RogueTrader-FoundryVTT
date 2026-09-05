@@ -72,11 +72,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	};
 
 	#baseTarget: number;
-	#contributors: Array<{
-		label: string;
-		value: number;
-		sourceLabel: string;
-	}>;
+	#contributors: Modifier[];
 	#custom: modifiersRow[];
 	#attackContext: TestDialogAttackContext | null;
 	// Bead hyv: attack-context selection state (read at roll time).
@@ -90,11 +86,10 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		super({ ...options, window: { title: request.title } });
 		this.#baseTarget = request.baseTarget;
 		this.#attackContext = request.attackContext ?? null;
-		this.#contributors = (request.contributors ?? []).map((m) => ({
-			label: m.label,
-			value: m.value,
-			sourceLabel: m.source.label,
-		}));
+		// Full modifiers kept so ids survive #collectModifiers — postTest's
+		// funnel merge then dedupes these against a fresh collection instead
+		// of double-counting (bead bpd follow-up).
+		this.#contributors = request.contributors ?? [];
 		// Start contributors in the custom list as well so the user can adjust
 		// them before rolling? No: fixed rows are display-only; custom start empty.
 		this.#custom = [];
@@ -131,12 +126,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		const rows = this.element?.querySelectorAll<HTMLElement>(
 			".modifier-row.custom",
 		);
-		const out: Modifier[] = this.#contributors.map((c, i) => ({
-			id: `contributor:${i}`,
-			source: { type: "effect" as const, label: c.sourceLabel },
-			label: c.label,
-			value: c.value,
-		}));
+		const out: Modifier[] = this.#contributors.map((m) => ({ ...m }));
 		if (!rows) return out;
 		rows.forEach((row) => {
 			const label =
@@ -172,7 +162,11 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 			unknown
 		>;
 		context.baseTarget = this.#baseTarget;
-		context.contributors = this.#contributors;
+		context.contributors = this.#contributors.map((m) => ({
+			label: m.label,
+			value: m.value,
+			sourceLabel: m.source.label,
+		}));
 		context.customModifiers = this.#custom;
 		context.attackContext = this.#attackContext;
 		context.previewTarget = Math.min(

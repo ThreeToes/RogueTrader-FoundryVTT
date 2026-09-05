@@ -12,7 +12,6 @@
         </div>
         {{/if}}
         <div class="modifier-row fixed">
-            <span class="modifier-label">{{localize "ROLL.AIM"}}</span>
             <select class="attack-select" data-aim>
                 <option value="none">{{localize "ROLL.AIM_NONE"}}</option>
                 <option value="half">{{localize "ROLL.AIM_HALF"}} (+10)</option>
@@ -37,6 +36,7 @@
             {{#each contributors as |m|}}
             <div class="modifier-row fixed" data-tooltip="{{m.sourceLabel}}">
                 <span class="modifier-label">{{m.label}}</span>
+                <span class="modifier-source">{{localize m.sourceLabel}}</span>
                 <span class="modifier-value {{#if (gt m.value 0)}}pos{{else}}neg{{/if}}">{{m.value}}</span>
             </div>
             {{/each}}

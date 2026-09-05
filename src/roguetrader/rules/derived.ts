@@ -8,18 +8,13 @@
  */
 
 import { talentEffectHandlers } from "./talent-effects";
+import { effectsAreLive, type EffectData } from "../data/item/effects";
 
-/** Minimal shape of a test-modifier talent effect (mirror of talent item data). */
-export interface TalentEffectData {
-	kind?: string;
-	testKey?: string;
-	value?: number;
-	label?: string;
-}
-
-export interface OwnedTalentLike {
+/** Minimal shape of an owned item whose effects feed derived values. */
+export interface OwnedItemLike {
+	type?: string;
 	name?: string;
-	system?: { effects?: TalentEffectData[] };
+	system?: { effects?: EffectData[]; equipState?: string };
 }
 
 export interface CharacterSystemLike {
@@ -28,20 +23,22 @@ export interface CharacterSystemLike {
 
 /**
  * Derived wounds maximum. Remembered RT core: base (SB + TB) doubled, plus +1
- * wound per level of Sound Constitution (consumed via the wounds-max talent
- * effect handler, see rules/talent-effects.ts). (VERIFY against the core
- * book - left conservative until confirmed; null fields are not guessed.)
+ * wound per level of Sound Constitution (consumed via the wounds-max effect
+ * handler, see rules/talent-effects.ts). Owned items contribute only when
+ * live (equipped), so a stowed piece of gear with a wounds-max effect does
+ * not inflate the maximum.
  */
 export function woundsMax(
 	character: CharacterSystemLike,
-	talents: OwnedTalentLike[] = [],
+	items: OwnedItemLike[] = [],
 ): number {
 	const tb = Math.floor((character.characteristics.t?.value ?? 0) / 10);
 	const sb = Math.floor((character.characteristics.s?.value ?? 0) / 10);
-	const levels = talents.reduce((total, talent) => {
-		for (const effect of talent.system?.effects ?? []) {
+	const levels = items.reduce((total, item) => {
+		if (!effectsAreLive(item.type, item.system?.equipState)) return total;
+		for (const effect of item.system?.effects ?? []) {
 			if (effect.kind !== "wounds-max") continue;
-			const results = talentEffectHandlers.run({}, talent, effect);
+			const results = talentEffectHandlers.run({}, item, effect);
 			for (const result of results) {
 				if (typeof result === "number") total += result;
 			}

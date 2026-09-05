@@ -36,6 +36,22 @@ export class Character extends foundry.abstract.TypeDataModel<
 	declare fate: { value: number; max: number };
 	declare insanity: number;
 	declare corruption: number;
+	declare threatLevel: string;
+	declare careerKey: string;
+	declare rank: number;
+	declare xp: { spent: number; total: number };
+	declare description: string;
+	declare advances: Array<{
+		type: "skill" | "talent" | "characteristic";
+		key: string;
+		name: string;
+		characteristic?: string;
+		cost: number;
+		rank: number;
+		tier?: string;
+		source?: string;
+		elite?: boolean;
+	}>;
 
 	static override defineSchema() {
 		const characteristic = () =>
@@ -107,6 +123,39 @@ export class Character extends foundry.abstract.TypeDataModel<
 				integer: true,
 				initial: 0,
 			}),
+			/**
+			 * XP purchase ledger (bead g7k): every advance bought, the audit
+			 * trail behind xp.spent (total = 4,500 creation baseline + ledger
+			 * sum, see rules/advancement). GM refunds/undo remove entries.
+			 * rank 0 marks creation-baseline/elite advances.
+			 */
+			advances: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.SchemaField({
+					type: new foundry.data.fields.StringField({
+						choices: { skill: "ADVANCE.TYPE_SKILL", talent: "ADVANCE.TYPE_TALENT", characteristic: "ADVANCE.TYPE_CHARACTERISTIC" },
+						initial: "skill",
+						required: true,
+						nullable: false,
+					}),
+					key: new foundry.data.fields.StringField({ initial: "" }),
+					name: new foundry.data.fields.StringField({ initial: "" }),
+					characteristic: new foundry.data.fields.StringField({ initial: "" }),
+					cost: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					rank: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 1,
+					}),
+					tier: new foundry.data.fields.StringField({ initial: "" }),
+					source: new foundry.data.fields.StringField({ initial: "" }),
+					elite: new foundry.data.fields.BooleanField({ initial: false }),
+				}),
+				{ initial: () => [] },
+			),
 			/** NPC threat level (e.g. "Trivial", or a descriptive rating). */
 			threatLevel: new foundry.data.fields.StringField({
 				initial: "",

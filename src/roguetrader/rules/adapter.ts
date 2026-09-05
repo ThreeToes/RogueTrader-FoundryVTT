@@ -11,7 +11,7 @@ import {
 	type TestOutcome,
 } from "../../rules-engine/src/index";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
-import { collectTestModifiers, type TestKind } from "./funnel";
+import { collectTestModifiers, mergeModifiers, type TestKind } from "./funnel";
 import { bodyLocationLabelKey } from "./labels";
 import { collectTalentDamageEffects } from "./talent-effects";
 import { TestDialog } from "./test-dialog";
@@ -26,6 +26,27 @@ export interface RollTestOptions {
 	modifiers?: Modifier[];
 	/** Bypass the modify dialog (fast-forward). */
 	skipDialog?: boolean;
+}
+
+/**
+ * Dialog contributors = caller modifiers + a funnel collection for the test
+ * context, so talent/gear/item effects are visible (and editable-previewed)
+ * in the dialog, not only on the chat card. Attack-context-dependent
+ * contributors (fire-mode, condition flags) are chosen inside the dialog and
+ * stay post-dialog only - the card shows the full breakdown. Ids survive the
+ * dialog round-trip, so postTest's funnel merge dedupes instead of doubling.
+ */
+function dialogContributors(
+	actor: Actor,
+	kind: TestKind,
+	key: string,
+	modifiers: Modifier[],
+	weapon: { type: string; special?: string[] } | null = null,
+): Modifier[] {
+	return mergeModifiers(
+		modifiers,
+		collectTestModifiers(actor, { kind, key, weapon }),
+	);
 }
 
 /** Roll a characteristic test: dialog -> funnel -> kernel -> chat card. */
@@ -50,7 +71,7 @@ export async function rollTest(
 		const result = await TestDialog.show({
 			title,
 			baseTarget: characteristic.value,
-			contributors: modifiers,
+			contributors: dialogContributors(actor, "characteristic", key, modifiers),
 		});
 		if (result === null) return;
 		modifiers = result.modifiers;
@@ -167,7 +188,7 @@ export async function rollSkillUntrained(
 		const result = await TestDialog.show({
 			title,
 			baseTarget: characteristic.value,
-			contributors: modifiers,
+			contributors: dialogContributors(actor, kind, characteristicKey, modifiers),
 		});
 		if (result === null) return;
 		modifiers = result.modifiers;
@@ -219,7 +240,7 @@ export async function rollSkill(
 		const result = await TestDialog.show({
 			title,
 			baseTarget,
-			contributors: modifiers,
+			contributors: dialogContributors(actor, "skill", skill.characteristic, modifiers),
 		});
 		if (result === null) return;
 		modifiers = result.modifiers;
@@ -277,7 +298,10 @@ export async function rollSkill(
 		const result = await TestDialog.show({
 			title: `${actor.name} — ${item.name}`,
 			baseTarget: characteristic.value,
-			contributors: modifiers,
+			contributors: dialogContributors(actor, "attack", key, modifiers, {
+				type: String(type),
+				special,
+			}),
 			// Bead hyv: attack-context selectors (fire mode, aim, charge).
 			attackContext: {
 				ranged: type === "ranged-weapon",
@@ -511,7 +535,7 @@ async function resolveEvasion(
 		const result = await TestDialog.show({
 			title,
 			baseTarget,
-			contributors: modifiers,
+			contributors: dialogContributors(defender, "skill", skill.characteristic, modifiers),
 		});
 		if (result === null) return;
 		modifiers = result.modifiers;
@@ -538,7 +562,12 @@ async function resolveEvasion(
 		title,
 		baseTarget:
 			system.characteristics[skillName === "Parry" ? "ws" : "ag"]?.value ?? 0,
-		contributors: modifiers,
+		contributors: dialogContributors(
+			defender,
+			"skill",
+			skillName === "Parry" ? "ws" : "ag",
+			modifiers,
+		),
 	});
 	if (untrainedResult === null) return;
 	await postTest(

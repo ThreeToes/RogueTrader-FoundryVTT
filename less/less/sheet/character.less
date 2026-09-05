@@ -194,6 +194,335 @@
     margin-top: 6px;
 }
 
+/* Character creator (Origin Path wizard, bead ay0) */
+
+.rogue-trader.dialog.character-creator {
+	min-width: 560px;
+}
+
+.rogue-trader .character-creator {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.rogue-trader .character-creator .creator-steps {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: #7a6a53;
+}
+
+.rogue-trader .character-creator .creator-steps .step.active {
+	color: var(--color-text-light-highlight, #d9c38a);
+	font-weight: bold;
+}
+
+.rogue-trader .character-creator .method-chips {
+	display: flex;
+	gap: 6px;
+	margin: 6px 0;
+}
+
+.rogue-trader .character-creator .chip {
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 4px;
+	padding: 2px 10px;
+	cursor: pointer;
+}
+
+.rogue-trader .character-creator .chip.active {
+	background: rgba(122, 106, 83, 0.4);
+	color: var(--color-text-light-highlight, #d9c38a);
+}
+
+.rogue-trader .character-creator .method-hint {
+	font-size: 0.85em;
+	opacity: 0.8;
+}
+
+.rogue-trader .character-creator .char-rolls {
+	list-style: none;
+	margin: 4px 0;
+	padding: 0;
+}
+
+.rogue-trader .character-creator .char-roll-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 1px 0;
+}
+
+.rogue-trader .character-creator .char-roll-row .char-label {
+	flex: 1;
+}
+
+.rogue-trader .character-creator .char-value {
+	width: 3em;
+	text-align: right;
+	font-weight: bold;
+}
+
+.rogue-trader .character-creator .char-value.unset {
+	opacity: 0.4;
+}
+
+.rogue-trader .character-creator .roll-btn,
+.rogue-trader .character-creator .reroll-btn {
+	width: 1.5em;
+	text-align: center;
+}
+
+.rogue-trader .character-creator .roll-btn.dim {
+	opacity: 0.4;
+}
+
+.rogue-trader .character-creator .alloc-controls {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.rogue-trader .character-creator .alloc-btn {
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 3px;
+	width: 1.4em;
+	text-align: center;
+	cursor: pointer;
+}
+
+.rogue-trader .character-creator .alloc {
+	width: 2em;
+	text-align: center;
+}
+
+.rogue-trader .character-creator .points-remaining.ok {
+	color: #7fbb6f;
+}
+
+.rogue-trader .character-creator .points-remaining.bad {
+	color: #d66;
+}
+
+.rogue-trader .character-creator .origin-row {
+	margin-bottom: 8px;
+}
+
+.rogue-trader .character-creator .origin-row h2 {
+	margin: 4px 0 2px;
+	font-size: 0.9em;
+	text-transform: uppercase;
+	color: #7a6a53;
+}
+
+.rogue-trader .character-creator .origin-options {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.rogue-trader .character-creator .origin-chip {
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 4px;
+	padding: 2px 8px;
+	cursor: pointer;
+}
+
+.rogue-trader .character-creator .origin-chip.selected {
+	background: rgba(122, 106, 83, 0.4);
+	color: var(--color-text-light-highlight, #d9c38a);
+}
+
+.rogue-trader .character-creator .origin-chip.disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.rogue-trader .character-creator .origin-detail {
+	border-left: 2px solid rgba(122, 106, 83, 0.5);
+	margin: 4px 0 0 8px;
+	padding: 2px 0 2px 10px;
+}
+
+.rogue-trader .character-creator .origin-effect {
+	font-size: 0.85em;
+	margin: 4px 0;
+}
+
+.rogue-trader .character-creator .pick-chips {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px;
+	margin: 4px 0;
+}
+
+.rogue-trader .character-creator .pick-label {
+	font-size: 0.85em;
+	color: #7a6a53;
+}
+
+.rogue-trader .character-creator .pick-chip {
+	border: 1px solid rgba(122, 106, 83, 0.4);
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.85em;
+	cursor: pointer;
+}
+
+.rogue-trader .character-creator .pick-chip.selected {
+	background: rgba(122, 106, 83, 0.4);
+	color: var(--color-text-light-highlight, #d9c38a);
+}
+
+.rogue-trader .character-creator .mini-list {
+	font-size: 0.85em;
+	margin: 2px 0;
+}
+
+.rogue-trader .character-creator .origin-notes {
+	font-size: 0.85em;
+	opacity: 0.85;
+	margin: 2px 0;
+	list-style: circle;
+}
+
+.rogue-trader .character-creator .review-chars {
+	list-style: none;
+	margin: 4px 0;
+	padding: 0;
+}
+
+.rogue-trader .character-creator .review-chars li {
+	display: flex;
+	gap: 8px;
+	align-items: baseline;
+}
+
+.rogue-trader .character-creator .review-chars .char-label {
+	flex: 1;
+}
+
+.rogue-trader .character-creator .char-delta {
+	font-size: 0.85em;
+	opacity: 0.8;
+}
+
+.rogue-trader .character-creator .review-derived {
+	list-style: none;
+	margin: 4px 0;
+	padding: 0;
+}
+
+.rogue-trader .character-creator .creator-nav {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.rogue-trader .character-creator .creator-name {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 6px;
+}
+
+.rogue-trader .character-creator .creator-name input {
+	flex: 1;
+}
+
+.rogue-trader .character-creator .fa-star.suggested {
+	color: #d9c38a;
+	margin-right: 2px;
+}
+
+.rogue-trader .creator-summary {
+	padding: 6px;
+}
+
+/* Advancement dialog (bead clng) */
+
+.rogue-trader .advancement {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.rogue-trader .advancement .advancement-header {
+	display: flex;
+	gap: 14px;
+	font-size: 0.95em;
+}
+
+.rogue-trader .advancement .advancement-progress {
+	margin-left: auto;
+	color: #7a6a53;
+}
+
+.rogue-trader .advancement .rank-up-note {
+	color: #d9c38a;
+	font-size: 0.9em;
+}
+
+.rogue-trader .advancement h2 {
+	margin: 6px 0 2px;
+	font-size: 0.95em;
+	text-transform: uppercase;
+	color: #7a6a53;
+}
+
+.rogue-trader .advancement .rank-group h3 {
+	margin: 6px 0 2px;
+	font-size: 0.9em;
+	color: #7a6a53;
+}
+
+.rogue-trader .advancement .advancement-rows {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.rogue-trader .advancement .advancement-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 2px 0;
+}
+
+.rogue-trader .advancement .advancement-row .adv-name {
+	flex: 1;
+}
+
+.rogue-trader .advancement .advancement-row .adv-detail {
+	font-size: 0.85em;
+	opacity: 0.85;
+	white-space: nowrap;
+}
+
+.rogue-trader .advancement .adv-buy {
+	flex: none;
+}
+
+.rogue-trader .advancement .adv-refund {
+	flex: none;
+	background: none;
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 3px;
+}
+
+.rogue-trader .advancement .prereq {
+	opacity: 0.7;
+}
+
+.rogue-trader .header .advancement-open {
+	flex: none;
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 3px;
+	padding: 0 6px;
+}
+
 /* Test dialog (unified roll dialog) */
 
 .rogue-trader.dialog.test-dialog-app {
@@ -227,6 +556,12 @@
 .rogue-trader .test-dialog .modifier-label {
     flex: 1;
     min-width: 0;
+}
+
+.rogue-trader .test-dialog .modifier-source {
+    font-size: 0.85em;
+    opacity: 0.7;
+    white-space: nowrap;
 }
 
 .rogue-trader .test-dialog .modifier-value {

@@ -12,14 +12,6 @@
                 <p class="static-value">{{categoryLabel}}</p>
                 {{/if}}
             </div>
-            <div class="stat">
-                <label>{{localize "GEAR.SHORT_DESCRIPTION"}}</label>
-                {{#if editable}}
-                <input name="system.shortDescription" type="text"
-                    value="{{source.system.shortDescription}}" />
-                {{else}}
-                <p class="static-value">{{source.system.shortDescription}}</p>
-                {{/if}}
             </div>
         </div>
         <div class="stats-row">
@@ -45,21 +37,25 @@
                 <label>{{localize "TALENT.EFFECTS"}}</label>
                 {{#if editable}}
                 <p class="untrained-hint">{{localize "TALENT.EFFECTS_HINT"}}</p>
+                <div class="effect-add-row">
+                    <a data-action="addEffect"><i class="fas fa-plus"></i> {{localize "EFFECTS.ADD"}}</a>
+                </div>
                 {{#each source.system.effects as |effect i|}}
                 <div class="stats-row">
                     <select name="system.effects.{{i}}.kind"
                         data-tooltip="{{localize "TALENT.KIND_HINT"}}">
-                        {{#each ../kindChoices as |choice|}}
-                        <option value="{{choice}}" {{#if (eq effect.kind choice)}}selected{{/if}}>{{choice}}</option>
-                        {{/each}}
+                        {{selectOptions ../kindChoices selected=effect.kind}}
                     </select>
-                    <input name="system.effects.{{i}}.testKey" type="text" value="{{effect.testKey}}"
-                        placeholder="{{localize "TALENT.TEST_KEY"}}"
-                        data-tooltip="{{localize "TALENT.TEST_KEY_HINT"}}" />
+                    <select name="system.effects.{{i}}.testKey"
+                        data-tooltip="{{localize "TALENT.TEST_KEY_HINT"}}">
+                        {{selectOptions ../testKeyChoices selected=effect.testKey}}
+                    </select>
                     <input name="system.effects.{{i}}.value" type="number" value="{{effect.value}}"
                         data-tooltip="{{localize "TALENT.VALUE_HINT"}}" />
                     <input name="system.effects.{{i}}.label" type="text" value="{{effect.label}}"
                         data-tooltip="{{localize "ROLL.LABEL"}}" />
+                    <a class="effect-remove" data-action="removeEffect" data-index="{{i}}"
+                        title="{{localize "EFFECTS.REMOVE"}}"><i class="fas fa-times"></i></a>
                 </div>
                 {{/each}}
                 {{else}}

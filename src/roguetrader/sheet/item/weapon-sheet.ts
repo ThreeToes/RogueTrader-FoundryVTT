@@ -5,6 +5,7 @@ import {
 	RANGED_CLASSES,
 	WeaponClass,
 } from "../../data/item/weapon-class";
+import { effectActions, effectEditorChoices } from "./effect-actions";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -15,6 +16,7 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		position: { width: 520, height: "auto" },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
+		actions: { ...effectActions },
 	};
 
 	static PARTS = {
@@ -79,6 +81,9 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			burst: system.rateOfFire?.burst ?? 0,
 			fullAuto: system.rateOfFire?.fullAuto ?? 0,
 		};
+
+		// Effect editor choices (bead bpd): localized kind labels + test keys.
+		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
 
 		// Description tab: enriched HTML from the system description
 		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).

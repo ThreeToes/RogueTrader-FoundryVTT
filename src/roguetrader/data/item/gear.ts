@@ -1,6 +1,7 @@
 import { equipStates } from "../../registry";
 import { Availability } from "./availability";
 import { Craftsmanship } from "./craftsmanship";
+import { effectsField } from "./effects";
 
 export class Gear extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,
@@ -42,6 +43,7 @@ export class Gear extends foundry.abstract.TypeDataModel<
 			}),
 			shortDescription: new foundry.data.fields.StringField(),
 			description: new foundry.data.fields.HTMLField(),
+			effects: effectsField(),
 		};
 	}
 }

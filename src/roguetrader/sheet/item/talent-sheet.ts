@@ -1,5 +1,5 @@
 import { talentCategories } from "../../registry";
-import { talentEffectHandlers } from "../../rules/talent-effects";
+import { effectActions, effectEditorChoices } from "./effect-actions";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -15,6 +15,7 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		position: { width: 500, height: "auto" },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
+		actions: { ...effectActions },
 	};
 
 	static PARTS = {
@@ -36,11 +37,8 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 				this.document.system.category
 			] as string,
 		);
-		// Effect-kind choices: test-modifier (funnel) + any registered handler kinds.
-		context.kindChoices = [
-			"test-modifier",
-			...talentEffectHandlers.kinds().filter((k) => k !== "test-modifier"),
-		];
+		// Effect editor choices (bead bpd): localized kind labels + test keys.
+		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
 		context.descriptionHTML =
 			await foundry.applications.ux.TextEditor.enrichHTML(
 				this.document.system.description,

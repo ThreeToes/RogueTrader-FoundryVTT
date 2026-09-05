@@ -1,0 +1,68 @@
+<div class="advancement">
+    <div class="advancement-header">
+        <span>{{localize "ADVANCE.POOL"}}: <strong>{{pool}}</strong> {{localize "ADVANCE.XP"}}</span>
+        <span>{{localize "CAREER.RANK"}}: <strong>{{rank}}</strong></span>
+        <span class="advancement-progress">
+            {{#if progress.nextRank}}
+            {{localize "ADVANCE.NEXT_RANK"}} {{progress.nextRank}}: {{progress.remaining}} {{localize "ADVANCE.XP_REMAINING"}}
+            {{else}}
+            {{localize "ADVANCE.MAX_RANK"}}
+            {{/if}}
+        </span>
+    </div>
+    {{#if rankUp}}
+    <p class="rank-up-note">{{localize "ADVANCE.RANK_UP_NOTE"}}</p>
+    {{/if}}
+    {{#unless hasCareer}}
+    <p class="untrained-hint">{{localize "ADVANCE.NO_CAREER"}}</p>
+    {{/unless}}
+
+    <h2>{{localize "ADVANCE.CHARACTERISTIC_SCHEME"}}</h2>
+    <ol class="advancement-rows">
+        {{#each characteristics as |c|}}
+        <li class="advancement-row">
+            <span class="adv-name">{{localize c.labelKey}}</span>
+            <span class="adv-detail">
+                {{#if c.next}}
+                +5 {{localize (concat "ADVANCE.TIER_" c.next.tier)}} — {{c.next.cost}} {{localize "ADVANCE.XP"}}
+                <em>({{c.purchased}} {{localize "ADVANCE.PURCHASED"}})</em>
+                {{else}}
+                {{localize "ADVANCE.EXHAUSTED"}}
+                {{/if}}
+            </span>
+            {{#if c.next}}
+            <button type="button" class="adv-buy" data-action="buyCharacteristic" data-key="{{c.key}}"
+                {{#unless ../canBuy}}disabled{{/unless}}>{{localize "ADVANCE.BUY"}}</button>
+            {{/if}}
+        </li>
+        {{/each}}
+    </ol>
+
+    <h2>{{localize "ADVANCE.RANK_TABLES"}}</h2>
+    {{#each rankGroups as |group|}}
+    <div class="rank-group">
+        <h3>{{localize "CAREER.RANK"}} {{group.rank}} <em>({{localize "ADVANCE.XP_LEVEL"}} {{group.xpLevel}}, {{localize "ADVANCE.SPENT"}} {{group.spentOnRank}})</em></h3>
+        <ol class="advancement-rows">
+            {{#each group.rows as |row|}}
+            <li class="advancement-row">
+                <span class="adv-name">{{row.name}}{{#if row.prereqText}} <em class="prereq">[{{row.prereqText}}]</em>{{/if}}</span>
+                <span class="adv-detail">{{row.cost}} {{localize "ADVANCE.XP"}}
+                    {{#if (gt row.multiplier 1)}}<em>({{row.purchased}}/{{row.multiplier}})</em>{{/if}}
+                    {{#if row.purchased}}<strong>{{localize "ADVANCE.OWNED"}}</strong>{{/if}}
+                </span>
+                <button type="button" class="adv-buy" data-action="buy" data-key="{{row.key}}" data-name="{{row.name}}"
+                    data-type="{{row.type}}" data-cost="{{row.cost}}" data-multiplier="{{row.multiplier}}"
+                    data-rank="{{row.rank}}" data-prerequisites="{{row.prereqList}}"
+                    {{#unless (and ../canBuy row.remaining)}}disabled{{/unless}}>
+                    {{#if row.purchased}}{{localize "ADVANCE.BUY_AGAIN"}}{{else}}{{localize "ADVANCE.BUY"}}{{/if}}
+                </button>
+                {{#if ../isGM}}
+                <button type="button" class="adv-refund" data-action="refund" data-index="{{row.ledgerIndex}}"
+                    data-tooltip="{{localize "ADVANCE.REFUND"}}"><i class="fa-solid fa-rotate-left"></i></button>
+                {{/if}}
+            </li>
+            {{/each}}
+        </ol>
+    </div>
+    {{/each}}
+</div>

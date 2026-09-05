@@ -1,12 +1,15 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
+import { effectActions, effectEditorChoices } from "./effect-actions";
+
 export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "gear"],
 		position: { width: 500, height: "auto" },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
+		actions: { ...effectActions },
 	};
 
 	static PARTS = {
@@ -39,6 +42,9 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 		// Context.tabs is a flat record keyed by tab id: { data: {...}, notes: {...} }.
 		context.tabs = this._prepareTabs("primary");
+
+		// Effect editor choices (bead bpd): localized kind labels + test keys.
+		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
 
 		context.descriptionHTML =
 			await foundry.applications.ux.TextEditor.enrichHTML(

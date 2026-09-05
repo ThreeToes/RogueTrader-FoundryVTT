@@ -1,13 +1,14 @@
 import { talentCategories } from "../../registry";
+import { effectsField, type EffectData } from "./effects";
 
 /**
  * Talents as Items (content-as-data, mirroring Skill): actors own `talent`
  * Items; the catalog lives in registries (CONFIG.ROGUE_TRADER.talents /
  * talentCategories) so modules extend content at init.
  *
- * Mechanical effects are DATA, not logic: a flat list of test-modifier
- * contributions {@link testModifiers} that the rules layer's funnel
- * contributor (rules/funnel.ts type "talent") reads and converts to
+ * Mechanical effects are DATA, not logic: a flat list of effect contributions
+ * (shared shape, see data/item/effects.ts) that the rules layer's funnel
+ * contributor (rules/funnel.ts type "item-effects") reads and converts to
  * Modifier[] for every applicable test. Non-modifier effects (extra wounds,
  * rank grants, ...) are deliberately not schema - model them later as
  * registered contribution types as they are needed.
@@ -24,14 +25,7 @@ export class Talent extends foundry.abstract.TypeDataModel<
 	declare shortDescription: string;
 	/** Long prose description (rulebook talent descriptions, p93-99). */
 	declare description: string;
-	declare effects: Array<{
-		kind: string;
-		testKey: string | null;
-		value: number;
-		label: string;
-		/** Guard: only applies when the matching context flag is set. */
-		condition: string;
-	}>;
+	declare effects: EffectData[];
 
 	static get categoryChoices(): Record<string, string> {
 		return talentCategories.choices;
@@ -66,29 +60,7 @@ export class Talent extends foundry.abstract.TypeDataModel<
 			prereqTalent: new foundry.data.fields.StringField({
 				initial: "",
 			}),
-			effects: new foundry.data.fields.ArrayField(
-				new foundry.data.fields.SchemaField({
-					kind: new foundry.data.fields.StringField({
-						initial: "test-modifier",
-						required: true,
-						nullable: false,
-					}),
-					testKey: new foundry.data.fields.StringField({
-						initial: "",
-					}),
-					value: new foundry.data.fields.NumberField({
-						integer: true,
-						initial: 0,
-					}),
-					label: new foundry.data.fields.StringField({
-						initial: "",
-					}),
-					condition: new foundry.data.fields.StringField({
-						initial: "",
-					}),
-				}),
-				{ initial: () => [] },
-			),
+			effects: effectsField(),
 			/** Short free-text description shown in pickers. */
 			shortDescription: new foundry.data.fields.StringField({
 				initial: "",

@@ -41,5 +41,54 @@
                 {{/if}}
             </div>
         </div>
+        {{#if editable}}
+        <div class="stats-row">
+            <div class="stat item-effects full-width">
+                <label>{{localize "EFFECTS.LIST"}}</label>
+                <p class="untrained-hint">{{localize "EFFECTS.HINT"}}</p>
+                <div class="effect-add-row">
+                    <a data-action="addEffect"><i class="fas fa-plus"></i> {{localize "EFFECTS.ADD"}}</a>
+                </div>
+        {{#each source.system.effects as |effect i|}}
+        <div class="stats-row">
+            <select name="system.effects.{{i}}.kind"
+                data-tooltip="{{localize "EFFECTS.KIND_HINT"}}">
+                {{selectOptions ../kindChoices selected=effect.kind}}
+            </select>
+            <select name="system.effects.{{i}}.testKey"
+                data-tooltip="{{localize "EFFECTS.TEST_KEY_HINT"}}">
+                {{selectOptions ../testKeyChoices selected=effect.testKey}}
+            </select>
+            <input name="system.effects.{{i}}.value" type="number" value="{{effect.value}}"
+                data-tooltip="{{localize "EFFECTS.VALUE_HINT"}}" />
+            <input name="system.effects.{{i}}.label" type="text" value="{{effect.label}}"
+                data-tooltip="{{localize "ROLL.LABEL"}}" />
+            <a class="effect-remove" data-action="removeEffect" data-index="{{i}}"
+                title="{{localize "EFFECTS.REMOVE"}}"><i class="fas fa-times"></i></a>
+        </div>
+        {{/each}}
+            </div>
+        </div>
+        {{else}}
+        {{#if source.system.effects.length}}
+        <div class="stats-row">
+            <div class="stat item-effects full-width">
+                <label>{{localize "EFFECTS.LIST"}}</label>
+                <ul class="static-effects">
+                    {{#each source.system.effects as |effect|}}
+                    <li>{{effect.label}} ({{effect.kind}}{{#if effect.testKey}}: {{effect.testKey}}{{/if}}) {{#if (gt effect.value 0)}}+{{/if}}{{effect.value}}</li>
+                    {{/each}}
+                </ul>
+            </div>
+        </div>
+        {{else}}
+        <div class="stats-row">
+            <div class="stat item-effects full-width">
+                <label>{{localize "EFFECTS.LIST"}}</label>
+                <p class="untrained-hint">{{localize "EFFECTS.NONE"}}</p>
+            </div>
+        </div>
+        {{/if}}
+        {{/if}}
     </div>
 </section>

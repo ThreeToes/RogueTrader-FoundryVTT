@@ -1,5 +1,7 @@
 import { Character } from "../../data/actor/character";
-import { careers } from "../../registry";
+import type { AdvanceLedgerEntry } from "../../rules/advancement";
+import { derivedRank, totalSpent } from "../../rules/advancement";
+import { careers, equipStates } from "../../registry";
 import {
 	rollSkill,
 	rollSkillUntrained,
@@ -11,6 +13,7 @@ import { defaultSkillItems } from "../../rules/default-skills";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { deriveCapacity, resolveEncumbrance } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
+import { AdvancementDialog } from "./advancement-dialog";
 import { SkillPicker } from "./skill-picker";
 import { TalentPicker } from "./talent-picker";
 
@@ -52,6 +55,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			rollDamage: CharacterSheet.#onRollDamage,
 			openTalentPicker: CharacterSheet.#onOpenTalentPicker,
 			toggleEquip: CharacterSheet.#onToggleEquip,
+			openAdvancement: CharacterSheet.#onOpenAdvancement,
 		},
 	};
 
@@ -107,6 +111,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		actor: foundry.documents.Actor;
 	}): Promise<void> {
 		await new TalentPicker({ actor: this.actor }).render({ force: true });
+	}
+
+	/** Open the Spend-XP advancement dialog (bead ayw/clng). */
+	static async #onOpenAdvancement(this: {
+		actor: foundry.documents.Actor;
+	}): Promise<void> {
+		await new AdvancementDialog({ actor: this.actor }).render({ force: true });
 	}
 
 	/**
@@ -349,6 +360,38 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			? (careers.get(system.careerKey) ?? system.careerKey)
 			: "";
 
+		// Advancement (bead ayw): derived rank from the career's xpLevel
+		// thresholds + the ledger, shown as a tooltip hint next to the
+		// stored rank; the Advancement dialog is the purchase path.
+		context.rankDerived = false;
+		context.rankTooltip = "";
+		if (system.careerKey) {
+			const pack = game.packs?.get("rogue-trader.careers");
+			if (pack) {
+				const docs = (await pack.getDocuments()) as unknown as Array<{
+					system: {
+						key: string;
+						ranks?: Array<{ rank: number; xpLevel: number }>;
+					};
+				}>;
+				const careerDoc = docs.find((d) => d.system.key === system.careerKey);
+				const thresholds = (careerDoc?.system.ranks ?? []).map((r) => ({
+					rank: r.rank,
+					xpLevel: r.xpLevel,
+					}));
+				if (thresholds.length > 0) {
+					const derived = derivedRank(
+						thresholds,
+						totalSpent((system.advances ?? []) as AdvanceLedgerEntry[]),
+					);
+					context.rankDerived = true;
+					context.rankTooltip = derived
+						? game.i18n!.format("ADVANCE.RANK_HINT", { rank: String(derived) })
+						: "";
+				}
+			}
+		}
+
 		context.characteristics = Object.entries(system.characteristics).map(
 			([key, data]): CharacteristicView => {
 				const bonus = system.characteristicBonus(key);
@@ -440,12 +483,21 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 					const equipState = (item.system as unknown as { equipState?: string })
 						.equipState;
 					const type = item.type as string;
+					// Localized label computed here (not via a template concat):
+					// module-registered states resolve through the registry when
+					// present, core states via the lang keys.
+					const stateKey = equipState ?? "stowed";
+					const registryLabel = equipStates.get(stateKey);
+					const label = registryLabel
+						? game.i18n!.localize(registryLabel)
+						: stateKey;
 					return {
 						id: item.id,
 						name: item.name,
 						uuid: item.uuid,
 						weight: (item.system as unknown as { weight?: number }).weight ?? 0,
-						equipState: equipState ?? "stowed",
+						equipState: stateKey,
+						equipStateLabel: label,
 						equipped: equipState === "carried" || equipState === "worn",
 						// Weapons get the inline attack/damage roll button.
 						isWeapon: type === "melee-weapon" || type === "ranged-weapon",
@@ -459,6 +511,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				uuid: string;
 				weight: number;
 				equipState: string;
+				equipStateLabel: string;
 				equipped: boolean;
 			}>;
 			addLabel?: string;
@@ -472,11 +525,14 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			{ label: "GEAR.HEADER", items: byType(["gear"]) },
 		];
 
-		// Armour: highest AP per body location across owned armour items.
-		// TODO(equip-state): once item-side equipState lands (bead n7m), filter to
-		// equipped armour only. Stacking rules intentionally not modelled yet.
+		// Armour: highest AP per body location across WORN armour items (bead
+		// yb6 equip-state model: stowed armour contributes nothing, matching
+		// the adapter's wornArmour filter in the damage pipeline).
 		const armourItems = this.actor.items.filter(
-			(item) => item.type === "armour",
+			(item) =>
+				(item.type as string) === "armour" &&
+				(item.system as unknown as { equipState?: string }).equipState ===
+					"worn",
 		);
 		const LOCATIONS = [
 			"head",
@@ -557,9 +613,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			initiative: system.initiativeBonus(),
 			woundsMax: woundsMax(
 				system,
-				this.actor.items
-					.filter((item) => item.type === "talent")
-					.map((item) => item.system as never),
+				this.actor.items.map((item) => ({
+					type: item.type,
+					system: item.system as never,
+				})),
 			),
 			fatigueMax: fatigueThreshold(system),
 		};

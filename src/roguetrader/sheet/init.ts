@@ -17,6 +17,7 @@ import { defaultSkillItems } from "../rules/default-skills";
 import { testContributors } from "../rules/funnel";
 import { talentEffectHandlers } from "../rules/talent-effects";
 import { CharacterSheet } from "./actor/character-sheet";
+import { CharacterCreator } from "./actor/character-creator";
 import { VehicleSheet } from "./actor/vehicle-sheet";
 import { registerConfigHelper } from "./handlebars";
 import { ArmourSheet } from "./item/armour-sheet";
@@ -356,6 +357,28 @@ export function sheetInit() {
 			VehicleSheet as unknown as AnySheetCtor,
 			["vehicle"],
 			"ROGUE_TRADER.VEHICLE.SHEET",
+		);
+
+		// Character creator (bead ay0): "Create Explorer (Origin Path)" entry
+		// on the Actors directory context menu. Hook name not yet in
+		// fvtt-types' hook map — registered defensively.
+		(Hooks as unknown as {
+			on: (name: string, fn: (app: unknown, options: Array<{
+				name: string;
+				icon: string;
+				callback: () => void;
+			}>) => void) => void;
+		}).on(
+			"getActorDirectoryEntryContext",
+			(_app, entryOptions) => {
+				entryOptions.push({
+					name: "CREATOR.MENU",
+					icon: "fa-solid fa-user-plus",
+					callback: () => {
+						new CharacterCreator().render({ force: true } as never);
+					},
+				});
+			},
 		);
 	});
 }

@@ -1,0 +1,200 @@
+<div class="character-creator">
+    <nav class="creator-steps">
+        <span class="step {{#if (eq step 0)}}active{{/if}}">{{localize "CREATOR.STEP_CHARACTERISTICS"}}</span>
+        <span class="step-sep">→</span>
+        <span class="step {{#if (eq step 1)}}active{{/if}}">{{localize "CREATOR.STEP_ORIGIN"}}</span>
+        <span class="step-sep">→</span>
+        <span class="step {{#if (eq step 2)}}active{{/if}}">{{localize "CREATOR.STEP_REVIEW"}}</span>
+    </nav>
+
+    {{!-- Step 0: Stage 1 — Generate Characteristics (rt_core p14) --}}
+    {{#if (eq step 0)}}
+    <section class="creator-section border">
+        <h1>{{localize "CREATOR.STEP_CHARACTERISTICS"}}</h1>
+        <div class="creator-name">
+            <label>{{localize "CREATOR.NAME"}}</label>
+            <input type="text" name="explorer-name" value="{{name}}" placeholder="{{localize "CREATOR.NAME_HINT"}}" />
+        </div>
+        <div class="method-chips">
+            <a class="chip {{#if isRoll}}active{{/if}}" data-action="setMethod" data-method="roll">{{localize "CREATOR.METHOD_ROLL"}}</a>
+            <a class="chip {{#if isPoints}}active{{/if}}" data-action="setMethod" data-method="points">{{localize "CREATOR.METHOD_POINTS"}}</a>
+        </div>
+
+        {{#if isRoll}}
+        <p class="method-hint">{{localize "CREATOR.ROLL_HINT"}}</p>
+        <ol class="char-rolls">
+            {{#each characteristics as |c|}}
+            <li class="char-roll-row">
+                <span class="char-label">{{localize c.labelKey}}</span>
+                {{#if c.rolled}}
+                <span class="char-value">{{c.rolled}}</span>
+                {{else}}
+                <span class="char-value unset">—</span>
+                {{/if}}
+                <a class="roll-btn {{#if c.rolled}}dim{{/if}}" data-action="rollOne" data-key="{{c.key}}"
+                    data-tooltip="{{localize "CREATOR.ROLL_ONE"}}"><i class="fa-solid fa-dice-d10"></i></a>
+                {{#if (and c.rolled ../canReroll)}}
+                <a class="reroll-btn" data-action="reroll" data-key="{{c.key}}"
+                    data-tooltip="{{localize "CREATOR.REROLL"}}"><i class="fa-solid fa-rotate-left"></i></a>
+                {{/if}}
+            </li>
+            {{/each}}
+        </ol>
+        <div class="creator-footer">
+            <button type="button" data-action="rollAll">{{localize "CREATOR.ROLL_ALL"}}</button>
+        </div>
+        {{/if}}
+
+        {{#if isPoints}}
+        <p class="method-hint">{{localize "CREATOR.POINTS_HINT"}}</p>
+        <ol class="char-rolls">
+            {{#each characteristics as |c|}}
+            <li class="char-roll-row">
+                <span class="char-label">{{localize c.labelKey}}</span>
+                <span class="char-value">{{c.base}}</span>
+                <span class="alloc-controls">
+                    <a class="alloc-btn" data-action="alloc" data-key="{{c.key}}" data-delta="-1">−</a>
+                    <span class="alloc">{{c.alloc}}</span>
+                    <a class="alloc-btn" data-action="alloc" data-key="{{c.key}}" data-delta="1">+</a>
+                </span>
+            </li>
+            {{/each}}
+        </ol>
+        <p class="points-remaining {{#if pointBuy.valid}}ok{{else}}bad{{/if}}">
+            {{localize "CREATOR.POINTS_REMAINING"}}: {{pointBuy.remaining}}
+            {{#unless pointBuy.valid}}<em>{{localize "CREATOR.POINTS_INVALID"}}</em>{{/unless}}
+        </p>
+        {{/if}}
+    </section>
+    {{/if}}
+
+    {{!-- Step 1: Stage 2 — The Origin Path (rt_core p16-35) --}}
+    {{#if (eq step 1)}}
+    <section class="creator-section border">
+        <h1>{{localize "CREATOR.STEP_ORIGIN"}}</h1>
+        <p class="method-hint">{{localize "CREATOR.ORIGIN_HINT"}}</p>
+        {{#each originRows as |row|}}
+        <div class="origin-row">
+            <h2>{{localize row.labelKey}}</h2>
+            <div class="origin-options">
+                {{#each row.options as |opt|}}
+                <a class="origin-chip {{#if opt.selected}}selected{{/if}} {{#unless opt.enabled}}disabled{{/unless}}"
+                    data-action="chooseOrigin" data-row="{{row.row}}" data-key="{{#if opt.selected}}{{else}}{{opt.key}}{{/if}}">{{opt.name}}</a>
+                {{/each}}
+            </div>
+            {{#if row.detail}}
+            <div class="origin-detail">
+                {{#if row.detail.effect}}<p class="origin-effect">{{row.detail.effect}}</p>{{/if}}
+                {{#if row.detail.variants}}
+                <div class="pick-chips">
+                    <span class="pick-label">{{localize "CREATOR.CHOOSE_RESULT"}}</span>
+                    {{#each row.detail.variants as |variant|}}
+                    <a class="pick-chip {{#if (eq variant.key ../row.detail.pickVariant.key)}}selected{{/if}}"
+                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="variant" data-value="{{variant.key}}">{{variant.name}}</a>
+                    {{/each}}
+                </div>
+                {{#if row.detail.pickVariant}}
+                <p class="origin-effect">{{row.detail.pickVariantEffect}}</p>
+                {{/if}}
+                {{/if}}
+                {{#if row.detail.hasOptions}}
+                <div class="pick-chips">
+                    <span class="pick-label">{{localize "CREATOR.CHOOSE_ONE"}}</span>
+                    {{#each row.detail.options as |option|}}
+                    <a class="pick-chip {{#if (eq option ../row.pickOption)}}selected{{/if}}"
+                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="option" data-value="{{option}}">{{option}}</a>
+                    {{/each}}
+                </div>
+                {{/if}}
+                {{#if row.detail.hasCharChoice}}
+                <div class="pick-chips">
+                    <span class="pick-label">{{localize "CREATOR.CHOOSE_BONUS"}}</span>
+                    {{#each row.detail.charChoices as |choice|}}
+                    <a class="pick-chip {{#if choice.selected}}selected{{/if}}"
+                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="charChoice" data-value="{{choice.value}}">{{choice.label}}</a>
+                    {{/each}}
+                </div>
+                {{/if}}
+                {{#if row.detail.hasAlternate}}
+                <div class="pick-chips">
+                    <span class="pick-label">{{localize "CREATOR.CHOOSE_ONE"}}</span>
+                    {{#each row.detail.alternates as |alt index|}}
+                    <a class="pick-chip {{#if (eq index ../row.detail.pickAlternate)}}selected{{/if}}"
+                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="alternate" data-value="{{index}}">{{alt.label}}</a>
+                    {{/each}}
+                </div>
+                {{/if}}
+                {{#if row.detail.hasCorrIns}}
+                <div class="pick-chips">
+                    <span class="pick-label">{{localize "CREATOR.CHOOSE_TRACK"}}</span>
+                    <a class="pick-chip {{#if (eq row.detail.corrIns 'corruption')}}selected{{/if}}" data-action="chooseCorrIns" data-row="{{row.row}}" data-track="corruption">{{localize "CREATOR.CORRUPTION"}}</a>
+                    <a class="pick-chip {{#if (eq row.detail.corrIns 'insanity')}}selected{{/if}}" data-action="chooseCorrIns" data-row="{{row.row}}" data-track="insanity">{{localize "CREATOR.INSANITY"}}</a>
+                </div>
+                {{/if}}
+                {{#if row.detail.skills.length}}
+                <p class="mini-list"><strong>{{localize "CREATOR.SKILLS"}}</strong> {{row.detail.skills}}</p>
+                {{/if}}
+                {{#if row.detail.talents.length}}
+                <p class="mini-list"><strong>{{localize "CREATOR.TALENTS"}}</strong> {{row.detail.talents}}</p>
+                {{/if}}
+                {{#if row.detail.notes.length}}
+                <ul class="origin-notes">{{#each row.detail.notes as |note|}}<li>{{note}}</li>{{/each}}</ul>
+                {{/if}}
+            </div>
+            {{/if}}
+        </div>
+        {{/each}}
+    </section>
+    {{/if}}
+
+    {{!-- Step 2: career + review + create --}}
+    {{#if (eq step 2)}}
+    <section class="creator-section border">
+        <h1>{{localize "CREATOR.STEP_REVIEW"}}</h1>
+
+        <h2>{{localize "CREATOR.CAREER"}}</h2>
+        <p class="method-hint">{{localize "CREATOR.CAREER_HINT"}}</p>
+        <div class="origin-options">
+            {{#each careers as |career|}}
+            <a class="origin-chip {{#if career.selected}}selected{{/if}}" data-action="chooseCareer" data-key="{{career.key}}"
+                {{#if career.suggested}}data-tooltip="{{localize "CREATOR.CAREER_SUGGESTED"}}"{{/if}}>
+                {{#if career.suggested}}<i class="fa-solid fa-star suggested"></i>{{/if}}{{career.label}}
+            </a>
+            {{/each}}
+        </div>
+
+        <h2>{{localize "CREATOR.REVIEW_CHARACTERISTICS"}}</h2>
+        <ol class="review-chars">
+            {{#each review.characteristics as |c|}}
+            <li>
+                <span class="char-label">{{localize c.labelKey}}</span>
+                <span class="char-value">{{c.value}}</span>
+                {{#if c.delta}}<span class="char-delta">({{#if (gt c.delta 0)}}+{{/if}}{{c.delta}} {{localize "CREATOR.FROM_ORIGIN"}})</span>{{/if}}
+            </li>
+            {{/each}}
+        </ol>
+
+        <h2>{{localize "CREATOR.REVIEW_DERIVED"}}</h2>
+        <ul class="review-derived">
+            <li>{{localize "CREATOR.WOUNDS"}}: <strong>{{review.woundsTotal}}</strong> <em>(2×TB + {{review.woundRolls}})</em></li>
+            <li>{{localize "CREATOR.FATE"}}: <strong>{{review.fateTotal}}</strong> <em>(d10: {{review.fateRoll}}{{#unless (eq review.fateDelta 0)}}; {{review.fateDelta}}{{/unless}})</em></li>
+            <li>{{localize "CREATOR.INSANITY_POINTS"}}: <strong>{{review.insanityTotal}}</strong></li>
+            <li>{{localize "CREATOR.CORRUPTION_POINTS"}}: <strong>{{review.corruptionTotal}}</strong></li>
+            <li>{{localize "CREATOR.STARTING_XP"}}: <strong>{{review.xpTotal}}</strong></li>
+            {{#if review.initiativeBonus}}<li>{{localize "CREATOR.INIT_BONUS"}}: +{{review.initiativeBonus}}</li>{{/if}}
+            {{#if review.profitFactor}}<li>{{localize "CREATOR.PROFIT_FACTOR"}}: {{review.profitFactor}}</li>{{/if}}
+        </ul>
+    </section>
+    {{/if}}
+
+    <footer class="creator-nav">
+        {{#unless (eq step 0)}}
+        <button type="button" data-action="prev">{{localize "CREATOR.BACK"}}</button>
+        {{/unless}}
+        {{#if (eq step 2)}}
+        <button type="button" class="create" data-action="create" {{#unless canCreate}}disabled{{/unless}}>{{localize "CREATOR.CREATE"}}</button>
+        {{else}}
+        <button type="button" data-action="next">{{localize "CREATOR.NEXT"}}</button>
+        {{/if}}
+    </footer>
+</div>

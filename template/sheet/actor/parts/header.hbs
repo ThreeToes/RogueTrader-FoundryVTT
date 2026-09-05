@@ -22,7 +22,14 @@
             <div class="header-cell">
                 <label>{{localize "CAREER.RANK"}}</label>
                 {{#if editable}}
-                <input name="system.rank" type="number" min="1" value="{{source.system.rank}}" />
+                <div class="paired">
+                    <input name="system.rank" type="number" min="1" value="{{source.system.rank}}"
+                        {{#if rankDerived}}data-tooltip="{{rankTooltip}}"{{/if}} />
+                    {{#if isPC}}
+                    <button type="button" class="advancement-open" data-action="openAdvancement"
+                        data-tooltip="{{localize "ADVANCE.OPEN"}}"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
+                    {{/if}}
+                </div>
                 {{else}}
                 <p class="static-value">{{source.system.rank}}</p>
                 {{/if}}

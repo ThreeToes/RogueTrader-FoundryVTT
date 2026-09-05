@@ -234,6 +234,25 @@
 	padding-left: 1.2em;
 }
 
+/* Effect editor controls (DATA tabs + talent content): add row and per-row
+   remove link. */
+.rogue-trader.sheet .effect-add-row {
+	margin: 2px 0 6px;
+}
+
+.rogue-trader.sheet .stat.item-effects .stats-row {
+	align-items: center;
+}
+
+.rogue-trader.sheet .effect-remove {
+	margin-left: auto;
+	color: var(--color-text-dark-secondary, #999);
+}
+
+.rogue-trader.sheet .effect-remove:hover {
+	color: var(--color-text-light-primary, #eee);
+}
+
 /* Career sheet tables (bead 2n5): advance schemes + rank tables. */
 .rogue-trader.sheet .career-table {
 	width: 100%;
@@ -584,4 +603,20 @@
 	align-items: center;
 	gap: 6px;
 	padding: 2px 0 2px 2px;
+}
+
+/* Equip toggle in inventory rows (bead 05m): ready state glows, stowed dims. */
+.rogue-trader.sheet .inv-row .equip-toggle {
+	flex: none;
+	width: 1.5em;
+	text-align: center;
+	color: #55503f;
+}
+
+.rogue-trader.sheet .inv-row .equip-toggle.equipped {
+	color: var(--color-text-light-highlight, #d9c38a);
+}
+
+.rogue-trader.sheet .inv-row .weapon-roll.unequipped {
+	opacity: 0.4;
 }

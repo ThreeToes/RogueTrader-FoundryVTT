@@ -13,6 +13,7 @@
 import type { Modifier } from "../../rules-engine/src/modifier";
 
 interface ItemLike {
+	name?: string;
 	type?: string;
 	system?: {
 		effects?: Array<{
@@ -158,8 +159,10 @@ export function collectTalentDamageEffects(
 			if (!Number.isFinite(value) || value === 0) continue;
 			const mod: Modifier = {
 				id: `talent-damage:${kind}:${effect.label ?? ""}:${condition || "any"}`,
-				source: { type: "talent", label: "TALENT.HEADER" },
-				label: effect.label || "Talent",
+				source: { type: "talent", label: "SOURCE.FROM_TALENTS" },
+				// Unlabelled effects fall back to the talent's name, never a
+				// generic slug.
+				label: effect.label || item.name || "",
 				value,
 				...(condition ? { condition } : {}),
 			};

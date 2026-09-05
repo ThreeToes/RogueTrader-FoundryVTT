@@ -3,6 +3,7 @@ import {
 	creatorGrantIds,
 	GRANTED_BY_CREATOR,
 	legacyCreatorIds,
+	originRowFromStoredKey,
 	parameterisedBase,
 	resolveParameterised,
 	reconcileForCreator,
@@ -79,6 +80,23 @@ describe("talent grant payload (meh0)", () => {
 			grantedBy: GRANTED_BY_CREATOR,
 		});
 		expect(skill.system).toEqual({ characteristic: "int", ladder: 1, grantedBy: GRANTED_BY_CREATOR });
+	});
+});
+
+describe("stored origin key mapping (bead h7wl)", () => {
+	it("maps every stored system.origins key to an OriginRow key", () => {
+		// The creator stores camelCase keys; the legacy-item lookup must map
+		// them to the kebab-case ORIGIN_ROWS or pre-flag items are never wiped.
+		expect(originRowFromStoredKey("homeWorld")).toBe("home-world");
+		expect(originRowFromStoredKey("birthright")).toBe("birthright");
+		expect(originRowFromStoredKey("lure")).toBe("lure");
+		expect(originRowFromStoredKey("trials")).toBe("trials");
+		expect(originRowFromStoredKey("motivation")).toBe("motivation");
+	});
+
+	it("returns null for unknown keys", () => {
+		expect(originRowFromStoredKey("claims")).toBeNull();
+		expect(originRowFromStoredKey("dynastyUuid")).toBeNull();
 	});
 });
 

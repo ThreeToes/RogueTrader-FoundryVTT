@@ -27,6 +27,7 @@ import { careers } from "../../registry";
 import { availabilityModifier } from "../../rules/acquisition";
 import {
 	GRANTED_BY_CREATOR,
+	originRowFromStoredKey,
 	reconcileForCreator,
 	skillGrantPayload,
 	type GrantPayload,
@@ -740,8 +741,11 @@ variants: (entry.variants ?? []).map((v) => ({
 		}).origins;
 		if (oldOrigins) {
 			const oldPicks: Partial<Record<OriginRow, OriginPick>> = {};
-			for (const [row, value] of Object.entries(oldOrigins)) {
-				if (!value || !ORIGIN_ROWS.includes(row as OriginRow)) continue;
+			for (const [storedKey, value] of Object.entries(oldOrigins)) {
+				// Bead h7wl: stored keys are camelCase (homeWorld); map them to
+				// the kebab-case OriginRow keys before validating.
+				const row = originRowFromStoredKey(storedKey);
+				if (!value || !row || !ORIGIN_ROWS.includes(row as OriginRow)) continue;
 				const [base, variant] = value.split("|");
 				oldPicks[row as OriginRow] = {
 					key: base,

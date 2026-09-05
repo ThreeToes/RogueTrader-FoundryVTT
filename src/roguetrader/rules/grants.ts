@@ -176,6 +176,26 @@ export function skillGrantPayload(
 // iufv — creator re-run reconcile
 // ---------------------------------------------------------------------------
 
+/**
+ * Stored system.origins keys (camelCase, as written by the creator's
+ * systemPayload) -> OriginRow keys (kebab-case, ORIGIN_ROWS). Bead h7wl:
+ * the legacy-item lookup iterated the stored keys directly against
+ * ORIGIN_ROWS, which never matched, so pre-flag creator items were never
+ * identified for the wipe.
+ */
+export const STORED_ORIGIN_KEY_MAP: Readonly<Record<string, string>> = {
+	homeWorld: "home-world",
+	birthright: "birthright",
+	lure: "lure",
+	trials: "trials",
+	motivation: "motivation",
+};
+
+/** Map a stored system.origins key to its OriginRow key, or null. */
+export function originRowFromStoredKey(key: string): string | null {
+	return STORED_ORIGIN_KEY_MAP[key] ?? null;
+}
+
 /** Ids of previously creator-granted items (provenance flag). */
 export function creatorGrantIds(existing: OwnedItemLike[]): string[] {
 	return existing

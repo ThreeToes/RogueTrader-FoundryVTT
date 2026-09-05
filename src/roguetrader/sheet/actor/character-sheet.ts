@@ -415,7 +415,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/psychic.hbs",
 		},
 		notes: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/notes.hbs",
+			template: "systems/rogue-trader/template/sheet/actor/tabs/notes.hbs",
 		},
 	};
 
@@ -528,8 +528,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Advancement (bead ayw): derived rank from the career's xpLevel
 		// thresholds + the ledger, shown as a tooltip hint next to the
 		// stored rank; the Advancement dialog is the purchase path.
-		context.rankDerived = false;
-		context.rankTooltip = "";
+		// Advancement button tooltip: derived-rank hint when available, else
+		// the generic open label (header.hbs must stay parseable — no inline
+		// || expressions with nested quotes, see character-sheet render error).
+		context.advancementTooltip = game.i18n!.localize("ADVANCE.OPEN");
 		if (system.careerKey) {
 			const pack = game.packs?.get("rogue-trader.careers");
 			if (pack) {
@@ -549,10 +551,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 						thresholds,
 						totalSpent((system.advances ?? []) as AdvanceLedgerEntry[]),
 					);
-					context.rankDerived = true;
-					context.rankTooltip = derived
-						? game.i18n!.format("ADVANCE.RANK_HINT", { rank: String(derived) })
-						: "";
+					if (derived) {
+						context.rankTooltip = game.i18n!.format("ADVANCE.RANK_HINT", {
+							rank: String(derived),
+						});
+						context.advancementTooltip = context.rankTooltip;
+					}
 				}
 			}
 		}
@@ -969,11 +973,15 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			}>,
 		};
 
-		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(system.description, {
+		const enrich = (text: string) =>
+			foundry.applications.ux.TextEditor.enrichHTML(text, {
 				secrets: this.actor.isOwner,
 				relativeTo: this.actor,
 			});
+		context.descriptionHTML = await enrich(system.description);
+		// Notes tab: motivation is rich text (owner request; appearance was
+		// culled — the description field covers it).
+		context.motivationHTML = await enrich(system.life?.motivation ?? "");
 
 		return context;
 	}

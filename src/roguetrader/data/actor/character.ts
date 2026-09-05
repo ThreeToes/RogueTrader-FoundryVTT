@@ -55,7 +55,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 		claims?: Record<string, boolean>;
 	};
 	/** Stage 4 free-text (bead ay0, rt_core p31-34). */
-	declare life: { appearance: string; motivation: string };
+	declare life: { motivation: string };
 	/** Linked dynasty actor (owner redesign: characters ATTACH to the group's dynasty, one per group by default). */
 	declare dynastyUuid: string;
 	declare careerKey: string;
@@ -189,12 +189,11 @@ export class Character extends foundry.abstract.TypeDataModel<
 			}),
 			/**
 			 * Stage 4 "Giving Characters Life" (bead ay0, rt_core p31-34):
-			 * free-text appearance and personal motivation, editable on the
-			 * Background tab.
+			 * personal motivation as rich text on the Notes tab (owner cull:
+			 * appearance removed — the description field covers it).
 			 */
 			life: new foundry.data.fields.SchemaField({
-				appearance: new foundry.data.fields.StringField({ initial: "" }),
-				motivation: new foundry.data.fields.StringField({ initial: "" }),
+				motivation: new foundry.data.fields.HTMLField({ initial: "" }),
 			}),
 			/**
 			 * Linked dynasty actor uuid (owner redesign): characters attach

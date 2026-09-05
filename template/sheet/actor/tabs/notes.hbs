@@ -1,0 +1,23 @@
+<section
+    class="tab {{tabs.notes.cssClass}}"
+    data-group="primary"
+    data-tab="notes"
+>
+    <div class="notes-editor border">
+        <h1>{{localize "TITLE.DESCRIPTION"}}</h1>
+        {{#if editable}}
+        <prose-mirror name="system.description" value="{{source.system.description}}"
+            button="true" editable="{{editable}}" toggled="false">{{{descriptionHTML}}}</prose-mirror>
+        {{else}}
+        {{{descriptionHTML}}}
+        {{/if}}
+
+        <h1>{{localize "BACKGROUND.MOTIVATION"}}</h1>
+        {{#if editable}}
+        <prose-mirror name="system.life.motivation" value="{{source.system.life.motivation}}"
+            button="true" editable="{{editable}}" toggled="false">{{{motivationHTML}}}</prose-mirror>
+        {{else}}
+        {{{motivationHTML}}}
+        {{/if}}
+    </div>
+</section>

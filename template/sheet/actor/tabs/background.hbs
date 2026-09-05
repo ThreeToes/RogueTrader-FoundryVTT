@@ -65,20 +65,6 @@
             </select>
         </div>
 
-        <div class="inv-group-header">
-            <h1>{{localize "BACKGROUND.LIFE"}}</h1>
-        </div>
-        <div class="traits-row life-fields">
-            <span class="origin-label">{{localize "BACKGROUND.APPEARANCE"}}:</span>
-            <input name="system.life.appearance" type="text" value="{{source.system.life.appearance}}"
-                placeholder="{{localize "BACKGROUND.APPEARANCE_HINT"}}" />
-        </div>
-        <div class="traits-row life-fields">
-            <span class="origin-label">{{localize "BACKGROUND.MOTIVATION"}}:</span>
-            <input name="system.life.motivation" type="text" value="{{source.system.life.motivation}}"
-                placeholder="{{localize "BACKGROUND.MOTIVATION_HINT"}}" />
-        </div>
-
         <div class="madness border">
             <div class="inv-group-header">
                 <h1>{{localize "MADNESS.HEADER"}}</h1>
@@ -90,8 +76,8 @@
                 </span>
             </div>
             <div class="traits-row">
-                <span class="origin-label">{{localize "MADNESS.INSANITY"}}: {{insanityDegree}}</span>
-                <span class="origin-label">{{localize "MADNESS.CORRUPTION"}}: {{corruptionDegree}}</span>
+                <span class="origin-label">{{localize "MADNESS.INSANITY"}}: {{madness.insanityDegree}}</span>
+                <span class="origin-label">{{localize "MADNESS.CORRUPTION"}}: {{madness.corruptionDegree}}</span>
                 {{#if madness.dueDisorders.length}}
                 <span class="chip grant-ack" data-tooltip="{{localize "MADNESS.DISORDERS_DUE"}}">
                     {{localize "MADNESS.DISORDERS_DUE"}}

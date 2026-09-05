@@ -492,7 +492,10 @@ export function sheetInit() {
 		const creatorEntry = (
 			_app: unknown,
 			entryOptions: Array<{
-				name: string;
+				// v14: ContextMenuEntry#name is deprecated -> #label (the
+				// "backwards-compatible support removed in v16" warning on
+				// right-click, reported 2026-09-05).
+				label: string;
 				icon: string;
 				callback: (element?: HTMLElement) => void;
 			}>,
@@ -514,7 +517,7 @@ export function sheetInit() {
 				user?.isGM || user?.hasPermission?.("ACTOR_CREATE"),
 			);
 			entryOptions.push({
-				name: "CREATOR.MENU",
+				label: "CREATOR.MENU",
 				icon: "fa-solid fa-user-plus",
 				callback: (element?: HTMLElement) => {
 					// When invoked from an actor entry, pre-load that actor so the

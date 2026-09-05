@@ -435,7 +435,7 @@ export const ORIGIN_ENTRIES: OriginEntry[] = [
 					"You must roll once on Table 14-3: Mutations (see page 369). If you choose, you may spend 200 xp to select one result from the table (must be a result of lower than 74-00) instead of rolling randomly.",
 				mechanics: {
 					notes: [
-						"Roll once on Table 14-3: Mutations (rt_core p369) — mutation machinery not modelled yet; record the result manually.",
+						"Roll once on Table 14-3: Mutations (Core Rulebook p369) — mutation machinery not modelled yet; record the result manually.",
 					],
 				},
 			},
@@ -852,7 +852,7 @@ export const ORIGIN_ENTRIES: OriginEntry[] = [
 					label: "Heirloom Item (Table 1-2)",
 					mechanics: {
 						notes: [
-							"Heirloom Item (Table 1-2, rt_core p29): Archeotech Laspistol; Angevin Era Chainsword; Ancestral Seal; Saint-blessed Carapace Armour; or Reliquary of Saint Drusus — grant manually from the Armoury/compendium.",
+							"Heirloom Item (Table 1-2, Core Rulebook p29): Archeotech Laspistol; Angevin Era Chainsword; Ancestral Seal; Saint-blessed Carapace Armour; or Reliquary of Saint Drusus — grant manually from the Armoury/compendium.",
 						],
 					},
 				},

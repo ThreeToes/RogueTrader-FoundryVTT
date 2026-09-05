@@ -1,5 +1,5 @@
 import { equipStates } from "../../registry";
-import { Availability } from "./availability";
+import { Availability, normalizeAvailability } from "./availability";
 import { Craftsmanship } from "./craftsmanship";
 import { effectsField } from "./effects";
 
@@ -16,6 +16,9 @@ export class Gear extends foundry.abstract.TypeDataModel<
 				initial: Availability.Common,
 				required: true,
 				nullable: false,
+				// Normalizes legacy world data ("Common", "—") at load and on
+				// save — see normalizeAvailability (world-load brick fix).
+				clean: normalizeAvailability,
 			}),
 			/**
 			 * Carrying state (item-side equip model): stowed / carried for

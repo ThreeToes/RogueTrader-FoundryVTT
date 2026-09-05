@@ -1,0 +1,33 @@
+<section class="tab {{tabs.psychic.cssClass}}" data-group="primary" data-tab="psychic">
+    <div class="psychic border">
+        <div class="psychic-header">
+            <h1>{{localize "TAB.PSYCHIC"}}</h1>
+            <div class="psy-rating">
+                <label>{{localize "PSYCHIC_POWER.PSY_RATING"}}</label>
+                <input name="system.psyRating" type="number" min="0" value="{{psyRating}}" />
+            </div>
+            <button type="button" class="psychic-add" data-action="openPsychicPicker">
+                <i class="fas fa-plus"></i> {{localize "PSYCHIC_POWER.ADD"}}
+            </button>
+        </div>
+
+        {{#if psychicPowers.length}}
+        <ol class="psychic-list">
+            {{#each psychicPowers as |power|}}
+            <li class="psychic-row" data-item-id="{{power.id}}">
+                <span class="psychic-name" data-action="openItem" data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{power.name}}</span>
+                <span class="psychic-tags">
+                    <span class="chip">{{localize power.classLabel}}</span>
+                    <span class="chip">{{localize power.subtypeLabel}}</span>
+                    {{#if power.rating}}<span class="chip">{{localize "PSYCHIC_POWER.RATING"}} {{power.rating}}</span>{{/if}}
+                </span>
+                <a class="psychic-delete" data-action="deleteItem" data-tooltip="{{localize "GEAR.DELETE"}}"
+                ><i class="fa-solid fa-xmark"></i></a>
+            </li>
+            {{/each}}
+        </ol>
+        {{else}}
+        <p class="untrained-hint">{{localize "PSYCHIC_POWER.NONE"}}</p>
+        {{/if}}
+    </div>
+</section>

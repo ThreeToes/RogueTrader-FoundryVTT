@@ -36,7 +36,17 @@ export class Character extends foundry.abstract.TypeDataModel<
 	declare fate: { value: number; max: number };
 	declare insanity: number;
 	declare corruption: number;
+	/** Psyker marker (bead m4me): Navigators count (rt_core p182) even at rating 0. */
+	declare psyker: boolean;
+	declare psyRating: number;
 	declare threatLevel: string;
+	declare origins: {
+		homeWorld: string;
+		birthright: string;
+		lure: string;
+		trials: string;
+		motivation: string;
+	};
 	declare careerKey: string;
 	declare rank: number;
 	declare xp: { spent: number; total: number };
@@ -122,6 +132,30 @@ export class Character extends foundry.abstract.TypeDataModel<
 				min: 0,
 				integer: true,
 				initial: 0,
+			}),
+			/**
+			 * Psyker status (bead m4me): Navigators are "considered a psyker
+			 * for all game purposes" (rt_core p182) without a standard Psy
+			 * Rating; Astropaths carry rating 2 from their starting talents.
+			 * Manually editable — homebrew/GM-granted psykers stay possible.
+			 */
+			psyker: new foundry.data.fields.BooleanField({ initial: false }),
+			psyRating: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 0,
+			}),
+			/**
+			 * Origin Path picks (bead ay0): written by the character creator,
+			 * displayed on the consolidated Background tab. Keys into the
+			 * origin chart in rules/origins data (rules/origins.ts).
+			 */
+			origins: new foundry.data.fields.SchemaField({
+				homeWorld: new foundry.data.fields.StringField({ initial: "" }),
+				birthright: new foundry.data.fields.StringField({ initial: "" }),
+				lure: new foundry.data.fields.StringField({ initial: "" }),
+				trials: new foundry.data.fields.StringField({ initial: "" }),
+				motivation: new foundry.data.fields.StringField({ initial: "" }),
 			}),
 			/**
 			 * XP purchase ledger (bead g7k): every advance bought, the audit

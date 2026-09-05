@@ -63,6 +63,9 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		characteristic: string;
 	}> = [];
 
+	/** Key > name resolution for key-only rank-table rows (careers carry empty names). */
+	#nameByKey: Record<string, string> = {};
+
 	constructor(options: { actor: foundry.documents.Actor } & object) {
 		super(options as never);
 		this.actor = options.actor;
@@ -144,6 +147,24 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				}
 			}
 		}
+		// Talents pack for name resolution of key-only rows ("psy-rating",
+		// "psychic-technique", ...).
+		this.#nameByKey = {};
+		const talentPack = game.packs?.get("rogue-trader.talents");
+		if (talentPack) {
+			const docs = (await talentPack.getDocuments()) as unknown as Array<{
+				name?: string;
+				system: { key?: string };
+			}>;
+			for (const doc of docs) {
+				if (doc.name && doc.system.key) {
+					this.#nameByKey[doc.system.key] = doc.name;
+				}
+			}
+		}
+		for (const doc of this.#skillDocs) {
+			if (doc.key) this.#nameByKey[doc.key] = doc.name;
+		}
 
 		const thresholds: RankThresholdLike[] = (this.#career?.ranks ?? []).map(
 			(r) => ({ rank: r.rank, xpLevel: r.xpLevel }),
@@ -178,6 +199,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				.filter((row) => row.rank === rank)
 				.map((row) => ({
 					...row,
+					name: row.name || this.#nameByKey[row.key] || row.key,
 					purchased: ledger.filter(
 						(entry) =>
 							entry.type === row.type &&
@@ -335,6 +357,17 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		if (row.type === "skill") {
 			const applied = await this.#applySkillAdvance(row);
 			if (!applied) return;
+		} else if (
+			row.key === "psy-rating" ||
+			/^psy rating/i.test(row.name)
+		) {
+			// Psy Rating advance (bead m4me): raises the actor's Psy Rating by
+			// 1 instead of granting a talent item (the rating lives on the
+			// actor, rt_core p182 psykers).
+			const system = this.actor.system as unknown as Character;
+			await this.actor.update({
+				system: { psyRating: (system.psyRating ?? 0) + 1 },
+			} as never);
 		} else {
 			// Talent: idempotent grant by name (matching the talent picker).
 			const owned = this.actor.items.find(

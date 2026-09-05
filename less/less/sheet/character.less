@@ -200,6 +200,13 @@
 	min-width: 560px;
 }
 
+/* Scrollable creator body: long origin lists exceed the fixed window. */
+.rogue-trader.dialog.character-creator .window-content {
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+}
+
 .rogue-trader .character-creator {
 	display: flex;
 	flex-direction: column;
@@ -521,6 +528,120 @@
 	border: 1px solid rgba(122, 106, 83, 0.5);
 	border-radius: 3px;
 	padding: 0 6px;
+}
+
+/* Psychic tab (bead m4me) */
+
+.rogue-trader .psychic .psychic-header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.rogue-trader .psychic .psychic-header h1 {
+	flex: 1;
+	margin: 0;
+}
+
+.rogue-trader .psychic .psy-rating {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.rogue-trader .psychic .psy-rating input {
+	width: 3.5em;
+	text-align: center;
+}
+
+.rogue-trader .psychic .psychic-list {
+	list-style: none;
+	margin: 6px 0 0;
+	padding: 0;
+}
+
+.rogue-trader .psychic .psychic-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0 2px 2px;
+}
+
+.rogue-trader .psychic .psychic-row .psychic-name {
+	flex: 1;
+	min-width: 0;
+	cursor: pointer;
+}
+
+.rogue-trader .psychic .psychic-tags {
+	display: flex;
+	gap: 4px;
+}
+
+.rogue-trader .psychic .psychic-tags .chip {
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.85em;
+}
+
+.rogue-trader .psychic .psychic-delete {
+	flex: none;
+}
+
+.rogue-trader.sheet .psychic-picker .catalog-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0;
+}
+
+.rogue-trader.sheet .psychic-picker .catalog-row .name {
+	flex: 1;
+}
+
+/* Consolidated Background tab (bead ay0): origins + career + talents. */
+
+.rogue-trader .background .origin-list {
+	list-style: none;
+	margin: 4px 0 8px;
+	padding: 0;
+}
+
+.rogue-trader .background .origin-entry {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0;
+}
+
+.rogue-trader .background .origin-label {
+	font-size: 0.85em;
+	text-transform: uppercase;
+	color: #7a6a53;
+}
+
+.rogue-trader .background .origin-name {
+	cursor: help;
+}
+
+.rogue-trader .background .origin-mod {
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.85em;
+}
+
+.rogue-trader .background .background-career {
+	margin: 4px 0 8px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.rogue-trader .background .background-career em {
+	opacity: 0.7;
+	font-size: 0.85em;
 }
 
 /* Test dialog (unified roll dialog) */

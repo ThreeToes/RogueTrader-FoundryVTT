@@ -360,25 +360,75 @@ export function sheetInit() {
 		);
 
 		// Character creator (bead ay0): "Create Explorer (Origin Path)" entry
-		// on the Actors directory context menu. Hook name not yet in
-		// fvtt-types' hook map — registered defensively.
-		(Hooks as unknown as {
-			on: (name: string, fn: (app: unknown, options: Array<{
+		// on the Actors directory ENTRY context menu (right-click an actor).
+		// Foundry v13/v14 (AppV2 sidebar): per-Document hook is
+		// `getActorContextOptions` (getDocumentContextOptions pattern); the
+		// generic per-class hook is `getEntryContextAbstractSidebarTab` and
+		// the legacy cores use `getActorDirectoryEntryContext`. Register all
+		// three defensively — the callback ignores its arguments, so a double
+		// fire (if two names exist on one core) is harmless: it only pushes
+		// into whatever array the firing hook passed.
+		const creatorEntry = (
+			_app: unknown,
+			entryOptions: Array<{
 				name: string;
 				icon: string;
-				callback: () => void;
-			}>) => void) => void;
-		}).on(
-			"getActorDirectoryEntryContext",
-			(_app, entryOptions) => {
-				entryOptions.push({
-					name: "CREATOR.MENU",
-					icon: "fa-solid fa-user-plus",
-					callback: () => {
-						new CharacterCreator().render({ force: true } as never);
-					},
-				});
-			},
-		);
+				callback: (element?: HTMLElement) => void;
+			}>,
+		) => {
+			// Permission model (bead ay0): finishing the wizard creates a world
+			// actor ONLY when opened without an actor target; opened on an
+			// actor entry it UPDATES that actor in place, which needs no
+			// actor-creation permission. So the entry is offered on actor
+			// entries to everyone; the creation-only open (no actor resolved)
+			// is limited to users who can create actors (GM, or players with
+			// "Create New Actors") so players never hit the hard server error.
+			const user = game.user as unknown as {
+				isGM?: boolean;
+				hasPermission?: (p: string) => boolean;
+			};
+			// The context menu builds one array shared across entries, so the
+			// element check happens at callback time, not menu-build time.
+			const canCreateActors = Boolean(
+				user?.isGM || user?.hasPermission?.("ACTOR_CREATE"),
+			);
+			entryOptions.push({
+				name: "CREATOR.MENU",
+				icon: "fa-solid fa-user-plus",
+				callback: (element?: HTMLElement) => {
+					// When invoked from an actor entry, pre-load that actor so the
+					// creator updates it in place instead of making a new one.
+					// v14 entry markup carries data-entry-id (document-partial.hbs);
+					// older cores used data-document-id.
+					const entryEl = element?.closest<HTMLElement>(
+						"[data-entry-id], [data-document-id]",
+					);
+					const resolvedId =
+						entryEl?.dataset.entryId ??
+						entryEl?.dataset.documentId ??
+						element?.dataset?.documentId;
+					const actor = resolvedId
+						? ((game.actors as unknown as {
+								get: (id: string) => unknown;
+							}).get(resolvedId) as foundry.documents.Actor | undefined)
+						: undefined;
+					if (!actor && !canCreateActors) {
+						ui.notifications?.warn(
+							game.i18n!.localize("CREATOR.NO_CREATE_PERMISSION"),
+						);
+						return;
+					}
+					new CharacterCreator({
+						actor,
+					} as never).render({ force: true } as never);
+				},
+			});
+		};
+		const hooksOn = Hooks as unknown as {
+			on: (name: string, fn: unknown) => void;
+		};
+		hooksOn.on("getActorContextOptions", creatorEntry);
+		hooksOn.on("getEntryContextAbstractSidebarTab", creatorEntry);
+		hooksOn.on("getActorDirectoryEntryContext", creatorEntry);
 	});
 }

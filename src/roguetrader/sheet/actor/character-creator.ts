@@ -119,6 +119,32 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 
 	creatorState: CreatorState = emptyState();
 
+	/**
+	 * Optional existing actor (right-clicked entry): the creator prefills
+	 * from it and UPDATES it on finish instead of creating a new actor.
+	 */
+	targetActor: foundry.documents.Actor | null = null;
+
+	constructor(
+		options: { actor?: foundry.documents.Actor } & object = {},
+	) {
+		super(options as never);
+		this.targetActor = options.actor ?? null;
+		if (this.targetActor) {
+			const system = this.targetActor.system as unknown as {
+				characteristics: Record<CharacteristicKey, { value: number }>;
+				careerKey?: string;
+			};
+			this.creatorState.name = this.targetActor.name ?? "";
+			this.creatorState.careerKey = system.careerKey ?? "";
+			// Existing characteristics prefill as rolled values; the player can
+			// re-roll (book: one re-roll) or switch to point-buy.
+			for (const key of CHARACTERISTIC_ORDER) {
+				this.creatorState.rolled[key] = system.characteristics[key]?.value ?? 25;
+			}
+		}
+	}
+
 	static PARTS = {
 		form: {
 			template: "systems/rogue-trader/template/sheet/actor/character-creator.hbs",
@@ -479,23 +505,80 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			state.rolledDice.corruption.reduce((a, b) => a + b, 0) +
 			(Object.values(state.corrOrInsTrack).includes("corruption") ? corrInsTotal : 0);
 
+		const systemPayload = {
+			characteristics: Object.fromEntries(
+				CHARACTERISTIC_ORDER.map((key) => [key, { value: chars[key], unnatural: 1 }]),
+			),
+			wounds: { value: wounds, max: wounds },
+			fate: { value: fate, max: fate },
+			insanity,
+			corruption,
+			// rt_core p13: characters begin with 4,500 xp already spent plus
+			// 500 to spend on Rank 1 advances; total earned = 5,000.
+			xp: { total: 5000, spent: 4500 },
+			// Psyker status from the career (bead m4me): Astropaths start
+			// with Psy Rating 2 (their starting talents); Navigators are
+			// "considered a psyker for all game purposes" (p182) with no
+			// standard Psy Rating. Manually editable post-creation.
+			psyker:
+				state.careerKey === "astropath-transcendent" ||
+				state.careerKey === "navigator",
+			psyRating: state.careerKey === "astropath-transcendent" ? 2 : 0,
+			careerKey: state.careerKey,
+			rank: 1,
+			// Persist the Origin Path picks (bead ay0): the consolidated
+			// Background tab reads these; the summary card is not the record.
+			// Chosen variants append as "key|variantKey".
+			origins: {
+				homeWorld: state.picks["home-world"]?.key ?? "",
+				birthright: state.picks.birthright?.key ?? "",
+				lure: state.picks.lure
+					? state.picks.lure.variantKey
+						? `${state.picks.lure.key}|${state.picks.lure.variantKey}`
+						: state.picks.lure.key
+					: "",
+				trials: state.picks.trials?.key ?? "",
+				motivation: state.picks.motivation?.key ?? "",
+			},
+		};
+
+		if (this.targetActor) {
+			// Right-clicked actor: update in place. Confirm overwrite when the
+			// actor already has content (blank new PCs apply silently).
+			const target = this.targetActor as unknown as {
+				update: (data: object) => Promise<unknown>;
+				createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+				sheet?: { render: (options?: object) => unknown };
+			};
+			const system = this.targetActor.system as unknown as {
+				xp?: { spent?: number; total?: number };
+			};
+			const hasContent =
+				this.targetActor.items.size > 0 ||
+				(system.xp?.spent ?? 0) > 0 ||
+				(system.xp?.total ?? 0) > 0;
+			if (hasContent) {
+				const confirmed = await foundry.applications.api.DialogV2.confirm({
+					window: {
+						title: game.i18n!.localize("CREATOR.APPLY_TITLE"),
+					},
+					content: game.i18n!.format("CREATOR.APPLY_CONFIRM", {
+						name: this.targetActor.name ?? "",
+					}),
+				});
+				if (!confirmed) return;
+			}
+			await target.update({ name: state.name || this.targetActor.name, system: systemPayload } as never);
+			await this.#applyGrantsAndSummary(target, state, resolved);
+			this.close();
+			target.sheet?.render({});
+			return;
+		}
+
 		const actor = (await foundry.documents.Actor.create({
 			name: state.name || game.i18n!.localize("CREATOR.DEFAULT_NAME"),
 			type: "pc",
-			system: {
-				characteristics: Object.fromEntries(
-					CHARACTERISTIC_ORDER.map((key) => [key, { value: chars[key], unnatural: 1 }]),
-				),
-				wounds: { value: wounds, max: wounds },
-				fate: { value: fate, max: fate },
-				insanity,
-				corruption,
-				// rt_core p13: characters begin with 4,500 xp already spent plus
-				// 500 to spend on Rank 1 advances; total earned = 5,000.
-				xp: { total: 5000, spent: 4500 },
-				careerKey: state.careerKey,
-				rank: 1,
-			},
+			system: systemPayload,
 		} as never)) as unknown as {
 			uuid: string;
 			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
@@ -503,6 +586,23 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 		};
 		if (!actor) return;
 
+		await this.#applyGrantsAndSummary(actor, state, resolved);
+
+		this.close();
+		actor.sheet?.render({});
+	}
+
+	/**
+	 * Shared apply tail (create or in-place update): grant starting
+	 * skills/talents as live items, post the summary chat card.
+	 */
+	async #applyGrantsAndSummary(
+		actor: {
+			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+		},
+		state: CreatorState,
+		resolved: ResolvedOrigin,
+	): Promise<void> {
 		// Grants: catalog-matched skills, then talents (create-by-name),
 		// then unmatched options (talents, or manual if unresolved).
 		const catalog: CatalogSkill[] = [];
@@ -553,11 +653,18 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 		const initiative = resolved.initiativeBonus
 			? `<p>${game.i18n!.localize("CREATOR.INIT_BONUS")}: +${resolved.initiativeBonus}</p>`
 			: "";
+		// Psyker note (bead m4me): Astropaths (Psy Rating 2) and Navigators.
+		const psykerNote =
+			state.careerKey === "astropath-transcendent" ||
+			state.careerKey === "navigator"
+				? `<p>${game.i18n!.localize("CREATOR.PSYKER")}${
+					state.careerKey === "astropath-transcendent"
+						? ` — ${game.i18n!.localize("CREATOR.PSY_RATING_2")}`
+						: ""
+				}</p>`
+				: "";
 		await foundry.documents.ChatMessage.create({
-			content: `<div class="rogue-trader creator-summary"><h3>${state.name}</h3><ul>${rows}</ul>${pf}${initiative}${notes}</div>`,
+			content: `<div class="rogue-trader creator-summary"><h3>${state.name}</h3><ul>${rows}</ul>${pf}${initiative}${psykerNote}${notes}</div>`,
 		} as never);
-
-		this.close();
-		actor.sheet?.render({});
 	}
 }

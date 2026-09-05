@@ -2,6 +2,7 @@ import { Character } from "../../data/actor/character";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { derivedRank, totalSpent } from "../../rules/advancement";
 import { careers, equipStates } from "../../registry";
+import { effectiveMechanics, originByKey } from "../../origins";
 import {
 	rollSkill,
 	rollSkillUntrained,
@@ -14,6 +15,7 @@ import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { deriveCapacity, resolveEncumbrance } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
 import { AdvancementDialog } from "./advancement-dialog";
+import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
 import { TalentPicker } from "./talent-picker";
 
@@ -56,6 +58,8 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			openTalentPicker: CharacterSheet.#onOpenTalentPicker,
 			toggleEquip: CharacterSheet.#onToggleEquip,
 			openAdvancement: CharacterSheet.#onOpenAdvancement,
+			openPsychicPicker: CharacterSheet.#onOpenPsychicPicker,
+			openCareerSheet: CharacterSheet.#onOpenCareerSheet,
 		},
 	};
 
@@ -118,6 +122,27 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		actor: foundry.documents.Actor;
 	}): Promise<void> {
 		await new AdvancementDialog({ actor: this.actor }).render({ force: true });
+	}
+
+	/** Open the psychic powers compendium picker (bead m4me). */
+	static async #onOpenPsychicPicker(this: {
+		actor: foundry.documents.Actor;
+	}): Promise<void> {
+		await new PsychicPicker({ actor: this.actor }).render({ force: true });
+	}
+
+	/** Open the compendium career item sheet (Background tab, bead ay0). */
+	static async #onOpenCareerSheet(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId = target.dataset.itemId;
+		if (!itemId) return;
+		const item = (await fromUuid(
+			`Item.${itemId}`,
+		) as unknown as { sheet?: { render: (options?: object) => unknown } } | null);
+		item?.sheet?.render({});
 	}
 
 	/**
@@ -259,11 +284,14 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		inventory: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/inventory.hbs",
 		},
-		talents: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/talents.hbs",
+		background: {
+			template: "systems/rogue-trader/template/sheet/actor/tabs/background.hbs",
 		},
 		skills: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/skills.hbs",
+		},
+		psychic: {
+			template: "systems/rogue-trader/template/sheet/actor/tabs/psychic.hbs",
 		},
 		notes: {
 			template: "systems/rogue-trader/template/sheet/item/tabs/notes.hbs",
@@ -276,13 +304,30 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				{ id: "data", group: "primary", label: "TAB.STATS" },
 				{ id: "combat", group: "primary", label: "TAB.COMBAT" },
 				{ id: "skills", group: "primary", label: "TAB.SKILLS" },
-				{ id: "talents", group: "primary", label: "TAB.TALENTS" },
+				{ id: "background", group: "primary", label: "TAB.BACKGROUND" },
+				{ id: "psychic", group: "primary", label: "TAB.PSYCHIC" },
 				{ id: "inventory", group: "primary", label: "TAB.INVENTORY" },
 				{ id: "notes", group: "primary", label: "TAB.NOTES" },
 			],
 			initial: "data",
 		},
 	};
+
+	/**
+	 * The psychic tab renders only for psykers (bead m4me): Navigators count
+	 * (rt_core p182) and anyone with a Psy Rating. Mundane characters never
+	 * see the tab in the nav nor the section.
+	 */
+	protected override _prepareTabs(
+		group: string,
+	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
+		const tabs = super._prepareTabs(group);
+		const system = this.actor.system as unknown as Character;
+		if (!(system.psyker === true || (system.psyRating ?? 0) >= 1)) {
+			delete tabs.psychic;
+		}
+		return tabs;
+	}
 
 	/**
 	 * Inventory rows carry their item uuid; drag transfers core {type, uuid}
@@ -474,6 +519,31 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 		context.isPC = this.actor.type === "pc";
 
+		// Psychic tab (bead m4me): owned powers + psyker status; the tab nav
+		// itself is gated in _prepareTabs.
+		context.isPsyker =
+			system.psyker === true || (system.psyRating ?? 0) >= 1;
+		context.psyRating = system.psyRating ?? 0;
+		context.psychicPowers = this.actor.items
+			.filter((item) => (item.type as string) === "psychicpower")
+			.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
+			.map((item) => {
+				const sys = item.system as unknown as {
+					powerClass?: string;
+					subtype?: string;
+					rating?: number;
+				};
+				return {
+					id: item.id,
+					name: item.name,
+					powerClass: sys.powerClass ?? "bound",
+					classLabel: `PSYCHIC_POWER.${(sys.powerClass ?? "bound").toUpperCase()}`,
+					subtype: sys.subtype ?? "focus",
+					subtypeLabel: `PSYCHIC_POWER.${(sys.subtype ?? "focus").toUpperCase()}`,
+					rating: sys.rating ?? 0,
+				};
+			});
+
 		// Inventory: all non-skill owned items grouped by family. Weight display
 		// only - aggregation/encumbrance is deliberately NOT calculated here yet.
 		const byType = (types: string[]) =>
@@ -594,9 +664,63 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 		context.inventory = inventory;
 
-		// Talents: dedicated first-class tab (bead 7gb), sharing the inventory
-		// row anatomy.
+		// Consolidated Background tab (bead ay0): origins + career + talents.
 		context.talentRows = byType(["talent"]);
+
+		// Origins: persisted picks (creator) resolved against the origin chart;
+		// tooltip carries the verbatim book effect text.
+		const originPicks = system.origins ?? {} as {
+			homeWorld?: string;
+			birthright?: string;
+			lure?: string;
+			trials?: string;
+			motivation?: string;
+		};
+		const splitPick = (stored?: string) => {
+			if (!stored) return null;
+			const [key, variantKey] = stored.split("|");
+			const entry = originByKey(key);
+			if (!entry) return null;
+			const variant = variantKey
+				? entry.variants?.find((v) => v.key === variantKey)
+				: undefined;
+			const mods = effectiveMechanics(entry, variantKey).characteristics ?? [];
+			return {
+				name: variant ? `${entry.name}: ${variant.name}` : entry.name,
+				tooltip: variant?.effect ?? entry.effect ?? "",
+				mods: mods.map((m) => `${m.value > 0 ? "+" : ""}${m.value} ${m.key.toUpperCase()}`),
+			};
+		};
+		const originRows: Array<{
+			labelKey: string;
+			pick: { name: string; tooltip: string; mods: string[] } | null;
+		}> = (
+			[
+				["homeWorld", "ORIGIN.ROW_HOME_WORLD"],
+				["birthright", "ORIGIN.ROW_BIRTHRIGHT"],
+				["lure", "ORIGIN.ROW_LURE"],
+				["trials", "ORIGIN.ROW_TRIALS"],
+				["motivation", "ORIGIN.ROW_MOTIVATION"],
+			] as Array<[string, string]>
+		)
+			.map(([field, labelKey]) => ({ field, labelKey, pick: splitPick(originPicks[field as keyof typeof originPicks]) }))
+			.filter((row) => row.pick !== null);
+		context.originRows = originRows;
+		context.hasOrigins = originRows.length > 0;
+
+		// Career link: the compendium career item behind the actor's careerKey,
+		// opened via openCareerSheet for the full crunch tables.
+		const careerPack = game.packs?.get("rogue-trader.careers");
+		if (careerPack && system.careerKey) {
+			const docs = (await careerPack.getDocuments()) as unknown as Array<{
+				id?: string;
+				sheet?: { render: (options?: object) => unknown };
+				system: { key: string };
+			}>;
+			context.careerItemId = docs.find((d) => d.system.key === system.careerKey)?.id ?? "";
+		} else {
+			context.careerItemId = "";
+		}
 
 		// Encumbrance: carried weight vs capacity derived from Strength Bonus
 		// (rules/encumbrance.ts deriveCapacity, VERIFY book rule).

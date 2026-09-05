@@ -197,12 +197,26 @@
     <section class="creator-section border">
         <h1>{{localize "CREATOR.STEP_EQUIPMENT"}}</h1>
         <p class="method-hint">{{localize "CREATOR.EQUIPMENT_HINT"}}</p>
-        <div class="origin-options">
-            {{#each acquisitions as |item|}}
-            <a class="origin-chip {{#if item.selected}}selected{{/if}}" data-action="chooseAcquisition" data-payload="{{item.payload}}"
-                data-tooltip="{{item.tooltip}}">{{item.name}}</a>
-            {{/each}}
+        {{#each acquisitionGroups as |group|}}
+        {{#if group.count}}
+        <div class="acq-group">
+            <button type="button" class="acq-group-header" data-action="toggleAcqGroup" data-group="{{group.key}}"
+                data-tooltip="{{localize "CREATOR.ACQ_GROUP_TOGGLE"}}">
+                <i class="fa-solid {{#if group.open}}fa-chevron-down{{else}}fa-chevron-right{{/if}}"></i>
+                <span>{{localize group.labelKey}}</span>
+                <span class="acq-group-count">({{group.count}})</span>
+            </button>
+            {{#if group.open}}
+            <div class="origin-options">
+                {{#each group.items as |item|}}
+                <a class="origin-chip {{#if item.selected}}selected{{/if}}" data-action="chooseAcquisition" data-payload="{{item.payload}}"
+                    data-tooltip="{{item.tooltip}}">{{item.name}}</a>
+                {{/each}}
+            </div>
+            {{/if}}
         </div>
+        {{/if}}
+        {{/each}}
     </section>
     {{/if}}
 

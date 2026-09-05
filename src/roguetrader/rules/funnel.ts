@@ -50,6 +50,12 @@ export interface TestModifierContext {
 	fireMode?: "single" | "burst" | "full";
 	/** Guarded-effect flags (talentConditions keys), e.g. { charging: true }. */
 	flags?: Record<string, boolean>;
+	/**
+	 * Skill-item test name, lowercased (bead r1k): lets item effects key on
+	 * SKILL tests ("skill:medicae") rather than the skill's underlying
+	 * characteristic — "+20 to Medicae Tests" must not hit every Int test.
+	 */
+	skillName?: string;
 }
 
 export type TestContributor = (
@@ -122,9 +128,15 @@ const QUALITY_CONTRIBUTIONS: Record<
 	string,
 	(context: TestModifierContext) => number | null
 > = {
-	// Accurate: +10 when taking an aimed Ballistic Skill test. VERIFY book.
+	// Accurate: VERIFIED book p115-116 (PDF p116): +10 to BS with an Aim
+	// Action, in addition to the aiming bonus. (Extra d10 per two degrees
+	// on a single shot = damage-pipeline work, bead gci0.)
 	accurate: (context) =>
 		context.aimed && context.kind === "attack" ? 10 : null,
+	// Defensive: VERIFIED book p115 (PDF p116): +15 to Parry but -10 when
+	// used to make attacks. The parry side needs parry-context plumbing
+	// (bead gci0, with Balanced/Unbalanced); the attack penalty lives here.
+	defensive: (context) => (context.kind === "attack" ? -10 : null),
 };
 
 testContributors.register("weapon-qualities", (_actor, context) => {
@@ -325,7 +337,20 @@ testContributors.register("item-effects", (actor, context) => {
 				kind === "attack-modifier" && context.kind === "attack";
 			if (!isTestModifier && !isAttackModifier) continue;
 			const key = effect.testKey;
-			if (key !== "" && key !== undefined && key !== context.key) continue;
+			// "skill:<name>" test keys (bead r1k) match the SKILL test's item
+			// name (lowercased), not the characteristic — gear/drug/tool
+			// bonuses like "Medikit: +20 Medicae Tests" must not hit every
+			// Int-characteristic test.
+			if (key?.startsWith("skill:")) {
+				if (
+					context.skillName?.toLowerCase() !==
+					key.slice("skill:".length).toLowerCase()
+				) {
+					continue;
+				}
+			} else if (key !== "" && key !== undefined && key !== context.key) {
+				continue;
+			}
 			// Guarded effects (bead czx) only apply when the matching context
 			// flag is set; the condition label rides on the Modifier for the
 			// chat/dialog breakdown.

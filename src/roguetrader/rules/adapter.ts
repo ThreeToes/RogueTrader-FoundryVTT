@@ -51,10 +51,11 @@ function dialogContributors(
 	key: string,
 	modifiers: Modifier[],
 	weapon: { type: string; special?: string[] } | null = null,
+	skillName?: string,
 ): Modifier[] {
 	return mergeModifiers(
 		modifiers,
-		collectTestModifiers(actor, { kind, key, weapon }),
+		collectTestModifiers(actor, { kind, key, weapon, skillName }),
 	);
 }
 
@@ -118,6 +119,8 @@ export async function postTest(
 			aimed?: boolean;
 			fireMode?: "single" | "burst" | "full";
 			flags?: Record<string, boolean>;
+			/** Skill-item test name (bead r1k) for "skill:<name>" effect keys. */
+			skillName?: string;
 		};
 		/** Profile override (bead sa6): e.g. Focus Power Tests auto-fail on
 		 * rolls of 91+ (rt_core book p157). Profile data, not an if/else. */
@@ -254,12 +257,20 @@ export async function rollSkill(
 	const title = `${actor.name} — ${item.name}`;
 
 	if (!options.skipDialog) {
-		// Bead 02u: skill tests show the same modify dialog as characteristics
-		// and attacks so talent/other funnel contributors are visible.
 		const result = await TestDialog.show({
 			title,
 			baseTarget,
-			contributors: dialogContributors(actor, "skill", skill.characteristic, modifiers),
+			// Bead r1k: skill tests carry the skill item's name so item
+			// effects keyed "skill:<name>" (Medikit → Medicae etc.) apply to
+			// the right tests only.
+			contributors: dialogContributors(
+				actor,
+				"skill",
+				skill.characteristic,
+				modifiers,
+				null,
+				(item.name ?? "").toLowerCase(),
+			),
 		});
 		if (result === null) return;
 		modifiers = result.modifiers;
@@ -272,6 +283,10 @@ export async function rollSkill(
 		modifiers,
 		"skill",
 		skill.characteristic,
+		null,
+		{
+			context: { skillName: (item.name ?? "").toLowerCase() },
+		},
 	);
 }
 
@@ -331,16 +346,32 @@ export async function rollSkill(
 		modifiers = result.modifiers;
 		// Aim (+10 half / +20 full, p237): a verified book modifier contributed
 		// by the dialog, shown in the breakdown like any other row.
+		// Inaccurate (VERIFIED book p116, PDF p117): "No bonus is gained from
+			// the use of the Aim Action" — the aim bonus never applies; an
+			// aimed shot with an Inaccurate weapon shows an explicit 0-value
+			// row so the cancellation is visible, not silent.
 		if (result.attack?.aimed) {
-			modifiers = [
-				...modifiers,
-				{
-					id: "attack:aim",
-					source: { type: "dialog", label: "ROLL.AIM" },
-					label: result.attack.aimFull ? "Aim (Full)" : "Aim (Half)",
-					value: result.attack.aimFull ? 20 : 10,
-				},
-			];
+			if (special.includes("inaccurate")) {
+				modifiers = [
+					...modifiers,
+					{
+						id: "attack:aim-inaccurate",
+						source: { type: "dialog", label: "WEAPON.SPECIAL" },
+						label: "Inaccurate (no Aim bonus)",
+						value: 0,
+					},
+				];
+			} else {
+				modifiers = [
+					...modifiers,
+					{
+						id: "attack:aim",
+						source: { type: "dialog", label: "ROLL.AIM" },
+						label: result.attack.aimFull ? "Aim (Full)" : "Aim (Half)",
+						value: result.attack.aimFull ? 20 : 10,
+					},
+				];
+			}
 		}
 		attackContext = {
 			aimed: result.attack?.aimed,

@@ -28,6 +28,7 @@ import { defaultSkillItems } from "../../rules/default-skills";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { deriveCapacity, resolveEncumbrance, carriedWeight } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
+import { openDocumentSheet, resolvePackDocument } from "../pack-resolve";
 import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
@@ -66,6 +67,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			setUnnatural: CharacterSheet.#onSetUnnatural,
 			setLadder: CharacterSheet.#onSetLadder,
 			openItem: CharacterSheet.#onOpenItem,
+			openPackItem: CharacterSheet.#onOpenPackItem,
 			deleteItem: CharacterSheet.#onDeleteItem,
 			rollWeapon: CharacterSheet.#onRollWeapon,
 			rollDamage: CharacterSheet.#onRollDamage,
@@ -93,6 +95,30 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		if (!itemId) return;
 		const item = this.actor.items.get(itemId);
 		if (item) item.sheet?.render(true);
+	}
+
+	/**
+	 * Open the COMPENDIUM version of an item (bead oaaz): reads data-uuid
+	 * (pack uuid resolved in _prepareContext), robust pack resolution per
+	 * the wwuc root cause. Used by the Background tab's talent book icons.
+	 */
+	static async #onOpenPackItem(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const uuid = target.dataset.uuid;
+		if (!uuid) return;
+		try {
+			const item = await resolvePackDocument(uuid);
+			if (!item) {
+				console.warn(`rogue-trader | pack item link: "${uuid}" did not resolve`);
+				return;
+			}
+			await openDocumentSheet(item, "pack item link");
+		} catch (error) {
+			console.error("rogue-trader | pack item link failed:", error);
+		}
 	}
 
 	/** Delete an owned inventory item. */
@@ -205,26 +231,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			// ROOT CAUSE (wwuc, diagnosed in-world 2026-09-05): fromUuid on a
 			// Compendium uuid resolved to undefined even though the pack held
 			// the document (pack getDocuments matched by system.key) — so the
-			// old `item.sheet?.render({})` silently no-oped. Resolve the
-			// document DIRECTLY from the pack instead (uuid format:
-			// "Compendium.<pack>.<type>.<id>"), with fromUuid as fallback.
-			const parts = /^Compendium\.([^.]+)\.([^.]+)\.Item\.([^.]+)$/.exec(uuid);
-			let item: unknown = null;
-			if (parts) {
-				const pack = game.packs?.get(`${parts[1]}.${parts[2]}`);
-				item = pack
-					? await (pack as unknown as {
-							getDocument: (id: string) => Promise<unknown>;
-						}).getDocument(parts[3])
-					: null;
-				if (!item) {
-					console.warn(
-						`rogue-trader | career link: pack document ${parts[3]} not found in ${parts[1]}.${parts[2]}`,
-					);
-				}
-			} else {
-				item = await foundry.utils.fromUuid(uuid);
-			}
+			// old `item.sheet?.render({})` silently no-oped. Direct pack
+			// resolution (sheet/pack-resolve.ts), fromUuid as fallback.
+			const item = await resolvePackDocument(uuid);
 			if (!item) {
 				ui.notifications?.error(
 					game.i18n!.format("BACKGROUND.OPEN_CAREER_FAIL", { uuid }),
@@ -232,22 +241,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				console.warn(`rogue-trader | career link: "${uuid}" did not resolve`);
 				return;
 			}
-			const sheet = (item as {
-				sheet?: { render: (options?: object) => unknown };
-			}).sheet;
-			if (!sheet) {
-				// Never a silent no-op: a document without a sheet binding is a
-				// diagnosable state, not a shrug.
-				console.error(
-					"rogue-trader | career link: resolved document has no sheet:",
-					item,
-				);
-				ui.notifications?.error(
-					game.i18n!.format("BACKGROUND.OPEN_CAREER_FAIL", { uuid }),
-				);
-				return;
-			}
-			await sheet.render({ force: true });
+			await openDocumentSheet(item, "career link");
 		} catch (error) {
 			// Surface render failures visibly instead of dying silently —
 			// CareerSheet._prepareContext errors land here.
@@ -893,6 +887,27 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 		// Consolidated Background tab (bead ay0): origins + career + talents.
 		context.talentRows = byType(["talent"]);
+		// Compendium link per talent row (bead oaaz): pack uuid by name
+		// (case-insensitive), same careers-pack pattern as careerItemId above.
+		const talentsPack = game.packs?.get("rogue-trader.talents");
+		if (talentsPack && context.talentRows.length > 0) {
+			const packDocs = (await talentsPack.getDocuments()) as unknown as Array<{
+				uuid?: string;
+				name?: string;
+			}>;
+			const byName = new Map(
+				packDocs
+					.filter((d) => d.name)
+					.map((d) => [d.name!.toLowerCase(), d.uuid ?? ""]),
+			);
+			for (const row of context.talentRows as Array<
+				Record<string, unknown> & { name?: string; packUuid?: string }
+			>) {
+				row.packUuid = row.name
+					? (byName.get(row.name.toLowerCase()) ?? "")
+					: "";
+			}
+		}
 
 		// Origins: persisted picks (creator) resolved against the origin chart;
 		// tooltip carries the verbatim book effect text.

@@ -250,6 +250,32 @@
 	opacity: 0.8;
 }
 
+/* Bead a2rd: collapsible acquisition groups (Stage 6). */
+.rogue-trader .character-creator .acq-group {
+	margin: 6px 0;
+}
+
+.rogue-trader .character-creator .acq-group-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	background: none;
+	border: none;
+	border-bottom: 1px solid rgba(122, 106, 83, 0.4);
+	padding: 4px 2px;
+	cursor: pointer;
+	font-weight: bold;
+	text-align: left;
+	color: inherit;
+}
+
+.rogue-trader .character-creator .acq-group-count {
+	font-weight: normal;
+	opacity: 0.7;
+	font-size: 0.85em;
+}
+
 .rogue-trader .character-creator .char-rolls {
 	list-style: none;
 	margin: 4px 0;
@@ -970,6 +996,18 @@
     text-align: center;
     color: #8b5e52;
     cursor: pointer;
+}
+
+/* Bead oaaz: compendium link (book icon) next to talent rows. */
+.rogue-trader.sheet.character .inv-pack-link {
+    width: 1.2em;
+    text-align: center;
+    color: #7a6a53;
+    cursor: pointer;
+}
+
+.rogue-trader.sheet.character .inv-pack-link:hover {
+    color: #a5936f;
 }
 
 /* Combat tab: weapons list */

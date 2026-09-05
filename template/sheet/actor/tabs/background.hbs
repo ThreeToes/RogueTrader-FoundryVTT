@@ -121,6 +121,10 @@
             <li class="inv-row draggable" data-item-id="{{item.id}}" data-item-uuid="{{item.uuid}}">
                 <span class="inv-grab"><i class="fa-solid fa-grip-vertical"></i></span>
                 <span class="inv-name" data-action="openItem" data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{item.name}}</span>
+                {{#if item.packUuid}}
+                <a class="inv-pack-link" data-action="openPackItem" data-uuid="{{item.packUuid}}"
+                    data-tooltip="{{localize "BACKGROUND.OPEN_PACK_TALENT"}}"><i class="fa-solid fa-book-open"></i></a>
+                {{/if}}
                 <a class="inv-delete" data-action="deleteItem" data-tooltip="{{localize "GEAR.DELETE"}}"
                 ><i class="fa-solid fa-xmark"></i></a>
             </li>

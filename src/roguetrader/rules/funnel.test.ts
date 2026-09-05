@@ -281,6 +281,60 @@ describe("talent contributor", () => {
 	// Bead yb6: gear-family effects feed the funnel only when the item is
 	// equipped (carried gear/weapons, worn armour). Items without an equip
 	// state (raw data in tests) count as stowed.
+	describe("skill-keyed item effects (bead r1k)", () => {
+		const medikit = {
+			type: "gear",
+			system: {
+				equipState: "carried",
+				effects: [
+					{ kind: "test-modifier", testKey: "skill:medicae", value: 20, label: "Medikit" },
+				],
+			},
+		};
+		const collectSkill = (skillName: string | undefined) =>
+			collectTestModifiers(
+				{ items: [medikit] },
+				{ kind: "skill", key: "int", skillName },
+			).filter((m) => m.label === "Medikit");
+
+		test("skill-keyed effect applies only to the matching skill test", () => {
+			expect(collectSkill("medicae")).toHaveLength(1);
+		});
+
+		test("other skill tests on the same characteristic do not match", () => {
+			// Medicae is Int-based: a Logic test is also Int — no +20.
+			expect(collectSkill("logic")).toHaveLength(0);
+		});
+
+		test("characteristic tests never match skill-keyed effects", () => {
+			expect(collectSkill(undefined)).toHaveLength(0);
+		});
+
+		test("skill name matching is case-insensitive", () => {
+			expect(collectSkill("Medicae")).toHaveLength(1);
+		});
+	});
+
+	describe("weapon quality contributions (bead r1k, verified book pp115-117)", () => {
+		const collectAttack = (special: string[], aimed = false) =>
+			collectTestModifiers(
+				{ items: [] },
+				{ kind: "attack", key: "bs", weapon: { type: "ranged-weapon", special }, aimed },
+			);
+
+		test("accurate grants +10 only when aimed", () => {
+			const aimed = collectAttack(["accurate"], true).filter((m) => m.label === "accurate");
+			expect(aimed).toHaveLength(1);
+			expect(aimed[0]?.value).toBe(10);
+			expect(collectAttack(["accurate"], false).filter((m) => m.label === "accurate")).toHaveLength(0);
+		});
+
+		test("defensive imposes -10 on attack tests", () => {
+			const mods = collectAttack(["defensive"]).filter((m) => m.label === "defensive");
+			expect(mods).toHaveLength(1);
+			expect(mods[0]?.value).toBe(-10);
+		});
+	});
 	describe("gear-family item effects (bead yb6)", () => {
 		const item = (type: string, equipState?: string, value = 5) => ({
 			type,

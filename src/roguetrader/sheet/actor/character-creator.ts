@@ -72,6 +72,8 @@ interface CreatorState {
 	};
 	/** Stage 6: the starting free acquisition (item name + pack payload). */
 	acquisition: { name: string; payload: object } | null;
+	/** Stage 6 collapsed group state (bead a2rd): group key -> collapsed. */
+	acqCollapsed: Record<string, boolean>;
 }
 
 function emptyState(): CreatorState {
@@ -88,6 +90,7 @@ function emptyState(): CreatorState {
 		careerKey: "",
 		rolledDice: { wounds: [], fateD10: null, insanity: [], corruption: [], corrOrInsanity: [] },
 		acquisition: null,
+		acqCollapsed: {},
 	};
 }
 
@@ -132,6 +135,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			chooseCorrIns: CharacterCreator.#onChooseCorrIns,
 			chooseCareer: CharacterCreator.#onChooseCareer,
 			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
+			toggleAcqGroup: CharacterCreator.#onToggleAcqGroup,
 			prev: CharacterCreator.#onPrev,
 			next: CharacterCreator.#onNext,
 			create: CharacterCreator.#onCreate,
@@ -368,6 +372,9 @@ variants: (entry.variants ?? []).map((v) => ({
 		// The group's PF/SP (stage 5) are a GROUP/GM-level decision and live
 		// on the dynasty document, NOT in the creator (owner redesign).
 		context.acquisitions = await this.#startingAcquisitions();
+		context.acquisitionGroups = this.#acquisitionGroups(
+			context.acquisitions as Array<Record<string, unknown>>,
+		);
 		context.acquisition = state.acquisition?.name ?? "";
 
 		context.canCreate =
@@ -417,10 +424,48 @@ variants: (entry.variants ?? []).map((v) => ({
 					payload: JSON.stringify(payload),
 					tooltip: (doc.system?.description ?? "").slice(0, 300),
 					selected: this.creatorState.acquisition?.name === doc.name,
+					group: packName.replace("rogue-trader.", ""),
 				});
 			}
 		}
 		return out.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+	}
+
+	/**
+	 * Stage 6 grouped view (bead a2rd, owner: collapsible groups): the flat
+	 * ~100+ chip list bucketed by item type, alphabetical WITHIN each group.
+	 * Groups start collapsed; a group containing the current selection
+	 * always renders open so the choice stays visible.
+	 */
+	#acquisitionGroups(
+		items: Array<Record<string, unknown>>,
+	): Array<{
+		key: string;
+		labelKey: string;
+		count: number;
+		open: boolean;
+		items: Array<Record<string, unknown>>;
+	}> {
+		const state = this.creatorState;
+		const GROUPS: Array<{ key: string; labelKey: string }> = [
+			{ key: "weapons", labelKey: "CREATOR.ACQ_GROUP_WEAPONS" },
+			{ key: "armour", labelKey: "CREATOR.ACQ_GROUP_ARMOUR" },
+			{ key: "gear", labelKey: "CREATOR.ACQ_GROUP_GEAR" },
+			{ key: "drugs", labelKey: "CREATOR.ACQ_GROUP_DRUGS" },
+			{ key: "tools", labelKey: "CREATOR.ACQ_GROUP_TOOLS" },
+		];
+		return GROUPS.map(({ key, labelKey }) => {
+			const list = items
+				.filter((item) => (item.group ?? "gear") === key)
+				.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+			return {
+				key,
+				labelKey,
+				count: list.length,
+				open: !state.acqCollapsed[key] || list.some((item) => Boolean(item.selected)),
+				items: list,
+			};
+		});
 	}
 
 	/** Roll wound/fate/insanity/corruption dice when entering the review. */
@@ -571,6 +616,19 @@ variants: (entry.variants ?? []).map((v) => ({
 	}
 
 	/** Stage 6 (p273): choose the single starting free acquisition. */
+	static async #onToggleAcqGroup(
+		this: CharacterCreator,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const key = target.dataset.group;
+		if (!key) return;
+		const collapsed = this.creatorState.acqCollapsed;
+		if (collapsed[key]) delete collapsed[key];
+		else collapsed[key] = true;
+		this.render({ force: true });
+	}
+
 	static async #onChooseAcquisition(
 		this: CharacterCreator,
 		_event: unknown,

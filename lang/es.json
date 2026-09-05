@@ -838,6 +838,12 @@
   "CREATOR.STEP_EQUIPMENT": "Elegir equipo",
   "CREATOR.EQUIPMENT_HINT": "Elegir equipo (Etapa 6): escoge un objeto con modificador total de Adquisición de +0 o mejor; no hace falta tirada (rt_core p. 273). Las armas requieren el Entrenamiento con Armas apropiado; el GM tiene la última palabra.",
   "CREATOR.ACQ_MODIFIER": "Mod",
+  "CREATOR.ACQ_GROUP_WEAPONS": "Armas",
+  "CREATOR.ACQ_GROUP_ARMOUR": "Armaduras",
+  "CREATOR.ACQ_GROUP_GEAR": "Equipo",
+  "CREATOR.ACQ_GROUP_DRUGS": "Drogas",
+  "CREATOR.ACQ_GROUP_TOOLS": "Herramientas",
+  "CREATOR.ACQ_GROUP_TOGGLE": "Expandir o plegar este grupo [traducción automática]",
   "CREATOR.MANUAL_NOTES": "Aplicar manualmente (aún no modelado por el sistema):",
   "CREATOR.BACK": "Atrás",
   "CREATOR.NEXT": "Siguiente",
@@ -931,5 +937,6 @@
   "TYPES.Item.ship": "Casco de nave estelar",
   "TYPES.Item.ship-complication": "Complicación de nave",
   "BACKGROUND.OPEN_CAREER_TOOLTIP": "Abrir las tablas de rango completas de la carrera en el compendio",
+  "BACKGROUND.OPEN_PACK_TALENT": "Ver este talento en el compendio de talentos [traducción automática]",
   "BACKGROUND.OPEN_CAREER_FAIL": "No se pudo abrir la entrada de carrera ({uuid}) — mira la consola (F12) para más detalles"
 }

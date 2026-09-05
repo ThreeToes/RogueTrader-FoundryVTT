@@ -835,6 +835,12 @@
   "CREATOR.STEP_EQUIPMENT": "Select Equipment",
   "CREATOR.EQUIPMENT_HINT": "Select Equipment (Stage 6): choose one item with a total Acquisition Modifier of +0 or better — no test needed (rt_core p273). Weapons require the appropriate Weapon Training; the GM has the final say.",
   "CREATOR.ACQ_MODIFIER": "Mod",
+  "CREATOR.ACQ_GROUP_WEAPONS": "Weapons",
+  "CREATOR.ACQ_GROUP_ARMOUR": "Armour",
+  "CREATOR.ACQ_GROUP_GEAR": "Gear",
+  "CREATOR.ACQ_GROUP_DRUGS": "Drugs",
+  "CREATOR.ACQ_GROUP_TOOLS": "Tools",
+  "CREATOR.ACQ_GROUP_TOGGLE": "Expand or collapse this group",
   "CREATOR.MANUAL_NOTES": "Apply manually (not modelled by the system yet):",
   "CREATOR.BACK": "Back",
   "CREATOR.NEXT": "Next",
@@ -928,5 +934,6 @@
   "TYPES.Item.ship": "Starship Hull",
   "TYPES.Item.ship-complication": "Ship Complication",
   "BACKGROUND.OPEN_CAREER_TOOLTIP": "Open the career's full rank tables in the careers compendium",
+  "BACKGROUND.OPEN_PACK_TALENT": "View this talent in the talents compendium",
   "BACKGROUND.OPEN_CAREER_FAIL": "Could not open the career entry ({uuid}) — see the console (F12) for details"
 }

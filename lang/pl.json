@@ -837,6 +837,12 @@
   "CREATOR.STEP_EQUIPMENT": "Wybór wyposażenia",
   "CREATOR.EQUIPMENT_HINT": "Wybór wyposażenia (Etap 6): wybierz jeden przedmiot o łącznym modyfikatorze Pozyskania +0 lub lepszym — bez testu (rt_core s. 273). Broń wymaga odpowiedniego Treningu Broni; decyzja należy do MG.",
   "CREATOR.ACQ_MODIFIER": "Mod",
+  "CREATOR.ACQ_GROUP_WEAPONS": "Bronie",
+  "CREATOR.ACQ_GROUP_ARMOUR": "Pancerze",
+  "CREATOR.ACQ_GROUP_GEAR": "Wyposażenie",
+  "CREATOR.ACQ_GROUP_DRUGS": "Narkotyki",
+  "CREATOR.ACQ_GROUP_TOOLS": "Narzędzia",
+  "CREATOR.ACQ_GROUP_TOGGLE": "Rozwiń lub zwiń tę grupę [tłumaczenie maszynowe]",
   "CREATOR.MANUAL_NOTES": "Zastosuj ręcznie (jeszcze nieobsługiwane przez system):",
   "CREATOR.BACK": "Wstecz",
   "CREATOR.NEXT": "Dalej",
@@ -930,5 +936,6 @@
   "TYPES.Item.ship": "Kadłub gwiezdnego statku",
   "TYPES.Item.ship-complication": "Komplikacja statku",
   "BACKGROUND.OPEN_CAREER_TOOLTIP": "Otwórz pełne tabele rang kariery w kompendium",
+  "BACKGROUND.OPEN_PACK_TALENT": "Zobacz ten talent w kompendium talentów [tłumaczenie maszynowe]",
   "BACKGROUND.OPEN_CAREER_FAIL": "Nie można otworzyć wpisu kariery ({uuid}) — szczegóły w konsoli (F12)"
 }

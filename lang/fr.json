@@ -837,6 +837,12 @@
   "CREATOR.STEP_EQUIPMENT": "Choix de l'équipement",
   "CREATOR.EQUIPMENT_HINT": "Choix de l'équipement (Étape 6) : choisissez un objet avec un modificateur total d'Acquisition de +0 ou mieux — aucun test requis (rt_core p. 273). Les armes exigent l'Entraînement aux Armes approprié ; le MJ a le dernier mot.",
   "CREATOR.ACQ_MODIFIER": "Mod",
+  "CREATOR.ACQ_GROUP_WEAPONS": "Armes",
+  "CREATOR.ACQ_GROUP_ARMOUR": "Armures",
+  "CREATOR.ACQ_GROUP_GEAR": "Équipement",
+  "CREATOR.ACQ_GROUP_DRUGS": "Drogues",
+  "CREATOR.ACQ_GROUP_TOOLS": "Outils",
+  "CREATOR.ACQ_GROUP_TOGGLE": "Déplier ou replier ce groupe [traduction automatique]",
   "CREATOR.MANUAL_NOTES": "À appliquer manuellement (non modélisé par le système pour l'instant) :",
   "CREATOR.BACK": "Retour",
   "CREATOR.NEXT": "Suivant",
@@ -930,5 +936,6 @@
   "TYPES.Item.ship": "Coque de vaisseau",
   "TYPES.Item.ship-complication": "Complication de vaisseau",
   "BACKGROUND.OPEN_CAREER_TOOLTIP": "Ouvrir les tables de rang complètes de la carrière dans le compendium",
+  "BACKGROUND.OPEN_PACK_TALENT": "Voir ce talent dans le compendium des talents [traduction automatique]",
   "BACKGROUND.OPEN_CAREER_FAIL": "Impossible d'ouvrir l'entrée de carrière ({uuid}) — voir la console (F12) pour plus de détails"
 }

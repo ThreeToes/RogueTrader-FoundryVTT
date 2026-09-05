@@ -6,6 +6,7 @@ import { ForceField } from "../data/item/force-field";
 import { Gear } from "../data/item/gear";
 import { MeleeWeapon } from "../data/item/melee-weapon";
 import { PsychicPower } from "../data/item/psychic-power";
+import { NavigatorPower } from "../data/item/navigator-power";
 import { OriginTrait } from "../data/item/origin-trait";
 import { Mutation } from "../data/item/mutation";
 import { MadnessEntry } from "../data/item/madness";
@@ -36,6 +37,7 @@ import { registerConfigHelper } from "./handlebars";
 import { ArmourSheet } from "./item/armour-sheet";
 import { GearSheet } from "./item/gear-sheet";
 import { PsychicPowerSheet } from "./item/psychic-power-sheet";
+import { NavigatorPowerSheet } from "./item/navigator-power-sheet";
 import { SkillSheet } from "./item/skill-sheet";
 import { TalentSheet } from "./item/talent-sheet";
 import { CareerSheet } from "./item/career-sheet";
@@ -258,6 +260,9 @@ export function sheetInit() {
 		// them does not crash DocumentSheetConfig (bead r7w).
 		CONFIG.Item.dataModels.aptitude = Gear;
 		CONFIG.Item.dataModels.psychicpower = PsychicPower;
+		// Navigator powers (bead sa6, Ch. VII): distinct type, no Focus Power
+		// Test / Psy Rating / phenomena (book p178).
+		CONFIG.Item.dataModels.navigatorpower = NavigatorPower;
 		CONFIG.Item.dataModels.origintrait = OriginTrait;
 		CONFIG.Item.dataModels.mutation = Mutation;
 		CONFIG.Item.dataModels.madness = MadnessEntry;
@@ -342,6 +347,12 @@ export function sheetInit() {
 			PsychicPowerSheet as unknown as AnySheetCtor,
 			["psychicpower"],
 			"TYPES.Item.psychicpower",
+		);
+		registerSheet(
+			foundry.documents.Item,
+			NavigatorPowerSheet as unknown as AnySheetCtor,
+			["navigatorpower"],
+			"TYPES.Item.navigatorpower",
 		);
 		// Origin traits: plain-Gear reuse (fields have initials) so opening
 		// them does not crash DocumentSheetConfig (pattern of bead r7w).

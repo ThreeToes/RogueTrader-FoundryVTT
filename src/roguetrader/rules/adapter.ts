@@ -11,6 +11,15 @@ import {
 	type TestOutcome,
 } from "../../rules-engine/src/index";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
+import {
+	effectivePsyRating,
+	focusPowerAutoFailFloor,
+	phenomenaRollModifier,
+	phenomenaTableName,
+	shouldRollPhenomena,
+	psyRatingBonus,
+} from "./psychic";
+import { resolvePower } from "./power-resolution";
 import { collectTestModifiers, mergeModifiers, type TestKind } from "./funnel";
 import { bodyLocationLabelKey } from "./labels";
 import { collectTalentDamageEffects } from "./talent-effects";
@@ -110,6 +119,9 @@ export async function postTest(
 			fireMode?: "single" | "burst" | "full";
 			flags?: Record<string, boolean>;
 		};
+		/** Profile override (bead sa6): e.g. Focus Power Tests auto-fail on
+		 * rolls of 91+ (rt_core book p157). Profile data, not an if/else. */
+		autoFailRoll?: number | null;
 	} = {},
 ): Promise<{ outcome: TestOutcome; messageId: string | null }> {
 	const collected = collectTestModifiers(
@@ -124,7 +136,14 @@ export async function postTest(
 	await roll.evaluate();
 	const rollResult = roll.total ?? 0;
 
-	const outcome = resolveTest({ target, roll: rollResult, profile: rtCore });
+	const outcome = resolveTest({
+		target,
+		roll: rollResult,
+		profile:
+			extras.autoFailRoll !== undefined
+				? { ...rtCore, autoFailRoll: extras.autoFailRoll }
+				: rtCore,
+	});
 	const outcomeLabel = outcome.success
 		? `${game.i18n.localize("ROLL.SUCCESS")} (+${outcome.degrees} ${game.i18n.localize("ROLL.DEGREES")})`
 		: game.i18n.localize("ROLL.FAILURE");
@@ -744,4 +763,316 @@ async function postWeaponDamage(
 			},
 		},
 	});
+}
+
+/**
+ * Map the power's focusTest free-text ("Willpower", "Psyniscience") to a
+ * Characteristic key. V1: Willpower -> wp, everything else falls back to wp
+ * with a console note — routing Psyniscience (a Skill test) needs the skill
+ * lookup flow and is deferred (UNVERIFIED IN WORLD).
+ */
+function focusTestKey(focusTest: string | undefined): string {
+	if (focusTest && /willpower/i.test(focusTest)) return "wp";
+	if (focusTest && /fellowship/i.test(focusTest)) return "fel";
+	if (focusTest && /perception/i.test(focusTest)) return "per";
+	console.warn(
+		`rogue-trader | focusTest "${focusTest ?? ""}" is not a known characteristic; defaulting to Willpower`,
+	);
+	return "wp";
+}
+
+/**
+ * Psychic power activation (bead sa6, rt_core Ch. VI). Flow per design bead
+ * mso6: strength selection (Fettered/Unfettered/Push) -> Focus Power Test
+ * through the shared pipeline (dialog -> funnel -> kernel -> chat card) ->
+ * Psychic Phenomena on the book's trigger -> resolution registry handling.
+ *
+ * Book citations: Table 6-1 Psychic Strength + Focus Power Test prose
+ * (book p157); 91+ always fails (p157); phenomena tables 6-2/6-3
+ * (pp160-161, extracted into the psychicphenomena pack, bead 5p15).
+ */
+export async function rollPsychicPower(
+	actor: Actor,
+	itemId: string,
+	options: RollTestOptions = {},
+): Promise<void> {
+	const item = actor.items.get(itemId);
+	if (!item || (item.type as string) !== "psychicpower") {
+		ui.notifications?.warn(game.i18n.localize("ROLL.UNKNOWN_SKILL"));
+		return;
+	}
+	const system = actor.system as unknown as Character;
+	const power = item.system as unknown as {
+		powerClass?: string;
+		subtype?: string;
+		focusTest?: string;
+		damage?: string;
+		name?: string;
+	};
+	const psyRating = system.psyRating ?? 0;
+	if (psyRating < 1 && system.psyker !== true) {
+		ui.notifications?.warn(game.i18n.localize("PSYCHIC_POWER.NOT_PSYKER"));
+		return;
+	}
+
+	// Strength selection (Table 6-1): Fettered (half PR, no phenomena),
+	// Unfettered (full PR, doubles trigger phenomena), Push (+1..+3 PR,
+	// automatic phenomena at +5/+1). Push cap is +3/+4 per the book; the
+	// sanctioned flag is not tracked on the actor yet — +3 is used and the
+	// cap is homebrew-profile material later (UNVERIFIED IN WORLD: renegade
+	// sorcerers need the +4 cap).
+	const strength = options.skipDialog
+		? "unfettered"
+		: await promptStrength();
+	if (!strength) return;
+	// Push level is encoded in the prompt choice ("push:2"); default +1.
+	const [strengthLevel, pushLevelsRaw] = strength.split(":");
+	const pushLevels = strengthLevel === "push" ? Number(pushLevelsRaw ?? "1") || 1 : 0;
+
+	const sustainedCount = system.sustainedPowers?.length ?? 0;
+	const effPr = effectivePsyRating({
+		psyRating,
+		strength: strengthLevel as "fettered" | "unfettered" | "push",
+		pushLevels,
+		sustainedCount,
+	});
+	const psyBonus = psyRatingBonus(effPr);
+
+	// Focus Power Test characteristic: the power's focusTest field names it
+	// (usually Willpower, sometimes Psyniscience as a skill); default wp.
+	const testKey = focusTestKey(power.focusTest);
+	const characteristic = system.characteristics[testKey];
+	if (!characteristic) {
+		ui.notifications?.warn(
+			game.i18n.format("ROLL.UNKNOWN_CHARACTERISTIC", { key: testKey }),
+		);
+		return;
+	}
+
+	const psyBonusModifier: Modifier = {
+		id: "psy-rating",
+		source: { type: "item", label: "SOURCE.FROM_POWERS" },
+		label: game.i18n.localize("PSYCHIC_POWER.PSY_RATING_BONUS"),
+		value: psyBonus,
+	};
+	const strengthLabel = game.i18n.localize(
+		`PSYCHIC_POWER.STRENGTH_${strengthLevel.toUpperCase()}`,
+	);
+	const title = `${actor.name} — ${item.name} (${strengthLabel})`;
+
+	let modifiers: Modifier[] = [psyBonusModifier];
+	if (!options.skipDialog) {
+		const result = await TestDialog.show({
+			title,
+			baseTarget: characteristic.value,
+			contributors: dialogContributors(actor, "focus-power", testKey, modifiers),
+		});
+		if (result === null) return;
+		modifiers = result.modifiers;
+	}
+
+	const { outcome } = await postTest(
+		actor,
+		title,
+		characteristic.value,
+		modifiers,
+		"focus-power",
+		testKey,
+		null,
+		{ autoFailRoll: focusPowerAutoFailFloor() },
+	);
+
+	// Psychic Phenomena (Table 6-1 triggers, book p157).
+	if (shouldRollPhenomena(strengthLevel as "fettered" | "unfettered" | "push", outcome)) {
+		await rollPhenomena(actor, { pushLevels, sustainedCount });
+	}
+
+	// Success handling via the resolution registry (design mso6 addendum).
+	if (outcome.success) {
+		const resolution = resolvePower(power.subtype);
+		if (resolution.damage && power.damage) {
+			await postPowerDamage(actor, item.name ?? "", power.damage);
+		}
+	}
+}
+
+/**
+ * Strength prompt (Table 6-1, book p157): Fettered / Unfettered / Push
+ * +1..+3. Push levels are separate buttons; each callback encodes the level
+ * in the returned value ("push:2"). Push cap is +3/+4 per the book; the
+ * sanctioned flag is not tracked on the actor yet — +3 is used and the cap
+ * is homebrew-profile material later (UNVERIFIED IN WORLD: renegade
+ * sorcerers need the +4 cap).
+ */
+async function promptStrength(): Promise<string | null> {
+	return (await foundry.applications.api.DialogV2.wait({
+		window: {
+			title: game.i18n.localize("PSYCHIC_POWER.STRENGTH_TITLE"),
+		},
+		content: `<p>${game.i18n.localize("PSYCHIC_POWER.STRENGTH_PROMPT")}</p>`,
+		buttons: [
+			{
+				action: "fettered",
+				label: game.i18n.localize("PSYCHIC_POWER.STRENGTH_FETTERED"),
+				callback: () => "fettered",
+			},
+			{
+				action: "unfettered",
+				label: game.i18n.localize("PSYCHIC_POWER.STRENGTH_UNFETTERED"),
+				callback: () => "unfettered",
+			},
+			{
+				action: "push1",
+				label: `${game.i18n.localize("PSYCHIC_POWER.STRENGTH_PUSH")} +1`,
+				callback: () => "push:1",
+			},
+			{
+				action: "push2",
+				label: `${game.i18n.localize("PSYCHIC_POWER.STRENGTH_PUSH")} +2`,
+				callback: () => "push:2",
+			},
+			{
+				action: "push3",
+				label: `${game.i18n.localize("PSYCHIC_POWER.STRENGTH_PUSH")} +3`,
+				callback: () => "push:3",
+			},
+		],
+	})) as string | null;
+}
+
+/**
+ * Roll on the Psychic Phenomena table (or Perils of the Warp on 75+,
+ * Table 6-2 book p160). Modifiers: +5 per push level, +10 per sustained
+ * power (book p157). The chart result is the RAW roll + modifier; the
+ * phenomena tables tile 1-100 with explicit ranges.
+ */
+async function rollPhenomena(
+	actor: Actor,
+	source: { pushLevels?: number; sustainedCount?: number },
+): Promise<void> {
+	const modifier = phenomenaRollModifier(source);
+	const die = new foundry.dice.Roll("1d100");
+	await die.evaluate();
+	const raw = die.total ?? 0;
+	const total = Math.min(100, raw + modifier);
+	const tableName = phenomenaTableName(total);
+
+	const pack = game.packs?.get("rogue-trader.psychicphenomena");
+	if (!pack) {
+		console.warn("rogue-trader | psychicphenomena pack missing");
+		ui.notifications?.warn(game.i18n.localize("PSYCHIC_POWER.NO_TABLE"));
+		return;
+	}
+	const tables = (await pack.getDocuments()) as unknown as Array<{
+		name?: string;
+		results?: Array<{ text?: string; range?: [number, number] }>;
+	}>;
+	const table = tables.find((t) => t.name === tableName);
+	const result = table?.results?.find(
+		(r) => total >= (r.range?.[0] ?? 0) && total <= (r.range?.[1] ?? 0),
+	);
+	const text = result?.text ?? game.i18n.localize("PSYCHIC_POWER.TABLE_MISS");
+	const label = game.i18n.localize("PSYCHIC_POWER.PHENOMENA_ROLL");
+	const content = `<div class="rogue-trader phenomena-roll"><h3>${label}: ${total}</h3><p>${text}</p></div>`;
+	await foundry.documents.ChatMessage.create({
+		speaker: foundry.documents.ChatMessage.getSpeaker({ actor }),
+		content,
+	});
+}
+
+/**
+ * Damage-carrying subtypes (bolt/barrage/storm/zone) roll the power's
+ * damage expression on success. Manual target application for now
+ * (mirrors the weapon damage card's manual-resolution note).
+ */
+async function postPowerDamage(
+	actor: Actor,
+	powerName: string,
+	damage: string,
+): Promise<void> {
+	const roll = new foundry.dice.Roll(damage);
+	await roll.evaluate();
+	const label = game.i18n.format("PSYCHIC_POWER.DAMAGE_ROLL", {
+		power: powerName,
+	});
+	const content = `<div class="rogue-trader power-damage"><h3>${label}</h3><p>${damage}: <strong>${roll.total}</strong></p></div>`;
+	await foundry.documents.ChatMessage.create({
+		speaker: foundry.documents.ChatMessage.getSpeaker({ actor }),
+		content,
+	});
+}
+
+/**
+ * Navigator power activation (bead sa6, rt_core Ch. VII book p178): a plain
+ * Characteristic Test with the mastery bonus (+0/+10/+20 Novice/Adept/
+ * Master) as a funnel-visible modifier. NO Focus Power Test, NO Psy Rating,
+ * NEVER Psychic Phenomena/Perils (book p178).
+ */
+export async function rollNavigatorPower(
+	actor: Actor,
+	itemId: string,
+	options: RollTestOptions = {},
+): Promise<void> {
+	const item = actor.items.get(itemId);
+	if (!item || (item.type as string) !== "navigatorpower") {
+		ui.notifications?.warn(game.i18n.localize("ROLL.UNKNOWN_SKILL"));
+		return;
+	}
+	const system = actor.system as unknown as Character;
+	const power = item.system as unknown as {
+		characteristic?: string;
+		mastery?: string;
+	};
+	const key = power.characteristic ?? "per";
+	const characteristic = system.characteristics[key];
+	if (!characteristic) {
+		ui.notifications?.warn(
+			game.i18n.format("ROLL.UNKNOWN_CHARACTERISTIC", { key }),
+		);
+		return;
+	}
+
+	const mastery = power.mastery ?? "novice";
+	const bonus =
+		(
+			item.system as unknown as {
+				masteryBonusValue?: number;
+			}
+		).masteryBonusValue ?? 0;
+	const masteryLabel = game.i18n.localize(`NAVIGATOR_POWER.${mastery.toUpperCase()}`);
+	const masteryModifier: Modifier = {
+		id: "navigator-mastery",
+		source: { type: "item", label: "SOURCE.FROM_POWERS" },
+		label: masteryLabel,
+		value: bonus,
+	};
+	const title = `${actor.name} — ${item.name} (${masteryLabel})`;
+
+	let modifiers: Modifier[] = [masteryModifier];
+	if (!options.skipDialog) {
+		const result = await TestDialog.show({
+			title,
+			baseTarget: characteristic.value,
+			contributors: dialogContributors(actor, "characteristic", key, modifiers),
+		});
+		if (result === null) return;
+		modifiers = result.modifiers;
+	}
+
+	await postTest(actor, title, characteristic.value, modifiers, "characteristic", key);
+}
+
+/** Toggle a power in/out of the sustained list (bead sa6, book p157). */
+export async function toggleSustainedPower(
+	actor: Actor,
+	itemUuid: string,
+	itemName: string,
+): Promise<void> {
+	const system = actor.system as unknown as Character;
+	const current = system.sustainedPowers ?? [];
+	const sustained = current.some((p) => p.itemUuid === itemUuid);
+	const next = sustained
+		? current.filter((p) => p.itemUuid !== itemUuid)
+		: [...current, { itemUuid, name: itemName }];
+	await actor.update({ system: { sustainedPowers: next } });
 }

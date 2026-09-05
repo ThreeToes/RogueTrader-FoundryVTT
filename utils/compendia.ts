@@ -77,7 +77,10 @@ export function resolveEntryType(
  * packs key each collection by document class: items live under `!items!`,
  * roll tables under `!tables!`.
  */
-export const TABLE_PACKS: ReadonlySet<string> = new Set(["criticals"]);
+export const TABLE_PACKS: ReadonlySet<string> = new Set([
+	"criticals",
+	"psychicphenomena",
+]);
 
 /** A single authored result row: string shorthand or a partial result. */
 type ResultRow =

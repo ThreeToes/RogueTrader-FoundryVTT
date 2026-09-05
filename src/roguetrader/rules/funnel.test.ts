@@ -318,7 +318,14 @@ describe("talent contributor", () => {
 		});
 
 		test("non-contributing item types are ignored even when carried", () => {
-			expect(collect([item("psychic-power", "carried")])).toHaveLength(0);
+			expect(collect([item("madness", "carried")])).toHaveLength(0);
+			expect(collect([item("skill", "carried")])).toHaveLength(0);
+		});
+
+		test("psychic powers contribute like talents (known items, bead sa6)", () => {
+			expect(collect([item("psychicpower")])).toHaveLength(1);
+			// ...regardless of equip state — powers are "known", not carried.
+			expect(collect([item("psychicpower", "carried")])).toHaveLength(1);
 		});
 
 		test("source label names the item type for the breakdown", () => {

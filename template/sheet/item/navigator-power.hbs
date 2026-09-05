@@ -1,0 +1,41 @@
+<section class="navigator-power">
+    <div class="form-group">
+        <label>{{localize "NAVIGATOR_POWER.CHARACTERISTIC"}}</label>
+        {{#if editable}}
+        <select name="system.characteristic">
+            {{selectOptions characteristicChoices selected=document.system.characteristic localize=true}}
+        </select>
+        {{else}}
+        <span>{{characteristicLabel}}</span>
+        {{/if}}
+    </div>
+    <div class="form-group">
+        <label>{{localize "NAVIGATOR_POWER.MASTERY"}}</label>
+        {{#if editable}}
+        <select name="system.mastery">
+            {{selectOptions masteryChoices selected=document.system.mastery localize=true}}
+        </select>
+        {{else}}
+        <span>{{localize (concat "NAVIGATOR_POWER." document.system.mastery)}}</span>
+        {{/if}}
+        <span class="chip">+{{masteryBonus}}</span>
+    </div>
+
+    <div class="form-group stacked">
+        <label>{{localize "NAVIGATOR_POWER.LEVEL_NOVICE"}}</label>
+        <div class="level-prose">{{{levels.novice}}}</div>
+    </div>
+    <div class="form-group stacked">
+        <label>{{localize "NAVIGATOR_POWER.LEVEL_ADEPT"}}</label>
+        <div class="level-prose">{{{levels.adept}}}</div>
+    </div>
+    <div class="form-group stacked">
+        <label>{{localize "NAVIGATOR_POWER.LEVEL_MASTER"}}</label>
+        <div class="level-prose">{{{levels.master}}}</div>
+    </div>
+
+    <div class="form-group stacked">
+        <label>{{localize "NAVIGATOR_POWER.DESCRIPTION"}}</label>
+        <div class="level-prose">{{{descriptionHTML}}}</div>
+    </div>
+</section>

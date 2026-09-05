@@ -14,13 +14,20 @@
         {{#if psychicPowers.length}}
         <ol class="psychic-list">
             {{#each psychicPowers as |power|}}
-            <li class="psychic-row" data-item-id="{{power.id}}">
+            <li class="psychic-row" data-item-id="{{power.id}}" data-item-uuid="{{power.uuid}}" data-item-name="{{power.name}}">
                 <span class="psychic-name" data-action="openItem" data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{power.name}}</span>
                 <span class="psychic-tags">
                     <span class="chip">{{localize power.classLabel}}</span>
                     <span class="chip">{{localize power.subtypeLabel}}</span>
                     {{#if power.rating}}<span class="chip">{{localize "PSYCHIC_POWER.RATING"}} {{power.rating}}</span>{{/if}}
+                    {{#if power.sustained}}<span class="chip claimed" data-tooltip="{{localize "PSYCHIC_POWER.SUSTAINED_TOOLTIP"}}"><i class="fa-solid fa-check"></i> {{localize "PSYCHIC_POWER.SUSTAINED"}}</span>{{/if}}
                 </span>
+                <button type="button" class="psychic-use" data-action="rollPower"
+                    data-tooltip="{{localize "PSYCHIC_POWER.USE_HINT"}}"><i class="fa-solid fa-hand-sparkles"></i>
+                </button>
+                <button type="button" class="psychic-sustain {{#if power.sustained}}active{{/if}}" data-action="toggleSustain"
+                    data-tooltip="{{localize "PSYCHIC_POWER.SUSTAIN_HINT"}}"><i class="fa-solid fa-arrows-rotate"></i>
+                </button>
                 <a class="psychic-delete" data-action="deleteItem" data-tooltip="{{localize "GEAR.DELETE"}}"
                 ><i class="fa-solid fa-xmark"></i></a>
             </li>
@@ -28,6 +35,27 @@
         </ol>
         {{else}}
         <p class="untrained-hint">{{localize "PSYCHIC_POWER.NONE"}}</p>
+        {{/if}}
+
+        {{#if navigatorPowers.length}}
+        <div class="inv-group-header">
+            <h1>{{localize "NAVIGATOR_POWER.HEADER"}}</h1>
+        </div>
+        <ol class="psychic-list">
+            {{#each navigatorPowers as |power|}}
+            <li class="psychic-row" data-item-id="{{power.id}}">
+                <span class="psychic-name" data-action="openItem" data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{power.name}}</span>
+                <span class="psychic-tags">
+                    <span class="chip">{{localize power.masteryLabel}}</span>
+                </span>
+                <button type="button" class="psychic-use" data-action="rollNavigatorPower"
+                    data-tooltip="{{localize "NAVIGATOR_POWER.USE_HINT"}}"><i class="fa-solid fa-eye"></i>
+                </button>
+                <a class="psychic-delete" data-action="deleteItem" data-tooltip="{{localize "GEAR.DELETE"}}"
+                ><i class="fa-solid fa-xmark"></i></a>
+            </li>
+            {{/each}}
+        </ol>
         {{/if}}
     </div>
 </section>

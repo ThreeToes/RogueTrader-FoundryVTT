@@ -591,6 +591,20 @@
 	flex: none;
 }
 
+/* Bead sa6: use/sustain action buttons on psychic + navigator power rows. */
+.rogue-trader .psychic .psychic-use,
+.rogue-trader .psychic .psychic-sustain {
+	flex: none;
+	padding: 1px 8px;
+	font-size: 0.9em;
+	line-height: 1.4;
+}
+
+.rogue-trader .psychic .psychic-sustain.active {
+	border-color: rgba(122, 106, 83, 0.9);
+	background: rgba(122, 106, 83, 0.2);
+}
+
 .rogue-trader.sheet .psychic-picker .catalog-row {
 	display: flex;
 	align-items: center;

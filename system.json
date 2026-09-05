@@ -162,6 +162,20 @@
       "system": "rogue-trader",
       "path": "packs/psychicpowers",
       "type": "Item"
+    },
+    {
+      "name": "navigatorpowers",
+      "label": "Rogue Trader Navigator Powers",
+      "system": "rogue-trader",
+      "path": "packs/navigatorpowers",
+      "type": "Item"
+    },
+    {
+      "name": "psychicphenomena",
+      "label": "Rogue Trader Psychic Phenomena",
+      "system": "rogue-trader",
+      "path": "packs/psychicphenomena",
+      "type": "RollTable"
     }
   ],
   "languages": [

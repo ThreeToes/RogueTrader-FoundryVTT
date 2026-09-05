@@ -1,4 +1,5 @@
 import { DamageType } from "./damage-types";
+import { effectsField, type EffectData } from "./effects";
 
 /** Psychic power sub-types (RT core, VERIFY against the book when seeding). */
 export const psychicPowerSubtypes = [
@@ -32,6 +33,7 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 	declare damageType: string;
 	declare sustained: boolean;
 	declare shortDescription: string;
+	declare effects: EffectData[];
 
 	static override defineSchema() {
 		return {
@@ -88,6 +90,13 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 			description: new foundry.data.fields.HTMLField({
 				initial: "",
 			}),
+			/**
+			 * Effect list (bead sa6, design mso6 addendum): same shared shape
+			 * as talents/gear (data/item/effects.ts). test-modifier kinds feed
+			 * the funnel for Focus Power Tests (powers are "known" items like
+			 * talents — effectsAreLive); other kinds go to registered handlers.
+			 */
+			effects: effectsField(),
 			/** Focus Power Test characteristic/skill (e.g. "Willpower"). */
 			focusTest: new foundry.data.fields.StringField({
 				initial: "",

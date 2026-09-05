@@ -39,6 +39,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 	/** Psyker marker (bead m4me): Navigators count (rt_core p182) even at rating 0. */
 	declare psyker: boolean;
 	declare psyRating: number;
+	declare sustainedPowers: Array<{ itemUuid: string; name: string }>;
 	declare afflictions: Array<{
 		kind: string;
 		name: string;
@@ -156,6 +157,19 @@ export class Character extends foundry.abstract.TypeDataModel<
 				integer: true,
 				initial: 0,
 			}),
+			/**
+			 * Powers currently sustained (bead sa6, rt_core p157): -1 effective
+			 * Psy Rating per sustained power and +10 to all Phenomena rolls
+			 * while any are up. {itemUuid, name} — uuid so the toggle survives
+			 * renames; name so the UI renders without pack lookups.
+			 */
+			sustainedPowers: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.SchemaField({
+					itemUuid: new foundry.data.fields.StringField({ initial: "" }),
+					name: new foundry.data.fields.StringField({ initial: "" }),
+				}),
+				{ initial: () => [] },
+			),
 			/**
 			 * Origin Path picks (bead ay0): written by the character creator,
 			 * displayed on the consolidated Background tab. Keys into the

@@ -13,14 +13,16 @@ import {
 	insanityTrack,
 	malignancyTestsDue,
 } from "../../rules/madness";
-import { rollTest } from "../../rules/adapter";
 import type { Modifier } from "../../rules-engine/src/modifier";
 import {
+	rollNavigatorPower,
+	rollPsychicPower,
 	rollSkill,
 	rollSkillUntrained,
 	rollTest,
 	rollWeaponAttack,
 	rollWeaponDamage,
+	toggleSustainedPower,
 } from "../../rules/adapter";
 import { defaultSkillItems } from "../../rules/default-skills";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
@@ -71,6 +73,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			toggleEquip: CharacterSheet.#onToggleEquip,
 			openAdvancement: CharacterSheet.#onOpenAdvancement,
 			openPsychicPicker: CharacterSheet.#onOpenPsychicPicker,
+			rollPower: CharacterSheet.#onRollPower,
+			toggleSustain: CharacterSheet.#onToggleSustain,
+			rollNavigatorPower: CharacterSheet.#onRollNavigatorPower,
 			openCareerSheet: CharacterSheet.#onOpenCareerSheet,
 			claimGrant: CharacterSheet.#onClaimGrant,
 			rollTraumaTest: CharacterSheet.#onRollTraumaTest,
@@ -144,6 +149,42 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		actor: foundry.documents.Actor;
 	}): Promise<void> {
 		await new PsychicPicker({ actor: this.actor }).render({ force: true });
+	}
+
+	/** Activate a psychic power (bead sa6): strength prompt -> Focus Power Test. */
+	static async #onRollPower(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		if (!itemId) return;
+		await rollPsychicPower(this.actor, itemId);
+	}
+
+	/** Toggle a power's sustained state (bead sa6, book p157). */
+	static async #onToggleSustain(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const row = target.closest<HTMLElement>("[data-item-uuid]");
+		const uuid = row?.dataset.itemUuid;
+		const name = row?.dataset.itemName;
+		if (!uuid || !name) return;
+		await toggleSustainedPower(this.actor, uuid, name);
+	}
+
+	/** Activate a navigator power (bead sa6, book p178): characteristic test + mastery. */
+	static async #onRollNavigatorPower(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId =
+			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		if (!itemId) return;
+		await rollNavigatorPower(this.actor, itemId);
 	}
 
 	/** Open the compendium career item sheet (Background tab, bead ay0). */
@@ -655,6 +696,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.isPsyker =
 			system.psyker === true || (system.psyRating ?? 0) >= 1;
 		context.psyRating = system.psyRating ?? 0;
+		const sustained = new Set(
+			(system.sustainedPowers ?? []).map((p) => p.itemUuid),
+		);
 		context.psychicPowers = this.actor.items
 			.filter((item) => (item.type as string) === "psychicpower")
 			.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
@@ -666,12 +710,32 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				};
 				return {
 					id: item.id,
+					uuid: item.uuid,
 					name: item.name,
 					powerClass: sys.powerClass ?? "bound",
 					classLabel: `PSYCHIC_POWER.${(sys.powerClass ?? "bound").toUpperCase()}`,
 					subtype: sys.subtype ?? "focus",
 					subtypeLabel: `PSYCHIC_POWER.${(sys.subtype ?? "focus").toUpperCase()}`,
 					rating: sys.rating ?? 0,
+					// Bead sa6: sustained-powers affordance (book p157 — the
+					// sustain modifiers flow through rules/psychic.ts).
+					sustained: sustained.has(item.uuid),
+				};
+			});
+		// Navigator powers (bead sa6, Ch. VII): plain characteristic test with
+		// mastery bonus — same tab, distinct section (owner fold-in decision).
+		context.navigatorPowers = this.actor.items
+			.filter((item) => (item.type as string) === "navigatorpower")
+			.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
+			.map((item) => {
+				const sys = item.system as unknown as {
+					mastery?: string;
+				};
+				return {
+					id: item.id,
+					name: item.name,
+					mastery: sys.mastery ?? "novice",
+					masteryLabel: `NAVIGATOR_POWER.${(sys.mastery ?? "novice").toUpperCase()}`,
 				};
 			});
 

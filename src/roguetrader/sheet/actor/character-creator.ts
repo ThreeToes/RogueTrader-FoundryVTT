@@ -266,7 +266,11 @@ variants: (entry.variants ?? []).map((v) => ({
 					pickVariantEffect: pickVariant?.effect ?? null,
 					pickOption: pick?.optionChoice ?? null,
 					pickAlternate: pick?.alternate ?? null,
-					corrIns: state.corrOrInsTrack[entry.key] ?? null,
+					// Track choice is stored under the ROW key (the write side in
+					// #onChooseCorrIns uses data-row = row.row) — reading it under
+					// entry.key silently never matched (bug report 2026-09-05:
+					// "Choose a track" chips never highlighted).
+					corrIns: state.corrOrInsTrack[row] ?? null,
 					hasOptions: (mechanicsForPick?.optionChoice?.length ?? 0) > 0,
 					// Selection state precomputed here (not in Handlebars paths):
 					// each-scope relative paths were silently unresolvable.
@@ -370,7 +374,19 @@ variants: (entry.variants ?? []).map((v) => ({
 			state.step === 3 &&
 			ORIGIN_ROWS.every((row) => Boolean(state.picks[row])) &&
 			Boolean(state.careerKey) &&
-			(state.method === "roll" ? true : pointBuy.valid);
+			(state.method === "roll" ? true : pointBuy.valid) &&
+			// Every origin whose mechanics offer the corruption-or-insanity
+			// track must have the track chosen (book rule); otherwise the
+			// rolled dice would be silently dropped.
+			ORIGIN_ROWS.every((row) => {
+				const pick = state.picks[row];
+				if (!pick) return true;
+				const detail = (context.originRows as Array<{ row: string; detail: { hasCorrIns?: boolean } } | undefined>)?.find(
+					(r) => r?.row === row,
+				)?.detail;
+				if (!detail?.hasCorrIns) return true;
+				return Boolean(state.corrOrInsTrack[row]);
+			});
 		return context;
 	}
 
@@ -614,7 +630,8 @@ variants: (entry.variants ?? []).map((v) => ({
 			// Psyker status from the career (bead m4me): Astropaths start
 			// with Psy Rating 2 (their starting talents); Navigators are
 			// "considered a psyker for all game purposes" (p182) with no
-			// standard Psy Rating. Manually editable post-creation.
+			// standard Psy Rating. Career-derived only — not editable (owner:
+			// stick to the book rules).
 			psyker:
 				state.careerKey === "astropath-transcendent" ||
 				state.careerKey === "navigator",

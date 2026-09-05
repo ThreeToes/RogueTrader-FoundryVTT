@@ -32,7 +32,11 @@ export type TestKind =
 	| "characteristic"
 	| "skill"
 	| "attack"
-	| "vehicle-handling";
+	| "vehicle-handling"
+	// Focus Power Test (bead sa6, rt_core p157): a Characteristic/Skill test
+	// with the +5-per-effective-PR bonus expressed as a funnel-visible
+	// modifier, so power/talent effects contribute via the normal funnel.
+	| "focus-power";
 
 export interface TestModifierContext {
 	/** What kind of test is being rolled. */

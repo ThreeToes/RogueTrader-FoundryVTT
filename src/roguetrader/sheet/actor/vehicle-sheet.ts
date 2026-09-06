@@ -1,4 +1,5 @@
 import { Vehicle } from "../../data/actor/vehicle";
+import { isWeaponType } from "../../data/accessors";
 import {
 	vehicleClasses,
 	vehicleFacings,
@@ -130,14 +131,11 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		if (data.type === "Item") {
 			const doc = await foundry.utils.fromUuid(data.uuid);
 			if (!(doc instanceof foundry.documents.Item)) return;
-			if (
-				!(
-					(doc.type as string) === "melee-weapon" ||
-					(doc.type as string) === "ranged-weapon"
-				)
-			) {
-				return;
-			}
+			// Mounted-weapon filter (p5nw review): the vehicle weapons tab lists
+			// character-scale weapons mounted on the hull with a facing, so only
+			// weapon items are accepted as mounted weapons. INTENTIONAL, not a
+			// copy-paste of the character-sheet filter.
+			if (!isWeaponType(doc.type as string)) return;
 			return this.actor.update({
 				system: {
 					mountedWeapons: [

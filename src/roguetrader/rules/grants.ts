@@ -66,6 +66,23 @@ export const PARAMETERISED_BASES: Readonly<Record<string, string[]>> = {
 	],
 	Hatred: [],
 	Resistance: ["Cold", "Fear", "Poison", "Psychic", "Psychic Powers"],
+	// Book-verified † (choose-one) talents from Table 4-1 (Core Rulebook
+	// pp92-94, bead h1o5). Subject lists empty = free text only (the book
+	// gives representative-group lists only for Peer/Enemy); the pack
+	// authors each of these as a bare base doc that grants clone from.
+	Rival: [],
+	"Basic Weapon Training": [],
+	"Exotic Weapon Training": [],
+	"Flame Weapon Training": [],
+	"Heavy Weapon Training": [],
+	"Melee Weapon Training": [],
+	"Pistol Weapon Training": [],
+	"Thrown Weapon Training": [],
+	"Good Reputation": [],
+	"Heightened Senses": [],
+	"Mechadendrite Use": [],
+	"Psychic Technique": [],
+	"Two-Weapon Wielder": [],
 	"Weapon Training": [
 		"Basic",
 		"Chain",
@@ -119,6 +136,20 @@ export function parameterisedBase(name: string): string | null {
 /** Resolve a base + subject into the concrete talent name. */
 export function resolveParameterised(base: string, subject: string): string {
 	return `${base} (${subject})`;
+}
+
+/**
+ * The parameterised PACK base for any subject-qualified form of a known
+ * parameterised talent, or null. Unlike parameterisedBase (which is
+ * subject-resolution logic and returns null for resolved subjects), this
+ * is pack-lookup logic (bead h1o5): grants name concrete forms like
+ * "Rival (Rogue Trader family)" while the pack authors the bare base
+ * "Rival" — both map to the base doc for cloning.
+ */
+export function parameterisedPackBase(name: string): string | null {
+	const paren = /^(.+?)\s*\(.*\)\s*$/.exec(name.trim());
+	const base = (paren?.[1] ?? name).trim();
+	return base in PARAMETERISED_BASES ? base : null;
 }
 
 // ---------------------------------------------------------------------------

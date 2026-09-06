@@ -1,15 +1,16 @@
 import {
-	rollNavigatorPower,
-	rollPsychicPower,
-	rollSkill,
-	rollTest,
-	rollWeaponAttack,
+	performRoll,
 	rollWeaponDamage,
 } from "../../rules/adapter";
-import type { Character, CharacteristicKey } from "../../data/actor/character";
 import type { CharacteristicKey as Key } from "../../data/actor/character";
+import {
+	equipStateOf,
+	isWeaponType,
+	systemOf,
+} from "../../data/accessors";
+import { cloneItemFromDrop, npcEquipDefaultSystemOverrides } from "../drop-clone";
+import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
 import { RtActorSheet } from "../context";
-import { npcEquipDefaultSystemOverrides } from "../drop-clone";
 
 /**
  * GM-facing NPC sheet (bead mqdy, owner spec 2026-09-06): fast at-the-table
@@ -19,19 +20,6 @@ import { npcEquipDefaultSystemOverrides } from "../drop-clone";
  * the NPC is a psyker/navigator) and long-form notes. The explorer keeps
  * CharacterSheet; this sheet is registered for the npc type only.
  */
-
-/** Short characteristic forms for the table's first row (data model order). */
-const CHAR_SHORTS: Record<CharacteristicKey, string> = {
-	ws: "WS",
-	bs: "BS",
-	s: "S",
-	t: "T",
-	ag: "Ag",
-	int: "Int",
-	per: "Per",
-	wp: "WP",
-	fel: "Fel",
-};
 
 export class NpcSheet extends RtActorSheet {
 	static DEFAULT_OPTIONS = {
@@ -92,7 +80,7 @@ export class NpcSheet extends RtActorSheet {
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
 		const tabs = super._prepareTabs(group);
-		const system = this.actor.system as unknown as Character;
+		const system = systemOf(this.actor);
 		const powers = this.actor.items.filter(
 			(i) =>
 				(i.type as string) === "psychicpower" ||
@@ -135,7 +123,7 @@ export class NpcSheet extends RtActorSheet {
 
 	async _prepareContext(options: object = {}) {
 		const context = await super._prepareContext(options);
-		const system = this.actor.system as unknown as Character;
+		const system = systemOf(this.actor);
 		context.system = system;
 
 		// Horizontal characteristic table: short row + value row.
@@ -161,11 +149,7 @@ export class NpcSheet extends RtActorSheet {
 					name: i.name ?? "",
 					ladder,
 					bonus: `+${(ladder - 1) * 10}`,
-					ladderOptions: [
-						{ value: 1, label: "SKILL.LADDER_KNOWN" },
-						{ value: 2, label: "SKILL.LADDER_PLUS_10" },
-						{ value: 3, label: "SKILL.LADDER_PLUS_20" },
-					],
+					ladderOptions: LADDER_OPTIONS,
 				};
 			})
 			.sort((a, b) => a.name.localeCompare(b.name)) as never;
@@ -174,16 +158,14 @@ export class NpcSheet extends RtActorSheet {
 		// the equip/stow toggle (owner spec: NPCs are HOLDING their listed
 		// weapons, so drops default to carried — see #onDrop).
 		context.weapons = this.actor.items
-			.filter(
-				(i) => (i.type as string) === "melee-weapon" || (i.type as string) === "ranged-weapon",
-			)
+			.filter((i) => isWeaponType(i.type as string))
 			.map((i) => {
-				const s = i.system as unknown as { damage?: string; equipState?: string };
+				const s = i.system as unknown as { damage?: string };
 				return {
 					id: i.id ?? "",
 					name: i.name ?? "",
 					damage: s.damage ?? "",
-					equipped: (s.equipState ?? "stowed") !== "stowed",
+					equipped: equipStateOf(i) !== "stowed",
 				};
 			}) as never;
 
@@ -198,9 +180,7 @@ export class NpcSheet extends RtActorSheet {
 		] as const;
 		const wornArmour = this.actor.items.filter(
 			(item) =>
-				(item.type as string) === "armour" &&
-				(item.system as unknown as { equipState?: string }).equipState ===
-					"worn",
+				(item.type as string) === "armour" && equipStateOf(item) === "worn",
 		);
 		context.armourTotals = LOCATIONS.map((loc) => ({
 			loc,
@@ -219,10 +199,8 @@ export class NpcSheet extends RtActorSheet {
 			.map((item) => ({
 				id: item.id ?? "",
 				name: item.name ?? "",
-				worn:
-					(item.system as unknown as { equipState?: string }).equipState ===
-					"worn",
-				}));
+				worn: equipStateOf(item) === "worn",
+			}));
 		context.items = this.actor.items
 			.filter(
 				(item) =>
@@ -267,7 +245,12 @@ export class NpcSheet extends RtActorSheet {
 	): Promise<void> {
 		const key = target.dataset.key;
 		if (!key) return;
-		await rollTest(this.actor, key, { skipDialog: false });
+		await performRoll({
+			kind: "characteristic",
+			actor: this.actor,
+			key,
+			skipDialog: false,
+		});
 	}
 
 		/** Click a known skill to roll it. */
@@ -278,7 +261,12 @@ export class NpcSheet extends RtActorSheet {
 	): Promise<void> {
 		const itemId = target.dataset.item;
 		if (!itemId) return;
-		await rollSkill(this.actor, itemId, { skipDialog: false });
+		await performRoll({
+			kind: "skill",
+			actor: this.actor,
+			itemId,
+			skipDialog: false,
+		});
 	}
 
 	static async #onRollWeapon(
@@ -288,7 +276,11 @@ export class NpcSheet extends RtActorSheet {
 	): Promise<void> {
 		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
-		await rollWeaponAttack(this.actor, itemId);
+		await performRoll({
+			kind: "weapon",
+			actor: this.actor,
+			itemId,
+		});
 	}
 
 	static async #onRollDamage(
@@ -312,9 +304,17 @@ export class NpcSheet extends RtActorSheet {
 		const item = this.actor.items.get(itemId);
 		if (!item) return;
 		if ((item.type as string) === "navigatorpower") {
-			await rollNavigatorPower(this.actor, itemId);
+			await performRoll({
+				kind: "navigator",
+				actor: this.actor,
+				itemId,
+			});
 		} else {
-			await rollPsychicPower(this.actor, itemId);
+			await performRoll({
+				kind: "psychic",
+				actor: this.actor,
+				itemId,
+			});
 		}
 	}
 
@@ -355,8 +355,7 @@ export class NpcSheet extends RtActorSheet {
 		if (!itemId) return;
 		const item = this.actor.items.get(itemId);
 		if (!item) return;
-		const current =
-			(item.system as unknown as { equipState?: string }).equipState ?? "stowed";
+		const current = equipStateOf(item);
 		await item.update({ system: { equipState: current === "stowed" ? "carried" : "stowed" } });
 	}
 

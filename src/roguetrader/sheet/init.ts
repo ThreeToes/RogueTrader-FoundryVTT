@@ -22,7 +22,17 @@ import {
 import { WeaponModification } from "../data/item/weapon-modification";
 import { attachRegistriesToConfig } from "../registry";
 import { migrateLegacyActors } from "../migrations";
-import { rollDamageForCard, rollSkill, rollTest } from "../rules/adapter";
+import {
+	rollDamageForCard,
+	rollSkill,
+	rollTest,
+	rollSkillUntrained,
+	rollWeaponAttack,
+	rollPsychicPower,
+	rollNavigatorPower,
+	performRoll,
+} from "../rules/adapter";
+import type { DamageApplyFlag, DamageRollFlag } from "../rules/chat-flags";
 import { missingSkillGrants } from "../rules/default-skills";
 import { testContributors } from "../rules/funnel";
 import {
@@ -52,15 +62,13 @@ import { registerSharedPartials } from "./partials";
 import { getPackDocuments } from "./pack-resolve";
 import { trackDefaultGrants } from "./default-grants";
 
-type AnySheetCtor = new (...args: unknown[]) => object;
+// 6a1x: any sheet constructor. never[] params (not unknown[]) so concrete
+// ApplicationV2 constructors with specific optional options objects are
+// assignable without per-call casts (never is assignable to everything).
+type AnySheetCtor = new (...args: never[]) => object;
 
 let commonSkillCatalog: object[] = [];
-
-interface DamageApplyFlag {
-	wounds?: number;
-	targetUuid?: string;
-	applied?: boolean;
-}
+// DamageApplyFlag / DamageRollFlag live in rules/chat-flags.ts (bead mvu2).
 
 /**
  * Apply the wounds shown on a damage chat card to the flagged target
@@ -189,11 +197,17 @@ export function sheetInit() {
 		attachRegistriesToConfig();
 		registerSharedPartials();
 
-		// Public roll API for modules/macros: game.rogueTrader.rollTest(actor, key, opts)
+		// Public roll API for modules/macros (bead mvu2): the full roll set
+		// plus performRoll for module-defined request kinds.
 		const git = game as unknown as { rogueTrader?: Record<string, unknown> };
 		git.rogueTrader ??= {};
+		git.rogueTrader.performRoll = performRoll;
 		git.rogueTrader.rollTest = rollTest;
 		git.rogueTrader.rollSkill = rollSkill;
+		git.rogueTrader.rollSkillUntrained = rollSkillUntrained;
+		git.rogueTrader.rollWeaponAttack = rollWeaponAttack;
+		git.rogueTrader.rollPsychicPower = rollPsychicPower;
+		git.rogueTrader.rollNavigatorPower = rollNavigatorPower;
 
 		// Module extension point for test modifiers (funnel v2, see rules/funnel.ts).
 		const rtc = CONFIG as unknown as {
@@ -254,57 +268,122 @@ export function sheetInit() {
 			getDefs: () => originTraitDefs,
 		};
 
-		CONFIG.Item.dataModels.gear = Gear;
-		CONFIG.Item.dataModels["ranged-weapon"] = RangedWeapon;
-		CONFIG.Item.dataModels["melee-weapon"] = MeleeWeapon;
-		CONFIG.Item.dataModels.armour = Armour;
-		CONFIG.Item.dataModels.skill = Skill;
-		CONFIG.Item.dataModels.talent = Talent;
-		CONFIG.Item.dataModels.career = Career;
-		// Starship hulls + complications (bead sl31, Chapter VIII).
-		CONFIG.Item.dataModels.ship = Starship;
-		CONFIG.Item.dataModels["ship-complication"] = ShipComplication;
-		CONFIG.Item.dataModels["ship-component"] = ShipComponent;
-		CONFIG.Item.dataModels["ship-weapon-component"] = ShipWeaponComponent;
-		// Compendium-sourced aptitudes are description-only items; reuse the
-		// Gear model (all fields have initials) and its generic sheet so opening
-		// them does not crash DocumentSheetConfig (bead r7w).
-		CONFIG.Item.dataModels.aptitude = Gear;
-		CONFIG.Item.dataModels.psychicpower = PsychicPower;
-		// Navigator powers (bead sa6, Ch. VII): distinct type, no Focus Power
-		// Test / Psy Rating / phenomena (book p178).
-		CONFIG.Item.dataModels.navigatorpower = NavigatorPower;
-		CONFIG.Item.dataModels.origintrait = OriginTrait;
-		CONFIG.Item.dataModels.mutation = Mutation;
-		CONFIG.Item.dataModels.madness = MadnessEntry;
-		CONFIG.Item.dataModels.ammunition = Ammunition;
-		CONFIG.Item.dataModels["force-field"] = ForceField;
-		CONFIG.Item.dataModels["weapon-modification"] = WeaponModification;
-		// No extra schema needed: reuse the Gear model for the plain-Gear
-		// subtypes the packs reference (bead 5p8 scope note).
-		CONFIG.Item.dataModels.tool = Gear;
-		CONFIG.Item.dataModels.drug = Gear;
-		CONFIG.Item.dataModels["special-ability"] = Gear;
-		CONFIG.Actor.dataModels.pc = Character;
-		// "explorer" = the character type (owner: rename of the legacy DH2
-		// "acolyte" and the creator-made "pc"); pc is migrated at ready (ow8w)
-		// but keeps its dataModel until the migration has run.
-		CONFIG.Actor.dataModels.explorer = Character;
-		CONFIG.Actor.dataModels.npc = Character;
-		CONFIG.Actor.dataModels.vehicle = Vehicle;
-		// Group record for Profit Factor / Ship Points (bead gjvg).
-		CONFIG.Actor.dataModels.dynasty = Dynasty;
-		// Starship actor (bead kwd): dedicated starship sheet.
-		CONFIG.Actor.dataModels.starship = StarshipActor;
+		// Data-driven document registration (bead 6a1x): one entry per document
+		// type = { model, sheet, label }. The data-model loop feeds
+		// CONFIG.*.dataModels; the sheet loop registers each sheet as
+		// makeDefault via DocumentSheetConfig. Adding a type is one table line.
+		// A type with no `sheet` registers its data model only (raw document
+		// types: starship hull/complications/components, legacy "pc").
+		//
+		// Plain-Gear reuse (beads r7w, 5p8): compendium-sourced aptitudes and
+		// the plain-Gear subtypes have no extra schema (all Gear fields have
+		// initials) and reuse the Gear model + generic sheet so opening them
+		// does not crash DocumentSheetConfig. (Pre-table these types were
+		// registered twice with different labels; DocumentSheetConfig keys
+		// registrations by scope + sheet class, so the later
+		// ROGUE_TRADER.GEAR.SHEET label won — the table keeps that final state.)
+		type SheetEntry = {
+			model: unknown;
+			sheet?: AnySheetCtor;
+			label?: string;
+		};
+		const SHEET_REGISTRY: Record<
+			"Item" | "Actor",
+			Record<string, SheetEntry>
+		> = {
+			Item: {
+				gear: { model: Gear, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				"ranged-weapon": {
+					model: RangedWeapon,
+					sheet: WeaponSheet,
+					label: "ROGUE_TRADER.WEAPON.SHEET",
+				},
+				"melee-weapon": {
+					model: MeleeWeapon,
+					sheet: WeaponSheet,
+					label: "ROGUE_TRADER.WEAPON.SHEET",
+				},
+				armour: { model: Armour, sheet: ArmourSheet, label: "ROGUE_TRADER.ARMOUR.SHEET" },
+				skill: { model: Skill, sheet: SkillSheet, label: "ROGUE_TRADER.SKILL.SHEET" },
+				talent: { model: Talent, sheet: TalentSheet, label: "ROGUE_TRADER.TALENT.SHEET" },
+				career: { model: Career, sheet: CareerSheet, label: "TYPES.Item.career" },
+				// Starship hulls + complications (bead sl31, Chapter VIII):
+				// data-model-only types, no sheets yet.
+				ship: { model: Starship },
+				"ship-complication": { model: ShipComplication },
+				"ship-component": { model: ShipComponent },
+				"ship-weapon-component": { model: ShipWeaponComponent },
+				// Compendium-sourced aptitudes are description-only items; reuse
+				// the Gear model (all fields have initials) and its generic sheet
+				// (bead r7w).
+				aptitude: { model: Gear, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				psychicpower: {
+					model: PsychicPower,
+					sheet: PsychicPowerSheet,
+					label: "TYPES.Item.psychicpower",
+				},
+				// Navigator powers (bead sa6, Ch. VII): distinct type, no Focus
+				// Power Test / Psy Rating / phenomena (book p178).
+				navigatorpower: {
+					model: NavigatorPower,
+					sheet: NavigatorPowerSheet,
+					label: "TYPES.Item.navigatorpower",
+				},
+				// Origin traits, mutations, madness, ammunition, force fields and
+				// weapon modifications reuse the Gear model + generic sheet.
+				origintrait: { model: OriginTrait, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				mutation: { model: Mutation, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				madnessentry: { model: MadnessEntry, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				ammunition: { model: Ammunition, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				"force-field": { model: ForceField, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				"weapon-modification": {
+					model: WeaponModification,
+					sheet: GearSheet,
+					label: "ROGUE_TRADER.GEAR.SHEET",
+				},
+				// No extra schema needed: reuse the Gear model for the plain-Gear
+				// subtypes the packs reference (bead 5p8 scope note).
+				tool: { model: Gear, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				drug: { model: Gear, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				"special-ability": { model: Gear, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+			},
+			Actor: {
+				// Legacy "pc": model kept until the ready-migration has run, no
+				// sheet registration (bead ow8w deletes it post-migration).
+				pc: { model: Character },
+				// "explorer" = the character type (owner: rename of the legacy
+				// DH2 "acolyte" and the creator-made "pc"); pc is migrated at
+				// ready (ow8w) but keeps its dataModel until the migration has run.
+				explorer: {
+					model: Character,
+					sheet: CharacterSheet,
+					label: "ROGUE_TRADER.CHARACTER.SHEET",
+				},
+				npc: { model: Character, sheet: NpcSheet, label: "NPC.SHEET" },
+				vehicle: { model: Vehicle, sheet: VehicleSheet, label: "ROGUE_TRADER.VEHICLE.SHEET" },
+				// Group record for Profit Factor / Ship Points (bead gjvg).
+				dynasty: { model: Dynasty, sheet: DynastySheet, label: "DYNASTY.SHEET" },
+				// Starship actor (bead kwd): dedicated starship sheet.
+				starship: { model: StarshipActor, sheet: ShipSheet, label: "STARSHIP.SHEET" },
+			},
+		};
+		for (const [type, entry] of Object.entries(SHEET_REGISTRY.Item)) {
+			(CONFIG.Item.dataModels as unknown as Record<string, unknown>)[type] =
+				entry.model;
+		}
+		for (const [type, entry] of Object.entries(SHEET_REGISTRY.Actor)) {
+			(CONFIG.Actor.dataModels as unknown as Record<string, unknown>)[type] =
+				entry.model;
+		}
 		registerConfigHelper();
 
 		const registerSheet = (
 			documentClass:
 				| typeof foundry.documents.Item
 				| typeof foundry.documents.Actor,
-			sheet: AnySheetCtor,
-			types: [string, ...string[]],
-			label: string,
+			 sheet: AnySheetCtor,
+			 types: [string, ...string[]],
+			 label: string,
 		) => {
 			foundry.applications.apps.DocumentSheetConfig.registerSheet(
 				documentClass,
@@ -317,75 +396,23 @@ export function sheetInit() {
 				},
 			);
 		};
-
-		registerSheet(
+		for (const documentClass of [
 			foundry.documents.Item,
-			GearSheet as unknown as AnySheetCtor,
-			["gear"],
-			"ROGUE_TRADER.GEAR.SHEET",
-		);
-		registerSheet(
-			foundry.documents.Item,
-			WeaponSheet as unknown as AnySheetCtor,
-			["ranged-weapon", "melee-weapon"],
-			"ROGUE_TRADER.WEAPON.SHEET",
-		);
-		registerSheet(
-			foundry.documents.Item,
-			ArmourSheet as unknown as AnySheetCtor,
-			["armour"],
-			"ROGUE_TRADER.ARMOUR.SHEET",
-		);
-		registerSheet(
-			foundry.documents.Item,
-			SkillSheet as unknown as AnySheetCtor,
-			["skill"],
-			"ROGUE_TRADER.SKILL.SHEET",
-		);
-		registerSheet(
-			foundry.documents.Item,
-			TalentSheet as unknown as AnySheetCtor,
-			["talent"],
-			"ROGUE_TRADER.TALENT.SHEET",
-		);
-		registerSheet(
-			foundry.documents.Item,
-			CareerSheet as unknown as AnySheetCtor,
-			["career"],
-			"TYPES.Item.career",
-		);
-		registerSheet(
-			foundry.documents.Item,
-			PsychicPowerSheet as unknown as AnySheetCtor,
-			["psychicpower"],
-			"TYPES.Item.psychicpower",
-		);
-		registerSheet(
-			foundry.documents.Item,
-			NavigatorPowerSheet as unknown as AnySheetCtor,
-			["navigatorpower"],
-			"TYPES.Item.navigatorpower",
-		);
-		// Origin traits: plain-Gear reuse (fields have initials) so opening
-		// them does not crash DocumentSheetConfig (pattern of bead r7w).
-		registerSheet(
-			foundry.documents.Item,
-			GearSheet as unknown as AnySheetCtor,
-			["origintrait"],
-			"TYPES.Item.origintrait",
-		);
-		registerSheet(
-			foundry.documents.Item,
-			GearSheet as unknown as AnySheetCtor,
-			["mutation"],
-			"TYPES.Item.mutation",
-		);
-		registerSheet(
-			foundry.documents.Item,
-			GearSheet as unknown as AnySheetCtor,
-			["madnessentry"],
-			"TYPES.Item.madnessentry",
-		);
+			foundry.documents.Actor,
+		] as const) {
+			const className = documentClass.name as "Item" | "Actor";
+			for (const [type, entry] of Object.entries(
+				SHEET_REGISTRY[className],
+			)) {
+				if (!entry.sheet) continue;
+				registerSheet(
+					documentClass,
+					entry.sheet,
+					[type],
+					entry.label ?? `TYPES.${className}.${type}`,
+				);
+			}
+		}
 		// Apply-damage button on attack damage cards (bead ncc): an
 		// adapter-layer action that consumes the displayed outcome - the flag
 		// carries the computed wounds; nothing is recomputed here. Delegated
@@ -415,23 +442,6 @@ export function sheetInit() {
 				);
 			});
 		});
-		registerSheet(
-			foundry.documents.Item,
-			GearSheet as unknown as AnySheetCtor,
-			[
-				"aptitude",
-				"ammunition",
-				"force-field",
-				"weapon-modification",
-				"tool",
-				"drug",
-				"special-ability",
-				"origintrait",
-				"mutation",
-				"madnessentry",
-			],
-			"ROGUE_TRADER.GEAR.SHEET",
-		);
 
 		// Pre-warm the skills pack for the createActor grant hook (the sheet
 		// backfill path loads the pack on demand and does not need this cache).
@@ -503,36 +513,6 @@ export function sheetInit() {
 			trackDefaultGrants(actor.uuid ?? "", grantPromise);
 			await grantPromise;
 		});
-		registerSheet(
-			foundry.documents.Actor,
-			CharacterSheet as unknown as AnySheetCtor,
-			["explorer"],
-			"ROGUE_TRADER.CHARACTER.SHEET",
-		);
-		registerSheet(
-			foundry.documents.Actor,
-			NpcSheet as unknown as AnySheetCtor,
-			["npc"],
-			"NPC.SHEET",
-		);
-		registerSheet(
-			foundry.documents.Actor,
-			VehicleSheet as unknown as AnySheetCtor,
-			["vehicle"],
-			"ROGUE_TRADER.VEHICLE.SHEET",
-		);
-		registerSheet(
-			foundry.documents.Actor,
-			DynastySheet as unknown as AnySheetCtor,
-			["dynasty"],
-			"DYNASTY.SHEET",
-		);
-		registerSheet(
-			foundry.documents.Actor,
-			ShipSheet as unknown as AnySheetCtor,
-			["starship"],
-			"STARSHIP.SHEET",
-		);
 
 		// Character creator (bead ay0): "Create Explorer (Origin Path)" entry
 		// on the Actors directory ENTRY context menu (right-click an actor).
@@ -551,7 +531,9 @@ export function sheetInit() {
 				// right-click, reported 2026-09-05).
 				label: string;
 				icon: string;
-				callback: (element?: HTMLElement) => void;
+				// v14: ContextMenuEntry#callback is deprecated -> #onClick
+				// (support removed in v16, reported 2026-09-06).
+				onClick: (element?: HTMLElement) => void;
 			}>,
 		) => {
 			// Permission model (bead ay0): finishing the wizard creates a world
@@ -573,7 +555,7 @@ export function sheetInit() {
 			entryOptions.push({
 				label: "CREATOR.MENU",
 				icon: "fa-solid fa-user-plus",
-				callback: (element?: HTMLElement) => {
+				onClick: (element?: HTMLElement) => {
 					// When invoked from an actor entry, pre-load that actor so the
 					// creator updates it in place instead of making a new one.
 					// v14 entry markup carries data-entry-id (document-partial.hbs);

@@ -1,4 +1,9 @@
 import { Character } from "../../data/actor/character";
+import {
+	equipStateOf,
+	isWeaponType,
+	systemOf,
+} from "../../data/accessors";
 import { RtActorSheet } from "../context";
 import { getPackDocuments } from "../pack-resolve";
 import { waitForDefaultGrants } from "../default-grants";
@@ -18,12 +23,7 @@ import {
 } from "../../rules/madness";
 import type { Modifier } from "../../rules-engine/src/modifier";
 import {
-	rollNavigatorPower,
-	rollPsychicPower,
-	rollSkill,
-	rollSkillUntrained,
-	rollTest,
-	rollWeaponAttack,
+	performRoll,
 	rollWeaponDamage,
 	toggleSustainedPower,
 } from "../../rules/adapter";
@@ -31,26 +31,18 @@ import { missingSkillGrants } from "../../rules/default-skills";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { deriveCapacity, resolveEncumbrance, carriedWeight } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
+import {
+	buildCharacteristicViews,
+	mergeOwnedAndCatalogRows,
+	type OwnedSkillLike,
+} from "../skills-domain";
 import { openDocumentSheet, resolvePackDocument } from "../pack-resolve";
 import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
 import { TalentPicker } from "./talent-picker";
 
-interface CharacteristicView {
-	key: string;
-	label: string;
-	value: number;
-	bonus: number;
-	effectiveBonus: number;
-	unnatural: number;
-	bonusTooltip: string;
-	unnaturalTooltip: string;
-	pips: Array<{ value: number; lit: boolean }>;
-}
-
-/** Max unnatural multiplier shown as pips. */
-const MAX_UNNATURAL_STEPS = 5;
+// (CharacteristicView, MAX_UNNATURAL_STEPS moved to sheet/skills-domain — bead 6l90)
 
 export class CharacterSheet extends RtActorSheet {
 	static DEFAULT_OPTIONS = {
@@ -142,7 +134,11 @@ export class CharacterSheet extends RtActorSheet {
 		const itemId =
 			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
-		await rollWeaponAttack(this.actor, itemId);
+		await performRoll({
+			kind: "weapon",
+			actor: this.actor,
+			itemId,
+		});
 	}
 
 	/** Quick damage roll from a weapon row (no to-hit test). */
@@ -185,7 +181,11 @@ export class CharacterSheet extends RtActorSheet {
 	): Promise<void> {
 		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
-		await rollPsychicPower(this.actor, itemId);
+		await performRoll({
+			kind: "psychic",
+			actor: this.actor,
+			itemId,
+		});
 	}
 
 	/** Toggle a power's sustained state (bead sa6, book p157). */
@@ -210,7 +210,11 @@ export class CharacterSheet extends RtActorSheet {
 		const itemId =
 			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
-		await rollNavigatorPower(this.actor, itemId);
+		await performRoll({
+			kind: "navigator",
+			actor: this.actor,
+			itemId,
+		});
 	}
 
 	/** Open the compendium career item sheet (Background tab, bead ay0). */
@@ -301,9 +305,14 @@ export class CharacterSheet extends RtActorSheet {
 					source: { type: "item", label: "MADNESS.TRAUMA_MODIFIER" },
 					label: `${track.degree}`,
 					value: track.modifier,
-				}]
+					}]
 			: [];
-		await rollTest(this.actor, "wp", { modifiers });
+		await performRoll({
+			kind: "characteristic",
+			actor: this.actor,
+			key: "wp",
+			modifiers,
+		});
 	}
 
 	/**
@@ -328,9 +337,14 @@ export class CharacterSheet extends RtActorSheet {
 					source: { type: "item", label: "MADNESS.MALIGNANCY_MODIFIER" },
 					label: `${track.degree}`,
 					value: track.modifier,
-				}]
+					}]
 			: [];
-		await rollTest(this.actor, "wp", { modifiers });
+		await performRoll({
+			kind: "characteristic",
+			actor: this.actor,
+			key: "wp",
+			modifiers,
+		});
 	}
 
 	/**
@@ -354,9 +368,7 @@ export class CharacterSheet extends RtActorSheet {
 			)
 		)
 			return;
-		const current =
-			(item.system as unknown as { equipState?: string }).equipState ??
-			"stowed";
+		const current = equipStateOf(item);
 		const readyState = type === "armour" ? "worn" : "carried";
 		const next = current === readyState ? "stowed" : readyState;
 		await item.update({ system: { equipState: next } });
@@ -372,7 +384,12 @@ export class CharacterSheet extends RtActorSheet {
 	): Promise<void> {
 		const key = target.dataset.key;
 		if (!key) return;
-		await rollTest(this.actor, key, { skipDialog: false });
+		await performRoll({
+			kind: "characteristic",
+			actor: this.actor,
+			key,
+			skipDialog: false,
+		});
 	}
 
 	static async #onRollSkill(
@@ -382,7 +399,12 @@ export class CharacterSheet extends RtActorSheet {
 	): Promise<void> {
 		const itemId = target.dataset.item;
 		if (!itemId) return;
-		await rollSkill(this.actor, itemId, { skipDialog: false });
+		await performRoll({
+			kind: "skill",
+			actor: this.actor,
+			itemId,
+			skipDialog: false,
+		});
 	}
 
 	static async #onRollUntrained(
@@ -393,7 +415,12 @@ export class CharacterSheet extends RtActorSheet {
 		const name = target.dataset.name;
 		const key = target.dataset.characteristic;
 		if (!name || !key) return;
-		await rollSkillUntrained(this.actor, name, key);
+		await performRoll({
+			kind: "skill",
+			actor: this.actor,
+			characteristicKey: key,
+			label: name,
+		});
 	}
 
 	/** Lazy-own: create the catalog skill item at the requested ladder. */
@@ -448,8 +475,7 @@ export class CharacterSheet extends RtActorSheet {
 		const value = Number(target.dataset.value);
 		if (!key || Number.isNaN(value)) return;
 		const current =
-			(this.actor.system as unknown as Character).characteristics[key]
-				?.unnatural ?? 1;
+			systemOf(this.actor).characteristics[key]?.unnatural ?? 1;
 		const next = current === value ? 1 : value;
 		await this.actor.update({
 			system: { characteristics: { [key]: { unnatural: next } } },
@@ -513,7 +539,7 @@ export class CharacterSheet extends RtActorSheet {
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
 		const tabs = super._prepareTabs(group);
-		const system = this.actor.system as unknown as Character;
+		const system = systemOf(this.actor);
 		const hasPowers = this.actor.items.some(
 			(i) =>
 				(i.type as string) === "psychicpower" ||
@@ -650,45 +676,18 @@ export class CharacterSheet extends RtActorSheet {
 		context.xpSpent = totalSpent((system.advances ?? []) as AdvanceLedgerEntry[]);
 		context.xpTotal = system.xp?.total ?? 0;
 
-		context.characteristics = Object.entries(system.characteristics).map(
-			([key, data]): CharacteristicView => {
-				const bonus = system.characteristicBonus(key);
-				const effectiveBonus = system.effectiveCharacteristicBonus(key);
-				return {
-					key,
-					label: `CHARACTERISTIC.${key.toUpperCase()}`,
-					value: data.value,
-					unnatural: data.unnatural,
-					bonus,
-					effectiveBonus,
-					bonusTooltip: game.i18n.format("CHARACTER.BONUS_TOOLTIP", {
-						bonus: data.unnatural > 1 ? effectiveBonus : bonus,
-					}),
-					unnaturalTooltip: game.i18n.format("CHARACTER.UNNATURAL_TOOLTIP", {
-						mult: data.unnatural,
-					}),
-					pips: Array.from({ length: MAX_UNNATURAL_STEPS }, (_, i) => {
-						const mult = i + 2; // pip 1 = x2
-						return { value: mult, lit: data.unnatural >= mult };
-					}),
-				};
-			},
+		context.characteristics = buildCharacteristicViews(
+			system,
+			// fvtt-types narrow format's vars to Record<string, string>; the
+			// views pass numbers (bonus/mult) like the pre-6l90 inline code.
+			(key, vars) => game.i18n!.format(key, vars as Record<string, string>),
 		);
 
 		const ownedSkills = this.actor.items.filter(
 			(item) => item.type === "skill",
 		);
-		const ladderOptions = [
-			{ value: 1, label: "SKILL.LADDER_KNOWN" },
-			{ value: 2, label: "SKILL.LADDER_PLUS_10" },
-			{ value: 3, label: "SKILL.LADDER_PLUS_20" },
-		];
 		const catalog = await getSkillCatalog();
-		const ownedNames = new Set(ownedSkills.map((item) => item.name));
-		const catalogByChar = new Map<
-			string,
-			Awaited<ReturnType<typeof getSkillCatalog>>
-		>();
+		const catalogByChar = new Map<string, Awaited<ReturnType<typeof getSkillCatalog>>>();
 		for (const entry of catalog) {
 			const list = catalogByChar.get(entry.characteristic) ?? [];
 			list.push(entry);
@@ -699,35 +698,17 @@ export class CharacterSheet extends RtActorSheet {
 			(system.characteristics ?? {}) as Record<string, unknown>,
 		).map((key) => {
 			const label = `CHARACTERISTIC.${key.toUpperCase()}`;
-			const rows = ownedSkills
-				.filter(
+			// 6l90: shared merge drops catalog entries owned under differing
+			// casing (t093 semantics) so owned skills never render twice.
+			const skills = mergeOwnedAndCatalogRows(
+				ownedSkills.filter(
 					(item) =>
 						(item.system as unknown as { characteristic: string })
 							.characteristic === key,
-				)
-				.map((item) => ({
-					owned: true,
-					id: item.id,
-					name: item.name,
-					advanced:
-						(item.system as unknown as { advanced?: boolean }).advanced ===
-						true,
-					ladder: (item.system as unknown as { ladder: number }).ladder,
-					ladderOptions,
-				}));
-			for (const entry of catalogByChar.get(key) ?? []) {
-				if (ownedNames.has(entry.name)) continue;
-				rows.push({
-					owned: false,
-					id: entry.id,
-					name: entry.name,
-					advanced: entry.advanced,
-					ladder: 0,
-					ladderOptions,
-				});
-			}
-			rows.sort((a, b) => a.name.localeCompare(b.name));
-			return { key, label, skills: rows };
+				) as unknown as OwnedSkillLike[],
+				catalogByChar.get(key) ?? [],
+			);
+			return { key, label, skills };
 		});
 
 		context.isPC = this.actor.type === "explorer";
@@ -786,8 +767,7 @@ export class CharacterSheet extends RtActorSheet {
 			this.actor.items
 				.filter((item) => types.includes(item.type as string))
 				.map((item) => {
-					const equipState = (item.system as unknown as { equipState?: string })
-						.equipState;
+					const equipState = equipStateOf(item);
 					const type = item.type as string;
 					// Localized label computed here (not via a template concat):
 					// module-registered states resolve through the registry when
@@ -806,7 +786,7 @@ export class CharacterSheet extends RtActorSheet {
 						equipStateLabel: label,
 						equipped: equipState === "carried" || equipState === "worn",
 						// Weapons get the inline attack/damage roll button.
-						isWeapon: type === "melee-weapon" || type === "ranged-weapon",
+						isWeapon: isWeaponType(type),
 					};
 				});
 		const inventory: Array<{
@@ -836,9 +816,7 @@ export class CharacterSheet extends RtActorSheet {
 		// the adapter's wornArmour filter in the damage pipeline).
 		const armourItems = this.actor.items.filter(
 			(item) =>
-				(item.type as string) === "armour" &&
-				(item.system as unknown as { equipState?: string }).equipState ===
-					"worn",
+				(item.type as string) === "armour" && equipStateOf(item) === "worn",
 		);
 		const LOCATIONS = [
 			"head",
@@ -865,9 +843,7 @@ export class CharacterSheet extends RtActorSheet {
 		// Combat tab: weapons from inventory with visible stats (display only;
 		// roll buttons land with the roll-damage adapter work).
 		context.weapons = this.actor.items
-			.filter(
-				(item) => item.type === "melee-weapon" || item.type === "ranged-weapon",
-			)
+			.filter((item) => isWeaponType(item.type as string))
 			.map((item) => {
 				const sys = item.system as unknown as {
 					class: string;

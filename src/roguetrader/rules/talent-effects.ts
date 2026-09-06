@@ -11,6 +11,7 @@
  */
 
 import type { Modifier } from "../../rules-engine/src/modifier";
+import { isWeaponType } from "../data/accessors";
 
 interface ItemLike {
 	name?: string;
@@ -175,7 +176,7 @@ export function collectRollMechanicEffects(
 		const isWeapon =
 			opts.weaponId !== undefined &&
 			item.id === opts.weaponId &&
-			(item.type === "melee-weapon" || item.type === "ranged-weapon");
+			isWeaponType(item.type);
 		if (!isTalent && !isWeapon) continue;
 		const special = (
 			item.system as unknown as { special?: string[] } | undefined
@@ -260,7 +261,7 @@ export function collectTalentDamageEffects(
 		const isAttackingWeapon =
 			opts.weaponId !== undefined &&
 			item.id === opts.weaponId &&
-			(item.type === "melee-weapon" || item.type === "ranged-weapon") &&
+			isWeaponType(item.type) &&
 			(item.equipState === undefined || item.equipState === "carried");
 		if (!isTalent && !isAttackingWeapon) continue;
 		for (const effect of item.system?.effects ?? []) {

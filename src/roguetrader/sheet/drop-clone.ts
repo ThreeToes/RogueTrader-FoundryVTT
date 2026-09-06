@@ -7,6 +7,8 @@
  * sheet keeps its exact previous behaviour.
  */
 
+import { isWeaponType } from "../data/accessors";
+
 export interface CloneItemOptions {
 	/** Static merge into every cloned item's system data. */
 	systemOverrides?: Record<string, unknown>;
@@ -72,7 +74,7 @@ export async function cloneItemFromDrop(
  * everything else stowed.
  */
 export function npcEquipDefault(type: string): string {
-	if (type === "melee-weapon" || type === "ranged-weapon") return "carried";
+	if (isWeaponType(type)) return "carried";
 	if (type === "armour") return "worn";
 	return "stowed";
 }

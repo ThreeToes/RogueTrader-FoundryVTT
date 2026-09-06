@@ -5,6 +5,7 @@ import {
 	legacyCreatorIds,
 	originRowFromStoredKey,
 	parameterisedBase,
+	parameterisedPackBase,
 	resolveParameterised,
 	reconcileForCreator,
 	skillGrantPayload,
@@ -33,6 +34,31 @@ describe("parameterised talents (yclz)", () => {
 
 	it("resolves base + subject", () => {
 		expect(resolveParameterised("Peer", "Underworld")).toBe("Peer (Underworld)");
+	});
+});
+
+describe("parameterised pack base (bead h1o5)", () => {
+	it("maps concrete subject-qualified names to the pack base", () => {
+		expect(parameterisedPackBase("Rival (Rogue Trader family)")).toBe("Rival");
+		expect(parameterisedPackBase("Resistance (Fear)")).toBe("Resistance");
+		expect(parameterisedPackBase("Peer (Underworld)")).toBe("Peer");
+		expect(parameterisedPackBase("Melee Weapon Training (Universal)")).toBe(
+			"Melee Weapon Training",
+		);
+		expect(parameterisedPackBase("Pistol Weapon Training (Universal)")).toBe(
+			"Pistol Weapon Training",
+		);
+	});
+
+	it("also maps unresolved forms", () => {
+		expect(parameterisedPackBase("Peer")).toBe("Peer");
+		expect(parameterisedPackBase("Peer (choose one)")).toBe("Peer");
+	});
+
+	it("returns null for non-parameterised and bare names", () => {
+		expect(parameterisedPackBase("Survival")).toBeNull();
+		expect(parameterisedPackBase("Air of Authority")).toBeNull();
+		expect(parameterisedPackBase("Totally Unrelated (Subject)")).toBeNull();
 	});
 });
 

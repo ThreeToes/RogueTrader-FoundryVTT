@@ -1,4 +1,4 @@
-import type { Character } from "../../data/actor/character";
+import { systemOf } from "../../data/accessors";
 import { sheetContext } from "../context";
 import { getPackDocuments } from "../pack-resolve";
 import {
@@ -87,7 +87,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 
 	async _prepareContext(_options: object = {}) {
 		const context = sheetContext(await super._prepareContext(_options as never));
-		const system = this.actor.system as unknown as Character;
+		const system = systemOf(this.actor);
 		const ledger = (system.advances ?? []) as AdvanceLedgerEntry[];
 		const spent = totalSpent(ledger);
 		const pool = Math.max(0, (system.xp?.total ?? 0) - spent);
@@ -267,7 +267,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		key: (typeof CHARACTERISTIC_KEYS)[number],
 	): Promise<void> {
 		if (!this.#career) return;
-		const system = this.actor.system as unknown as Character;
+		const system = systemOf(this.actor);
 		const ledger = (system.advances ?? []) as AdvanceLedgerEntry[];
 		const scheme = this.#career.characteristicAdvances[key];
 		if (!scheme) return;
@@ -334,7 +334,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 
 	async #buyRow(row: AdvanceRowLike): Promise<void> {
 		if (!this.#career) return;
-		const system = this.actor.system as unknown as Character;
+		const system = systemOf(this.actor);
 		const ledger = (system.advances ?? []) as AdvanceLedgerEntry[];
 		const spent = totalSpent(ledger);
 		const pool = Math.max(0, (system.xp?.total ?? 0) - spent);
@@ -383,7 +383,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			// Psy Rating advance (bead m4me): raises the actor's Psy Rating by
 			// 1 instead of granting a talent item (the rating lives on the
 			// actor, Core Rulebook p182 psykers).
-			const system = this.actor.system as unknown as Character;
+			const system = systemOf(this.actor);
 			await this.actor.update({
 				system: { psyRating: (system.psyRating ?? 0) + 1 },
 			} as never);
@@ -466,7 +466,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 	): Promise<void> {
 		const index = Number(target.dataset.index ?? -1);
 		if (index < 0) return;
-		const system = this.actor.system as unknown as Character;
+		const system = systemOf(this.actor);
 		const ledger = [...((system.advances ?? []) as AdvanceLedgerEntry[])];
 		const [removed] = ledger.splice(index, 1);
 		if (!removed) return;

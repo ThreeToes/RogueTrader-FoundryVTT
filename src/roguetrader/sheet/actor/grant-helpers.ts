@@ -5,9 +5,12 @@
  * by the creator, advancement dialog and talent picker.
  */
 
-import { getPackDocuments } from "../pack-resolve";
+import {
+	getPackDocuments,
+} from "../pack-resolve";
 import {
 	parameterisedBase,
+	parameterisedPackBase,
 	resolveParameterised,
 	suggestedSubjects,
 	talentGrantPayload,
@@ -34,7 +37,16 @@ export async function talentGrant(
 	name: string,
 	options: { grantedBy?: string } = {},
 ): Promise<GrantPayload> {
-	const doc = await findPackTalentDoc(name);
+	let doc = await findPackTalentDoc(name);
+	if (!doc) {
+		// Parameterised talents are authored as BARE base docs in the pack
+		// ("Rival", "Resistance") while origins/careers grant concrete
+		// subject-qualified names ("Rival (Rogue Trader family)"). Fall back
+		// to the base pack doc and clone it under the concrete name —
+		// talentGrantPayload takes the display name separately (h1o5).
+		const base = parameterisedPackBase(name);
+		if (base) doc = await findPackTalentDoc(base);
+	}
 	if (!doc) {
 		console.warn(
 			`rogue-trader | talent "${name}" not found in rogue-trader.talents; granting a bare item`,

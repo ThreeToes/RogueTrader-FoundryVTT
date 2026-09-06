@@ -1,4 +1,5 @@
 import { Skill } from "../../data/item/skill";
+import { LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -21,11 +22,7 @@ export class SkillSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	async _prepareContext(options: object = {}) {
 		const context = sheetContext(await super._prepareContext(options));
 		context.characteristicChoices = Skill.characteristicChoices;
-		context.ladderOptions = [
-			{ value: 1, label: "SKILL.LADDER_KNOWN" },
-			{ value: 2, label: "SKILL.LADDER_PLUS_10" },
-			{ value: 3, label: "SKILL.LADDER_PLUS_20" },
-		];
+		context.ladderOptions = LADDER_OPTIONS;
 		// Read-only display labels keyed by ladder value.
 		context.ladderLabels = Object.fromEntries(
 			(context.ladderOptions as Array<{ value: number; label: string }>).map(

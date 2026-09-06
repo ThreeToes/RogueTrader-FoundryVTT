@@ -5,18 +5,6 @@
 >
     <div class="notes-editor border">
         <h1>{{localize "TITLE.DESCRIPTION"}}</h1>
-        {{#if editable}}
-            <prose-mirror
-                name="system.description"
-                value="{{source.system.description}}"
-                button="true"
-                editable="{{editable}}"
-                toggled="false"
-            >
-                {{{descriptionHTML}}}
-            </prose-mirror>
-        {{else}}
-            {{{descriptionHTML}}}
-        {{/if}}
+        {{> "rt/rich-text" name="system.description" value=source.system.description html=descriptionHTML editable=editable}}
     </div>
 </section>

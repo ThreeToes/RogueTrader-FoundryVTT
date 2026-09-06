@@ -4,11 +4,10 @@
         {{#if powers.length}}
         <div class="starship-components">
             {{#each powers as |p|}}
-            <div class="inv-row" data-item-id="{{p.id}}">
-                <span class="inv-name">{{p.name}}</span>
-                <button type="button" class="ladder-option" data-action="rollNpcPower"
-                    data-tooltip="{{localize "NPC.ROLL_POWER"}}">{{localize "NPC.ROLL"}}</button>
-            </div>
+            {{#> "rt/inv-row" id=p.id name=p.name}}
+            <button type="button" class="ladder-option" data-action="rollNpcPower"
+                data-tooltip="{{localize "NPC.ROLL_POWER"}}">{{localize "NPC.ROLL"}}</button>
+            {{/"rt/inv-row"}}
             {{/each}}
         </div>
         {{else}}

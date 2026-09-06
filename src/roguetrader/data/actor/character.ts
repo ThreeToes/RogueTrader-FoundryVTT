@@ -47,6 +47,8 @@ export class Character extends foundry.abstract.TypeDataModel<
 		text?: string;
 	}>;
 	declare threatLevel: string;
+	declare shortDescription: string;
+	declare notes: string;
 	declare origins: {
 		homeWorld: string;
 		birthright: string;
@@ -255,6 +257,12 @@ export class Character extends foundry.abstract.TypeDataModel<
 			shortDescription: new foundry.data.fields.StringField({
 				initial: "",
 			}),
+			/**
+			 * Long-form notes (NPC sheet Notes tab; template.json npc block
+			 * carries notes but the schema never declared it — bead d7js
+			 * follow-up found the field was silently dropped on save).
+			 */
+			notes: new foundry.data.fields.HTMLField({ initial: "" }),
 			/**
 			 * Career reference: registry key into CONFIG.ROGUE_TRADER.careers
 			 * (bead 0ib). Homebrew careers registered at init are pickable too;

@@ -1,0 +1,16 @@
+{{!-- Shared paired value/max composite (consolidation bead 7c1y).
+     Params: nameValue/nameMax (input paths), value/max (current values),
+     min (optional), boxClass (optional input class), pairedClasses
+     (optional extra classes on .paired), static (render readonly text).
+     Callers wanting chips instead of a max input keep their own markup. --}}
+<div class="paired{{#if pairedClasses}} {{pairedClasses}}{{/if}}">
+    {{#if static}}
+    <p class="static-value">{{value}} <span class="pair-sep">/</span> {{max}}</p>
+    {{else}}
+    <input {{#if boxClass}}class="{{boxClass}}"{{/if}} name="{{nameValue}}" type="number"
+        {{#if min}}min="{{min}}"{{/if}} value="{{value}}" />
+    <span class="pair-sep">/</span>
+    <input {{#if boxClass}}class="{{boxClass}}"{{/if}} name="{{nameMax}}" type="number"
+        {{#if min}}min="{{min}}"{{/if}} value="{{max}}" />
+    {{/if}}
+</div>

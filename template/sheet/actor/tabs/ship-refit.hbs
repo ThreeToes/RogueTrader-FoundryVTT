@@ -17,21 +17,17 @@
         {{#if components.length}}
         <div class="starship-components">
             {{#each components as |c|}}
-            <div class="inv-row">
-                <i class="fa-solid fa-grip inv-grip"></i>
-                <span class="inv-name">{{c.name}}</span>
-                <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{c.power}}</span>
-                <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{c.space}}</span>
-                <span class="chip origin-mod">SP {{c.sp}}</span>
-                {{#if (eq c.type "ship-weapon-component")}}
-                <select data-action="setWeaponSlot" data-item-id="{{c.id}}"
-                    data-tooltip="{{localize "STARSHIP.SLOT_HINT"}}">
-                    {{selectOptions ../weaponSlots selected=c.slot localize=true blank="—"}}
-                </select>
-                {{/if}}
-                <button type="button" class="inv-delete" data-action="removeComponent" data-item-id="{{c.id}}"
-                    data-tooltip="{{localize "STARSHIP.COMPONENT_REMOVE"}}"><i class="fa-solid fa-trash"></i></button>
-            </div>
+            {{#> "rt/inv-row" id=c.id name=c.name deleteAction="removeComponent" deleteTooltip=(localize "STARSHIP.COMPONENT_REMOVE")}}
+            <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{c.power}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{c.space}}</span>
+            <span class="chip origin-mod">SP {{c.sp}}</span>
+            {{#if (eq c.type "ship-weapon-component")}}
+            <select data-action="setWeaponSlot" data-item-id="{{c.id}}"
+                data-tooltip="{{localize "STARSHIP.SLOT_HINT"}}">
+                {{selectOptions ../weaponSlots selected=c.slot localize=true blank="—"}}
+            </select>
+            {{/if}}
+            {{/"rt/inv-row"}}
             {{/each}}
         </div>
         {{else}}

@@ -1,0 +1,11 @@
+{{!-- Shared rich-text editor (consolidation bead bef7). Params:
+     name (input path), value (raw text for prose-mirror), html (rendered
+     HTML for the readonly branch), editable. --}}
+{{#if editable}}
+<prose-mirror name="{{name}}" value="{{value}}"
+    button="true" editable="{{editable}}" toggled="false">{{{html}}}</prose-mirror>
+{{else if readonlyClass}}
+<div class="{{readonlyClass}}">{{{html}}}</div>
+{{else}}
+{{{html}}}
+{{/if}}

@@ -1,8 +1,7 @@
 <div class="header border">
     <div class="header-grid">
         <div class="header-portrait">
-            <img class="profile-img" src="{{document.img}}" data-action="editImage" data-field="img"
-                alt="{{document.name}}" title="{{document.name}}" />
+            {{> "rt/header-portrait"}}
         </div>
         <div class="header-line line-1">
             <div class="header-cell">
@@ -40,24 +39,14 @@
         <div class="header-line line-2">
             <div class="header-cell">
                 <label>{{localize "TITLE.WOUNDS"}}</label>
-                <div class="paired">
-                    <input name="system.wounds.value" type="number" min="0"
-                        value="{{source.system.wounds.value}}" />
-                    <span class="pair-sep">/</span>
-                    <input name="system.wounds.max" type="number" min="0"
-                        value="{{source.system.wounds.max}}" />
-                </div>
+                {{> "rt/paired-value" nameValue="system.wounds.value" nameMax="system.wounds.max"
+                    value=source.system.wounds.value max=source.system.wounds.max min=0}}
             </div>
             {{#if isPC}}
             <div class="header-cell">
                 <label>{{localize "CHARACTER.FATE"}}</label>
-                <div class="paired">
-                    <input name="system.fate.value" type="number" min="0"
-                        value="{{source.system.fate.value}}" />
-                    <span class="pair-sep">/</span>
-                    <input name="system.fate.max" type="number" min="0"
-                        value="{{source.system.fate.max}}" />
-                </div>
+                {{> "rt/paired-value" nameValue="system.fate.value" nameMax="system.fate.max"
+                    value=source.system.fate.value max=source.system.fate.max min=0}}
             </div>
             {{else}}
             <div class="header-cell">
@@ -87,8 +76,11 @@
             </div>
             <div class="header-cell">
                 <label>{{localize "PSYCHIC_POWER.PSY_RATING"}}</label>
+                {{!-- Legacy actors predate the psyRating field: undefined must
+                     render 0, or the empty submit value fails NumberField
+                     validation on ANY form change (bead hli6). --}}
                 <input name="system.psyRating" type="number" min="0"
-                    value="{{source.system.psyRating}}"
+                    value="{{#if source.system.psyRating}}{{source.system.psyRating}}{{else}}0{{/if}}"
                     data-tooltip="{{localize "PSYCHIC_POWER.PSY_RATING"}}" />
             </div>
         </div>

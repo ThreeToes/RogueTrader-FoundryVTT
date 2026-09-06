@@ -20,6 +20,6 @@
         <div class="traits-row">
             <label class="origin-label" for="dynasty-notes">{{localize "DYNASTY.NOTES"}}</label>
         </div>
-        {{editor source.system.notes target="system.notes" button=true editable=editable engine="prosemirror"}}
+        {{> "rt/rich-text" name="system.notes" value=source.system.notes html=notesHTML editable=editable}}
     </div>
 </section>

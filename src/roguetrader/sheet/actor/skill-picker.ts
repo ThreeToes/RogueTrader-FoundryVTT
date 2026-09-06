@@ -1,4 +1,6 @@
 import { CHARACTERISTIC_KEYS, Character } from "../../data/actor/character";
+import { sheetContext } from "../context";
+import { getPackDocuments } from "../pack-resolve";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
@@ -35,23 +37,19 @@ export class SkillPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = (await super._prepareContext(_options)) as Record<
-			string,
-			unknown
-		>;
-		const pack = game.packs.get("rogue-trader.skills");
+		const context = sheetContext(await super._prepareContext(_options));
 		const catalog: Array<{ id: string; name: string; characteristic: string }> =
 			[];
-		if (pack) {
-			const documents = (await pack.getDocuments()) as foundry.documents.Item[];
-			for (const doc of documents) {
-				catalog.push({
-					id: doc.id,
-					name: doc.name ?? doc.id,
-					characteristic:
-						(doc.system as { characteristic?: string }).characteristic ?? "int",
-				});
-			}
+		const documents = (await getPackDocuments(
+			"rogue-trader.skills",
+		)) as foundry.documents.Item[];
+		for (const doc of documents) {
+			catalog.push({
+				id: doc.id,
+				name: doc.name ?? doc.id,
+				characteristic:
+					(doc.system as { characteristic?: string }).characteristic ?? "int",
+			});
 		}
 		catalog.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -81,9 +79,9 @@ export class SkillPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	): Promise<void> {
 		const name = target.dataset.name;
 		if (!name || !this.actor) return;
-		const pack = game.packs.get("rogue-trader.skills");
-		if (!pack) return;
-		const documents = (await pack.getDocuments()) as foundry.documents.Item[];
+		const documents = (await getPackDocuments(
+			"rogue-trader.skills",
+		)) as foundry.documents.Item[];
 		const source = documents.find((doc) => doc.name === name);
 		if (!source) return;
 		await this.actor.createEmbeddedDocuments("Item", [source.toObject()]);

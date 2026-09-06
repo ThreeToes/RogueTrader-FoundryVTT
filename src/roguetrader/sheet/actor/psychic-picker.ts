@@ -1,6 +1,9 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
 
+import { sheetContext } from "../context";
+import { getPackDocuments } from "../pack-resolve";
+
 /**
  * Psychic power compendium picker (bead m4me): lists `rogue-trader.psychicpowers`
  * pack documents and grants them as owned psychicpower items. The pack does
@@ -33,10 +36,14 @@ export class PsychicPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = (await super._prepareContext(
-			_options as never,
-		)) as Record<string, unknown>;
-		const pack = game.packs?.get("rogue-trader.psychicpowers");
+		const context = sheetContext(await super._prepareContext(_options as never));
+		const documents = (await getPackDocuments(
+			"rogue-trader.psychicpowers",
+		)) as unknown as Array<{
+			uuid?: string;
+			name?: string;
+			system: { powerClass?: string; subtype?: string };
+		}>;
 		const powers: Array<{
 			uuid: string;
 			name: string;
@@ -45,12 +52,7 @@ export class PsychicPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 			subtypeLabel: string;
 			owned: boolean;
 		}> = [];
-		if (pack) {
-			const documents = (await pack.getDocuments()) as unknown as Array<{
-				uuid?: string;
-				name?: string;
-				system: { powerClass?: string; subtype?: string };
-			}>;
+		if (documents.length > 0) {
 			const owned = new Set(
 				this.actor.items
 					.filter((item) => (item.type as string) === "psychicpower")
@@ -71,7 +73,9 @@ export class PsychicPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 			powers.sort((a, b) => a.name.localeCompare(b.name));
 		}
 		context.powers = powers;
-		context.hasPack = Boolean(pack);
+		// The pack-existence hint degrades to "pack has documents": an installed
+		// but empty pack renders the same hint as a missing one.
+		context.hasPack = documents.length > 0;
 		return context;
 	}
 

@@ -5,19 +5,9 @@
 >
     <div class="notes-editor border">
         <h1>{{localize "TITLE.DESCRIPTION"}}</h1>
-        {{#if editable}}
-        <prose-mirror name="system.description" value="{{source.system.description}}"
-            button="true" editable="{{editable}}" toggled="false">{{{descriptionHTML}}}</prose-mirror>
-        {{else}}
-        {{{descriptionHTML}}}
-        {{/if}}
+        {{> "rt/rich-text" name="system.description" value=source.system.description html=descriptionHTML editable=editable}}
 
         <h1>{{localize "BACKGROUND.MOTIVATION"}}</h1>
-        {{#if editable}}
-        <prose-mirror name="system.life.motivation" value="{{source.system.life.motivation}}"
-            button="true" editable="{{editable}}" toggled="false">{{{motivationHTML}}}</prose-mirror>
-        {{else}}
-        {{{motivationHTML}}}
-        {{/if}}
+        {{> "rt/rich-text" name="system.life.motivation" value=source.system.life.motivation html=motivationHTML editable=editable}}
     </div>
 </section>

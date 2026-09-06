@@ -1,4 +1,6 @@
 import { Character } from "../../data/actor/character";
+import { RtActorSheet } from "../context";
+import { getPackDocuments } from "../pack-resolve";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { derivedRank, totalSpent } from "../../rules/advancement";
 import { careers, equipStates } from "../../registry";
@@ -34,9 +36,6 @@ import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
 import { TalentPicker } from "./talent-picker";
 
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ActorSheetV2 } = foundry.applications.sheets;
-
 interface CharacteristicView {
 	key: string;
 	label: string;
@@ -52,7 +51,7 @@ interface CharacteristicView {
 /** Max unnatural multiplier shown as pips. */
 const MAX_UNNATURAL_STEPS = 5;
 
-export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+export class CharacterSheet extends RtActorSheet {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "character"],
 		position: { width: 600, height: 500 },
@@ -557,9 +556,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	async #ensureDefaultSkills(): Promise<void> {
 		if (this.actor.items.size > 0) return;
 		if (this.actor.type !== "explorer" && this.actor.type !== "npc") return;
-		const pack = game.packs.get("rogue-trader.skills");
-		if (!pack) return;
-		const documents = (await pack.getDocuments()) as foundry.documents.Item[];
+		const documents = (await getPackDocuments(
+			"rogue-trader.skills",
+		)) as foundry.documents.Item[];
 		const grants = missingSkillGrants(
 			documents.map(
 				(doc) =>
@@ -581,10 +580,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	async _prepareContext(options: { isFirstRender: boolean }) {
 		await this.#ensureDefaultSkills();
-		const context = (await super._prepareContext(options)) as Record<
-			string,
-			unknown
-		>;
+		const context = await super._prepareContext(options);
 		const system = this.actor.system as Character;
 
 		// Career picker (bead 0ib): choices from the careers registry; the
@@ -601,14 +597,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// || expressions with nested quotes, see character-sheet render error).
 		context.advancementTooltip = game.i18n!.localize("ADVANCE.OPEN");
 		if (system.careerKey) {
-			const pack = game.packs?.get("rogue-trader.careers");
-			if (pack) {
-				const docs = (await pack.getDocuments()) as unknown as Array<{
-					system: {
-						key: string;
-						ranks?: Array<{ rank: number; xpLevel: number }>;
-					};
-				}>;
+			const docs = (await getPackDocuments("rogue-trader.careers")) as unknown as Array<{
+				system: {
+					key: string;
+					ranks?: Array<{ rank: number; xpLevel: number }>;
+				};
+			}>;
+			if (docs.length > 0) {
 				const careerDoc = docs.find((d) => d.system.key === system.careerKey);
 				const thresholds = (careerDoc?.system.ranks ?? []).map((r) => ({
 					rank: r.rank,
@@ -890,12 +885,11 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.talentRows = byType(["talent"]);
 		// Compendium link per talent row (bead oaaz): pack uuid by name
 		// (case-insensitive), same careers-pack pattern as careerItemId above.
-		const talentsPack = game.packs?.get("rogue-trader.talents");
-		if (talentsPack && context.talentRows.length > 0) {
-			const packDocs = (await talentsPack.getDocuments()) as unknown as Array<{
-				uuid?: string;
-				name?: string;
-			}>;
+		const packDocs = (await getPackDocuments("rogue-trader.talents")) as unknown as Array<{
+			uuid?: string;
+			name?: string;
+		}>;
+		if (packDocs.length > 0 && context.talentRows.length > 0) {
 			const byName = new Map(
 				packDocs
 					.filter((d) => d.name)
@@ -1016,12 +1010,11 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Career link: the compendium career item behind the actor's careerKey,
 		// opened via openCareerSheet for the full crunch tables. Diagnostic log
 		// when the lookup fails (bead qwp6) — pack missing, or key mismatch.
-		const careerPack = game.packs?.get("rogue-trader.careers");
-		if (careerPack && system.careerKey) {
-			const docs = (await careerPack.getDocuments()) as unknown as Array<{
-				uuid?: string;
-				system: { key: string };
-			}>;
+		const docs = (await getPackDocuments("rogue-trader.careers")) as unknown as Array<{
+			uuid?: string;
+			system: { key: string };
+		}>;
+		if (docs.length > 0 && system.careerKey) {
 			const careerDoc = docs.find((d) => d.system.key === system.careerKey);
 			if (!careerDoc) {
 				console.warn(
@@ -1030,7 +1023,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			}
 			context.careerItemId = careerDoc?.uuid ?? "";
 		} else {
-			if (!careerPack) {
+			if (docs.length === 0) {
 				console.warn("rogue-trader | careers pack not registered (game.packs)");
 			}
 			context.careerItemId = "";

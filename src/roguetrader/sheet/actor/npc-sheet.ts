@@ -8,9 +8,8 @@ import {
 } from "../../rules/adapter";
 import type { Character, CharacteristicKey } from "../../data/actor/character";
 import type { CharacteristicKey as Key } from "../../data/actor/character";
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ActorSheetV2 } = foundry.applications.sheets;
+import { RtActorSheet } from "../context";
+import { npcEquipDefaultSystemOverrides } from "../drop-clone";
 
 /**
  * GM-facing NPC sheet (bead mqdy, owner spec 2026-09-06): fast at-the-table
@@ -34,7 +33,7 @@ const CHAR_SHORTS: Record<CharacteristicKey, string> = {
 	fel: "Fel",
 };
 
-export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+export class NpcSheet extends RtActorSheet {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "npc"],
 		position: { width: 560, height: 480 },
@@ -135,10 +134,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	async _prepareContext(options: object = {}) {
-		const context = (await super._prepareContext(options)) as Record<
-			string,
-			unknown
-		>;
+		const context = await super._prepareContext(options);
 		const system = this.actor.system as unknown as Character;
 		context.system = system;
 
@@ -255,6 +251,11 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 		context.isPsyker =
 			system.psyker === true || (system.psyRating ?? 0) >= 1;
+		// Shared rich-text partial (bead bef7) renders notes via prose-mirror.
+		context.notesHTML = await foundry.applications.ux.TextEditor.enrichHTML(
+			system.notes ?? "",
+			{ relativeTo: this.actor },
+		);
 		return context;
 	}
 
@@ -365,25 +366,11 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	 * GM gives it (owner spec, bead NPC-inventory); everything else stows.
 	 */
 	protected async _onDrop(event: DragEvent): Promise<unknown> {
-		const data = foundry.applications.ux.TextEditor.getDragEventData(event) as {
-			type?: string;
-			uuid?: string;
-		};
-		if (data.type !== "Item" || !data.uuid) return;
-		const source = await foundry.utils.fromUuid(data.uuid);
-		if (!(source instanceof foundry.documents.Item)) return;
-		if (this.actor.items.find((item) => item.uuid === source.uuid)) return;
-		const type = source.type as string;
-		const equipState =
-			type === "melee-weapon" || type === "ranged-weapon"
-				? "carried"
-				: type === "armour"
-					? "worn"
-					: "stowed";
-		const payload = source.toObject() as { system?: Record<string, unknown> };
-		return this.actor.createEmbeddedDocuments("Item", [
-			{ ...payload, system: { ...payload.system, equipState } },
-		] as never);
+		// NPC spec: dropped weapons arrive CARRIED, armour WORN — the NPC is
+		// holding/wearing whatever the GM gives it; everything else stows.
+		return cloneItemFromDrop(this.actor, event, {
+			systemOverridesFor: npcEquipDefaultSystemOverrides,
+		});
 	}
 
 	/**

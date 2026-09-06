@@ -2,6 +2,8 @@
  * Skill catalog access: the compendium pack of skill definitions, cached
  * after first load (the pack itself rarely changes during a session).
  */
+import { getPackDocuments } from "../pack-resolve";
+
 export interface CatalogSkill {
 	id: string;
 	name: string;
@@ -17,9 +19,9 @@ let loading: Promise<CatalogSkill[]> | null = null;
 export async function getSkillCatalog(): Promise<CatalogSkill[]> {
 	if (cache) return cache;
 	loading ??= (async () => {
-		const pack = game.packs.get("rogue-trader.skills");
-		if (!pack) return [];
-		const documents = (await pack.getDocuments()) as foundry.documents.Item[];
+		const documents = (await getPackDocuments(
+			"rogue-trader.skills",
+		)) as foundry.documents.Item[];
 		cache = documents
 			.map((doc) => {
 				const system = doc.system as unknown as {

@@ -1,0 +1,32 @@
+{{!-- Shared compact header (consolidation bead 9v7c): profile image +
+     name input + short-description, with editable/static branches.
+     Params: woundBoxes (true for NPC-style wound pair), valueSource
+     ("system" short-description source override for actor sheets that
+     expose context.system). --}}
+<div class="header compact border">
+    {{> "rt/header-portrait"}}
+    <div class="name header-cell grow">
+        {{#if editable}}
+        <div class="npc-name-row">
+            <input class="name-input" name="name" type="text" value="{{document.name}}" />
+            {{#if woundBoxes}}
+            {{> "rt/paired-value" nameValue="system.wounds.value" nameMax="system.wounds.max"
+                value=system.wounds.value max=system.wounds.max min=0 boxClass="wound-box"
+                pairedClasses="paired npc-wounds"}}
+            {{/if}}
+        </div>
+        <input class="short-description" name="system.shortDescription" type="text"
+            value="{{source.system.shortDescription}}" placeholder="{{localize "GEAR.SHORT_DESCRIPTION"}}" />
+        {{else}}
+        <div class="npc-name-row">
+            <p class="name-input static-value">{{document.name}}</p>
+            {{#if woundBoxes}}
+            <p class="static-value">{{system.wounds.value}} / {{system.wounds.max}}</p>
+            {{/if}}
+        </div>
+        {{#if source.system.shortDescription}}
+        <p class="short-description static-value">{{source.system.shortDescription}}</p>
+        {{/if}}
+        {{/if}}
+    </div>
+</div>

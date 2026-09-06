@@ -53,21 +53,20 @@
         {{#if weapons.length}}
         <div class="starship-components">
             {{#each weapons as |w|}}
-            <div class="inv-row" data-item-id="{{w.id}}">
-                <span class="inv-name">{{w.name}}</span>
-                <span class="npc-combat-right">
-                    <span class="chip origin-mod">{{w.damage}}</span>
-                    <button type="button" class="npc-equip-toggle {{#if w.equipped}}active{{/if}}"
-                        data-action="toggleNpcEquip"
-                        data-tooltip="{{#if w.equipped}}{{localize "NPC.STOW"}}{{else}}{{localize "NPC.EQUIP"}}{{/if}}">
-                        <i class="fa-solid {{#if w.equipped}}fa-grip-lines-vertical{{else}}fa-grip-lines{{/if}}"></i>
-                    </button>
-                    <button type="button" class="ladder-option" data-action="rollNpcWeapon"
-                        data-tooltip="{{localize "NPC.ROLL_ATTACK"}}">{{localize "NPC.ATTACK"}}</button>
-                    <button type="button" class="ladder-option" data-action="rollNpcDamage"
-                        data-tooltip="{{localize "NPC.ROLL_DAMAGE"}}">{{localize "NPC.DAMAGE"}}</button>
-                </span>
-            </div>
+            {{#> "rt/inv-row" id=w.id name=w.name}}
+            <span class="npc-combat-right">
+                <span class="chip origin-mod">{{w.damage}}</span>
+                <button type="button" class="npc-equip-toggle {{#if w.equipped}}active{{/if}}"
+                    data-action="toggleNpcEquip"
+                    data-tooltip="{{#if w.equipped}}{{localize "NPC.STOW"}}{{else}}{{localize "NPC.EQUIP"}}{{/if}}">
+                    <i class="fa-solid {{#if w.equipped}}fa-grip-lines-vertical{{else}}fa-grip-lines{{/if}}"></i>
+                </button>
+                <button type="button" class="ladder-option" data-action="rollNpcWeapon"
+                    data-tooltip="{{localize "NPC.ROLL_ATTACK"}}">{{localize "NPC.ATTACK"}}</button>
+                <button type="button" class="ladder-option" data-action="rollNpcDamage"
+                    data-tooltip="{{localize "NPC.ROLL_DAMAGE"}}">{{localize "NPC.DAMAGE"}}</button>
+            </span>
+            {{/"rt/inv-row"}}
             {{/each}}
         </div>
         {{else}}

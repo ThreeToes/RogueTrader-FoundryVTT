@@ -82,6 +82,43 @@ const stubs = {
 
 Handlebars.registerHelper(stubs);
 
+// Mirror src/roguetrader/sheet/partials.ts (consolidation beads bef7/9v7c/
+// 7c1y/201f): register template/shared/parts/*.hbs as `rt/<name>` partials
+// so sheet templates compile + render exactly as they will in Foundry. The
+// list itself is imported from partials.ts (bead 8uyu single source of
+// truth) so runtime and verify can never drift; a walk below additionally
+// fails loudly if a file in template/shared/parts/ is not listed.
+import { SHARED_PARTIALS } from "../src/roguetrader/sheet/partials";
+
+{
+	const sharedDir = join(TEMPLATE_ROOT, "shared/parts");
+	const onDisk = new Set((await readdir(sharedDir)).filter((f) => f.endsWith(".hbs")));
+	const listed = new Set(SHARED_PARTIALS.map((p) => p.split("/").pop()));
+	for (const file of onDisk) {
+		if (!listed.has(file)) {
+			throw new Error(
+				`verify:templates — template/shared/parts/${file} exists but is not in SHARED_PARTIALS (src/roguetrader/sheet/partials.ts); add it or remove the file.`,
+			);
+		}
+	}
+}
+
+for (const rel of SHARED_PARTIALS) {
+	const src = await readFile(join(TEMPLATE_ROOT, rel), "utf8");
+	const name = `rt/${rel.split("/").pop().replace(/\.hbs$/, "")}`;
+	const compiled = Handlebars.compile(src);
+	// Block partials ({{> @partial-block}}) render fine at their call sites;
+	// render-verify them with a visible stub so a standalone render still
+	// succeeds loudly.
+	if (src.includes("@partial-block")) {
+		Handlebars.registerPartial(
+			"@partial-block",
+			Handlebars.compile("<!-- block-stub -->"),
+		);
+	}
+	Handlebars.registerPartial(name, compiled);
+}
+
 // ---------------------------------------------------------------------------
 // Render context: a plain empty object. Missing keys resolve to undefined and
 // render empty (Handlebars short-circuits nested paths), while helper and

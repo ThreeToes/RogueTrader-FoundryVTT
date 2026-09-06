@@ -48,6 +48,8 @@ import { SkillSheet } from "./item/skill-sheet";
 import { TalentSheet } from "./item/talent-sheet";
 import { CareerSheet } from "./item/career-sheet";
 import { WeaponSheet } from "./item/weapon-sheet";
+import { registerSharedPartials } from "./partials";
+import { getPackDocuments } from "./pack-resolve";
 
 type AnySheetCtor = new (...args: unknown[]) => object;
 
@@ -184,6 +186,7 @@ async function rollDamageButton(button: HTMLButtonElement): Promise<void> {
 export function sheetInit() {
 	Hooks.once("init", () => {
 		attachRegistriesToConfig();
+		registerSharedPartials();
 
 		// Public roll API for modules/macros: game.rogueTrader.rollTest(actor, key, opts)
 		const git = game as unknown as { rogueTrader?: Record<string, unknown> };
@@ -229,9 +232,8 @@ export function sheetInit() {
 		// pack definitions pre-warm at ready (commonSkillCatalog pattern).
 		let originTraitDefs: OriginTraitDef[] = [];
 		Hooks.once("ready", () => {
-			const pack = game.packs?.get("rogue-trader.origin-traits");
-			if (!pack) return;
-			pack.getDocuments().then((docs) => {
+			getPackDocuments("rogue-trader.origin-traits").then((rawDocs) => {
+				const docs = rawDocs as Array<foundry.documents.Item>;
 				originTraitDefs = docs.map((doc) => {
 					const s = doc.system as unknown as Record<string, unknown>;
 					return {
@@ -440,9 +442,8 @@ export function sheetInit() {
 			);
 		});
 		Hooks.once("ready", () => {
-			const pack = game.packs.get("rogue-trader.skills");
-			if (!pack) return;
-			pack.getDocuments().then((docs) => {
+			getPackDocuments("rogue-trader.skills").then((rawDocs) => {
+				const docs = rawDocs as Array<foundry.documents.Item>;
 				commonSkillCatalog = docs.map(
 					(doc) =>
 						doc.toObject() as {

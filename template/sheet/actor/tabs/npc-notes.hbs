@@ -1,6 +1,6 @@
 <section class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes">
     <div class="npc border">
         <h1>{{localize "NPC.TAB_NOTES"}}</h1>
-        {{editor source.system.notes target="system.notes" button=true editable=editable engine="prosemirror"}}
+        {{> "rt/rich-text" name="system.notes" value=source.system.notes html=notesHTML editable=editable}}
     </div>
 </section>

@@ -31,6 +31,21 @@ export async function resolvePackDocument(
 	return (await foundry.utils.fromUuid(uuid)) ?? null;
 }
 
+/**
+ * Fetch a compendium pack's documents (bead ku1i consolidation): one loud
+ * missing-pack warning per fetch instead of 22 silent no-ops. Empty list
+ * means "pack missing or empty" — callers that distinguish can check the
+ * pack's existence separately.
+ */
+export async function getPackDocuments(packId: string): Promise<unknown[]> {
+	const pack = game.packs?.get(packId);
+	if (!pack) {
+		console.warn(`rogue-trader | compendium pack ${packId} not installed`);
+		return [];
+	}
+	return (await pack.getDocuments()) as unknown[];
+}
+
 /** Open a resolved document's sheet, loudly reporting a missing binding. */
 export async function openDocumentSheet(
 	item: unknown,

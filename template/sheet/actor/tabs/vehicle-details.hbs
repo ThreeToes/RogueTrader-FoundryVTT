@@ -18,14 +18,7 @@
         <div class="stats-row">
             <div class="stat description">
                 <label>{{localize "VEHICLE.DESCRIPTION"}}</label>
-                {{#if editable}}
-                <prose-mirror name="system.description" value="{{source.system.description}}" button="true"
-                    editable="{{editable}}" toggled="false">
-                    {{{descriptionHTML}}}
-                </prose-mirror>
-                {{else}}
-                {{{descriptionHTML}}}
-                {{/if}}
+                {{> "rt/rich-text" name="system.description" value=source.system.description html=descriptionHTML editable=editable}}
             </div>
         </div>
     </div>

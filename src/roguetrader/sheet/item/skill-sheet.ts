@@ -1,4 +1,5 @@
 import { Skill } from "../../data/item/skill";
+import { sheetContext } from "../context";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -18,10 +19,7 @@ export class SkillSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = (await super._prepareContext(options)) as Record<
-			string,
-			unknown
-		>;
+		const context = sheetContext(await super._prepareContext(options));
 		context.characteristicChoices = Skill.characteristicChoices;
 		context.ladderOptions = [
 			{ value: 1, label: "SKILL.LADDER_KNOWN" },

@@ -1,8 +1,7 @@
 <div class="header border">
     <div class="header-grid">
         <div class="header-portrait">
-            <img class="profile-img" src="{{document.img}}" data-action="editImage" data-field="img"
-                alt="{{document.name}}" title="{{document.name}}" />
+            {{> "rt/header-portrait"}}
         </div>
         <div class="header-line line-1">
             <div class="header-cell">
@@ -23,13 +22,8 @@
         <div class="header-line line-2">
             <div class="header-cell">
                 <label>{{localize "VEHICLE.STRUCTURAL_INTEGRITY"}}</label>
-                <div class="paired">
-                    <input name="system.structuralIntegrity.value" type="number" min="0"
-                        value="{{source.system.structuralIntegrity.value}}" />
-                    <span class="pair-sep">/</span>
-                    <input name="system.structuralIntegrity.max" type="number" min="0"
-                        value="{{source.system.structuralIntegrity.max}}" />
-                </div>
+                {{> "rt/paired-value" nameValue="system.structuralIntegrity.value" nameMax="system.structuralIntegrity.max"
+                    value=source.system.structuralIntegrity.value max=source.system.structuralIntegrity.max min=0}}
             </div>
             <div class="header-cell">
                 <label>{{localize "VEHICLE.HANDLING"}}</label>

@@ -1,14 +1,12 @@
 import { Dynasty } from "../../data/actor/dynasty";
 import { startingProfitFactorAndShipPoints } from "../../rules/acquisition";
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ActorSheetV2 } = foundry.applications.sheets;
+import { RtActorSheet } from "../context";
 
 /**
  * Dynasty sheet (bead gjvg): the group's Profit Factor and Ship Points
  * record. Minimal editable fields; Ship Points remaining derives 1:1.
  */
-export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+export class DynastySheet extends RtActorSheet {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "dynasty"],
 		position: { width: 480, height: "auto" },
@@ -39,6 +37,11 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.profitFactor = system.profitFactor;
 		context.shipPoints = system.shipPoints;
 		context.shipPointsRemaining = system.shipPointsRemaining;
+		// Shared rich-text partial (bead bef7) renders notes via prose-mirror.
+		context.notesHTML = await foundry.applications.ux.TextEditor.enrichHTML(
+			system.notes ?? "",
+			{ relativeTo: this.document },
+		);
 		return context;
 	}
 

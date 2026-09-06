@@ -1,4 +1,6 @@
 import type { Character } from "../../data/actor/character";
+import { sheetContext } from "../context";
+import { getPackDocuments } from "../pack-resolve";
 import {
 	availableRows,
 	characteristicNextAdvance,
@@ -84,10 +86,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = (await super._prepareContext(_options as never)) as Record<
-			string,
-			unknown
-		>;
+		const context = sheetContext(await super._prepareContext(_options as never));
 		const system = this.actor.system as unknown as Character;
 		const ledger = (system.advances ?? []) as AdvanceLedgerEntry[];
 		const spent = totalSpent(ledger);
@@ -97,9 +96,8 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		this.#career = null;
 		this.#skillDocs = [];
 		const careerKey = system.careerKey;
-		const careerPack = game.packs?.get("rogue-trader.careers");
-		if (careerPack && careerKey) {
-			const docs = (await careerPack.getDocuments()) as unknown as Array<{
+		if (careerKey) {
+			const docs = (await getPackDocuments("rogue-trader.careers")) as unknown as Array<{
 				id?: string;
 				name?: string;
 				system: {
@@ -134,9 +132,8 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				};
 			}
 		}
-		const skillPack = game.packs?.get("rogue-trader.skills");
-		if (skillPack) {
-			const docs = (await skillPack.getDocuments()) as unknown as Array<{
+		{
+			const docs = (await getPackDocuments("rogue-trader.skills")) as unknown as Array<{
 				id?: string;
 				name?: string;
 				system: { key?: string; characteristic?: string };
@@ -155,9 +152,8 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		// Talents pack for name resolution of key-only rows ("psy-rating",
 		// "psychic-technique", ...).
 		this.#nameByKey = {};
-		const talentPack = game.packs?.get("rogue-trader.talents");
-		if (talentPack) {
-			const docs = (await talentPack.getDocuments()) as unknown as Array<{
+		{
+			const docs = (await getPackDocuments("rogue-trader.talents")) as unknown as Array<{
 				name?: string;
 				system: { key?: string };
 			}>;

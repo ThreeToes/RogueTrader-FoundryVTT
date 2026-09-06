@@ -1,0 +1,15 @@
+{{!-- Shared item-row skeleton (consolidation bead 201f). Hash: id,
+     uuid, name, draggable, gripVertical (inv-grab), grip (inv-grip),
+     openItem (adds data-action="openItem" + openItemTooltip), deleteAction
+     (renders the delete anchor; omit to suppress), deleteTooltip.
+     The block body renders between the name and the delete anchor. --}}
+<div class="inv-row{{#if draggable}} draggable{{/if}}"{{#if id}} data-item-id="{{id}}"{{/if}}{{#if uuid}} data-item-uuid="{{uuid}}"{{/if}}>
+    {{#if gripVertical}}<span class="inv-grab"><i class="fa-solid fa-grip-vertical"></i></span>{{/if}}
+    {{#if grip}}<i class="fa-solid fa-grip inv-grip"></i>{{/if}}
+    <span class="inv-name"{{#if openItem}} data-action="openItem" data-tooltip="{{openItemTooltip}}"{{/if}}>{{name}}</span>
+    {{> @partial-block}}
+    {{#if deleteAction}}
+    <a class="inv-delete" data-action="{{deleteAction}}"{{#if id}} data-item-id="{{id}}"{{/if}}
+        data-tooltip="{{deleteTooltip}}"><i class="fa-solid fa-xmark"></i></a>
+    {{/if}}
+</div>

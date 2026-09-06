@@ -1,4 +1,6 @@
 import { talents } from "../../registry";
+import { sheetContext } from "../context";
+import { getPackDocuments } from "../pack-resolve";
 import {
 	evaluatePrerequisites,
 	parsePrerequisites,
@@ -40,10 +42,7 @@ export class TalentPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = (await super._prepareContext(_options)) as Record<
-			string,
-			unknown
-		>;
+		const context = sheetContext(await super._prepareContext(_options));
 		const owned = new Set(
 			this.actor.items
 				.filter((item) => item.type === "talent")
@@ -117,9 +116,7 @@ export class TalentPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	static async #findPackTalent(
 		name: string,
 	): Promise<{ prereqText: string } | null> {
-		const pack = game.packs?.get("rogue-trader.talents");
-		if (!pack) return null;
-		const docs = (await pack.getDocuments()) as unknown as Array<{
+		const docs = (await getPackDocuments("rogue-trader.talents")) as unknown as Array<{
 			name?: string;
 			system: { description?: string };
 		}>;

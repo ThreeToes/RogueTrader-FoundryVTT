@@ -5,6 +5,7 @@
  * by the creator, advancement dialog and talent picker.
  */
 
+import { getPackDocuments } from "../pack-resolve";
 import {
 	parameterisedBase,
 	resolveParameterised,
@@ -18,9 +19,7 @@ import {
 export async function findPackTalentDoc(
 	name: string,
 ): Promise<(PackTalentSnapshot & { id?: string }) | null> {
-	const pack = game.packs?.get("rogue-trader.talents");
-	if (!pack) return null;
-	const docs = (await pack.getDocuments()) as unknown as Array<
+	const docs = (await getPackDocuments("rogue-trader.talents")) as unknown as Array<
 		PackTalentSnapshot & { id?: string }
 	>;
 	const lower = name.toLowerCase();

@@ -1,8 +1,11 @@
 import type { CharacteristicKey } from "../../data/actor/character";
+import { sheetContext } from "../context";
+import { getPackDocuments } from "../pack-resolve";
 import {
 	allowedColumns,
 	fateFromTable,
 	heirloomForRoll,
+	heirloomItems,
 	ORIGIN_ROW_LABEL_KEYS,
 	ORIGIN_ROWS,
 	originByKey,
@@ -214,10 +217,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 	}
 
 	async _prepareContext(_options: object = {}) {
-		const context = (await super._prepareContext(_options as never)) as Record<
-			string,
-			unknown
-		>;
+		const context = sheetContext(await super._prepareContext(_options as never));
 		const state = this.creatorState;
 		context.step = state.step;
 		context.name = state.name;
@@ -419,9 +419,7 @@ variants: (entry.variants ?? []).map((v) => ({
 		const out: Array<Record<string, unknown>> = [];
 		const packs = ["rogue-trader.weapons", "rogue-trader.armour", "rogue-trader.gear", "rogue-trader.drugs", "rogue-trader.tools"];
 		for (const packName of packs) {
-			const pack = game.packs?.get(packName);
-			if (!pack) continue;
-			const docs = (await pack.getDocuments()) as unknown as Array<{
+			const docs = (await getPackDocuments(packName)) as unknown as Array<{
 				name?: string;
 				type?: string;
 				system?: { availability?: string; description?: string };
@@ -825,14 +823,11 @@ variants: (entry.variants ?? []).map((v) => ({
 			};
 			const grants: object[] = [];
 			if (entry.grant.kind === "pack-item") {
-				const pack = game.packs?.get(entry.grant.pack);
-				const docs = pack
-					? ((await pack.getDocuments()) as unknown as Array<{
-							name?: string;
-							type?: string;
-							toObject: () => object;
-						}>)
-					: [];
+				const docs = (await getPackDocuments(entry.grant.pack)) as unknown as Array<{
+						name?: string;
+						type?: string;
+						toObject: () => object;
+					}>;
 				const doc = docs.find((d) => d.name === entry.grant.item);
 				if (!doc) {
 					console.error(

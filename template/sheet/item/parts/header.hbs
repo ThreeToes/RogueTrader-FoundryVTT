@@ -1,16 +1,1 @@
-<div class="header compact border">
-    <img class="profile-img" src="{{document.img}}" data-action="editImage" data-field="img"
-        alt="{{document.name}}" title="{{document.name}}" />
-    <div class="name header-cell grow">
-        {{#if editable}}
-        <input class="name-input" name="name" type="text" value="{{document.name}}" />
-        <input class="short-description" name="system.shortDescription" type="text"
-            value="{{source.system.shortDescription}}" placeholder="{{localize "GEAR.SHORT_DESCRIPTION"}}" />
-        {{else}}
-        <p class="name-input static-value">{{document.name}}</p>
-        {{#if source.system.shortDescription}}
-        <p class="short-description static-value">{{source.system.shortDescription}}</p>
-        {{/if}}
-        {{/if}}
-    </div>
-</div>
+{{> "rt/compact-header"}}

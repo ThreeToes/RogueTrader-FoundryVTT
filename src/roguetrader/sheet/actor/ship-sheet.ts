@@ -7,9 +7,9 @@ import {
 	validateWeaponSlots,
 	WEAPON_SLOTS,
 } from "../../rules/ship-systems";
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ActorSheetV2 } = foundry.applications.sheets;
+import { cloneItemIntoActor } from "../drop-clone";
+import { RtActorSheet } from "../context";
+import { getPackDocuments } from "../pack-resolve";
 
 /** Row for the hull picker: ships pack `ship` docs. */
 interface HullOption {
@@ -32,7 +32,7 @@ const COMPONENT_CATEGORIES: Array<{ key: string; labelKey: string }> = [
  * SP delta), the two Complications (rolled from the ships pack with
  * 1d10), Ship Points and Space trackers, and notes. Fully resizable.
  */
-export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+export class ShipSheet extends RtActorSheet {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "starship"],
 		position: { width: 640, height: 560 },
@@ -84,9 +84,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	async #hullOptions(): Promise<HullOption[]> {
-		const pack = game.packs?.get("rogue-trader.ships");
-		if (!pack) return [];
-		const docs = (await pack.getDocuments()) as unknown as Array<{
+		const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
 			uuid?: string;
 			name?: string;
 			type?: string;
@@ -123,6 +121,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			crewQuality: string;
 			machineSpiritOddity: string;
 			pastHistory: string;
+			notes: string;
 			spRemaining: number;
 		};
 		context.system = system;
@@ -156,6 +155,11 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				`STARSHIP.ISSUE_${issue.kind.toUpperCase()}`,
 			),
 		}));
+		// Shared rich-text partial (bead bef7) renders notes via prose-mirror.
+		context.notesHTML = await foundry.applications.ux.TextEditor.enrichHTML(
+			system.notes ?? "",
+			{ relativeTo: this.document },
+		);
 		return context;
 	}
 
@@ -214,9 +218,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		labelKey: string;
 		items: Array<{ uuid: string; name: string; power: string; space: number; sp: string }>;
 	}>> {
-		const pack = game.packs?.get("rogue-trader.ships");
-		if (!pack) return [];
-		const docs = (await pack.getDocuments()) as unknown as Array<{
+		const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
 			uuid?: string;
 			name?: string;
 			type?: string;
@@ -315,17 +317,14 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const uuid = target.dataset.uuid;
 		if (!uuid) return;
 		try {
-			const doc = (await foundry.utils.fromUuid(uuid)) as unknown as {
-				toObject?: () => object;
-			} | null;
-			if (!doc?.toObject) {
+			const created = await cloneItemIntoActor(this.document, uuid, {
+				// Ship refit may install the same component twice — no dup check.
+				skipOwned: false,
+			});
+			if (!created) {
 				console.warn(`rogue-trader | component "${uuid}" did not resolve`);
 				return;
 			}
-			const data = doc.toObject() as { system?: Record<string, unknown> };
-			await this.document.createEmbeddedDocuments("Item", [
-				{ ...data, system: { ...data.system } },
-			] as never);
 			// New array may raise the shield max; clamp current upward is not
 			// needed (shields start at max), but keep current within bounds.
 			await this.#clampVoidShields();
@@ -375,9 +374,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const roll = new foundry.dice.Roll("1d10");
 		await roll.evaluate();
 		const result = roll.total ?? 1;
-		const pack = game.packs?.get("rogue-trader.ships");
-		if (!pack) return;
-		const docs = (await pack.getDocuments()) as unknown as Array<{
+		const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
 			type?: string;
 			name?: string;
 			system?: { kind?: string; roll?: number };

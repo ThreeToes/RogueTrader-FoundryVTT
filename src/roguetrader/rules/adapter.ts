@@ -32,6 +32,8 @@ export {
 	rollWeaponAttack,
 	rollPsychicPower,
 	rollNavigatorPower,
+	rollShipSalvo,
+	rollShipRepair,
 	performRoll,
 } from "./roll-system";
 export type {
@@ -43,6 +45,8 @@ export type {
 	WeaponRollRequest,
 	PsychicRollRequest,
 	NavigatorRollRequest,
+	ShipWeaponRollRequest,
+	ShipRepairRollRequest,
 } from "./roll-system";
 
 /**

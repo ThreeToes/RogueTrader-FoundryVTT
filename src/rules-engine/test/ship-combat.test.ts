@@ -4,12 +4,17 @@ import {
 	crewLossFromHullDamage,
 	crippledEffects,
 	criticalFromCrippledDamage,
+	emergencyRepairsCanFix,
+	emergencyRepairsOutcome,
+	componentFunctional,
 	hitsScored,
+	HAZARD_CREW_DAMAGE,
 	isCritical,
 	rangeModifier,
 	resolveSalvoDamage,
 	SHIP_CRITICALS,
 	shipCritical,
+	VENT_FIRE_CREW_DAMAGE,
 } from "../src/ship-combat";
 
 // Bead cj6k: ship combat kernel (Core Rulebook Ch. VIII pp218-223), all
@@ -135,5 +140,35 @@ describe("crippled ships (book p221)", () => {
 	test("positive Hull Integrity leaves the ship uncrippled", () => {
 		expect(crippledEffects(1).crippled).toBe(false);
 		expect(crippledEffects(1).manoeuvrabilityPenalty).toBe(0);
+	});
+});
+
+describe("component states + repairs (book p223-224, bead cj6k)", () => {
+	test("functional components", () => {
+		expect(componentFunctional(undefined)).toBe(true);
+		expect(componentFunctional("intact")).toBe(true);
+		expect(componentFunctional("unpowered")).toBe(true);
+		expect(componentFunctional("damaged")).toBe(false);
+		expect(componentFunctional("destroyed")).toBe(false);
+	});
+
+	test("Emergency Repairs eligibility (book p218)", () => {
+		expect(emergencyRepairsCanFix("unpowered")).toBe(true);
+		expect(emergencyRepairsCanFix("damaged")).toBe(true);
+		expect(emergencyRepairsCanFix(undefined, true)).toBe(true); // depressurised
+		expect(emergencyRepairsCanFix("intact")).toBe(false);
+		expect(emergencyRepairsCanFix("destroyed")).toBe(false);
+	});
+
+	test("repair time: 1d5 turns, -1 per degree, minimum one (book p218)", () => {
+		expect(emergencyRepairsOutcome(0).turns).toBe(5);
+		expect(emergencyRepairsOutcome(2).turns).toBe(3);
+		expect(emergencyRepairsOutcome(9).turns).toBe(1); // clamped
+	});
+
+	test("hazard crew damage dice (book p223-224)", () => {
+		expect(HAZARD_CREW_DAMAGE.fire).toMatchObject({ populationFaces: 5, moraleFaces: 10 });
+		expect(HAZARD_CREW_DAMAGE.depressurisation).toMatchObject({ populationFaces: 10, moraleFaces: 5 });
+		expect(VENT_FIRE_CREW_DAMAGE).toMatchObject({ populationFaces: 5, moraleDice: 2, moraleFaces: 10 });
 	});
 });

@@ -212,8 +212,19 @@ async function buildPack(
 		const contents = await readFile(path.join(PACK_SRC, folder, file), "utf8");
 		const documents = yaml.parseAllDocuments(contents) as Array<{
 			toJSON: () => Record<string, unknown>;
+			errors: Array<Error>;
 		}>;
 		for (const parsed of documents) {
+			// Loud failure (bead gjn6 finding): the yaml lib collects parse
+			// errors on the Document and STILL yields a (corrupted) tree —
+			// e.g. "special: Plasma drive: provides..." silently parses as a
+			// nested mapping {"Plasma drive": "..."}. Never ship that.
+			if (parsed.errors.length > 0) {
+				throw new Error(
+					`compendia: YAML parse error in ${path.join(PACK_SRC, folder, file)}: ` +
+						parsed.errors.map((e) => e.message.split("\n")[0]).join(" | "),
+				);
+			}
 			const value = (
 				parsed as unknown as { toJSON: () => unknown }
 			).toJSON?.call(parsed);

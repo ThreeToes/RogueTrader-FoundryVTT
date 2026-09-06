@@ -67,6 +67,8 @@ const {
 	weaponHandler,
 	navigatorHandler,
 	psychicHandler,
+	shipRepairHandler,
+	shipWeaponHandler,
 } = await import("./roll-system");
 const { TestDialog } = await import("./test-dialog");
 
@@ -130,7 +132,15 @@ function resetSpies() {
 describe("handler registry (bead mvu2)", () => {
 	it("is exhaustive over the RollKind union", () => {
 		expect(Object.keys(rollHandlers).sort()).toEqual(
-			["characteristic", "navigator", "psychic", "skill", "weapon"].sort(),
+			[
+				"characteristic",
+				"navigator",
+				"psychic",
+				"ship-repair",
+				"ship-weapon",
+				"skill",
+				"weapon",
+			].sort(),
 		);
 	});
 });
@@ -424,5 +434,187 @@ describe("psychic handler wiring", () => {
 			strength: "unfettered",
 			pushLevels: 0,
 		});
+	});
+});
+
+// --- Ship combat handlers (bead xfta) ------------------------------------
+
+function shipFixture(items: unknown[], crewQuality = "competent") {
+	return {
+		name: "Sabre",
+		type: "starship",
+		uuid: "Actor.sabre",
+		items: Object.assign([...items], {
+			get: (id: string) => items.find((i) => (i as { id?: string }).id === id),
+		}),
+		system: {
+			crewQuality,
+			armour: 18,
+			voidShields: 1,
+			hullIntegrity: { value: 33, max: 33 },
+			crewPopulation: 100,
+			crewMorale: 100,
+		},
+	} as never;
+}
+
+const lasBattery = {
+	id: "sw1",
+	type: "ship-weapon-component",
+	name: "Dorsal Sunsear Laser Battery",
+	uuid: "Item.sw1",
+	system: {
+		strength: 4,
+		damage: "1d10+2",
+		critRating: 4,
+		range: 9,
+		slot: "dorsal",
+		state: "intact",
+	},
+};
+
+describe("ship-weapon handler (bead xfta)", () => {
+	it("prepares a crew-skill BS test with weapon stats", async () => {
+		resetSpies();
+		const prepared = await shipWeaponHandler.prepare({
+			kind: "ship-weapon",
+			actor: shipFixture([lasBattery]),
+			itemId: "sw1",
+			rangeBand: "normal",
+		} as never);
+		expect(prepared).toMatchObject({
+			title: "Sabre — Dorsal Sunsear Laser Battery (SHIP_COMBAT.MACROBATTERY)",
+			baseTarget: 30, // competent crew skill (book p193)
+			testKind: "characteristic",
+			testKey: "bs",
+		});
+		expect(prepared?.kindData).toMatchObject({
+			weaponKind: "macrobattery",
+			strength: 4,
+			damage: "1d10+2",
+			critRating: 4,
+		});
+	});
+
+	it("classifies lance weapons by name", async () => {
+		resetSpies();
+		const lance = {
+			...lasBattery,
+			id: "sw2",
+			name: "Prow Titanforge Lance Weapon",
+		};
+		const prepared = await shipWeaponHandler.prepare({
+			kind: "ship-weapon",
+			actor: shipFixture([lance]),
+			itemId: "sw2",
+			rangeBand: "normal",
+		} as never);
+		expect(prepared?.kindData?.weaponKind).toBe("lance");
+	});
+
+	it("gates on non-functional components (book p223)", async () => {
+		resetSpies();
+		const damaged = {
+			...lasBattery,
+			system: { ...lasBattery.system, state: "damaged" },
+		};
+		const prepared = await shipWeaponHandler.prepare({
+			kind: "ship-weapon",
+			actor: shipFixture([damaged]),
+			itemId: "sw1",
+		} as never);
+		expect(prepared).toBeNull();
+		expect(warnings.some((w) => w.includes("SHIP_COMBAT.COMPONENT_NONFUNCTIONAL"))).toBe(true);
+	});
+
+	it("contributes the range-band row (book p220)", () => {
+		resetSpies();
+		const half = shipWeaponHandler.postDialogModifiers?.(
+			{ kind: "ship-weapon", actor: shipFixture([]), itemId: "sw1", rangeBand: "half" } as never,
+			{} as never,
+			{ modifiers: [] },
+		);
+		expect(half).toEqual([
+			{
+				id: "ship:range",
+				source: { type: "dialog", label: "SHIP_COMBAT.RANGE" },
+				label: "SHIP_COMBAT.RANGE_HALF",
+				value: 10,
+			},
+		]);
+		const normal = shipWeaponHandler.postDialogModifiers?.(
+			{ kind: "ship-weapon", actor: shipFixture([]), itemId: "sw1", rangeBand: "normal" } as never,
+			{} as never,
+			{ modifiers: [] },
+		);
+		expect(normal).toEqual([]);
+	});
+
+	it("rolls variable Strength (ork Dorsal Gunz, book p209)", async () => {
+		resetSpies();
+		const gunz = {
+			...lasBattery,
+			id: "sw3",
+			name: "Dorsal Gunz",
+			system: {
+				strength: 0,
+				strengthRoll: "1d5",
+				damage: "1d10+4",
+				critRating: 6,
+				range: 4,
+				state: "intact",
+			},
+		};
+		const prepared = await shipWeaponHandler.prepare({
+			kind: "ship-weapon",
+			actor: shipFixture([gunz]),
+			itemId: "sw3",
+			rangeBand: "normal",
+		} as never);
+		expect(prepared?.kindData?.weaponKind).toBe("macrobattery");
+		expect(prepared?.kindData?.strength).toBeGreaterThanOrEqual(1);
+	});
+});
+
+describe("ship-repair handler (bead xfta)", () => {
+	it("prepares the Difficult (-10) crew test (book p218)", async () => {
+		resetSpies();
+		const damaged = {
+			...lasBattery,
+			system: { ...lasBattery.system, state: "damaged" },
+		};
+		const prepared = await shipRepairHandler.prepare({
+			kind: "ship-repair",
+			actor: shipFixture([damaged]),
+			itemId: "sw1",
+		} as never);
+		expect(prepared?.baseTarget).toBe(30);
+		expect(prepared?.initialModifiers).toHaveLength(1);
+		expect(prepared?.initialModifiers[0]).toMatchObject({ value: -10 });
+	});
+
+	it("refuses destroyed components (book p218/p224)", async () => {
+		resetSpies();
+		const destroyed = {
+			...lasBattery,
+			system: { ...lasBattery.system, state: "destroyed" },
+		};
+		const prepared = await shipRepairHandler.prepare({
+			kind: "ship-repair",
+			actor: shipFixture([destroyed]),
+			itemId: "sw1",
+		} as never);
+		expect(prepared).toBeNull();
+		expect(warnings.some((w) => w.includes("SHIP_COMBAT.REPAIR_INELIGIBLE"))).toBe(true);
+	});
+
+	it("refuses intact components (nothing to repair)", async () => {
+		resetSpies();
+		const prepared = await shipRepairHandler.prepare({
+			kind: "ship-repair",
+			actor: shipFixture([lasBattery]),
+			itemId: "sw1",
+		} as never);
+		expect(prepared).toBeNull();
 	});
 });

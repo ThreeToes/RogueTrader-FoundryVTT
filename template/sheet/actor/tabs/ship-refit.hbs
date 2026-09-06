@@ -2,21 +2,29 @@
     <div class="starship border">
         <h1>{{localize "STARSHIP.TAB_REFIT"}}</h1>
 
-        {{!-- Installed components (inv-row vocabulary) --}}
-        <div class="inv-group-header">
-            <h2 class="inv-group-label">{{localize "STARSHIP.COMPONENTS"}}</h2>
-            <span class="acq-group-count">{{components.length}}</span>
-        </div>
-        {{!-- Weapon-slot validation (bead om4j, Table 8-4 book p202): loud
-             warnings for unassigned/over-capacity/broadside-slot issues --}}
+        {{!-- Drag-and-drop install (bead pyi3): drag ship-component /
+             ship-weapon-component items here from the ships compendium.
+             Non-component items are refused with a loud warning. --}}
+        <p class="method-hint">{{localize "STARSHIP.DROP_HINT"}}</p>
+
         {{#each weaponIssues as |issue|}}
         <p class="method-hint warn">⚠ {{localize "STARSHIP.WEAPON_ISSUE"}}: {{issue.name}} —
             {{issue.message}}{{#if issue.slot}} ({{issue.slot}}){{/if}}</p>
         {{/each}}
 
+        {{!-- Installed components: inventory-style, grouped by category --}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize "STARSHIP.COMPONENTS"}}</h2>
+            <span class="acq-group-count">{{components.length}}</span>
+        </div>
         {{#if components.length}}
         <div class="starship-components">
-            {{#each components as |c|}}
+            {{#each installedGroups as |group|}}
+            <div class="inv-group-header">
+                <h3 class="inv-group-label">{{localize group.labelKey}}</h3>
+                <span class="acq-group-count">{{group.items.length}}</span>
+            </div>
+            {{#each group.items as |c|}}
             {{#> "rt/inv-row" id=c.id name=c.name deleteAction="removeComponent" deleteTooltip=(localize "STARSHIP.COMPONENT_REMOVE")}}
             <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{c.power}}</span>
             <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{c.space}}</span>
@@ -29,31 +37,41 @@
             {{/if}}
             {{/"rt/inv-row"}}
             {{/each}}
+            {{/each}}
         </div>
         {{else}}
         <p class="method-hint">{{localize "STARSHIP.COMPONENTS_EMPTY"}}</p>
         {{/if}}
 
-        {{!-- Component picker: collapsible category groups (acq-group pattern) --}}
-        {{#each componentGroups as |group|}}
-        {{#if group.items.length}}
+        {{!-- Demoted browse affordance: the compendium pickers, collapsed by
+             default now that drag-and-drop is the primary install path --}}
         <div class="acq-group">
-            <button type="button" class="acq-group-header" data-action="toggleComponentGroup" data-group="{{group.key}}">
-                <i class="fa-solid {{#if group.open}}fa-chevron-down{{else}}fa-chevron-right{{/if}}"></i>
-                {{localize group.labelKey}}
-                <span class="acq-group-count">({{group.items.length}})</span>
+            <button type="button" class="acq-group-header" data-action="toggleComponentGroup" data-group="browse">
+                <i class="fa-solid {{#if componentGroupsOpen}}fa-chevron-down{{else}}fa-chevron-right{{/if}}"></i>
+                {{localize "STARSHIP.BROWSE_COMPONENTS"}}
             </button>
-            {{#if group.open}}
-            <div class="pick-chips">
-                {{#each group.items as |c|}}
-                <a class="pick-chip" data-action="addComponent" data-uuid="{{c.uuid}}"
-                    data-tooltip="{{localize "WEAPON.POWER"}} {{c.power}} · {{localize "STARSHIP.SPACE"}} {{c.space}} · SP {{c.sp}}">{{c.name}}</a>
-                {{/each}}
+            {{#if componentGroupsOpen}}
+            {{#each componentGroups as |group|}}
+            {{#if group.items.length}}
+            <div class="acq-group">
+                <button type="button" class="acq-group-header" data-action="toggleComponentGroup" data-group="{{group.key}}">
+                    <i class="fa-solid {{#if group.open}}fa-chevron-down{{else}}fa-chevron-right{{/if}}"></i>
+                    {{localize group.labelKey}}
+                    <span class="acq-group-count">({{group.items.length}})</span>
+                </button>
+                {{#if group.open}}
+                <div class="pick-chips">
+                    {{#each group.items as |c|}}
+                    <a class="pick-chip" data-action="addComponent" data-uuid="{{c.uuid}}"
+                        data-tooltip="{{localize "WEAPON.POWER"}} {{c.power}} · {{localize "STARSHIP.SPACE"}} {{c.space}} · SP {{c.sp}}">{{c.name}}</a>
+                    {{/each}}
+                </div>
+                {{/if}}
             </div>
             {{/if}}
+            {{/each}}
+            {{/if}}
         </div>
-        {{/if}}
-        {{/each}}
 
         {{!-- Hull picker: apply a ships-pack hull to this actor --}}
         <div class="inv-group-header">

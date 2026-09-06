@@ -148,6 +148,14 @@ describe("weapon slot validation (bead om4j, loud failures)", () => {
 	});
 
 	test("slot vocabulary is the Table 8-4 set", () => {
-		expect(WEAPON_SLOTS).toEqual(["dorsal", "prow", "port", "starboard"]);
+		// Keel added (bead gjn6, book p220): "Dorsal, Prow, Port, Starboard, or
+		// Keel" — Wayfarer Station carries a Keel capacity (p210).
+		expect(WEAPON_SLOTS).toEqual([
+			"dorsal",
+			"prow",
+			"port",
+			"starboard",
+			"keel",
+		]);
 	});
 });

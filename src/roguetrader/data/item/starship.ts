@@ -25,6 +25,15 @@ export class Starship extends foundry.abstract.TypeDataModel<
 	declare weaponCapacity: string;
 	declare specialRules: string;
 	declare description: string;
+	/** Complete NPC / quick-start vessel (gjn6, book pp209-211): has a full
+	 * statline and pre-installed components, not an empty hull for refit. */
+	declare npc: boolean;
+	/** Pre-installed essential components by name (NPC vessels, pp209-211). */
+	declare essentialComponents: string[];
+	/** Pre-installed supplemental components by name (NPC vessels). */
+	declare supplementalComponents: string[];
+	/** Named complications already rolled for a pre-built vessel (p211). */
+	declare complications: string[];
 
 	static override defineSchema() {
 		return {
@@ -47,6 +56,19 @@ export class Starship extends foundry.abstract.TypeDataModel<
 			/** Named hull special rules, verbatim ("Cargo Hauler: ..."). */
 			specialRules: new foundry.data.fields.HTMLField({ initial: "" }),
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
+			// NPC vessels (gjn6, book pp209-211): complete ships with
+			// pre-installed components, listed by pack-component name so the
+			// ship creator can instantiate them with loud failures.
+			npc: new foundry.data.fields.BooleanField({ initial: false }),
+			essentialComponents: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.StringField({ initial: "" }),
+			),
+			supplementalComponents: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.StringField({ initial: "" }),
+			),
+			complications: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.StringField({ initial: "" }),
+			),
 		};
 	}
 }

@@ -1,12 +1,22 @@
-{{!-- Shared item-row skeleton (consolidation bead 201f). Hash: id,
-     uuid, name, draggable, gripVertical (inv-grab), grip (inv-grip),
-     openItem (adds data-action="openItem" + openItemTooltip), deleteAction
-     (renders the delete anchor; omit to suppress), deleteTooltip.
+{{!-- Shared item-row skeleton (consolidation beads 201f + npc-parity).
+     Hash: id, uuid, name, draggable, gripVertical (inv-grab), grip (inv-grip),
+     openItem + openItemTooltip (name opens the item sheet), equipToggle (bool)
+     + equipped + equipAction + equipTooltip (the circle-check ready-state
+     toggle), leadingIcon + leadingAction + leadingTooltip + leadingClasses
+     (an action anchor before the name, e.g. the weapon roll), weight (a
+     rendered weight string, e.g. "2.5 kg"), deleteAction (renders the delete
+     anchor; omit to suppress), deleteTooltip.
      The block body renders between the name and the delete anchor. --}}
 <div class="inv-row{{#if draggable}} draggable{{/if}}"{{#if id}} data-item-id="{{id}}"{{/if}}{{#if uuid}} data-item-uuid="{{uuid}}"{{/if}}>
     {{#if gripVertical}}<span class="inv-grab"><i class="fa-solid fa-grip-vertical"></i></span>{{/if}}
     {{#if grip}}<i class="fa-solid fa-grip inv-grip"></i>{{/if}}
+    {{#if equipToggle}}<a class="equip-toggle {{#if equipped}}equipped{{/if}}"
+        data-action="{{equipAction}}"
+        data-tooltip="{{equipTooltip}}"><i class="fa-solid fa-circle-check"></i></a>{{/if}}
+    {{#if leadingIcon}}<a class="inv-leading {{leadingClasses}}" data-action="{{leadingAction}}"
+        data-tooltip="{{leadingTooltip}}"><i class="fa-solid {{leadingIcon}}"></i></a>{{/if}}
     <span class="inv-name"{{#if openItem}} data-action="openItem" data-tooltip="{{openItemTooltip}}"{{/if}}>{{name}}</span>
+    {{#if weight}}<span class="inv-weight" title="{{weightTooltip}}">{{weight}}</span>{{/if}}
     {{> @partial-block}}
     {{#if deleteAction}}
     <a class="inv-delete" data-action="{{deleteAction}}"{{#if id}} data-item-id="{{id}}"{{/if}}

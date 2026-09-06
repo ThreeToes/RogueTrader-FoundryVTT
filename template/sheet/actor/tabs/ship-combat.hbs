@@ -1,0 +1,86 @@
+<section class="tab {{tabs.combat.cssClass}}" data-group="primary" data-tab="combat">
+    <div class="starship border">
+        <h1>{{localize "STARSHIP.TAB_COMBAT"}}</h1>
+
+        {{!-- Crippled state (bead xfta, book p221): 0 Hull Integrity --}}
+        {{#if combat.crippled.crippled}}
+        <p class="method-hint warn">⚠ {{localize "SHIP_COMBAT.CRIPPLED"}}
+            ({{localize "SHIP_COMBAT.CRIPPLED_EFFECTS"}})</p>
+        {{/if}}
+
+        {{!-- Ship status row --}}
+        <div class="starship-status">
+            <span class="chip origin-mod">{{localize "STARSHIP.HULL_INTEGRITY"}}: {{combat.hullIntegrity.value}}/{{combat.hullIntegrity.max}}</span>
+            <span class="chip origin-mod">{{localize "SHIP_COMBAT.VOID_SHIELDS"}}: {{combat.voidShields}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.CREW_POPULATION"}}: {{combat.crewPopulation}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.CREW_MORALE"}}: {{combat.crewMorale}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.CREW_SKILL"}}: {{combat.crewSkill}}</span>
+        </div>
+
+        {{!-- Weapons: fire action per installed ship-weapon-component --}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize "SHIP_COMBAT.WEAPONS"}}</h2>
+            <span class="acq-group-count">{{combat.weapons.length}}</span>
+        </div>
+        {{#if combat.weapons.length}}
+        <div class="starship-components">
+            {{#each combat.weapons as |w|}}
+            {{#> "rt/inv-row" id=w.id name=w.name}}
+            <span class="chip origin-mod">{{localize w.slotLabel}} {{w.slot}}</span>
+            <span class="chip origin-mod">{{localize "SHIP_COMBAT.STRENGTH"}} {{w.strength}}</span>
+            <span class="chip origin-mod">{{localize "SHIP_COMBAT.DAMAGE"}} {{w.damage}}</span>
+            <span class="chip origin-mod">{{localize "SHIP_COMBAT.CRIT"}} {{w.critRating}}</span>
+            <span class="chip origin-mod">{{localize "SHIP_COMBAT.RANGE"}} {{w.range}}</span>
+            {{#if (ne w.state "intact")}}
+            <span class="chip warn">{{localize (concat "SHIP_COMBAT.STATE_" w.state)}}</span>
+            {{/if}}            {{#if w.depressurised}}
+            <span class="chip origin-mod warn">{{localize "SHIP_COMBAT.DEPRESSURISED"}}</span>
+            {{/if}}
+            <button type="button" class="rt-button" data-action="fireWeapon" data-item-id="{{w.id}}"
+                {{#if (ne w.state "intact")}}disabled{{/if}}
+                data-tooltip="{{localize "SHIP_COMBAT.FIRE_TOOLTIP"}}">
+                {{localize "SHIP_COMBAT.FIRE"}}
+            </button>
+            {{/"rt/inv-row"}}
+            {{/each}}
+        </div>
+        {{else}}
+        <p class="method-hint">{{localize "SHIP_COMBAT.NO_WEAPONS"}}</p>
+        {{/if}}
+
+        {{!-- Repairs: Emergency Repairs eligible components (book p216-218) --}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize "SHIP_COMBAT.REPAIRS"}}</h2>
+            <span class="acq-group-count">{{combat.repairable.length}}</span>
+        </div>
+        {{#if combat.repairable.length}}
+        <div class="starship-components">
+            {{#each combat.repairable as |c|}}
+            {{#> "rt/inv-row" id=c.id name=c.name}}
+            <button type="button" class="rt-button" data-action="repairComponent" data-item-id="{{c.id}}"
+                data-tooltip="{{localize "SHIP_COMBAT.REPAIR_TOOLTIP"}}">
+                {{localize "SHIP_COMBAT.REPAIR"}}
+            </button>
+            {{/"rt/inv-row"}}
+            {{/each}}
+        </div>
+        {{else}}
+        <p class="method-hint">{{localize "SHIP_COMBAT.REPAIRS_NONE"}}</p>
+        {{/if}}
+
+        {{!-- GM manual component condition override (book p223 vocabulary) --}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize "SHIP_COMBAT.CONDITIONS"}}</h2>
+        </div>
+        <div class="starship-components">
+            {{#each components as |c|}}
+            {{#> "rt/inv-row" id=c.id name=c.name}}
+            <select data-action="setComponentState" data-item-id="{{c.id}}"
+                data-tooltip="{{localize "SHIP_COMBAT.STATE_HINT"}}">
+                {{selectOptions ../combat.componentStates selected=c.state}}
+            </select>
+            {{/"rt/inv-row"}}
+            {{/each}}
+        </div>
+    </div>
+</section>

@@ -23,13 +23,22 @@ describe("ship component schema (bead f5xu)", () => {
 				"sp",
 				"special",
 				"unique",
+				// Component condition (bead xfta, book p223).
+				"state",
+				"depressurised",
 			].sort(),
 		);
 	});
 
 	test("ShipWeaponComponent adds the Table 8-4 combat columns", () => {
 		const schema = ShipWeaponComponent.defineSchema();
-		for (const key of ["strength", "damage", "critRating", "range"]) {
+		for (const key of [
+			"strength",
+			"strengthRoll",
+			"damage",
+			"critRating",
+			"range",
+		]) {
 			expect(schema[key]).toBeDefined();
 		}
 	});

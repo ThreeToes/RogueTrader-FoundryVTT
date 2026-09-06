@@ -259,7 +259,8 @@ export class NpcSheet extends RtActorSheet {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.dataset.item;
+		// Shared inv-row vocabulary: actions ride data-item-id on the row.
+		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
 		await performRoll({
 			kind: "skill",
@@ -381,7 +382,8 @@ export class NpcSheet extends RtActorSheet {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.dataset.item;
+		// Shared inv-row vocabulary: actions ride data-item-id on the row.
+		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
 		if (!itemId) return;
 		await this.actor.items.get(itemId)?.delete();
 	}

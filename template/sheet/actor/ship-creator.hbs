@@ -1,0 +1,107 @@
+<div class="ship-creator">
+    <div class="creator-header">
+        <input type="text" name="ship-name" value="{{name}}" placeholder="{{localize "SHIP_CREATOR.NAME_PLACEHOLDER"}}" />
+    </div>
+
+    {{!-- Step 0: hull (ships pack) + SP budget (Table 1-5, owner redesign note) --}}
+    {{#if (eq step 0)}}
+    <h2>{{localize "SHIP_CREATOR.STEP_HULL"}}</h2>
+    <div class="form-group">
+        <label>{{localize "SHIP_CREATOR.SP_BUDGET"}}</label>
+        <input type="number" name="sp-budget" value="{{spBudget}}" min="0"
+            data-tooltip="{{localize "SHIP_CREATOR.SP_BUDGET_HINT"}}" />
+    </div>
+    <p class="method-hint">{{localize "SHIP_CREATOR.SP_BUDGET_HINT"}}</p>
+    <div class="inv-group-header">
+        <h3 class="inv-group-label">{{localize "SHIP_CREATOR.HULLS"}}</h3>
+        <span class="acq-group-count">{{hullOptions.length}}</span>
+    </div>
+    <div class="pick-chips">
+        {{#each hullOptions as |h|}}
+        <a class="pick-chip {{#if (eq h.uuid ../hullUuid)}}selected{{/if}}" data-action="pickHull" data-uuid="{{h.uuid}}">
+            {{h.name}} ({{h.sp}} SP)
+        </a>
+        {{/each}}
+    </div>
+    {{/if}}
+
+    {{!-- Step 1-2: components with running validation --}}
+    {{#if (gt step 0)}}
+    <div class="starship-status">
+        <span class="chip origin-mod">{{localize "STARSHIP.HULL"}}: {{hullName}}</span>
+        <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{derived.powerUsed}}/{{derived.powerGenerated}} {{#if derived.powerDeficit}}<span class="warn">⚠ {{derived.powerDeficit}}</span>{{/if}}</span>
+        <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{derived.spaceUsed}}/{{derived.hullSpace}}</span>
+        <span class="chip origin-mod">SP {{derived.spSpent}}/{{derived.spBudget}} {{#if derived.overBudget}}<span class="warn">⚠ {{derived.spLeft}}</span>{{/if}}</span>
+        <span class="chip origin-mod">{{localize "SHIP_CREATOR.CREW_SKILL"}} {{derived.crewSkill}} ({{localize "SHIP_CREATOR.SP_DELTA"}} {{derived.crewSpDelta}})</span>
+    </div>
+
+    <h2>{{#if (eq step 1)}}{{localize "SHIP_CREATOR.STEP_ESSENTIAL"}}{{else}}{{localize "SHIP_CREATOR.STEP_SUPPLEMENTAL"}}{{/if}}</h2>
+
+    {{!-- Picked components (inventory rows, removable) --}}
+    {{#if picks.length}}
+    <div class="starship-components">
+        {{#each picks as |p|}}
+        {{#> "rt/inv-row" id=p.id name=p.name deleteAction="unpickComponent" deleteTooltip=(localize "SHIP_CREATOR.UNPICK")}}
+        <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{p.power}}</span>
+        <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{p.space}}</span>
+        <span class="chip origin-mod">SP {{p.sp}}</span>
+        {{/"rt/inv-row"}}
+        {{/each}}
+    </div>
+    {{else}}
+    <p class="method-hint">{{localize "SHIP_CREATOR.NO_PICKS"}}</p>
+    {{/if}}
+
+    {{#if (eq step 1)}}
+    <div class="acq-group">
+        <button type="button" class="acq-group-header" data-action="toggleGroup" data-group="essential">
+            <i class="fa-solid {{#if collapse.essential}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></i>
+            {{localize "STARSHIP.COMPONENTS_ESSENTIAL"}}
+        </button>
+        {{#if (not collapse.essential)}}
+        <div class="pick-chips">
+            {{#each essentialOptions as |o|}}
+            <a class="pick-chip {{#if ../picked.has o.uuid}}selected{{/if}}" data-action="pickComponent" data-uuid="{{o.uuid}}"
+                data-tooltip="{{localize "WEAPON.POWER"}} {{o.power}} · {{localize "STARSHIP.SPACE"}} {{o.space}} · SP {{o.sp}}">{{o.name}}</a>
+            {{/each}}
+        </div>
+        {{/if}}
+    </div>
+    {{/if}}
+
+    {{#if (eq step 2)}}
+    <div class="acq-group">
+        <button type="button" class="acq-group-header" data-action="toggleGroup" data-group="supplemental">
+            <i class="fa-solid {{#if collapse.supplemental}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></i>
+            {{localize "STARSHIP.COMPONENTS_SUPPLEMENTAL"}}
+        </button>
+        {{#if (not collapse.supplemental)}}
+        <div class="pick-chips">
+            {{#each supplementalOptions as |o|}}
+            <a class="pick-chip {{#if ../picked.has o.uuid}}selected{{/if}}" data-action="pickComponent" data-uuid="{{o.uuid}}"
+                data-tooltip="{{localize "WEAPON.POWER"}} {{o.power}} · {{localize "STARSHIP.SPACE"}} {{o.space}} · SP {{o.sp}}">{{o.name}}</a>
+            {{/each}}
+        </div>
+        {{/if}}
+    </div>
+    {{/if}}
+
+    <div class="form-group">
+        <label>{{localize "STARSHIP.CREW_QUALITY"}}</label>
+        <select data-action="setCrewQuality" data-tooltip="{{localize "SHIP_CREATOR.CREW_HINT"}}">
+            {{selectOptions crewQualities selected=crewQuality}}
+        </select>
+    </div>
+    {{/if}}
+
+    <div class="creator-actions">
+        {{#if (gt step 0)}}
+        <button type="button" class="rt-button" data-action="prev">{{localize "SHIP_CREATOR.PREV"}}</button>
+        {{/if}}
+        {{#if (lt step 2)}}
+        <button type="button" class="rt-button" data-action="next">{{localize "SHIP_CREATOR.NEXT"}}</button>
+        {{else}}
+        <button type="button" class="rt-button" data-action="finish">{{localize "SHIP_CREATOR.FINISH"}}</button>
+        {{/if}}
+    </div>
+</div>

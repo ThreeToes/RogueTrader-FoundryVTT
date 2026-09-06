@@ -43,6 +43,7 @@ import type { OriginTraitDef } from "../rules/origin-traits";
 import { talentEffectHandlers } from "../rules/talent-effects";
 import { CharacterSheet } from "./actor/character-sheet";
 import { CharacterCreator } from "./actor/character-creator";
+import { ShipCreator } from "./actor/ship-creator";
 import { VehicleSheet } from "./actor/vehicle-sheet";
 import { DynastySheet } from "./actor/dynasty-sheet";
 import { Dynasty } from "../data/actor/dynasty";
@@ -523,6 +524,24 @@ export function sheetInit() {
 		// three defensively — the callback ignores its arguments, so a double
 		// fire (if two names exist on one core) is harmless: it only pushes
 		// into whatever array the firing hook passed.
+		// Permission model (bead ay0): finishing the wizard creates a world
+		// actor ONLY when opened without an actor target; opened on an
+		// actor entry it UPDATES that actor in place, which needs no
+		// actor-creation permission. So the entry is offered on actor
+		// entries to everyone; the creation-only open (no actor resolved)
+		// is limited to users who can create actors (GM, or players with
+		// "Create New Actors") so players never hit the hard server error.
+		// Hoisted above both menu entries (bead 9cre follow-up) so the ship
+		// creator's entry shares the same check.
+		const user = game.user as unknown as {
+			isGM?: boolean;
+			hasPermission?: (p: string) => boolean;
+		};
+		// The context menu builds one array shared across entries, so the
+		// element check happens at callback time, not menu-build time.
+		const canCreateActors = Boolean(
+			user?.isGM || user?.hasPermission?.("ACTOR_CREATE"),
+		);
 		const creatorEntry = (
 			_app: unknown,
 			entryOptions: Array<{
@@ -532,30 +551,18 @@ export function sheetInit() {
 				label: string;
 				icon: string;
 				// v14: ContextMenuEntry#callback is deprecated -> #onClick
-				// (support removed in v16, reported 2026-09-06).
-				onClick: (element?: HTMLElement) => void;
+				// (support removed in v16, reported 2026-09-06); the v14
+				// ContextMenuCallback signature is (event, target).
+				onClick: (event?: PointerEvent, element?: HTMLElement) => void;
 			}>,
 		) => {
-			// Permission model (bead ay0): finishing the wizard creates a world
-			// actor ONLY when opened without an actor target; opened on an
-			// actor entry it UPDATES that actor in place, which needs no
-			// actor-creation permission. So the entry is offered on actor
-			// entries to everyone; the creation-only open (no actor resolved)
-			// is limited to users who can create actors (GM, or players with
-			// "Create New Actors") so players never hit the hard server error.
-			const user = game.user as unknown as {
-				isGM?: boolean;
-				hasPermission?: (p: string) => boolean;
-			};
-			// The context menu builds one array shared across entries, so the
-			// element check happens at callback time, not menu-build time.
-			const canCreateActors = Boolean(
-				user?.isGM || user?.hasPermission?.("ACTOR_CREATE"),
-			);
 			entryOptions.push({
 				label: "CREATOR.MENU",
 				icon: "fa-solid fa-user-plus",
-				onClick: (element?: HTMLElement) => {
+				// v14 ContextMenuCallback: onClick(event, target) — the first
+				// arg is the PointerEvent, the second is the element the menu
+				// was triggered for (core source foundry.mjs ContextMenuCallback).
+				onClick: (_event?: PointerEvent, element?: HTMLElement) => {
 					// When invoked from an actor entry, pre-load that actor so the
 					// creator updates it in place instead of making a new one.
 					// v14 entry markup carries data-entry-id (document-partial.hbs);
@@ -590,5 +597,52 @@ export function sheetInit() {
 		hooksOn.on("getActorContextOptions", creatorEntry);
 		hooksOn.on("getEntryContextAbstractSidebarTab", creatorEntry);
 		hooksOn.on("getActorDirectoryEntryContext", creatorEntry);
+
+		// Ship creator (bead 9cre): "Create Ship (wizard)" on the Actors
+		// directory menu, mirroring the character-creator entry's permission
+		// model. Starship entries open the creator in update-in-place mode;
+		// other entries/open-without-target follow the same create rules.
+		const shipCreatorEntry = (
+			_app: unknown,
+			entryOptions: Array<{
+				label: string;
+				icon: string;
+				// v14 ContextMenuCallback: (event, target).
+				onClick: (event?: PointerEvent, element?: HTMLElement) => void;
+			}>,
+		) => {
+			entryOptions.push({
+				label: "SHIP_CREATOR.MENU",
+				icon: "fa-solid fa-rocket",
+				onClick: (_event?: PointerEvent, element?: HTMLElement) => {
+					const entryEl = element?.closest<HTMLElement>(
+						"[data-entry-id], [data-document-id]",
+					);
+					const resolvedId =
+						entryEl?.dataset.entryId ??
+						entryEl?.dataset.documentId ??
+						element?.dataset?.documentId;
+					const actor = resolvedId
+						? ((game.actors as unknown as {
+								get: (id: string) => unknown;
+							}).get(resolvedId) as foundry.documents.Actor | undefined)
+						: undefined;
+					const isStarship =
+						actor && (actor.type as string) === "starship";
+					if (!isStarship && !canCreateActors) {
+						ui.notifications?.warn(
+							game.i18n!.localize("CREATOR.NO_CREATE_PERMISSION"),
+						);
+						return;
+					}
+					new ShipCreator({
+						actor: isStarship ? actor : undefined,
+					} as never).render({ force: true } as never);
+				},
+			});
+		};
+		hooksOn.on("getActorContextOptions", shipCreatorEntry);
+		hooksOn.on("getEntryContextAbstractSidebarTab", shipCreatorEntry);
+		hooksOn.on("getActorDirectoryEntryContext", shipCreatorEntry);
 	});
 }

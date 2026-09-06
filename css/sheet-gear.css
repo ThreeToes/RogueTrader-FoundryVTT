@@ -927,36 +927,13 @@
 	text-shadow: 0 0 4px currentColor;
 }
 
-.rogue-trader.sheet.npc ul.npc-skills {
-	list-style: none;
-	margin: 2px 0;
-	padding: 0;
-}
-
-.rogue-trader.sheet.npc ul.npc-skills li {
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
-	padding: 1px 0;
-}
-
-.rogue-trader.sheet.npc .npc-skill-roll {
-	width: 1.5em;
-	text-align: center;
-	color: var(--rt-gold);
-	cursor: pointer;
-}
-
-.rogue-trader.sheet.npc .npc-skill-roll:hover {
-	text-shadow: 0 0 4px currentColor;
-}
-
-.rogue-trader.sheet.npc .npc-skill-name {
-	flex: 1;
-}
-
-.rogue-trader.sheet.npc .inv-row .inv-grip {
-	color: var(--rt-muted-deep);
+/* NPC ladder dropdown: small, right-aligned at the end of the shared
+   inventory line (the rt/inv-row name carries flex:1). */
+.rogue-trader.sheet.npc .npc-ladder-select {
+	width: auto;
+	min-width: 0;
+	font-size: var(--rt-fs-md);
+	padding: 0 2px;
 }
 
 /* NPC header (bead mqdy follow-up): compact item-header anatomy — portrait
@@ -977,49 +954,8 @@
 	text-align: center;
 }
 
-/* Ladder dropdown: small, right-aligned at the end of the skill line. */
-.rogue-trader.sheet.npc .npc-ladder-select {
-	margin-left: auto;
-	width: auto;
-	min-width: 0;
-	font-size: var(--rt-fs-md);
-	padding: 0 2px;
-}
-
 .rogue-trader.sheet.npc .npc-desc {
 	margin-top: 4px;
-}
-
-/* NPC skill line: delete (reset-to-unknown) button, faded-red per the
-   destructive-action token. */
-.rogue-trader.sheet.npc .npc-skill-delete {
-	color: var(--rt-danger);
-	background: none;
-	border: none;
-	cursor: pointer;
-	padding: 0 2px;
-}
-
-/* NPC combat row (owner spec): damage chip + equip/attack/damage buttons
-   right-aligned as a group at the end of the weapon row. */
-.rogue-trader.sheet.npc .npc-combat-right {
-	margin-left: auto;
-	display: flex;
-	align-items: baseline;
-	gap: 4px;
-	white-space: nowrap;
-}
-
-.rogue-trader.sheet.npc .npc-equip-toggle {
-	background: none;
-	border: none;
-	cursor: pointer;
-	color: var(--rt-muted-deep);
-	padding: 0 4px;
-}
-
-.rogue-trader.sheet.npc .npc-equip-toggle.active {
-	color: var(--rt-gold);
 }
 
 /* NPC inventory tab (owner spec): armour stats left, item list right. */

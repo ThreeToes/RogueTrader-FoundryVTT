@@ -19,4 +19,16 @@ export function registerConfigHelper() {
 		}
 		return RogueTraderConfig[key as keyof typeof RogueTraderConfig];
 	});
+
+	// `concat` helper: joins path fragments for localize keys
+	// ("{{localize (concat "SHIP_COMBAT." key)}}"). The verify:templates
+	// stub list always assumed this system-custom helper existed (bead
+	// xfta follow-up): templates using it would throw "Missing helper:
+	// concat" in world without this registration.
+	Handlebars.registerHelper("concat", (...args: unknown[]) =>
+		args
+			.slice(0, -1) // drop the handlebars options object
+			.filter((part) => part !== undefined && part !== null)
+			.join(""),
+	);
 }

@@ -1,0 +1,22 @@
+<div class="rogue-trader chat roll">
+    <div class="background border">
+        <h1>{{title}}</h1>
+        <h3>{{localize "SHIP_COMBAT.SALVO_TARGET"}}: {{targetName}}</h3>
+        <ul style="text-align: left; display: inline-block;">
+            <li>{{localize "SHIP_COMBAT.HITS"}}: <strong>{{hits}}</strong></li>
+            <li>{{localize "SHIP_COMBAT.VOID_SHIELDS_ABSORBED"}}: {{absorbed}}</li>
+            <li>{{localize "SHIP_COMBAT.HITS_THROUGH"}}: {{through}}</li>
+            <li>{{localize "SHIP_COMBAT.DAMAGE"}}: <strong>{{damageTotal}}</strong></li>
+            <li>{{localize "STARSHIP.ARMOUR"}}: {{armourAbsorbed}}</li>
+            <li>{{localize "STARSHIP.HULL_INTEGRITY"}}: <strong>{{hullDamage}}</strong></li>
+            <li>{{localize "STARSHIP.CREW_POPULATION"}}: -{{crewPopulationLoss}}</li>
+            <li>{{localize "STARSHIP.CREW_MORALE"}}: -{{crewMoraleLoss}}</li>
+        </ul>
+        {{#if criticalName}}
+        <p class="critical">⚠ {{localize "SHIP_COMBAT.CRITICAL"}}: <strong>{{criticalName}}</strong></p>
+        {{/if}}
+        {{#if crippled}}
+        <p class="method-hint warn">⚠ {{localize "SHIP_COMBAT.CRIPPLED_NOW"}}</p>
+        {{/if}}
+    </div>
+</div>

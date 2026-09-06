@@ -962,17 +962,20 @@
     margin-left: auto;
 }
 
-.rogue-trader.sheet.character .inv-row.draggable {
+/* Inventory line vocabulary (bead npc-parity): promoted from the character
+   sheet to the global sheet layer per DESIGN-LANGUAGE ("never scope row CSS
+   to one sheet class") so the NPC sheet's shared rt/inv-row rows match. */
+.rogue-trader.sheet .inv-row.draggable {
     cursor: grab;
 }
 
-.rogue-trader.sheet.character .inv-grab {
+.rogue-trader.sheet .inv-grab {
     color: var(--rt-muted);
     width: 1.2em;
     text-align: center;
 }
 
-.rogue-trader.sheet.character .inv-name {
+.rogue-trader.sheet .inv-name {
     flex: 1;
     cursor: pointer;
     min-width: 0;
@@ -981,20 +984,38 @@
     white-space: nowrap;
 }
 
-.rogue-trader.sheet.character .inv-name:hover {
+.rogue-trader.sheet .inv-name:hover {
     color: var(--rt-gold);
 }
 
-.rogue-trader.sheet.character .inv-weight {
+.rogue-trader.sheet .inv-weight {
     font-size: var(--rt-fs-md);
     color: var(--rt-muted);
 }
 
-.rogue-trader.sheet.character .inv-delete {
+.rogue-trader.sheet .inv-delete {
     width: 1.2em;
     text-align: center;
-    color: var(--rt-danger);
+    color: var(--rt-muted);
     cursor: pointer;
+}
+
+.rogue-trader.sheet .inv-delete:hover {
+    color: var(--rt-danger);
+}
+
+/* Leading action anchor in shared inventory rows (the weapon/skill roll
+   dice): 1.5em centred slot before the name, gold on hover. */
+.rogue-trader.sheet .inv-row .inv-leading {
+	flex: none;
+	width: 1.5em;
+	text-align: center;
+	color: var(--rt-gold);
+	cursor: pointer;
+}
+
+.rogue-trader.sheet .inv-row .inv-leading:hover {
+	text-shadow: 0 0 4px currentColor;
 }
 
 /* Bead oaaz: compendium link (book icon) next to talent rows. */

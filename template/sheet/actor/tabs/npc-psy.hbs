@@ -2,7 +2,7 @@
     <div class="npc border">
         <h1>{{localize "NPC.TAB_PSY"}}</h1>
         {{#if powers.length}}
-        <div class="starship-components">
+        <div class="inv-list">
             {{#each powers as |p|}}
             {{#> "rt/inv-row" id=p.id name=p.name}}
             <button type="button" class="ladder-option" data-action="rollNpcPower"

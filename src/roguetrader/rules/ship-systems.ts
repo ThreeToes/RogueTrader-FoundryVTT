@@ -29,7 +29,15 @@ export interface ShipWeaponLike extends ShipComponentLike {
 	special?: string;
 }
 
-export const WEAPON_SLOTS = ["dorsal", "prow", "port", "starboard"] as const;
+export const WEAPON_SLOTS = [
+	"dorsal",
+	"prow",
+	"port",
+	"starboard",
+	// Keel (Table 8-4, book p220): often on long masts or spars on vessels;
+	// may fire in any direction. Wayfarer Station uses a Keel capacity (p210).
+	"keel",
+] as const;
 export type WeaponSlot = (typeof WEAPON_SLOTS)[number];
 
 /** Power a component GENERATES: "35 Generated" -> 35 (Table 8-3, book p201). */

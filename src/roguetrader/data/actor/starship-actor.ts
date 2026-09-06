@@ -6,14 +6,15 @@
  * ships start Competent; Incompetent grants +5 SP, Crack costs 5 SP,
  * Veteran 15 SP) and free-text notes.
  */
-export const CREW_QUALITIES = {
-	incompetent: { skill: 20, spDelta: 5 },
-	competent: { skill: 30, spDelta: 0 },
-	crack: { skill: 40, spDelta: -5 },
-	veteran: { skill: 50, spDelta: -15 },
-} as const;
+// Crew-quality table moved to rules/ship-crew.ts (bead xfta) so the roll
+// handlers can use it without loading this foundry-extended DataModel.
+import {
+	CREW_QUALITIES,
+	type CrewQuality,
+	crewQualityEffects,
+} from "../../rules/ship-crew";
 
-export type CrewQuality = keyof typeof CREW_QUALITIES;
+export { CREW_QUALITIES, type CrewQuality, crewQualityEffects };
 
 export class StarshipActor extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,
@@ -113,9 +114,4 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 	get spRemaining(): number {
 		return Math.max(0, this.sp.total - this.sp.spent);
 	}
-}
-
-/** Crew quality effects (Core Rulebook p193). Pure + testable. */
-export function crewQualityEffects(quality: string): { skill: number; spDelta: number } {
-	return CREW_QUALITIES[(quality as CrewQuality) in CREW_QUALITIES ? (quality as CrewQuality) : "competent"];
 }

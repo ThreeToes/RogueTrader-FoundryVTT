@@ -196,3 +196,84 @@ export function criticalFromCrippledDamage(
 ): ShipCriticalEntry | null {
 	return shipCritical(damagePastArmour);
 }
+
+// ---------------------------------------------------------------------------
+// Component states + repair (book p223-224; bead cj6k)
+// ---------------------------------------------------------------------------
+
+/**
+ * Component condition (book p223: "A ship's Component is either intact,
+ * unpowered, damaged, or destroyed"). Depressurisation is a separate
+ * condition a component may carry alongside its state (p224).
+ */
+export type ShipComponentState = "intact" | "unpowered" | "damaged" | "destroyed";
+
+export const SHIP_COMPONENT_STATES: readonly ShipComponentState[] = [
+	"intact",
+	"unpowered",
+	"damaged",
+	"destroyed",
+];
+
+/** Whether the component functions (damaged/destroyed never do, p223). */
+export function componentFunctional(state: ShipComponentState | undefined): boolean {
+	return state === undefined || state === "intact" || state === "unpowered";
+}
+
+/**
+ * Whether an Emergency Repairs action can fix this component (book p218:
+ * "repairs one unpowered, damaged, or depressurized Component ... cannot
+ * fix destroyed Components"; p224: destroyed = replaced at a forge world
+ * or stardock only).
+ */
+export function emergencyRepairsCanFix(
+	state: ShipComponentState | undefined,
+	depressurised = false,
+): boolean {
+	if (state === "destroyed") return false;
+	return state === "unpowered" || state === "damaged" || depressurised;
+}
+
+/**
+ * Hazard damage the instant a condition lands (book p223-224). Fire and
+ * depressurisation both hurt crew immediately: fire 1d5 Population + 1d10
+ * Morale; depressurisation 1d10 Population + 1d5 Morale. The die rolls are
+ * the adapter's; these are the book's dice counts.
+ */
+export const HAZARD_CREW_DAMAGE = {
+	fire: { populationDice: 1, populationFaces: 5, moraleDice: 1, moraleFaces: 10 },
+	depressurisation: {
+		populationDice: 1,
+		populationFaces: 10,
+		moraleDice: 1,
+		moraleFaces: 5,
+	},
+} as const;
+
+/**
+ * Venting a burning compartment into the void (book p223): the fire is
+ * out and the component becomes depressurised, but the crew takes only
+ * 1d5 Population damage (they fled) and 2d10 Morale damage ("nobody likes
+ * seeing their comrades vented into the void deliberately").
+ */
+export const VENT_FIRE_CREW_DAMAGE = {
+	populationDice: 1,
+	populationFaces: 5,
+	moraleDice: 2,
+	moraleFaces: 10,
+} as const;
+
+/**
+ * Repair outcome for a successful Emergency Repairs action (book p218):
+ * the component's state is restored to intact (depressurised hulls are
+ * patched; p224). Repair TIME is 1d5 Strategic Turns, reduced by one turn
+ * per degree of success to a minimum of one — the adapter rolls the d5 and
+ * feeds the degrees here.
+ */
+export function emergencyRepairsOutcome(
+	degrees: number,
+): { turns: number } {
+	const d5 = 5;
+	const reduction = Math.max(0, degrees);
+	return { turns: Math.max(1, d5 - reduction) };
+}

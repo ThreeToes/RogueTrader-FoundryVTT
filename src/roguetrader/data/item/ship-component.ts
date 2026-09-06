@@ -22,6 +22,14 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 	declare availability: string;
 	declare unique: boolean;
 	declare description: string;
+	/**
+	 * Condition (book p223: "A ship's Component is either intact, unpowered,
+	 * damaged, or destroyed"); depressurisation is a separate condition
+	 * (p224). Set by ship combat criticals; Emergency Repairs fixes
+	 * unpowered/damaged/depressurised, never destroyed (p218/p224).
+	 */
+	declare state: string;
+	declare depressurised: boolean;
 
 	static override defineSchema() {
 		return {
@@ -45,6 +53,12 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 			/** † marker: may not be selected more than once per vessel (Table 8-5). */
 			unique: new foundry.data.fields.BooleanField({ initial: false }),
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
+			// Component condition (bead xfta, book p223-224).
+			state: new foundry.data.fields.StringField({
+				choices: ["intact", "unpowered", "damaged", "destroyed"],
+				initial: "intact",
+			}),
+			depressurised: new foundry.data.fields.BooleanField({ initial: false }),
 		};
 	}
 }
@@ -53,6 +67,8 @@ export class ShipWeaponComponent extends ShipComponent {
 	static override LOCALIZATION_PREFIXES = ["SHIP_WEAPON_COMPONENT"];
 
 	declare strength: number;
+	/** Variable Strength die ("1d5" for ork Dorsal Gunz, book p209). */
+	declare strengthRoll: string;
 	declare damage: string;
 	declare critRating: number;
 	declare range: number;
@@ -72,6 +88,10 @@ export class ShipWeaponComponent extends ShipComponent {
 				integer: true,
 				initial: 0,
 			}),
+			/** Variable Strength die (gjn6, book p209 dagger note: Dorsal Gunz
+			 * roll 1d5 for Strength before firing each turn). Empty = fixed
+			 * Strength. */
+			strengthRoll: new foundry.data.fields.StringField({ initial: "" }),
 			damage: new foundry.data.fields.StringField({ initial: "" }),
 			critRating: new foundry.data.fields.NumberField({
 				min: 0,
@@ -84,8 +104,14 @@ export class ShipWeaponComponent extends ShipComponent {
 				initial: 0,
 			}),
 			slot: new foundry.data.fields.StringField({
-				choices: ["", "dorsal", "prow", "port", "starboard"],
+				// blank: true — StringField FORCES blank:false when choices are
+				// set (core source: "If choices are provided, the field should
+				// not be null or blank by default"), but the om4j model
+				// deliberately starts weapons UNASSIGNED (validateWeaponSlots
+				// flags them loudly); the slot is assigned at install.
+				choices: ["", "dorsal", "prow", "port", "starboard", "keel"],
 				initial: "",
+				blank: true,
 			}),
 		};
 	}

@@ -18,17 +18,18 @@
             </tbody>
         </table>
 
-        {{!-- Known-or-better skills (ladder >= 1); number = roll bonus --}}
+        {{!-- Known-or-better skills (ladder >= 1); number = roll bonus.
+             Shared inventory line (bead npc-parity): leading roll anchor +
+             name + ladder select + delete via the rt/inv-row vocabulary. --}}
         <div class="inv-group-header">
             <h2 class="inv-group-label">{{localize "NPC.SKILLS"}}</h2>
         </div>
         {{#if skills.length}}
-        <ul class="npc-skills">
+        <div class="inv-list">
             {{#each skills as |s|}}
-            <li>
-                <a class="npc-skill-roll" data-action="rollNpcSkill" data-item="{{s.id}}"
-                    data-tooltip="{{s.name}}"><i class="fa-solid fa-dice-d10"></i></a>
-                <span class="npc-skill-name">{{s.name}}</span>
+            {{#> "rt/inv-row" id=s.id name=s.name
+                leadingIcon="fa-solid fa-dice-d10" leadingAction="rollNpcSkill" leadingTooltip=s.name
+                deleteAction="deleteNpcSkill" deleteTooltip=(localize "NPC.DELETE_SKILL")}}
                 {{#if ../editable}}
                 <select class="npc-ladder-select" data-item="{{s.id}}"
                     data-tooltip="{{localize "NPC.LADDER_TOOLTIP"}}">
@@ -37,35 +38,28 @@
                 {{else}}
                 <span class="acq-group-count">{{s.bonus}}</span>
                 {{/if}}
-                <button type="button" class="npc-skill-delete" data-action="deleteNpcSkill" data-item="{{s.id}}"
-                    data-tooltip="{{localize "NPC.DELETE_SKILL"}}"><i class="fa-solid fa-trash"></i></button>
-            </li>
+            {{/"rt/inv-row"}}
             {{/each}}
-        </ul>
+        </div>
         {{else}}
         <p class="method-hint">{{localize "NPC.SKILLS_EMPTY"}}</p>
         {{/if}}
 
-        {{!-- Combat rolls: owned weapons --}}
+        {{!-- Combat rolls: owned weapons on the shared inventory line --}}
         <div class="inv-group-header">
             <h2 class="inv-group-label">{{localize "NPC.COMBAT"}}</h2>
         </div>
         {{#if weapons.length}}
-        <div class="starship-components">
+        <div class="inv-list">
             {{#each weapons as |w|}}
-            {{#> "rt/inv-row" id=w.id name=w.name}}
-            <span class="npc-combat-right">
+            {{#> "rt/inv-row" id=w.id name=w.name
+                equipToggle=true equipped=w.equipped equipAction="toggleNpcEquip"
+                equipTooltip=(ifThen w.equipped (localize "NPC.STOW") (localize "NPC.EQUIP"))}}
                 <span class="chip origin-mod">{{w.damage}}</span>
-                <button type="button" class="npc-equip-toggle {{#if w.equipped}}active{{/if}}"
-                    data-action="toggleNpcEquip"
-                    data-tooltip="{{#if w.equipped}}{{localize "NPC.STOW"}}{{else}}{{localize "NPC.EQUIP"}}{{/if}}">
-                    <i class="fa-solid {{#if w.equipped}}fa-grip-lines-vertical{{else}}fa-grip-lines{{/if}}"></i>
-                </button>
                 <button type="button" class="ladder-option" data-action="rollNpcWeapon"
                     data-tooltip="{{localize "NPC.ROLL_ATTACK"}}">{{localize "NPC.ATTACK"}}</button>
                 <button type="button" class="ladder-option" data-action="rollNpcDamage"
                     data-tooltip="{{localize "NPC.ROLL_DAMAGE"}}">{{localize "NPC.DAMAGE"}}</button>
-            </span>
             {{/"rt/inv-row"}}
             {{/each}}
         </div>

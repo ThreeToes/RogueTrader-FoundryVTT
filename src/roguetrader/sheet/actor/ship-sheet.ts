@@ -7,7 +7,16 @@ import {
 	validateWeaponSlots,
 	WEAPON_SLOTS,
 } from "../../rules/ship-systems";
-import { cloneItemIntoActor } from "../drop-clone";
+import {
+	crippledEffects,
+	emergencyRepairsCanFix,
+	SHIP_COMPONENT_STATES,
+} from "../../../rules-engine/src/index";
+import {
+	performRoll,
+	rollShipSalvo,
+} from "../../rules/adapter";
+import { cloneItemFromDrop, cloneItemIntoActor } from "../drop-clone";
 import { RtActorSheet } from "../context";
 import { getPackDocuments } from "../pack-resolve";
 
@@ -46,6 +55,9 @@ export class ShipSheet extends RtActorSheet {
 			removeComponent: ShipSheet.#onRemoveComponent,
 			toggleComponentGroup: ShipSheet.#onToggleComponentGroup,
 			setWeaponSlot: ShipSheet.#onSetWeaponSlot,
+			fireWeapon: ShipSheet.#onFireWeapon,
+			repairComponent: ShipSheet.#onRepairComponent,
+			setComponentState: ShipSheet.#onSetComponentState,
 		},
 	};
 
@@ -64,6 +76,10 @@ export class ShipSheet extends RtActorSheet {
 			template:
 				"systems/rogue-trader/template/sheet/actor/tabs/ship-refit.hbs",
 		},
+		combat: {
+			template:
+				"systems/rogue-trader/template/sheet/actor/tabs/ship-combat.hbs",
+		},
 	};
 
 	static TABS = {
@@ -71,13 +87,22 @@ export class ShipSheet extends RtActorSheet {
 			tabs: [
 				{ id: "hull", group: "primary", label: "STARSHIP.TAB_HULL" },
 				{ id: "refit", group: "primary", label: "STARSHIP.TAB_REFIT" },
+				{ id: "combat", group: "primary", label: "STARSHIP.TAB_COMBAT" },
 			],
 			initial: "hull",
 		},
 	};
 
 	/** Session-only collapsed state for the refit component categories. */
-	componentCollapsed: Record<string, boolean> = { essential: false };
+	componentCollapsed: Record<string, boolean> = {
+		essential: true,
+		supplemental: true,
+		archeotech: true,
+		xenotech: true,
+	};
+
+	/** Session-only state for the demoted browse-chips section (bead pyi3). */
+	componentGroupsOpen = false;
 
 	override get title(): string {
 		return `${game.i18n.localize("STARSHIP.HEADER")}: ${this.document.name}`;
@@ -139,6 +164,16 @@ export class ShipSheet extends RtActorSheet {
 		const components = this.#ownedComponents();
 		context.components = components;
 		context.componentGroups = await this.#componentGroups();
+		context.componentGroupsOpen = this.componentGroupsOpen;
+		// Installed components grouped by category (bead pyi3: inventory-style
+		// primary view; the pack pickers are demoted browse affordances).
+		context.installedGroups = COMPONENT_CATEGORIES.map(
+			({ key, labelKey }) => ({
+				key,
+				labelKey,
+				items: components.filter((c) => c.category === key),
+			}),
+		).filter((g) => g.items.length > 0);
 		// Derived totals (bead om4j): recomputed from installed items on every
 		// render so space/SP/power/shields never drift from the items.
 		context.derived = deriveShipStats(components);
@@ -160,7 +195,92 @@ export class ShipSheet extends RtActorSheet {
 			system.notes ?? "",
 			{ relativeTo: this.document },
 		);
+		// Combat tab (bead xfta): weapons with fire buttons, hull + crew
+		// status, crippled-state effects (book p221), component conditions
+		// (book p223) and the repairs column.
+		context.combat = this.#combatContext(components);
 		return context;
+	}
+
+	/** Combat-tab context: status + weapons + repairable components. */
+	#combatContext(components: Array<{
+		id: string;
+		name: string;
+		type: string;
+		power: string;
+		space: number;
+		sp: string;
+		category: string;
+		slot: string;
+		special: string;
+	}>): Record<string, unknown> {
+		const doc = this.document.system as unknown as {
+			hullIntegrity: { value: number; max: number };
+			crewPopulation: number;
+			crewMorale: number;
+			voidShields: number;
+			crewQuality: string;
+		};
+		const crippled = crippledEffects(doc.hullIntegrity?.value ?? 0);
+		const crew = crewQualityEffects(doc.crewQuality ?? "competent");
+		const weapons = components
+			.filter((c) => c.type === "ship-weapon-component")
+			.map((c) => ({ ...c }));
+		// Load the weapon combat stats off the item system.
+		for (const w of weapons) {
+			const item = this.document.items.get(w.id);
+			const s = (item?.system ?? {}) as unknown as {
+				strength?: number;
+				damage?: string;
+				critRating?: number;
+				range?: number;
+				state?: string;
+				depressurised?: boolean;
+			};
+			// Crippled ships halve weapon Strength (round up, book p221).
+			const rawStrength = s.strength ?? 0;
+			w.slot = w.slot ?? "";
+			Object.assign(w, {
+				damage: s.damage ?? "",
+				critRating: s.critRating ?? 0,
+				range: s.range ?? 0,
+				state: s.state ?? "intact",
+				depressurised: s.depressurised === true,
+				slotLabel: w.slot
+					? `STARSHIP.SLOT_${w.slot.toUpperCase()}`
+					: "STARSHIP.ISSUE_UNASSIGNED",
+				strength: crippled.weaponStrengthHalved
+					? Math.ceil(rawStrength / 2)
+					: rawStrength,
+			});
+		}
+		const repairable = components.filter((c) => {
+			const item = this.document.items.get(c.id);
+			const s = (item?.system ?? {}) as unknown as {
+				state?: string;
+				depressurised?: boolean;
+			};
+			return emergencyRepairsCanFix(
+				(s.state ?? "intact") as never,
+				s.depressurised === true,
+			);
+		});
+		return {
+			hullIntegrity: doc.hullIntegrity,
+			crewPopulation: doc.crewPopulation ?? 100,
+			crewMorale: doc.crewMorale ?? 100,
+			voidShields: doc.voidShields ?? 0,
+			crewSkill: crew.skill,
+			crippled,
+			weapons,
+			repairable,
+			componentStates: Object.fromEntries(
+				SHIP_COMPONENT_STATES.map((state) => [
+					state,
+					game.i18n.localize(`SHIP_COMBAT.STATE_${state.toUpperCase()}`),
+				]),
+			),
+		};
 	}
 
 	/** Toggle a refit category's collapsed state (session-only). */
@@ -308,7 +428,36 @@ export class ShipSheet extends RtActorSheet {
 		await this.#rollComplication("past-history", "pastHistory");
 	}
 
-	/** Add a component from the ships pack (bead f5xu): clone as an item. */
+	/**
+	 * Drop an Item from a compendium onto the ship: install it (bead pyi3).
+	 * Only ship-component / ship-weapon-component items are accepted — a
+	 * loud warning for anything else. Duplicates are allowed (refit may
+	 * install the same component twice), so skipOwned is off.
+	 */
+	protected async _onDrop(event: DragEvent): Promise<unknown> {
+		const created = await cloneItemFromDrop(this.document, event, {
+			skipOwned: false,
+		});
+		if (!created) return;
+		const type = (created.type as string) ?? "";
+		if (type !== "ship-component" && type !== "ship-weapon-component") {
+			console.warn(
+				`rogue-trader | ship refit: "${created.name}" (${type}) is not a ship component; not installed`,
+			);
+			await this.document.deleteEmbeddedDocuments("Item", [created.id]);
+			ui.notifications?.warn(
+				game.i18n.format("STARSHIP.DROP_NOT_COMPONENT", {
+					name: created.name ?? "",
+				}),
+			);
+			return;
+		}
+		await this.#clampVoidShields();
+		this.render({ force: true });
+		return created;
+	}
+
+	/** Install a component from a uuid (browse-chips path, bead f5xu). */
 	static async #onAddComponent(
 		this: ShipSheet,
 		_event: unknown,
@@ -368,6 +517,79 @@ export class ShipSheet extends RtActorSheet {
 		const item = this.document.items.get(id);
 		if (!item) return;
 		await item.update({ system: { slot } } as never);
+	}
+
+	/**
+	 * Fire an installed weapon (bead xfta, book p220): prompt the range
+	 * band vs the target, then run the ship-weapon roll kind (gunner BS
+	 * test -> hits -> void shields -> damage -> criticals). UNVERIFIED IN
+	 * WORLD: range is banded rather than VU-measured for v1.
+	 */
+	static async #onFireWeapon(
+		this: ShipSheet,
+		_event: Event,
+		target: HTMLElement,
+	): Promise<void> {
+		const id = target.dataset.itemId;
+		if (!id) return;
+		const choice = (await foundry.applications.api.DialogV2.wait({
+			window: { title: game.i18n.localize("SHIP_COMBAT.FIRE_TITLE") },
+			content: `<p>${game.i18n.localize("SHIP_COMBAT.FIRE_PROMPT")}</p>`,
+			buttons: [
+				{
+					action: "half",
+					label: game.i18n.localize("SHIP_COMBAT.RANGE_HALF"),
+					callback: () => "half",
+				},
+				{
+					action: "normal",
+					label: game.i18n.localize("SHIP_COMBAT.RANGE_NORMAL"),
+					callback: () => "normal",
+				},
+				{
+					action: "long",
+					label: game.i18n.localize("SHIP_COMBAT.RANGE_LONG"),
+					callback: () => "long",
+				},
+			],
+		})) as string | null;
+		if (!choice) return;
+		const band = (choice === "half" || choice === "long"
+			? choice
+			: "normal") as "half" | "normal" | "long";
+		await rollShipSalvo(this.document, id, band);
+	}
+
+	/** Emergency Repairs on an installed component (book p216-218). */
+	static async #onRepairComponent(
+		this: ShipSheet,
+		_event: Event,
+		target: HTMLElement,
+	): Promise<void> {
+		const id = target.dataset.itemId;
+		if (!id) return;
+		await performRoll({ kind: "ship-repair", actor: this.document, itemId: id } as never);
+	}
+
+	/** GM manual component-state override (book p223 condition vocabulary). */
+	static async #onSetComponentState(
+		this: ShipSheet,
+		_event: Event,
+		target: HTMLElement,
+	): Promise<void> {
+		const id = target.dataset.itemId;
+		const state = (target as HTMLSelectElement).value;
+		if (!id) return;
+		const item = this.document.items.get(id);
+		if (!item) return;
+		const depressurised = (target as HTMLSelectElement).dataset.depressurised;
+		if (depressurised !== undefined) {
+			await item.update({
+				system: { depressurised: depressurised === "true" },
+			} as never);
+			return;
+		}
+		await item.update({ system: { state } } as never);
 	}
 
 	async #rollComplication(kind: string, field: string): Promise<void> {

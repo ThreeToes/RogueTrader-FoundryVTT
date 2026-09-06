@@ -571,6 +571,18 @@
 	margin: 0;
 }
 
+/* Psyker flag (bead hli6 follow-up): moved off the header onto the tab
+   where it belongs; small inline checkbox + label. */
+.rogue-trader .psychic .psyker-flag {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.85em;
+	color: #7a6a53;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
 .rogue-trader .psychic .psy-rating {
 	display: flex;
 	align-items: center;

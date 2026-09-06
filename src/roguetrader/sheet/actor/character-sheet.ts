@@ -502,15 +502,29 @@ export class CharacterSheet extends RtActorSheet {
 
 	/**
 	 * The psychic tab renders only for psykers (bead m4me): Navigators count
-	 * (Core Rulebook p182) and anyone with a Psy Rating. Mundane characters never
-	 * see the tab in the nav nor the section.
+	 * (Core Rulebook p182), anyone with a Psy Rating, and anyone who owns
+	 * psychic/navigator powers (bead hli6 follow-up: the header psyker
+	 * checkbox moved onto this tab, so owned powers must be able to reveal
+	 * it for homebrew/GM-granted psykers). Mundane characters never see the
+	 * tab in the nav nor the section.
 	 */
 	protected override _prepareTabs(
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
 		const tabs = super._prepareTabs(group);
 		const system = this.actor.system as unknown as Character;
-		if (!(system.psyker === true || (system.psyRating ?? 0) >= 1)) {
+		const hasPowers = this.actor.items.some(
+			(i) =>
+				(i.type as string) === "psychicpower" ||
+				(i.type as string) === "navigatorpower",
+		);
+		if (
+			!(
+				system.psyker === true ||
+				(system.psyRating ?? 0) >= 1 ||
+				hasPowers
+			)
+		) {
 			delete tabs.psychic;
 		}
 		return tabs;

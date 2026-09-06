@@ -1,81 +1,54 @@
 <div class="header border">
+    {{!-- Option C (owner decision): compact identity + tracker strip.
+    Row 1 = portrait + name + career tagline (career · rank · XP as text,
+    advancement button inline — the .career-tagline pattern). Row 2 = one
+    .stat-footer strip of stat-chips for the table-hot numbers (reuse of the
+    Stats tab derived-row vocabulary). --}}
     <div class="header-grid">
         <div class="header-portrait">
             {{> "rt/header-portrait"}}
         </div>
-        <div class="header-line line-1">
-            <div class="header-cell">
-                <label>{{localize "CHARACTER.NAME"}}</label>
-                <input name="name" type="text" value="{{document.name}}" data-tooltip="{{localize "CHARACTER.NAME"}}" />
-            </div>
-            <div class="header-cell">
-                <label>{{localize "CHARACTER.CAREER"}}</label>
-                <p class="static-value">{{careerLabel}}</p>
-            </div>
-            <div class="header-cell">
-                <label>{{localize "CAREER.RANK"}}</label>
-                <div class="paired">
-                    <p class="static-value">{{source.system.rank}}</p>
-                    {{#if isPC}}
-                    <button type="button" class="advancement-open" data-action="openAdvancement"
-                        data-tooltip="{{advancementTooltip}}"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
-                    {{/if}}
-                </div>
-            </div>
-            <div class="header-cell">
-                <label>{{localize "CHARACTER.XP"}}</label>
-                <div class="paired">
-                    <p class="static-value" data-tooltip="{{localize "CHARACTER.XP_SPENT"}}">{{xpSpent}}</p>
-                    <span class="pair-sep">/</span>
-                    {{#if editable}}
-                    <input name="system.xp.total" type="number" min="0" value="{{source.system.xp.total}}"
-                        data-tooltip="{{localize "CHARACTER.XP_TOTAL"}}" />
-                    {{else}}
-                    <p class="static-value">{{source.system.xp.total}}</p>
-                    {{/if}}
-                </div>
-            </div>
+        <div class="header-identity">
+            <input class="name-input" name="name" type="text" value="{{document.name}}"
+                data-tooltip="{{localize "CHARACTER.NAME"}}" />
+            <p class="header-tagline">
+                <span class="tagline-career">{{careerLabel}}</span>
+                <span class="tagline-sep">·</span>
+                <span>{{localize "CAREER.RANK"}} {{source.system.rank}}</span>
+                <button type="button" class="advancement-open" data-action="openAdvancement"
+                    data-tooltip="{{advancementTooltip}}"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
+                <span class="tagline-sep">·</span>
+                <span class="tagline-xp" data-tooltip="{{localize "CHARACTER.XP_SPENT"}}">{{xpSpent}}</span>
+                <span class="pair-sep">/</span>
+                {{#if editable}}
+                <input class="tagline-xp-total" name="system.xp.total" type="number" min="0"
+                    value="{{source.system.xp.total}}" data-tooltip="{{localize "CHARACTER.XP_TOTAL"}}" />
+                {{else}}
+                <span>{{source.system.xp.total}}</span>
+                {{/if}}
+                <span>{{localize "CHARACTER.XP"}}</span>
+            </p>
         </div>
-        <div class="header-line line-2">
-            <div class="header-cell">
-                <label>{{localize "TITLE.WOUNDS"}}</label>
+    </div>
+
+    <div class="stat-footer tracker-strip">
+        <div class="stat-chip">
+            <span class="chip-label">{{localize "TITLE.WOUNDS"}}</span>
+            <div class="chip-value">
                 {{> "rt/paired-value" nameValue="system.wounds.value" nameMax="system.wounds.max"
                     value=source.system.wounds.value max=source.system.wounds.max min=0}}
             </div>
-            {{#if isPC}}
-            <div class="header-cell">
-                <label>{{localize "CHARACTER.FATE"}}</label>
+        </div>
+        <div class="stat-chip">
+            <span class="chip-label">{{localize "CHARACTER.FATE"}}</span>
+            <div class="chip-value">
                 {{> "rt/paired-value" nameValue="system.fate.value" nameMax="system.fate.max"
                     value=source.system.fate.value max=source.system.fate.max min=0}}
             </div>
-            {{else}}
-            <div class="header-cell">
-                <label>{{localize "NPC.THREAT_LEVEL"}}</label>
-                <input name="system.threatLevel" type="text" value="{{source.system.threatLevel}}" />
-            </div>
-            {{/if}}
         </div>
-        {{#if isPC}}
-        <div class="header-line line-3">
-            <div class="header-cell">
-                <label>{{localize "CHARACTER.INSANITY"}}</label>
-                <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
-            </div>
-            <div class="header-cell">
-                <label>{{localize "CHARACTER.CORRUPTION"}}</label>
-                <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
-            </div>
-            <div class="header-cell">
-                <label>{{localize "CHARACTER.FATIGUE"}}</label>
-                <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
-            </div>
-            <div class="header-cell">
-                <label>{{localize "CHARACTER.PSYKER"}}</label>
-                <input name="system.psyker" type="checkbox" {{checked source.system.psyker}}
-                    data-tooltip="{{localize "CHARACTER.PSYKER_TOOLTIP"}}" />
-            </div>
-            <div class="header-cell">
-                <label>{{localize "PSYCHIC_POWER.PSY_RATING"}}</label>
+        <div class="stat-chip">
+            <span class="chip-label">{{localize "PSYCHIC_POWER.PSY_RATING"}}</span>
+            <div class="chip-value">
                 {{!-- Legacy actors predate the psyRating field: undefined must
                      render 0, or the empty submit value fails NumberField
                      validation on ANY form change (bead hli6). --}}
@@ -84,13 +57,23 @@
                     data-tooltip="{{localize "PSYCHIC_POWER.PSY_RATING"}}" />
             </div>
         </div>
-        {{else}}
-        <div class="header-line line-3">
-            <div class="header-cell">
-                <label>{{localize "CHARACTER.FATIGUE"}}</label>
+        <div class="stat-chip">
+            <span class="chip-label">{{localize "CHARACTER.INSANITY"}}</span>
+            <div class="chip-value">
+                <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
+            </div>
+        </div>
+        <div class="stat-chip">
+            <span class="chip-label">{{localize "CHARACTER.CORRUPTION"}}</span>
+            <div class="chip-value">
+                <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
+            </div>
+        </div>
+        <div class="stat-chip">
+            <span class="chip-label">{{localize "CHARACTER.FATIGUE"}}</span>
+            <div class="chip-value">
                 <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
             </div>
         </div>
-        {{/if}}
     </div>
 </div>

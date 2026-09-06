@@ -58,6 +58,9 @@ const stubs = {
 	numberInput: () => new Handlebars.SafeString("<input/>"),
 	object: (v) => v,
 	radioBoxes: () => new Handlebars.SafeString(""),
+	// Foundry core's checked helper: renders checked="" when the value is
+	// truthy (used by psychic.hbs psyker flag, bead hli6 follow-up).
+	checked: (v) => (v ? new Handlebars.SafeString('checked="checked"') : ""),
 	rangePicker: () => new Handlebars.SafeString("<input/>"),
 	timeSince: (t) => String(t ?? ""),
 	eq: (a, b) => a === b,

@@ -2,10 +2,19 @@
     <div class="psychic border">
         <div class="psychic-header">
             <h1>{{localize "TAB.PSYCHIC"}}</h1>
-            <div class="psy-rating">
-                <label>{{localize "PSYCHIC_POWER.PSY_RATING"}}</label>
-                <input name="system.psyRating" type="number" min="0" value="{{psyRating}}" />
-            </div>
+            {{!-- Psy Rating is edited in the sheet header (bead 1ooe) — a
+                 second input here duplicated the form name and turned the
+                 submitted value into an array (bead hli6: NumberField
+                 "must be a number" on every form submit). --}}
+            {{!-- Psyker flag lives here, not in the header (owner: the header
+                 checkbox was clutter). Navigators count as psykers at rating 0
+                 (Core Rulebook p182, bead m4me) — the flag keeps the tab
+                 visible for them. --}}
+            <label class="psyker-flag"
+                data-tooltip="{{localize "CHARACTER.PSYKER_TOOLTIP"}}">
+                <input name="system.psyker" type="checkbox" {{checked source.system.psyker}} />
+                {{localize "CHARACTER.PSYKER"}}
+            </label>
             <button type="button" class="psychic-add" data-action="openPsychicPicker">
                 <i class="fas fa-plus"></i> {{localize "PSYCHIC_POWER.ADD"}}
             </button>

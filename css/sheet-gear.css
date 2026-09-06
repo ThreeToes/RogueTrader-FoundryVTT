@@ -103,6 +103,59 @@
 	align-items: center;
 }
 
+/* Explorer identity header (Option C): name + career tagline instead of the
+   old 3-row form grid (bead hli6 follow-up). */
+.rogue-trader.sheet.character .header-identity {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.rogue-trader.sheet.character .header-identity .name-input {
+	font-size: 1.15em;
+	font-weight: bold;
+}
+
+.rogue-trader.sheet.character .header-tagline {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	margin: 0;
+	font-size: 0.85em;
+	color: #7a6a53;
+	flex-wrap: wrap;
+}
+
+.rogue-trader.sheet.character .header-tagline .tagline-career {
+	font-style: italic;
+	color: #b8860b;
+}
+
+.rogue-trader.sheet.character .header-tagline .tagline-sep {
+	color: #5a4f3f;
+}
+
+.rogue-trader.sheet.character .header-tagline .tagline-xp-total {
+	width: 3.5em;
+	text-align: center;
+	padding: 0 2px;
+}
+
+.rogue-trader.sheet.character .header-tagline .advancement-open {
+	background: none;
+	border: none;
+	color: #b8860b;
+	cursor: pointer;
+	padding: 0 2px;
+}
+
+/* Tracker strip: paired inputs run narrower inside chips than in the
+   full-width paired context. */
+.rogue-trader.sheet.character .tracker-strip .paired input {
+	width: 2.8em;
+}
+
 .rogue-trader.sheet .header-grid .header-portrait {
 	grid-row: 1 / -1;
 	display: flex;

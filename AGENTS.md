@@ -6,6 +6,9 @@ This project is to create a system for FoundryVTT for the Rogue Trader RPG.
 
 - Write unit tests where approriate
 - Follow existing patterns
+- **Terminology: always cite the core book as "Core Rulebook", never "rt_core"**
+  (bead 3it4). `rt_core` is only the machine slug where a literal file/directory
+  name is required (e.g. `rt_core.pdf`, `--book rt_core`, `extracted-text/rt_core`).
 - Use `bun run build` to test application builds, do not hack together bash,
   typescript, javascript or python scripts to try and test the compile
 - Use `bun run lint` before declaring any typescript changes done

@@ -1,0 +1,52 @@
+<section class="tab {{tabs.inventory.cssClass}}" data-group="primary" data-tab="inventory">
+    <div class="npc border npc-inventory">
+        <h1>{{localize "NPC.TAB_INVENTORY"}}</h1>
+        <div class="npc-inventory-grid">
+            {{!-- Left: armour stats (AP per body location, worn armour only) --}}
+            <div class="npc-inventory-left">
+                <h2 class="inv-group-label">{{localize "ARMOUR.HEADER"}}</h2>
+                <table class="npc-armour">
+                    <tbody>
+                        {{#each armourTotals as |a|}}
+                        <tr>
+                            <th>{{localize a.label}}</th>
+                            <td>{{a.ap}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+                {{#if armourItems.length}}
+                <ul class="npc-armour-list">
+                    {{#each armourItems as |a|}}
+                    <li>
+                        <span class="npc-item-name">{{a.name}}</span>
+                        <span class="chip {{#if a.worn}}origin-mod{{/if}}"
+                            data-tooltip="{{#if a.worn}}{{localize "ARMOUR.WORN_TOOLTIP"}}{{else}}{{localize "ARMOUR.STOWED_TOOLTIP"}}{{/if}}">
+                            {{#if a.worn}}{{localize "EQUIP_STATE.WORN"}}{{else}}{{localize "EQUIP_STATE.STOWED"}}{{/if}}
+                        </span>
+                    </li>
+                    {{/each}}
+                </ul>
+                {{/if}}
+            </div>
+
+            {{!-- Right: minimal item list (everything but skills/weapons/armour/powers) --}}
+            <div class="npc-inventory-right">
+                <h2 class="inv-group-label">{{localize "NPC.ITEMS"}}</h2>
+                {{#if items.length}}
+                <ul class="npc-item-list">
+                    {{#each items as |item|}}
+                    <li>
+                        <span class="npc-item-name" data-item-id="{{item.id}}">{{item.name}}</span>
+                        <a class="npc-item-delete" data-action="deleteNpcItem" data-item-id="{{item.id}}"
+                            data-tooltip="{{localize "GEAR.DELETE"}}"><i class="fa-solid fa-xmark"></i></a>
+                    </li>
+                    {{/each}}
+                </ul>
+                {{else}}
+                <p class="method-hint">{{localize "NPC.ITEMS_EMPTY"}}</p>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

@@ -1142,6 +1142,11 @@
                 "fate",
                 "psy"
             ],
+            "prototypeToken": {
+                "bar1": {
+                    "attribute": "wounds"
+                }
+            },
             "experience": {
                 "value": 0
             },
@@ -1152,8 +1157,25 @@
             "size": 4,
             "notes": ""
         },
-        "dynasty": {},
-        "starship": {},
+        "dynasty": {
+            "prototypeToken": {
+                "actorLink": true,
+                "sight": {
+                    "enabled": false
+                }
+            }
+        },
+        "starship": {
+            "prototypeToken": {
+                "actorLink": true,
+                "bar1": {
+                    "attribute": "hullIntegrity"
+                },
+                "sight": {
+                    "enabled": false
+                }
+            }
+        },
         "explorer": {
             "templates": [
                 "characteristics",
@@ -1164,6 +1186,12 @@
                 "fate",
                 "psy"
             ],
+            "prototypeToken": {
+                "actorLink": true,
+                "bar1": {
+                    "attribute": "wounds"
+                }
+            },
             "bio": {
                 "homeWorld": "",
                 "background": "",
@@ -1211,6 +1239,8 @@
             "psychicpower",
             "ship",
             "ship-complication",
+            "ship-component",
+            "ship-weapon-component",
             "skill",
             "career",
             "melee-weapon",
@@ -1340,6 +1370,8 @@
         "psychicpower": {},
         "ship": {},
         "ship-complication": {},
+        "ship-component": {},
+        "ship-weapon-component": {},
         "skill": {},
         "career": {},
         "melee-weapon": {},

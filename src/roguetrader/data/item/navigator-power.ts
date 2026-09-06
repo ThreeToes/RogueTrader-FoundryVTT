@@ -1,7 +1,7 @@
 import { CHARACTERISTIC_KEYS } from "../actor/character";
 
 /**
- * Navigator powers (bead sa6, rt_core Ch. VII book pp178-181). Distinct
+ * Navigator powers (bead sa6, Core Rulebook Ch. VII book pp178-181). Distinct
  * from psychic powers by design (owner decision on bead mso6: same general
  * flow, different test config — NOT a fork):
  *

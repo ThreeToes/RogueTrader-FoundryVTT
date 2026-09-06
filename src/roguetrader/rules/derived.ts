@@ -30,7 +30,7 @@ export interface CharacterSystemLike {
 
 /**
  * Derived wounds maximum (bead hbu): the BOOK defines starting wounds via
- * the Home World formula (double the Toughness Bonus + 1d5(+N), rt_core
+ * the Home World formula (double the Toughness Bonus + 1d5(+N), Core Rulebook
  * p17-24) — applied by the character creator and stored on the actor. The
  * runtime maximum is that stored base plus +1 wound per live wounds-max
  * effect (Sound Constitution levels, consumed via the wounds-max effect

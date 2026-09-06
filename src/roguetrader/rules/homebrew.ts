@@ -8,7 +8,7 @@
  * here so tests cover the math without Foundry. Modules can register richer
  * providers via the same seam.
  *
- * Pilot rule: fire-mode BS bonuses (rt_core p237 core values: Semi-Auto +10,
+ * Pilot rule: fire-mode BS bonuses (Core Rulebook p237 core values: Semi-Auto +10,
  * Full Auto +20 — the owner's motivating example for tuning).
  */
 
@@ -19,7 +19,7 @@ export interface HomebrewProfile {
 	fireModeBonus?: { burst: number; full: number };
 }
 
-/** Core book values (rt_core p237, verified in the attack-context contributor). */
+/** Core book values (Core Rulebook p237, verified in the attack-context contributor). */
 export const CORE_FIRE_MODE_BONUS = { burst: 10, full: 20 } as const;
 
 /** No homebrew active. */

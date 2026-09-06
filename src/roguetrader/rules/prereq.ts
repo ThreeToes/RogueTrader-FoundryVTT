@@ -5,7 +5,7 @@
  * advancement dialog): unmet prereqs surface in a confirm dialog, GM
  * overridable — never a hard block.
  *
- * Grammar (verified against rt_core Table 4-1 p92-94 samples):
+ * Grammar (verified against Core Rulebook Table 4-1 p92-94 samples):
  *   "—" / ""            -> no prerequisites
  *   "Fel 30"            -> characteristic threshold (Fel/WS/BS/S/T/Ag/Int/Per/WP)
  *   "Psy Rating 2"      -> psyker with at least that Psy Rating

@@ -19,7 +19,7 @@ describe("Table 1-5 starting PF/SP (p33)", () => {
 	});
 });
 
-describe("acquisition target (rt_core p272-273)", () => {
+describe("acquisition target (Core Rulebook p272-273)", () => {
 	it("sums modifiers into the target", () => {
 		const result = acquisitionTarget({
 			profitFactor: 40,

@@ -1,5 +1,5 @@
 /**
- * Mutation table rows (bead bfdz): data for Table 14-3: Mutations (rt_core
+ * Mutation table rows (bead bfdz): data for Table 14-3: Mutations (Core
  * p368-369) and later the Navigator set (Table 7-1). Rows are looked up by
  * d100 roll (corruption-track rolls, Tainted birthright). Text is verbatim;
  * mechanical hooks stay in `text` until effect kinds exist for them.

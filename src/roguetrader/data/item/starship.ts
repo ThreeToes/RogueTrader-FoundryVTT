@@ -1,5 +1,5 @@
 /**
- * Starship hulls as Items (bead sl31, rt_core Chapter VIII p193-196).
+ * Starship hulls as Items (bead sl31, Core Rulebook Chapter VIII p193-196).
  * The hull defines the ship's base characteristics; components are a later
  * pass (bead follow-up). All values verbatim from the hull statlines.
  */

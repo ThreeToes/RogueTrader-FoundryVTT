@@ -14,7 +14,7 @@ import {
 	type CharMod,
 } from "./origins";
 
-describe("origin path chart (rt_core p16)", () => {
+describe("origin path chart (Core Rulebook p16)", () => {
 	test("every row is present with six contiguous columns", () => {
 		for (const row of ORIGIN_ROWS) {
 			const entries = originsInRow(row);

@@ -10,7 +10,7 @@ const actor = (chars: Record<string, number>, talents: string[] = [], psyRating 
 	psyRating,
 });
 
-describe("parsePrerequisites (rt_core Table 4-1 grammar)", () => {
+describe("parsePrerequisites (Core Rulebook Table 4-1 grammar)", () => {
 	test("empty and dash mean no prerequisites", () => {
 		expect(parsePrerequisites("").groups).toHaveLength(0);
 		expect(parsePrerequisites("—").groups).toHaveLength(0);

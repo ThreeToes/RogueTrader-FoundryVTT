@@ -9,7 +9,7 @@ import {
 	STRENGTH_LEVELS,
 } from "./psychic";
 
-describe("psyker mechanics (bead sa6, rt_core Table 6-1 book p157)", () => {
+describe("psyker mechanics (bead sa6, Core Rulebook Table 6-1 book p157)", () => {
 	test("strength levels are fettered/unfettered/push", () => {
 		expect(STRENGTH_LEVELS).toEqual(["fettered", "unfettered", "push"]);
 	});

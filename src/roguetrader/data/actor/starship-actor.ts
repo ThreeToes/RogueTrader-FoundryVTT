@@ -2,7 +2,7 @@
  * Starship actor (bead kwd, owner decision 2026-09-05: dedicated starship
  * sheet from scratch). The actor holds a snapshot of its hull's statline
  * (copied from the ships compendium pack when the hull is chosen), the two
- * rolled Complications (Tables 8-1/8-2), crew quality (rt_core p193: all
+ * rolled Complications (Tables 8-1/8-2), crew quality (Core Rulebook p193: all
  * ships start Competent; Incompetent grants +5 SP, Crack costs 5 SP,
  * Veteran 15 SP) and free-text notes.
  */
@@ -36,6 +36,19 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 	declare space: { total: number; used: number };
 	declare sp: { total: number; spent: number };
 	declare weaponCapacity: string;
+	/**
+	 * Void shields (bead om4j, Table 8-3 book p201): granted by the Single (1)
+	 * / Multiple (2) Void Shield Array components; `value` is the absorbable
+	 * remaining count, max is derived from installed arrays at render time.
+	 */
+	declare voidShields: number;
+	/**
+	 * Crew population + morale percentage tracks (book p224; p221 Hull
+	 * Integrity damage also wounds Crew/Morale; Morale gates rout/surrender
+	 * via opposed Command).
+	 */
+	declare crewPopulation: number;
+	declare crewMorale: number;
 	declare crewQuality: string;
 	declare machineSpiritOddity: string;
 	declare pastHistory: string;
@@ -66,6 +79,26 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 				spent: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
 			}),
 			weaponCapacity: new foundry.data.fields.StringField({ initial: "" }),
+			/** Void shields remaining (bead om4j, Table 8-3 book p201). */
+			voidShields: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 0,
+			}),
+			/** Crew population percentage (book p224). */
+			crewPopulation: new foundry.data.fields.NumberField({
+				min: 0,
+				max: 100,
+				integer: true,
+				initial: 100,
+			}),
+			/** Crew morale percentage (book p224; p221 rout/surrender gate). */
+			crewMorale: new foundry.data.fields.NumberField({
+				min: 0,
+				max: 100,
+				integer: true,
+				initial: 100,
+			}),
 			crewQuality: new foundry.data.fields.StringField({
 				choices: Object.keys(CREW_QUALITIES),
 				initial: "competent",
@@ -82,7 +115,7 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 	}
 }
 
-/** Crew quality effects (rt_core p193). Pure + testable. */
+/** Crew quality effects (Core Rulebook p193). Pure + testable. */
 export function crewQualityEffects(quality: string): { skill: number; spDelta: number } {
 	return CREW_QUALITIES[(quality as CrewQuality) in CREW_QUALITIES ? (quality as CrewQuality) : "competent"];
 }

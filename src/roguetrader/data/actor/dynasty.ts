@@ -3,7 +3,7 @@ import { effectsField } from "../item/effects";
 /**
  * Group record (bead gjvg, owner decision 2026-09-05): a dedicated
  * party/dynasty document holding the group's Profit Factor and Ship Points
- * (rt_core p271 book p146; Table 1-5 p33). PF is shared by the Explorers
+ * (Core Rulebook p271 book p146; Table 1-5 p33). PF is shared by the Explorers
  * ("all the Explorers have the same level of access", p272). Ship Points
  * gate the starting starship purchase (Chapter VIII); unspent SP convert
  * to PF 1:1 (p33).

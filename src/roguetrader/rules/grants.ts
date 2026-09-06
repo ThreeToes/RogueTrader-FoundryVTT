@@ -35,7 +35,7 @@ export interface GrantPayload {
 
 /**
  * Parameterised talent bases that MUST take a parenthetical subject. The
- * book (rt_core p92) notes group listings are "representative, not
+ * book (Core Rulebook p92) notes group listings are "representative, not
  * all-inclusive" — suggestions come from groups seen in the rulebook
  * (noble-born Peer list p20; Peer/Enemy rows in the rank tables p102-130),
  * and free text is always allowed.

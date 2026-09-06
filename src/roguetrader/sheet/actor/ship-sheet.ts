@@ -1,4 +1,12 @@
-import { crewQualityEffects, CREW_QUALITIES, type StarshipActor } from "../../data/actor/starship-actor";
+import {
+	crewQualityEffects,
+	CREW_QUALITIES,
+} from "../../data/actor/starship-actor";
+import {
+	deriveShipStats,
+	validateWeaponSlots,
+	WEAPON_SLOTS,
+} from "../../rules/ship-systems";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -10,6 +18,14 @@ interface HullOption {
 	hullClass: string;
 	sp: number;
 }
+
+/** Category groups for the component picker (bead f5xu). */
+const COMPONENT_CATEGORIES: Array<{ key: string; labelKey: string }> = [
+	{ key: "essential", labelKey: "STARSHIP.COMPONENTS_ESSENTIAL" },
+	{ key: "supplemental", labelKey: "STARSHIP.COMPONENTS_SUPPLEMENTAL" },
+	{ key: "archeotech", labelKey: "STARSHIP.COMPONENTS_ARCHEOTECH" },
+	{ key: "xenotech", labelKey: "STARSHIP.COMPONENTS_XENOTECH" },
+];
 
 /**
  * Starship sheet (bead kwd): hull snapshot fields, crew quality (with its
@@ -26,6 +42,10 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			rollOddity: ShipSheet.#onRollOddity,
 			pickHull: ShipSheet.#onPickHull,
 			rollHistory: ShipSheet.#onRollHistory,
+			addComponent: ShipSheet.#onAddComponent,
+			removeComponent: ShipSheet.#onRemoveComponent,
+			toggleComponentGroup: ShipSheet.#onToggleComponentGroup,
+			setWeaponSlot: ShipSheet.#onSetWeaponSlot,
 		},
 	};
 
@@ -34,10 +54,30 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			template:
 				"systems/rogue-trader/template/sheet/actor/parts/ship-header.hbs",
 		},
-		form: {
+		tabs: {
+			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+		},
+		hull: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/starship.hbs",
 		},
+		refit: {
+			template:
+				"systems/rogue-trader/template/sheet/actor/tabs/ship-refit.hbs",
+		},
 	};
+
+	static TABS = {
+		primary: {
+			tabs: [
+				{ id: "hull", group: "primary", label: "STARSHIP.TAB_HULL" },
+				{ id: "refit", group: "primary", label: "STARSHIP.TAB_REFIT" },
+			],
+			initial: "hull",
+		},
+	};
+
+	/** Session-only collapsed state for the refit component categories. */
+	componentCollapsed: Record<string, boolean> = { essential: false };
 
 	override get title(): string {
 		return `${game.i18n.localize("STARSHIP.HEADER")}: ${this.document.name}`;
@@ -97,7 +137,114 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.crewSpDelta = crew.spDelta;
 		context.spRemaining = system.spRemaining;
 		context.hullOptions = await this.#hullOptions();
+		const components = this.#ownedComponents();
+		context.components = components;
+		context.componentGroups = await this.#componentGroups();
+		// Derived totals (bead om4j): recomputed from installed items on every
+		// render so space/SP/power/shields never drift from the items.
+		context.derived = deriveShipStats(components);
+		context.weaponSlots = Object.fromEntries(
+			WEAPON_SLOTS.map((slot) => [slot, `STARSHIP.SLOT_${slot.toUpperCase()}`]),
+		);
+		context.weaponIssues = validateWeaponSlots(
+			system.weaponCapacity,
+			components.filter((c) => c.type === "ship-weapon-component"),
+		).map((issue) => ({
+			name: issue.name,
+			slot: issue.slot ?? "",
+			message: game.i18n.localize(
+				`STARSHIP.ISSUE_${issue.kind.toUpperCase()}`,
+			),
+		}));
 		return context;
+	}
+
+	/** Toggle a refit category's collapsed state (session-only). */
+	static #onToggleComponentGroup(this: ShipSheet, _event: unknown, target: HTMLElement): void {
+		const key = target.dataset.group;
+		if (!key) return;
+		if (this.componentCollapsed[key]) delete this.componentCollapsed[key];
+		else this.componentCollapsed[key] = true;
+		this.render({ force: true });
+	}
+
+	/** Owned component items on this ship (bead f5xu). */
+	#ownedComponents(): Array<{
+		id: string;
+		name: string;
+		type: string;
+		power: string;
+		space: number;
+		sp: string;
+		category: string;
+		slot: string;
+		special: string;
+	}> {
+		return this.document.items
+			.filter((i) => {
+				const t = (i.type as string) ?? "";
+				return t === "ship-component" || t === "ship-weapon-component";
+			})
+			.map((i) => {
+				const s = i.system as unknown as {
+					power?: string;
+					space?: number;
+					sp?: string;
+					category?: string;
+					slot?: string;
+					special?: string;
+				};
+				return {
+					id: i.id ?? "",
+					name: i.name ?? "",
+					type: (i.type as string) ?? "",
+					power: s.power ?? "",
+					space: s.space ?? 0,
+					sp: s.sp ?? "-",
+					category: s.category ?? "supplemental",
+					slot: s.slot ?? "",
+					special: s.special ?? "",
+				};
+			}) as never;
+	}
+
+	/** Ships-pack component picker, grouped by category. */
+	async #componentGroups(): Promise<Array<{
+		key: string;
+		labelKey: string;
+		items: Array<{ uuid: string; name: string; power: string; space: number; sp: string }>;
+	}>> {
+		const pack = game.packs?.get("rogue-trader.ships");
+		if (!pack) return [];
+		const docs = (await pack.getDocuments()) as unknown as Array<{
+			uuid?: string;
+			name?: string;
+			type?: string;
+			system?: {
+				power?: string;
+				space?: number;
+				sp?: string;
+				category?: string;
+			};
+		}>;
+		return COMPONENT_CATEGORIES.map(({ key, labelKey }) => ({
+			key,
+			labelKey,
+			open: !this.componentCollapsed[key],
+			items: docs
+				.filter(
+					(d) =>
+						(d.type === "ship-component" || d.type === "ship-weapon-component") &&
+						d.system?.category === key,
+				)
+				.map((d) => ({
+					uuid: d.uuid ?? "",
+					name: d.name ?? "",
+					power: d.system?.power ?? "",
+					space: d.system?.space ?? 0,
+					sp: d.system?.sp ?? "-",
+				})),
+		}));
 	}
 
 	/** Roll 1d10 on a complications table and record the result name. */
@@ -157,6 +304,71 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	static async #onRollHistory(this: ShipSheet): Promise<void> {
 		await this.#rollComplication("past-history", "pastHistory");
+	}
+
+	/** Add a component from the ships pack (bead f5xu): clone as an item. */
+	static async #onAddComponent(
+		this: ShipSheet,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const uuid = target.dataset.uuid;
+		if (!uuid) return;
+		try {
+			const doc = (await foundry.utils.fromUuid(uuid)) as unknown as {
+				toObject?: () => object;
+			} | null;
+			if (!doc?.toObject) {
+				console.warn(`rogue-trader | component "${uuid}" did not resolve`);
+				return;
+			}
+			const data = doc.toObject() as { system?: Record<string, unknown> };
+			await this.document.createEmbeddedDocuments("Item", [
+				{ ...data, system: { ...data.system } },
+			] as never);
+			// New array may raise the shield max; clamp current upward is not
+			// needed (shields start at max), but keep current within bounds.
+			await this.#clampVoidShields();
+		} catch (error) {
+			console.error("rogue-trader | component add failed:", error);
+		}
+	}
+
+	/** Remove an installed component, then clamp void shields to the new max. */
+	static async #onRemoveComponent(
+		this: ShipSheet,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const id = target.dataset.itemId;
+		if (!id) return;
+		await this.document.deleteEmbeddedDocuments("Item", [id]);
+		await this.#clampVoidShields();
+	}
+
+	/** Clamp stored voidShields.current to the max granted by installed arrays. */
+	async #clampVoidShields(): Promise<void> {
+		const { voidShieldsMax } = deriveShipStats(this.#ownedComponents());
+		const current = (
+			this.document.system as unknown as { voidShields?: number }
+		).voidShields ?? 0;
+		if (current > voidShieldsMax) {
+			await this.document.update({ system: { voidShields: voidShieldsMax } } as never);
+		}
+	}
+
+	/** Assign a weapon component to a capacity slot (bead om4j, Table 8-4). */
+	static async #onSetWeaponSlot(
+		this: ShipSheet,
+		_event: Event,
+		target: HTMLElement,
+	): Promise<void> {
+		const id = target.dataset.itemId;
+		const slot = (target as HTMLSelectElement).value;
+		if (!id) return;
+		const item = this.document.items.get(id);
+		if (!item) return;
+		await item.update({ system: { slot } } as never);
 	}
 
 	async #rollComplication(kind: string, field: string): Promise<void> {

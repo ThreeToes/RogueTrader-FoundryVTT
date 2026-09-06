@@ -4,6 +4,7 @@
         "build:js": "bun utils/javascript.ts",
         "build:css": "bun utils/css.ts",
         "build:packs": "bun utils/compendia.ts",
+        "verify:templates": "bun utils/verify-templates.mjs",
         "build:manifest": "cp system-manifests/dev.json ./release/system.json",
         "build:languages": "cp -R ./lang/ release/",
         "build:templates": "cp -R ./template release/",

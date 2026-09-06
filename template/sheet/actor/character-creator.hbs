@@ -197,6 +197,18 @@
     <section class="creator-section border">
         <h1>{{localize "CREATOR.STEP_EQUIPMENT"}}</h1>
         <p class="method-hint">{{localize "CREATOR.EQUIPMENT_HINT"}}</p>
+        {{#if heirloom.enabled}}
+        <div class="acq-group">
+            <h2>{{localize "CREATOR.HEIRLOOM"}}</h2>
+            <p class="method-hint">{{localize "CREATOR.HEIRLOOM_HINT"}}</p>
+            {{#if heirloom.rolled}}
+            <p class="origin-effect"><strong>{{localize "CREATOR.HEIRLOOM_ROLLED"}}: {{heirloom.rolled.roll}} — {{heirloom.rolled.name}}</strong></p>
+            {{else}}
+            <p class="method-hint">{{localize "CREATOR.HEIRLOOM_NOT_ROLLED"}}</p>
+            {{/if}}
+            <button type="button" class="heirloom-roll" data-action="rollHeirloom">{{localize "CREATOR.HEIRLOOM_ROLL"}}</button>
+        </div>
+        {{/if}}
         {{#each acquisitionGroups as |group|}}
         {{#if group.count}}
         <div class="acq-group">

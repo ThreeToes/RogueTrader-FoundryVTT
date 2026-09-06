@@ -11,7 +11,7 @@ const char = {
 		t: { value: 45, unnatural: 1 }, // TB 4
 		s: { value: 30, unnatural: 1 }, // SB 3
 	},
-	// Bead hbu: the book's wounds formula (2xTB + 1d5(+N), rt_core p17-24)
+	// Bead hbu: the book's wounds formula (2xTB + 1d5(+N), Core Rulebook p17-24)
 	// is applied at creation and stored; TB 4 with a rolled 1d5=6 (Death
 	// World, 1d5+2) gives 14 as the stored base.
 	wounds: { max: 14 },

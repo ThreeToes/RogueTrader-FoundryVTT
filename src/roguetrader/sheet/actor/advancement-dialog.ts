@@ -29,7 +29,7 @@ const { ApplicationV2 } = foundry.applications.api;
  * layer of the advancement engine: the math is pure (rules/advancement).
  *
  * Lists the career's Characteristic Advance Scheme and every rank advance
- * row the character holds or previously held (rt_core p38), with computed
+ * row the character holds or previously held (Core Rulebook p38), with computed
  * cost, multiplier state, remaining xp pool and progress to the next rank.
  * Purchase = ledger append + live application (skill ladder bump or item
  * grant, characteristic +5). Ineligible rows soft-confirm (GM overridable).
@@ -386,7 +386,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		) {
 			// Psy Rating advance (bead m4me): raises the actor's Psy Rating by
 			// 1 instead of granting a talent item (the rating lives on the
-			// actor, rt_core p182 psykers).
+			// actor, Core Rulebook p182 psykers).
 			const system = this.actor.system as unknown as Character;
 			await this.actor.update({
 				system: { psyRating: (system.psyRating ?? 0) + 1 },

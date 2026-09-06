@@ -43,3 +43,11 @@
 	font-size: 0.9em;
 	color: #4a3f31;
 }
+/* Bead gci0: roll-mechanic quality notes (Tearing/Toxic/Blast) on the
+   damage card - same treatment as the modifier breakdown list. */
+.rogue-trader.chat.damage ul.quality-notes {
+	margin: 4px 0 0;
+	padding-left: 1.2em;
+	font-size: 0.9em;
+	color: #4a3f31;
+}

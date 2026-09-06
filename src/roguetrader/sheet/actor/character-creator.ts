@@ -2,6 +2,7 @@ import type { CharacteristicKey } from "../../data/actor/character";
 import {
 	allowedColumns,
 	fateFromTable,
+	heirloomForRoll,
 	ORIGIN_ROW_LABEL_KEYS,
 	ORIGIN_ROWS,
 	originByKey,
@@ -74,6 +75,8 @@ interface CreatorState {
 	acquisition: { name: string; payload: object } | null;
 	/** Stage 6 collapsed group state (bead a2rd): group key -> collapsed. */
 	acqCollapsed: Record<string, boolean>;
+	/** Stage 3.5 (bead rboc): rolled heirloom (1d100 result + entry name). */
+	heirloom: { roll: number; name: string } | null;
 }
 
 function emptyState(): CreatorState {
@@ -91,6 +94,7 @@ function emptyState(): CreatorState {
 		rolledDice: { wounds: [], fateD10: null, insanity: [], corruption: [], corrOrInsanity: [] },
 		acquisition: null,
 		acqCollapsed: {},
+		heirloom: null,
 	};
 }
 
@@ -101,7 +105,7 @@ async function roll(formula: string): Promise<number> {
 }
 
 /**
- * Character creator (bead ay0): a wizard over rt_core Chapter I stages 1-2.
+ * Character creator (bead ay0): a wizard over Core Rulebook Chapter I stages 1-2.
  *
  * Stage 1 — Generate Characteristics (p14): 2d10+25 per characteristic with
  * the book's single re-roll, or the "Allocating Points" alternative (25 base,
@@ -136,6 +140,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			chooseCareer: CharacterCreator.#onChooseCareer,
 			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
 			toggleAcqGroup: CharacterCreator.#onToggleAcqGroup,
+			rollHeirloom: CharacterCreator.#onRollHeirloom,
 			prev: CharacterCreator.#onPrev,
 			next: CharacterCreator.#onNext,
 			create: CharacterCreator.#onCreate,
@@ -367,7 +372,7 @@ variants: (entry.variants ?? []).map((v) => ({
 			: "";
 
 		// Stage 6 (gjvg): the starting free acquisition — items with a total
-		// modifier of +0 or better need no test (rt_core p273 "Acquisition
+		// modifier of +0 or better need no test (Core Rulebook p273 "Acquisition
 		// and Starting Characters"). Availability modifier ≥ 0 (scarce+).
 		// The group's PF/SP (stage 5) are a GROUP/GM-level decision and live
 		// on the dynasty document, NOT in the creator (owner redesign).
@@ -376,6 +381,14 @@ variants: (entry.variants ?? []).map((v) => ({
 			context.acquisitions as Array<Record<string, unknown>>,
 		);
 		context.acquisition = state.acquisition?.name ?? "";
+
+		// Stage 3.5 (bead rboc): the heirloom roll only applies when the Pride
+		// motivation's "Heirloom Item" alternative was taken.
+		const pridePick = state.picks.motivation;
+		context.heirloom = {
+			enabled: pridePick?.key === "pride" && pridePick.alternate === 0,
+			rolled: state.heirloom,
+		};
 
 		context.canCreate =
 			state.step === 3 &&
@@ -620,12 +633,26 @@ variants: (entry.variants ?? []).map((v) => ({
 		this: CharacterCreator,
 		_event: unknown,
 		target: HTMLElement,
-	): Promise<void> {
-		const key = target.dataset.group;
+	): Promise<void> {		const key = target.dataset.group;
 		if (!key) return;
 		const collapsed = this.creatorState.acqCollapsed;
 		if (collapsed[key]) delete collapsed[key];
 		else collapsed[key] = true;
+		this.render({ force: true });
+	}
+
+
+	/**
+	 * Stage 3.5 (bead rboc, Core Rulebook Table 1-2 p31): roll 1d100 for the
+	 * heirloom when the Pride "Heirloom Item" alternative is taken. The roll
+	 * is stored in state and the grant happens at apply alongside the
+	 * starting acquisition.
+	 */
+	static async #onRollHeirloom(this: CharacterCreator): Promise<void> {
+		const rollTotal = await roll("1d100");
+		const total = Math.floor(rollTotal);
+		const entry = heirloomForRoll(total);
+		this.creatorState.heirloom = { roll: total, name: entry.name };
 		this.render({ force: true });
 	}
 
@@ -682,7 +709,7 @@ variants: (entry.variants ?? []).map((v) => ({
 			fate: { value: fate, max: fate },
 			insanity,
 			corruption,
-			// rt_core p13: characters begin with 4,500 xp already spent plus
+			// Core Rulebook p13: characters begin with 4,500 xp already spent plus
 			// 500 to spend on Rank 1 advances; total earned = 5,000.
 			xp: { total: 5000, spent: 4500 },
 			// Psyker status from the career (bead m4me): Astropaths start
@@ -749,7 +776,7 @@ variants: (entry.variants ?? []).map((v) => ({
 
 		const actor = (await foundry.documents.Actor.create({
 			name: state.name || game.i18n!.localize("CREATOR.DEFAULT_NAME"),
-			type: "pc",
+			type: "explorer",
 			system: systemPayload,
 		} as never)) as unknown as {
 			uuid: string;
@@ -783,6 +810,58 @@ variants: (entry.variants ?? []).map((v) => ({
 			await target.createEmbeddedDocuments("Item", [
 				{ ...state.acquisition.payload, system: { ...(state.acquisition.payload as { system?: object }).system, grantedBy: GRANTED_BY_CREATOR } },
 			] as never);
+		}
+		// Stage 3.5 heirloom (bead rboc): grant the rolled Table 1-2 entry as a
+		// live item (pack-item clone with craftsmanship override, or a
+		// note-item for the conditional-interaction rows), creator provenance.
+		if (state.heirloom) {
+			const entry = heirloomItems.find((e) => e.name === state.heirloom?.name);
+			if (!entry) {
+				console.error(`rogue-trader | unknown heirloom "${state.heirloom.name}"`);
+				return;
+			}
+			const target = actor as {
+				createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+			};
+			const grants: object[] = [];
+			if (entry.grant.kind === "pack-item") {
+				const pack = game.packs?.get(entry.grant.pack);
+				const docs = pack
+					? ((await pack.getDocuments()) as unknown as Array<{
+							name?: string;
+							type?: string;
+							toObject: () => object;
+						}>)
+					: [];
+				const doc = docs.find((d) => d.name === entry.grant.item);
+				if (!doc) {
+					console.error(
+						`rogue-trader | heirloom pack item "${entry.grant.item}" not found in ${entry.grant.pack}`,
+					);
+					return;
+				}
+				const data = doc.toObject() as { name?: string; system?: Record<string, unknown> };
+				grants.push({
+					...data,
+					...(entry.grant.rename ? { name: entry.grant.rename } : {}),
+					system: {
+						...data.system,
+						...(entry.grant.craftsmanship
+							? { craftsmanship: entry.grant.craftsmanship }
+							: {}),
+						grantedBy: GRANTED_BY_CREATOR,
+					},
+				});
+			} else {
+				grants.push({
+					name: entry.name,
+					type: "special-ability",
+					system: { ...entry.grant.system, grantedBy: GRANTED_BY_CREATOR },
+				});
+			}
+			if (grants.length > 0) {
+				await target.createEmbeddedDocuments("Item", grants as never);
+			}
 		}
 	}
 

@@ -80,6 +80,17 @@
                 <label>{{localize "CHARACTER.FATIGUE"}}</label>
                 <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
             </div>
+            <div class="header-cell">
+                <label>{{localize "CHARACTER.PSYKER"}}</label>
+                <input name="system.psyker" type="checkbox" {{checked source.system.psyker}}
+                    data-tooltip="{{localize "CHARACTER.PSYKER_TOOLTIP"}}" />
+            </div>
+            <div class="header-cell">
+                <label>{{localize "PSYCHIC_POWER.PSY_RATING"}}</label>
+                <input name="system.psyRating" type="number" min="0"
+                    value="{{source.system.psyRating}}"
+                    data-tooltip="{{localize "PSYCHIC_POWER.PSY_RATING"}}" />
+            </div>
         </div>
         {{else}}
         <div class="header-line line-3">

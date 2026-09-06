@@ -10,6 +10,9 @@ document-lifecycle bead, run this manual pass.**
 1. **Deploy & reload** — Reload Foundry in the test world
    (`~/Documents/rogue-trader-test`, which has `release/` symlinked) so the built
    bundle is actually loaded. A Foundry refresh IS the deploy step.
+1b. **Run `bun run verify:templates`** for any template/sheet-context change — it
+   compiles + renders every template with stubbed Foundry helpers and catches the
+   hidden-`.tab`-body class of bug headlessly (bead 83tl; AGENT-GUIDE §2a).
 2. **Open every affected sheet type** — pc, npc, gear, ranged-weapon,
    melee-weapon, armour, skill. A fix that works on one sheet type does not
    necessarily generalize.

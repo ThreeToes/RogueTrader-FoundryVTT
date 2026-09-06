@@ -1,7 +1,7 @@
 /**
- * Psyker mechanics (bead sa6, rt_core Ch. VI). Pure + Foundry-free.
+ * Psyker mechanics (bead sa6, Core Rulebook Ch. VI). Pure + Foundry-free.
  *
- * Book citations (verified against rt_core PDF during bead 5p15):
+ * Book citations (verified against the Core Rulebook PDF during bead 5p15):
  * - Table 6-1 Psychic Strength (book p157): Fettered = PR/2 (round up),
  *   never phenomena; Unfettered = PR, doubles on the Focus Power Test roll
  *   Psychic Phenomena; Push = PR +1..+3/+4, phenomena roll automatic with

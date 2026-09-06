@@ -1,5 +1,5 @@
 /**
- * Acquisition rules (bead gjvg, rt_core p271-273 = book pages 146-148 and
+ * Acquisition rules (bead gjvg, Core Rulebook p271-273 = book pages 146-148 and
  * Table 1-5 p33).
  *
  * An Acquisition Test is a 1d100 roll against the group's Profit Factor,

@@ -43,7 +43,7 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	/**
-	 * Stage 5 roll (rt_core Table 1-5, p33): 1d10 for the group's starting
+	 * Stage 5 roll (Core Rulebook Table 1-5, p33): 1d10 for the group's starting
 	 * Profit Factor and Ship Points. GM/group-level — done here on the
 	 * dynasty document, not in the character creator (owner redesign).
 	 */

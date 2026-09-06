@@ -2,7 +2,7 @@
  * Advancement engine (bead g7k): RT core Chapter II XP spending, PURE — no
  * Foundry coupling; dice/documents belong to the advancement dialog (clng).
  *
- * Book rules verified (rt_core p13/p38 + Table 2-2 p38):
+ * Book rules verified (Core Rulebook p13/p38 + Table 2-2 p38):
  * - Characters begin with 4,500 xp already spent (PRE_SPENT_BASELINE) and
  *   500 xp to spend on Rank 1 advances; total spent starts at 4,500 and
  *   reaches 5,000 after the initial spending (p13).
@@ -26,7 +26,7 @@
 
 import type { CharacteristicKey } from "../data/actor/character";
 
-/** xp considered already spent at character creation (rt_core p13). */
+/** xp considered already spent at character creation (Core Rulebook p13). */
 export const PRE_SPENT_BASELINE = 4500;
 
 export type AdvanceType = "skill" | "talent" | "characteristic";

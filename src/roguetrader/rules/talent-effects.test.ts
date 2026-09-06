@@ -231,3 +231,105 @@ describe("weapon-scoped damage effects (bead 2k5)", () => {
 		expect(damage[0].id.startsWith("talent-damage:")).toBe(true);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Bead gci0: roll-mechanic kinds (Tearing/Toxic/Blast). Book wording (Core
+// Rulebook Armoury quality prose): Tearing = "roll one extra die for damage,
+// and the lowest result is discarded"; Toxic = Toughness test at -5 per
+// damage taken, failure = 1d10 Impact no armour/TB; Blast (X) = everyone
+// within X metres also hit.
+// ---------------------------------------------------------------------------
+import { applyTearing, collectRollMechanicEffects, parseSpecialMechanics } from "./talent-effects";
+
+describe("parseSpecialMechanics", () => {
+	test("parses tearing/toxic/blast-N special strings", () => {
+		const m = parseSpecialMechanics(["tearing", "toxic", "blast-4"]);
+		expect(m).toEqual({ tearing: true, toxic: true, blast: 4 });
+	});
+
+	test("accepts blast (X) paren form and bare blast (rating 0)", () => {
+		expect(parseSpecialMechanics(["blast (3)"]).blast).toBe(3);
+		expect(parseSpecialMechanics(["Blast"]).blast).toBe(0);
+	});
+
+	test("unrelated qualities are ignored", () => {
+		const m = parseSpecialMechanics(["accurate", "reliable", "storm"]);
+		expect(m).toEqual({ tearing: false, toxic: false, blast: null });
+	});
+
+	test("undefined/empty special lists yield inert mechanics", () => {
+		expect(parseSpecialMechanics(undefined)).toEqual({
+			tearing: false,
+			toxic: false,
+			blast: null,
+		});
+	});
+});
+
+describe("collectRollMechanicEffects", () => {
+	const weapon = (special: string[], effects: object[] = []) => ({
+		id: "w1",
+		type: "ranged-weapon",
+		system: { special, effects },
+	});
+
+	test("weapon special strings seed the mechanics", () => {
+		const m = collectRollMechanicEffects(
+			{ items: [weapon(["tearing", "blast-1"])] },
+			{ weaponId: "w1", attackType: "ranged-weapon" },
+		);
+		expect(m.tearing).toBe(true);
+		expect(m.blast).toBe(1);
+	});
+
+	test("talent effects with the kinds contribute (blast keeps max)", () => {
+		const talent = {
+			type: "talent",
+			system: {
+				effects: [
+					{ kind: "blast", value: 3 },
+					{ kind: "tearing" },
+				],
+			},
+		};
+		const m = collectRollMechanicEffects(
+			{ items: [weapon(["blast-1"]), talent] },
+			{ weaponId: "w1", attackType: "ranged-weapon" },
+		);
+		expect(m.tearing).toBe(true);
+		expect(m.blast).toBe(3);
+	});
+
+	test("other actors' weapons are ignored; only the attacking weapon", () => {
+		const other = { id: "w2", type: "ranged-weapon", system: { special: ["tearing"] } };
+		const m = collectRollMechanicEffects(
+			{ items: [other, weapon([])] },
+			{ weaponId: "w1", attackType: "ranged-weapon" },
+		);
+		expect(m.tearing).toBe(false);
+	});
+});
+
+describe("applyTearing", () => {
+	test("extra die beats lowest base die: added = extra - lowest", () => {
+		expect(applyTearing([5], 7, 10)).toEqual({ added: 2, discarded: 5 });
+	});
+
+	test("extra die ties lowest: added 0", () => {
+		expect(applyTearing([3, 6], 3, 10)).toEqual({ added: 0, discarded: 3 });
+	});
+
+	test("multi-die roll: lowest across base dice + extra is discarded", () => {
+		expect(applyTearing([2, 8], 9, 10)).toEqual({ added: 7, discarded: 2 });
+		expect(applyTearing([9, 8], 1, 10)).toEqual({ added: 0, discarded: 1 });
+	});
+});
+
+describe("roll-mechanic kinds are discoverable (bead gci0)", () => {
+	test("kinds() includes tearing, toxic and blast", () => {
+		const kinds = talentEffectHandlers.kinds();
+		for (const kind of ["tearing", "toxic", "blast"]) {
+			expect(kinds.includes(kind)).toBe(true);
+		}
+	});
+});

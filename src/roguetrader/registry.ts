@@ -215,7 +215,7 @@ export const talentConditions = new EntryRegistry(TALENT_CONDITIONS);
 export const equipStates = new EntryRegistry(EQUIP_STATES);
 
 /**
- * Core careers (Table 2-1, rt_core p37). Labels are the career names
+ * Core careers (Table 2-1, Core Rulebook p37). Labels are the career names
  * themselves (proper nouns, not localized). Splat books and homebrew
  * register additional careers via CONFIG.ROGUE_TRADER.careers at init.
  */

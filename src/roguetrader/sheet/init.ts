@@ -15,10 +15,15 @@ import { Skill } from "../data/item/skill";
 import { Talent } from "../data/item/talent";
 import { Career } from "../data/item/career";
 import { Starship, ShipComplication } from "../data/item/starship";
+import {
+	ShipComponent,
+	ShipWeaponComponent,
+} from "../data/item/ship-component";
 import { WeaponModification } from "../data/item/weapon-modification";
 import { attachRegistriesToConfig } from "../registry";
+import { migrateLegacyActors } from "../migrations";
 import { rollDamageForCard, rollSkill, rollTest } from "../rules/adapter";
-import { defaultSkillItems } from "../rules/default-skills";
+import { missingSkillGrants } from "../rules/default-skills";
 import { testContributors } from "../rules/funnel";
 import {
 	HOMEBREW_SETTING,
@@ -33,6 +38,7 @@ import { DynastySheet } from "./actor/dynasty-sheet";
 import { Dynasty } from "../data/actor/dynasty";
 import { StarshipActor } from "../data/actor/starship-actor";
 import { ShipSheet } from "./actor/ship-sheet";
+import { NpcSheet } from "./actor/npc-sheet";
 import { registerConfigHelper } from "./handlebars";
 import { ArmourSheet } from "./item/armour-sheet";
 import { GearSheet } from "./item/gear-sheet";
@@ -255,6 +261,8 @@ export function sheetInit() {
 		// Starship hulls + complications (bead sl31, Chapter VIII).
 		CONFIG.Item.dataModels.ship = Starship;
 		CONFIG.Item.dataModels["ship-complication"] = ShipComplication;
+		CONFIG.Item.dataModels["ship-component"] = ShipComponent;
+		CONFIG.Item.dataModels["ship-weapon-component"] = ShipWeaponComponent;
 		// Compendium-sourced aptitudes are description-only items; reuse the
 		// Gear model (all fields have initials) and its generic sheet so opening
 		// them does not crash DocumentSheetConfig (bead r7w).
@@ -275,8 +283,9 @@ export function sheetInit() {
 		CONFIG.Item.dataModels.drug = Gear;
 		CONFIG.Item.dataModels["special-ability"] = Gear;
 		CONFIG.Actor.dataModels.pc = Character;
-		// "explorer" = the sidebar-creatable character type (owner: rename of
-		// the legacy DH2 "acolyte" entry); "pc" stays for creator-made actors.
+		// "explorer" = the character type (owner: rename of the legacy DH2
+		// "acolyte" and the creator-made "pc"); pc is migrated at ready (ow8w)
+		// but keeps its dataModel until the migration has run.
 		CONFIG.Actor.dataModels.explorer = Character;
 		CONFIG.Actor.dataModels.npc = Character;
 		CONFIG.Actor.dataModels.vehicle = Vehicle;
@@ -423,6 +432,13 @@ export function sheetInit() {
 
 		// Pre-warm the skills pack for the createActor grant hook (the sheet
 		// backfill path loads the pack on demand and does not need this cache).
+		// Legacy character-type migration (bead ow8w): pc/acolyte -> explorer,
+		// clone-recreate at ready (GM-only, logs old->new ids).
+		Hooks.once("ready", () => {
+			migrateLegacyActors().catch((error) =>
+				console.error("rogue-trader | legacy-actor migration crashed:", error),
+			);
+		});
 		Hooks.once("ready", () => {
 			const pack = game.packs.get("rogue-trader.skills");
 			if (!pack) return;
@@ -445,21 +461,31 @@ export function sheetInit() {
 		Hooks.on("createActor", async (actor, _options, userId) => {
 			// Only the creating user embeds the grants (avoids double-fire).
 			if (userId !== (game as { userId?: string }).userId) return;
-			if (actor.type !== "pc" && actor.type !== "npc") return;
+			if (actor.type !== "explorer" && actor.type !== "npc") return;
 			// Only brand-new blank actors: NPC statblocks and compendium imports
 			// come with items and must not receive defaults.
 			if (actor.items.size > 0) return;
 			if (commonSkillCatalog.length === 0) return;
-			await actor.createEmbeddedDocuments(
-				"Item",
-				defaultSkillItems(commonSkillCatalog),
+			// Race-safe vs the sheet backfill: skip skills the actor already has
+			// (TOCTOU on items.size when both paths run near-simultaneously).
+			const grants = missingSkillGrants(
+				commonSkillCatalog,
+				actor.items.map((i) => i.name ?? ""),
 			);
+			if (grants.length === 0) return;
+			await actor.createEmbeddedDocuments("Item", grants);
 		});
 		registerSheet(
 			foundry.documents.Actor,
 			CharacterSheet as unknown as AnySheetCtor,
-			["pc", "npc", "explorer"],
+			["explorer"],
 			"ROGUE_TRADER.CHARACTER.SHEET",
+		);
+		registerSheet(
+			foundry.documents.Actor,
+			NpcSheet as unknown as AnySheetCtor,
+			["npc"],
+			"NPC.SHEET",
 		);
 		registerSheet(
 			foundry.documents.Actor,

@@ -4,7 +4,7 @@
  * `subtype` field. Weird powers = a new registered entry + data, never a
  * fork of the test pipeline (AGENT-GUIDE §11 rule of thumb).
  *
- * Subtypes the book defines (rt_core Ch. VI): focus, bolt, barrage, storm,
+ * Subtypes the book defines (Core Rulebook Ch. VI): focus, bolt, barrage, storm,
  * zone. The "prose" entry is the fallback for powers whose effect has no
  * mechanical representation yet: the Focus Power Test still rolls and the
  * chat card shows the prose — nothing is applied automatically.
@@ -50,7 +50,7 @@ function proseResolution(): PowerResolution {
 	return { damage: false, sustained: false };
 }
 
-// Built-in subtypes (rt_core Ch. VI technique tables; the damage-carrying
+// Built-in subtypes (Core Rulebook Ch. VI technique tables; the damage-carrying
 // subtypes roll the power's `damage` expression on success — damage
 // application to targets is manual for now, mirroring the weapon damage
 // card flow).

@@ -626,3 +626,360 @@
 .rogue-trader.sheet .inv-row .weapon-roll.unequipped {
 	opacity: 0.4;
 }
+/* ---------------------------------------------------------------------------
+   Global shared sheet patterns (bead: starship sheet tidy-up).
+   Promoted from .character-creator/.background/.sheet.character scoping to
+   the global sheet layer per DESIGN-LANGUAGE ("never scope row CSS to one
+   sheet class"). Values mirror the scoped originals.
+   --------------------------------------------------------------------------- */
+
+.rogue-trader.sheet .pick-chips {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px;
+	margin: 4px 0;
+}
+
+.rogue-trader.sheet .pick-label {
+	font-size: 0.85em;
+	color: #7a6a53;
+}
+
+.rogue-trader.sheet .pick-chip {
+	border: 1px solid rgba(122, 106, 83, 0.4);
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.85em;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet .pick-chip.selected {
+	background: rgba(122, 106, 83, 0.4);
+	color: var(--color-text-light-highlight, #d9c38a);
+}
+
+.rogue-trader.sheet .traits-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px;
+}
+
+.rogue-trader.sheet .traits-row .chip {
+	border: 1px solid rgba(122, 106, 83, 0.5);
+	border-radius: 4px;
+	padding: 1px 8px;
+	font-size: 0.85em;
+	cursor: help;
+}
+
+.rogue-trader.sheet .inv-group-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	margin-top: 8px;
+}
+
+.rogue-trader.sheet .inv-group-header .inv-group-label {
+	margin: 0;
+}
+
+.rogue-trader.sheet .acq-group {
+	margin: 6px 0;
+}
+
+.rogue-trader.sheet .acq-group-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	background: none;
+	border: none;
+	border-bottom: 1px solid rgba(122, 106, 83, 0.4);
+	padding: 4px 2px;
+	cursor: pointer;
+	font-weight: bold;
+	text-align: left;
+	color: inherit;
+}
+
+.rogue-trader.sheet .acq-group-count {
+	font-weight: normal;
+	opacity: 0.7;
+	font-size: 0.85em;
+}
+
+/* Starship statline: compact multi-column grid (design-language stats-row
+   pattern) replacing the stacked full-width inputs. */
+.rogue-trader.sheet.starship .stat-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 4px 16px;
+	margin: 6px 0;
+}
+
+.rogue-trader.sheet.starship .stat-grid .stat {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.rogue-trader.sheet.starship .stat-grid .stat > label {
+	font-size: 0.78em;
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #b8860b;
+}
+
+.rogue-trader.sheet.starship .stat-grid input {
+	width: 100%;
+}
+
+.rogue-trader.sheet.starship .composite {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+}
+
+.rogue-trader.sheet.starship .composite .sep {
+	color: #7a6a53;
+}
+
+/* Installed component rows (inv-row vocabulary). */
+.rogue-trader.sheet.starship .inv-row {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 2px 0;
+}
+
+/* Loud weapon-capacity warnings (bead om4j) + weapon slot selector. */
+.rogue-trader.sheet.starship .method-hint.warn {
+	color: #c25b3f;
+	margin: 2px 0;
+}
+
+.rogue-trader.sheet.starship .inv-row select {
+	padding: 0 4px;
+}
+
+.rogue-trader.sheet.starship .inv-row .inv-name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.starship .inv-row .inv-delete {
+	color: #8b5e52;
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0 4px;
+}
+
+/* GM-facing NPC sheet (bead mqdy): horizontal characteristic table +
+   compact skill/combat lists. Design-language tokens throughout. */
+.rogue-trader.sheet.npc .stat-grid .stat > label {
+	font-size: 0.78em;
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #b8860b;
+}
+
+.rogue-trader.sheet.npc table.npc-chars {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 4px 0 8px;
+}
+
+.rogue-trader.sheet.npc table.npc-chars th {
+	font-size: 0.78em;
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #b8860b;
+	padding: 2px 4px;
+	text-align: center;
+	border-bottom: 1px solid rgba(122, 106, 83, 0.4);
+}
+
+.rogue-trader.sheet.npc table.npc-chars td {
+	text-align: center;
+	padding: 2px 4px;
+}
+
+.rogue-trader.sheet.npc .npc-char-roll {
+	font-weight: bold;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.npc .npc-char-roll:hover {
+	color: #b8860b;
+	text-shadow: 0 0 4px currentColor;
+}
+
+.rogue-trader.sheet.npc ul.npc-skills {
+	list-style: none;
+	margin: 2px 0;
+	padding: 0;
+}
+
+.rogue-trader.sheet.npc ul.npc-skills li {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 1px 0;
+}
+
+.rogue-trader.sheet.npc .npc-skill-roll {
+	width: 1.5em;
+	text-align: center;
+	color: #b8860b;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.npc .npc-skill-roll:hover {
+	text-shadow: 0 0 4px currentColor;
+}
+
+.rogue-trader.sheet.npc .npc-skill-name {
+	flex: 1;
+}
+
+.rogue-trader.sheet.npc .inv-row .inv-grip {
+	color: #5a4f3f;
+}
+
+/* NPC header (bead mqdy follow-up): compact item-header anatomy — portrait
+   inline, name + wound boxes on the top row, short description underneath as
+   the italic underlined minor input (shared .header.compact rules). */
+.rogue-trader.sheet.npc .npc-name-row {
+	display: flex;
+	align-items: baseline;
+	gap: 14px;
+}
+
+.rogue-trader.sheet.npc .npc-name-row .name-input {
+	flex: 1;
+}
+
+.rogue-trader.sheet.npc .npc-wounds .wound-box {
+	width: 2.5em;
+	text-align: center;
+}
+
+/* Ladder dropdown: small, right-aligned at the end of the skill line. */
+.rogue-trader.sheet.npc .npc-ladder-select {
+	margin-left: auto;
+	width: auto;
+	min-width: 0;
+	font-size: 0.85em;
+	padding: 0 2px;
+}
+
+.rogue-trader.sheet.npc .npc-desc {
+	margin-top: 4px;
+}
+
+/* NPC skill line: delete (reset-to-unknown) button, faded-red per the
+   destructive-action token. */
+.rogue-trader.sheet.npc .npc-skill-delete {
+	color: #8b5e52;
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0 2px;
+}
+
+/* NPC combat row (owner spec): damage chip + equip/attack/damage buttons
+   right-aligned as a group at the end of the weapon row. */
+.rogue-trader.sheet.npc .npc-combat-right {
+	margin-left: auto;
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+	white-space: nowrap;
+}
+
+.rogue-trader.sheet.npc .npc-equip-toggle {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: #5a4f3f;
+	padding: 0 4px;
+}
+
+.rogue-trader.sheet.npc .npc-equip-toggle.active {
+	color: #b8860b;
+}
+
+/* NPC inventory tab (owner spec): armour stats left, item list right. */
+.rogue-trader.sheet.npc .npc-inventory-grid {
+	display: flex;
+	gap: 16px;
+	align-items: flex-start;
+}
+
+.rogue-trader.sheet.npc .npc-inventory-left {
+	flex: 0 0 40%;
+	min-width: 0;
+}
+
+.rogue-trader.sheet.npc .npc-inventory-right {
+	flex: 1;
+	min-width: 0;
+}
+
+.rogue-trader.sheet.npc table.npc-armour {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.rogue-trader.sheet.npc table.npc-armour th {
+	text-align: left;
+	font-weight: normal;
+	font-size: 0.85em;
+	color: #7a6a53;
+	padding: 1px 4px;
+	border-bottom: 1px solid rgba(122, 106, 83, 0.3);
+}
+
+.rogue-trader.sheet.npc table.npc-armour td {
+	text-align: right;
+	padding: 1px 4px;
+	border-bottom: 1px solid rgba(122, 106, 83, 0.3);
+}
+
+.rogue-trader.sheet.npc ul.npc-armour-list,
+.rogue-trader.sheet.npc ul.npc-item-list {
+	list-style: none;
+	margin: 4px 0;
+	padding: 0;
+}
+
+.rogue-trader.sheet.npc ul.npc-armour-list li,
+.rogue-trader.sheet.npc ul.npc-item-list li {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 1px 0;
+}
+
+.rogue-trader.sheet.npc .npc-item-name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.npc .npc-item-delete {
+	color: #8b5e52;
+	cursor: pointer;
+	padding: 0 2px;
+}

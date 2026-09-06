@@ -17,7 +17,7 @@ import {
 	type RankThresholdLike,
 } from "./advancement";
 
-/** Table 2-2 thresholds (rt_core p38). */
+/** Table 2-2 thresholds (Core Rulebook p38). */
 const RANKS: RankThresholdLike[] = [
 	{ rank: 1, xpLevel: 5000 },
 	{ rank: 2, xpLevel: 7000 },
@@ -25,7 +25,7 @@ const RANKS: RankThresholdLike[] = [
 	{ rank: 4, xpLevel: 13000 },
 ];
 
-describe("totalSpent (rt_core p13)", () => {
+describe("totalSpent (Core Rulebook p13)", () => {
 	test("baseline is 4,500 before any purchases", () => {
 		expect(PRE_SPENT_BASELINE).toBe(4500);
 		expect(totalSpent([])).toBe(4500);
@@ -51,7 +51,7 @@ describe("totalSpent (rt_core p13)", () => {
 	});
 });
 
-describe("derivedRank (Table 2-2, rt_core p38)", () => {
+describe("derivedRank (Table 2-2, Core Rulebook p38)", () => {
 	test("4,500 baseline is below rank 1 threshold", () => {
 		expect(derivedRank(RANKS, 4500)).toBe(1);
 	});

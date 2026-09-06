@@ -202,7 +202,7 @@
   ],
   "gridDistance": 1,
   "gridUnits": "m",
-  "primaryTokenAttribute": null,
+  "primaryTokenAttribute": "wounds",
   "secondaryTokenAttribute": null,
   "url": "https://github.com/ThreeToes/RogueTrader-FoundryVTT",
   "socket": true,

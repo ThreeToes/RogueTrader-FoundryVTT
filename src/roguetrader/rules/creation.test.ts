@@ -11,7 +11,7 @@ import {
 	type ResolvedOrigin,
 } from "./creation";
 
-describe("validatePointBuy (rt_core p14)", () => {
+describe("validatePointBuy (Core Rulebook p14)", () => {
 	test("empty allocation is valid with the full budget remaining", () => {
 		const result = validatePointBuy({});
 		expect(result.total).toBe(0);

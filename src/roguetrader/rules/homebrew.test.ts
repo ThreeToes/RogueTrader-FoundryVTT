@@ -6,7 +6,7 @@ import {
 } from "./homebrew";
 
 describe("resolveFireModeBonus (bead 9if pilot)", () => {
-	test("core values apply with no profile (rt_core p237: +10/+20)", () => {
+	test("core values apply with no profile (Core Rulebook p237: +10/+20)", () => {
 		expect(CORE_FIRE_MODE_BONUS).toEqual({ burst: 10, full: 20 });
 		expect(resolveFireModeBonus(null, "burst")).toBe(10);
 		expect(resolveFireModeBonus(null, "full")).toBe(20);

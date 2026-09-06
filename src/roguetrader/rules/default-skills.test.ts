@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { defaultSkillItems } from "./default-skills";
+import { defaultSkillItems, missingSkillGrants } from "./default-skills";
 
 const catalog = [
 	{
@@ -35,5 +35,31 @@ describe("defaultSkillItems", () => {
 
 	test("empty catalog grants nothing", () => {
 		expect(defaultSkillItems([])).toEqual([]);
+	});
+});
+
+describe("missingSkillGrants (race-safe default grants)", () => {
+	test("filters out skills the actor already owns (exact name)", () => {
+		const grants = missingSkillGrants(catalog, [
+			"Speak Language (Low Gothic)",
+		]);
+		expect(grants).toHaveLength(0);
+	});
+
+	test("case- and whitespace-insensitive matching", () => {
+		const grants = missingSkillGrants(catalog, [
+			"  speak language (low gothic)",
+		]);
+		expect(grants).toHaveLength(0);
+	});
+
+	test("keeps unowned common skills", () => {
+		const grants = missingSkillGrants(catalog, ["Climb", "Swim"]);
+		expect(grants).toHaveLength(1);
+		expect(grants[0].name).toBe("Speak Language (Low Gothic)");
+	});
+
+	test("no existing items grants everything common", () => {
+		expect(missingSkillGrants(catalog, [])).toEqual(defaultSkillItems(catalog));
 	});
 });

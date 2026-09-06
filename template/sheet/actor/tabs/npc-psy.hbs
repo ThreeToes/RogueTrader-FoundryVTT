@@ -1,0 +1,18 @@
+<section class="tab {{tabs.psy.cssClass}}" data-group="primary" data-tab="psy">
+    <div class="npc border">
+        <h1>{{localize "NPC.TAB_PSY"}}</h1>
+        {{#if powers.length}}
+        <div class="starship-components">
+            {{#each powers as |p|}}
+            <div class="inv-row" data-item-id="{{p.id}}">
+                <span class="inv-name">{{p.name}}</span>
+                <button type="button" class="ladder-option" data-action="rollNpcPower"
+                    data-tooltip="{{localize "NPC.ROLL_POWER"}}">{{localize "NPC.ROLL"}}</button>
+            </div>
+            {{/each}}
+        </div>
+        {{else}}
+        <p class="method-hint">{{localize "NPC.POWERS_EMPTY"}}</p>
+        {{/if}}
+    </div>
+</section>

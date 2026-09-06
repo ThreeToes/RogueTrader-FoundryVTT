@@ -111,6 +111,115 @@ talentEffectHandlers.register("critical-damage", (_actor, _talent, effect) => {
 });
 
 // ---------------------------------------------------------------------------
+// Roll-mechanic kinds (bead gci0, Core Rulebook Armoury quality prose):
+//   tearing - "roll one extra die for damage, and the lowest result is
+//             discarded" (the extra die roll happens in the adapter: the
+//             kernel stays number-in/number-out and cannot touch Foundry
+//             dice)
+//   toxic   - target Toughness test at -5 per damage taken; failure = 1d10
+//             Impact with no armour/TB reduction (adapter posts the prompt)
+//   blast   - everyone within the blast radius (rating in metres) is also
+//             hit; roll location/damage individually (adapter posts the
+//             prompt)
+// Handlers here are reference/discovery registrations (kinds() lists them,
+// the effect editor offers them); the adapter consumes them via
+// collectRollMechanicEffects below.
+// ---------------------------------------------------------------------------
+talentEffectHandlers.register("tearing", () => 1);
+talentEffectHandlers.register("toxic", () => 1);
+talentEffectHandlers.register("blast", (_actor, _talent, effect) => {
+	const value = Number(effect.value ?? 0);
+	return Number.isFinite(value) ? value : 0;
+});
+
+/** Parsed roll-mechanic inputs for one attack (bead gci0). */
+export interface RollMechanics {
+	tearing: boolean;
+	toxic: boolean;
+	/** Blast rating in metres ("blast-4"), null when the weapon has none. */
+	blast: number | null;
+}
+
+/** Parse a weapon's `special` strings into roll-mechanic inputs. */
+export function parseSpecialMechanics(special: string[] | undefined): RollMechanics {
+	const out: RollMechanics = { tearing: false, toxic: false, blast: null };
+	for (const entry of special ?? []) {
+		const key = entry.trim().toLowerCase();
+		if (key === "tearing") out.tearing = true;
+		else if (key === "toxic") out.toxic = true;
+		else {
+			const blast = /^blast(?:\s*\((\d+)\))?(?:-(\d+))?$/.exec(key);
+			if (blast) {
+				const rating = Number(blast[1] ?? blast[2] ?? 0);
+				out.blast = Number.isFinite(rating) ? rating : 0;
+			}
+		}
+	}
+	return out;
+}
+
+/**
+ * Collect roll-mechanic qualities for an attack (bead gci0): the attacking
+ * weapon's `special` strings plus effect-kind contributions (kind "tearing"/
+ * "toxic"/"blast", value = blast rating) from talents and the weapon itself.
+ * Pure; the adapter turns the result into dice rolls and card notes.
+ */
+export function collectRollMechanicEffects(
+	actor: unknown,
+	opts: { weaponId?: string; attackType: "melee-weapon" | "ranged-weapon" },
+): RollMechanics {
+	const out: RollMechanics = { tearing: false, toxic: false, blast: null };
+	const items = (actor as { items?: ItemLike[] }).items ?? [];
+	for (const item of items) {
+		const isTalent = item.type === "talent";
+		const isWeapon =
+			opts.weaponId !== undefined &&
+			item.id === opts.weaponId &&
+			(item.type === "melee-weapon" || item.type === "ranged-weapon");
+		if (!isTalent && !isWeapon) continue;
+		const special = (
+			item.system as unknown as { special?: string[] } | undefined
+		)?.special;
+		if (isWeapon && special) {
+			const parsed = parseSpecialMechanics(special);
+			out.tearing ||= parsed.tearing;
+			out.toxic ||= parsed.toxic;
+			if (parsed.blast !== null) out.blast = Math.max(out.blast ?? 0, parsed.blast);
+		}
+		for (const effect of item.system?.effects ?? []) {
+			const kind = effect.kind ?? "";
+			if (kind !== "tearing" && kind !== "toxic" && kind !== "blast") continue;
+			if (kind === "tearing") out.tearing = true;
+			else if (kind === "toxic") out.toxic = true;
+			else {
+				const rating = Number(effect.value ?? 0);
+				if (Number.isFinite(rating)) {
+					out.blast = Math.max(out.blast ?? 0, rating);
+				}
+			}
+		}
+	}
+	return out;
+}
+
+/**
+ * Tearing die math (bead gci0, Core Rulebook: "roll one extra die for
+ * damage, and the lowest result is discarded"). Pure: given the results of
+ * the damage roll's dice of size `faces` and the extra die result, returns
+ * the net addition (extra minus the discarded lowest) — always >= 0 when
+ * `extra` ties or beats the lowest.
+ */
+export function applyTearing(
+	diceResults: number[],
+	extra: number,
+	faces: number,
+): { added: number; discarded: number } {
+	const relevant = [...diceResults.filter((r) => Number.isFinite(r)), extra];
+	const discarded = Math.min(...relevant);
+	return { added: extra - discarded, discarded };
+}
+
+// ---------------------------------------------------------------------------
 // Pure collection helper for the damage pipeline (adapter-side; the kernel
 // stays Foundry-free and receives plain numbers).
 //

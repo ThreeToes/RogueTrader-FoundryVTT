@@ -24,7 +24,7 @@ import {
 	rollWeaponDamage,
 	toggleSustainedPower,
 } from "../../rules/adapter";
-import { defaultSkillItems } from "../../rules/default-skills";
+import { missingSkillGrants } from "../../rules/default-skills";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { deriveCapacity, resolveEncumbrance, carriedWeight } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
@@ -503,7 +503,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	/**
 	 * The psychic tab renders only for psykers (bead m4me): Navigators count
-	 * (rt_core p182) and anyone with a Psy Rating. Mundane characters never
+	 * (Core Rulebook p182) and anyone with a Psy Rating. Mundane characters never
 	 * see the tab in the nav nor the section.
 	 */
 	protected override _prepareTabs(
@@ -556,11 +556,11 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	 */
 	async #ensureDefaultSkills(): Promise<void> {
 		if (this.actor.items.size > 0) return;
-		if (this.actor.type !== "pc" && this.actor.type !== "npc") return;
+		if (this.actor.type !== "explorer" && this.actor.type !== "npc") return;
 		const pack = game.packs.get("rogue-trader.skills");
 		if (!pack) return;
 		const documents = (await pack.getDocuments()) as foundry.documents.Item[];
-		const grants = defaultSkillItems(
+		const grants = missingSkillGrants(
 			documents.map(
 				(doc) =>
 					doc.toObject() as {
@@ -573,8 +573,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 						};
 					},
 			),
+			this.actor.items.map((i) => i.name ?? ""),
 		);
-		if (grants.length === 0 || this.actor.items.size > 0) return;
+		if (grants.length === 0) return;
 		await this.actor.createEmbeddedDocuments("Item", grants);
 	}
 
@@ -715,7 +716,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			return { key, label, skills: rows };
 		});
 
-		context.isPC = this.actor.type === "pc";
+		context.isPC = this.actor.type === "explorer";
 
 		// Psychic tab (bead m4me): owned powers + psyker status; the tab nav
 		// itself is gated in _prepareTabs.

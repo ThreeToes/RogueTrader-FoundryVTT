@@ -48,7 +48,7 @@ export async function talentGrant(
  * Prompt for a parameterised talent's parenthetical subject (yclz):
  * "Peer" alone is mechanically meaningless, so resolve to e.g.
  * "Peer (Underworld)" before granting. Suggestions come from the book's
- * representative group lists (rt_core p92); free text is always allowed
+ * representative group lists (Core Rulebook p92); free text is always allowed
  * (book: "representative, not all-inclusive").
  *
  * Returns the resolved name, or null when the player cancels (caller

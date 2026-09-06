@@ -101,7 +101,7 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 			focusTest: new foundry.data.fields.StringField({
 				initial: "",
 			}),
-			/** Focus time, e.g. "Half Action" (rt_core Tables 6-4..6-15). */
+			/** Focus time, e.g. "Half Action" (Core Rulebook Tables 6-4..6-15). */
 			focusTime: new foundry.data.fields.StringField({
 				initial: "",
 			}),

@@ -111,7 +111,7 @@ function matchesPack(bookName: string, packNames: Set<string>): string | null {
 
 /**
  * Curation patches for the book's OWN typos (each verified against the PDF):
- * - "Decieve" — rt_core misspells Deceive in the Void-master rank tables
+ * - "Decieve" — the Core Rulebook misspells Deceive in the Void-master rank tables
  *   (p71, p72, verified in the PDF text layer 2026-09-04);
  * - "Totall Recall" — misspells Total Recall, Astropath rank 5 (p50, verified);
  * - "Good Repuatation (Ecclesiarchy)" — misspells Good Reputation,
@@ -330,7 +330,7 @@ const documents = parsed.map((career) => ({
 	},
 }));
 
-const header = `# Careers pack (beads 2n5/rcv): core-8 from rt_core Chapter II
+const header = `# Careers pack (beads 2n5/rcv): core-8 from Core Rulebook Chapter II
 # (p36-71), emitted by utils/emit-careers-yaml.ts from the parse-careers.mjs
 # JSON. VERBATIM book text (short descriptions from Table 2-1 p37, prose from
 # the career sections, rank tables p41-72). Rank xpLevel stored per-rank

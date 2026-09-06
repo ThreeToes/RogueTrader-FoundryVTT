@@ -1,5 +1,5 @@
 /**
- * Origin Path (bead ay0, rt_core Chapter I p16-35) — creation-time data, not
+ * Origin Path (bead ay0, Core Rulebook Chapter I p16-35) — creation-time data, not
  * item types. Verbatim book text is preserved in `description` (flavour) and
  * `effect` (mechanics prose); structured `mechanics` carry the machine-
  * applicable subset. Anything the engine cannot resolve yet (mutation table
@@ -852,7 +852,7 @@ export const ORIGIN_ENTRIES: OriginEntry[] = [
 					label: "Heirloom Item (Table 1-2)",
 					mechanics: {
 						notes: [
-							"Heirloom Item (Table 1-2, Core Rulebook p29): Archeotech Laspistol; Angevin Era Chainsword; Ancestral Seal; Saint-blessed Carapace Armour; or Reliquary of Saint Drusus — grant manually from the Armoury/compendium.",
+							"Heirloom Item (Table 1-2, Core Rulebook p31): roll 1d100 at stage 3.5 (the creator's equipment step) — Archeotech Laspistol; Angevin Era Chainsword; Ancestral Seal; Saint-blessed Carapace Armour; or Reliquary of Saint Drusus.",
 						],
 					},
 				},
@@ -881,7 +881,7 @@ export const ORIGIN_ENTRIES: OriginEntry[] = [
 // ---------------------------------------------------------------- Table 1-1: Suggested Home Worlds (p18)
 
 /**
- * Table 1-1: Suggested Home Worlds (rt_core p18). The book imposes NO
+ * Table 1-1: Suggested Home Worlds (Core Rulebook p18). The book imposes NO
  * restrictions on home world vs career (p24); this only marks the commonly
  * appropriate combinations for GM guidance.
  */
@@ -1099,4 +1099,104 @@ export function resolveOrigins(
 		}
 	}
 	return resolved;
+}
+// ---------------------------------------------------------------------------
+// Table 1-2: Heirloom Items (Core Rulebook p31, layout pp30-31; bead rboc).
+// Rolled by the creator's stage 3.5 when the Pride motivation's "Heirloom
+// Item" alternative is taken. 1d100 ranges are the book's own (five wide
+// ranges, not 100 distinct rows). Prose is verbatim from the book; grant
+// payloads map each row onto existing pack data — curation decisions:
+//   * Angevin Era Chainsword: the book grants a generic Best-Craftsmanship
+//     chainsword; the weapons pack's chainsword is the Hecate pattern, used
+//     as the clone base and renamed (owner-verify).
+//   * Saint-blessed Carapace Armour: the book grants a full Best-Craftsmanship
+//     carapace set; the armour pack models it as the Storm Trooper Carapace
+//     full set, used as the clone base and renamed (owner-verify).
+// ---------------------------------------------------------------------------
+export type HeirloomGrant =
+	| {
+			kind: "pack-item";
+			pack: string;
+			item: string;
+			craftsmanship?: string;
+			rename?: string;
+	  }
+	| { kind: "note-item"; system: Record<string, unknown> };
+
+export interface HeirloomEntry {
+	name: string;
+	range: [number, number];
+	/** Verbatim book prose. */
+	text: string;
+	grant: HeirloomGrant;
+}
+
+export const heirloomItems: HeirloomEntry[] = [
+	{
+		name: "Archeotech Laspistol",
+		range: [1, 20],
+		text: "Archeotech Laspistol: A weapon of unknown origin and great antiquity. You gain one best-Craftsmanship archeotech laspistol.",
+		grant: {
+			kind: "pack-item",
+			pack: "rogue-trader.weapons",
+			item: "Archeotech Laspistol",
+			craftsmanship: "best",
+		},
+	},
+	{
+		name: "Angevin Era Chainsword",
+		range: [21, 40],
+		text: "Angevin Era Chainsword: An ancient blade bearing Crusade purity seals and kill-marks, supposedly used against dire xenos in the cleansing of the Drusus Marches. You gain one Best-Craftsmanship chainsword.",
+		grant: {
+			kind: "pack-item",
+			pack: "rogue-trader.weapons",
+			item: "Chainsword (Hecate)",
+			craftsmanship: "best",
+			rename: "Angevin Era Chainsword",
+		},
+	},
+	{
+		name: "Ancestral Seal",
+		range: [41, 60],
+		text: "Ancestral Seal: A potent and respected mark of power once held, passed down through a family even after their scions have long departed the vaults of Imperial rulership. You gain a +10% bonus to all Interaction Skill Tests when displaying the seal and dealing with Imperial citizens or organisations.",
+		grant: {
+			kind: "note-item",
+			system: {
+				description:
+					"A potent and respected mark of power once held, passed down through a family even after their scions have long departed the vaults of Imperial rulership. You gain a +10% bonus to all Interaction Skill Tests when displaying the seal and dealing with Imperial citizens or organisations. (Core Rulebook Table 1-2, p31; conditional bonus — apply manually.)",
+			},
+		},
+	},
+	{
+		name: "Saint-blessed Carapace Armour",
+		range: [61, 80],
+		text: "Saint-blessed Carapace Armour: A set of armour that once belonged to a saint's honour-guard. Anointed and inscribed with the saint's teachings, it is a sign to stir the faithful of the Imperial Creed. You gain one best-Craftsmanship set of carapace armour.",
+		grant: {
+			kind: "pack-item",
+			pack: "rogue-trader.armour",
+			item: "Storm Trooper Carapace",
+			craftsmanship: "best",
+			rename: "Saint-blessed Carapace Armour",
+		},
+	},
+	{
+		name: "Reliquary of Saint Drusus",
+		range: [81, 100],
+		text: "Reliquary of Saint Drusus: An inscribed void-steel canister containing a true relic of the saint, attested to in Ecclesiarchy data-vaults. Such an artefact opens many doors in the Ministorum. You gain a +20% bonus to all Interaction Skill Tests when displaying the reliquary and dealing with any member of the Ministorum.",
+		grant: {
+			kind: "note-item",
+			system: {
+				description:
+					"An inscribed void-steel canister containing a true relic of the saint, attested to in Ecclesiarchy data-vaults. Such an artefact opens many doors in the Ministorum. You gain a +20% bonus to all Interaction Skill Tests when displaying the reliquary and dealing with any member of the Ministorum. (Core Rulebook Table 1-2, p31; conditional bonus — apply manually.)",
+			},
+		},
+	},
+];
+
+/** The heirloom entry for a 1d100 result; loud failure outside 1-100. */
+export function heirloomForRoll(roll: number): HeirloomEntry {
+	const n = Math.floor(roll);
+	const entry = heirloomItems.find((e) => n >= e.range[0] && n <= e.range[1]);
+	if (!entry) throw new Error(`Heirloom roll ${n} outside Table 1-2 (1-100)`);
+	return entry;
 }

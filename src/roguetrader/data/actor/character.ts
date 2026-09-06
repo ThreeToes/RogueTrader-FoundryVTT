@@ -36,7 +36,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 	declare fate: { value: number; max: number };
 	declare insanity: number;
 	declare corruption: number;
-	/** Psyker marker (bead m4me): Navigators count (rt_core p182) even at rating 0. */
+	/** Psyker marker (bead m4me): Navigators count (Core Rulebook p182) even at rating 0. */
 	declare psyker: boolean;
 	declare psyRating: number;
 	declare sustainedPowers: Array<{ itemUuid: string; name: string }>;
@@ -55,7 +55,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 		motivation: string;
 		claims?: Record<string, boolean>;
 	};
-	/** Stage 4 free-text (bead ay0, rt_core p31-34). */
+	/** Stage 4 free-text (bead ay0, Core Rulebook p31-34). */
 	declare life: { motivation: string };
 	/** Linked dynasty actor (owner redesign: characters ATTACH to the group's dynasty, one per group by default). */
 	declare dynastyUuid: string;
@@ -147,7 +147,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 			}),
 			/**
 			 * Psyker status (bead m4me): Navigators are "considered a psyker
-			 * for all game purposes" (rt_core p182) without a standard Psy
+			 * for all game purposes" (Core Rulebook p182) without a standard Psy
 			 * Rating; Astropaths carry rating 2 from their starting talents.
 			 * Manually editable — homebrew/GM-granted psykers stay possible.
 			 */
@@ -158,7 +158,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 				initial: 0,
 			}),
 			/**
-			 * Powers currently sustained (bead sa6, rt_core p157): -1 effective
+			 * Powers currently sustained (bead sa6, Core Rulebook p157): -1 effective
 			 * Psy Rating per sustained power and +10 to all Phenomena rolls
 			 * while any are up. {itemUuid, name} — uuid so the toggle survives
 			 * renames; name so the UI renders without pack lookups.
@@ -202,7 +202,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 				),
 			}),
 			/**
-			 * Stage 4 "Giving Characters Life" (bead ay0, rt_core p31-34):
+			 * Stage 4 "Giving Characters Life" (bead ay0, Core Rulebook p31-34):
 			 * personal motivation as rich text on the Notes tab (owner cull:
 			 * appearance removed — the description field covers it).
 			 */
@@ -249,6 +249,10 @@ export class Character extends foundry.abstract.TypeDataModel<
 			),
 			/** NPC threat level (e.g. "Trivial", or a descriptive rating). */
 			threatLevel: new foundry.data.fields.StringField({
+				initial: "",
+			}),
+			/** NPC short description (GM sheet header, bead mqdy). */
+			shortDescription: new foundry.data.fields.StringField({
 				initial: "",
 			}),
 			/**

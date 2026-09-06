@@ -33,7 +33,7 @@ export type TestKind =
 	| "skill"
 	| "attack"
 	| "vehicle-handling"
-	// Focus Power Test (bead sa6, rt_core p157): a Characteristic/Skill test
+	// Focus Power Test (bead sa6, Core Rulebook p157): a Characteristic/Skill test
 	// with the +5-per-effective-PR bonus expressed as a funnel-visible
 	// modifier, so power/talent effects contribute via the normal funnel.
 	| "focus-power";
@@ -209,7 +209,7 @@ testContributors.register("attack-context", (_actor, context) => {
 	const mods: Modifier[] = [];
 	// Bead 9if: homebrew profile overrides the core fire-mode bonuses via a
 	// provider attached at init (CONFIG.ROGUE_TRADER.homebrew.getProfile);
-	// absent provider = core rules (rt_core p237). Guarded for pure-test
+	// absent provider = core rules (Core Rulebook p237). Guarded for pure-test
 	// environments where the Foundry global is absent.
 	const homebrewProvider =
 		typeof CONFIG !== "undefined"

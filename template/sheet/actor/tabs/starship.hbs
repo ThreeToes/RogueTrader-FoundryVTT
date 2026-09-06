@@ -1,9 +1,8 @@
-<section class="tab" data-group="primary" data-tab="main">
+<section class="tab {{tabs.hull.cssClass}}" data-group="primary" data-tab="hull">
     <div class="starship border">
+        <h1>{{localize "STARSHIP.TAB_HULL"}}</h1>
+
         {{!-- Hull snapshot (copied from the ships pack when the hull is chosen) --}}
-        <div class="inv-group-header">
-            <h1>{{localize "STARSHIP.HULL"}}</h1>
-        </div>
         <div class="traits-row">
             <span class="origin-label">{{localize "STARSHIP.HULL_CLASS"}}:</span>
             <span class="origin-name">{{system.hullName}}</span>
@@ -22,20 +21,83 @@
             <span class="origin-name">{{system.accel}}</span>
         </div>
 
-        {{!-- Statline --}}
-        <ol class="review-chars">
-            <li><span class="char-label">{{localize "STARSHIP.SPEED"}}</span><input name="system.speed" type="number" min="0" value="{{system.speed}}" /></li>
-            <li><span class="char-label">{{localize "STARSHIP.MANOEUVRAABILITY"}}</span><input name="system.manoeuvrability" type="number" value="{{system.manoeuvrability}}" /></li>
-            <li><span class="char-label">{{localize "STARSHIP.DETECTION"}}</span><input name="system.detection" type="number" value="{{system.detection}}" /></li>
-            <li><span class="char-label">{{localize "STARSHIP.HULL_INTEGRITY"}}</span><input name="system.hullIntegrity.value" type="number" min="0" value="{{system.hullIntegrity.value}}" /> / {{system.hullIntegrity.max}}</li>
-            <li><span class="char-label">{{localize "STARSHIP.ARMOUR"}}</span><input name="system.armour" type="number" min="0" value="{{system.armour}}" /></li>
-            <li><span class="char-label">{{localize "STARSHIP.TURRET_RATING"}}</span><input name="system.turretRating" type="number" min="0" value="{{system.turretRating}}" /></li>
-            <li><span class="char-label">{{localize "STARSHIP.WEAPON_CAPACITY"}}</span><input name="system.weaponCapacity" type="text" value="{{system.weaponCapacity}}" /></li>
-            <li><span class="char-label">{{localize "STARSHIP.SPACE"}}</span><input name="system.space.used" type="number" min="0" value="{{system.space.used}}" /> / <input name="system.space.total" type="number" min="0" value="{{system.space.total}}" /></li>
-            <li><span class="char-label">{{localize "DYNASTY.SHIP_POINTS"}}</span><input name="system.sp.spent" type="number" min="0" value="{{system.sp.spent}}" /> / <input name="system.sp.total" type="number" min="0" value="{{system.sp.total}}" /> ({{spRemaining}} {{localize "DYNASTY.SPENT"}})</li>
-        </ol>
+        {{!-- Statline: compact 3-column grid (design-language stats-row pattern) --}}
+        <div class="stat-grid">
+            <div class="stat">
+                <label>{{localize "STARSHIP.SPEED"}}</label>
+                <input name="system.speed" type="number" min="0" value="{{system.speed}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.MANOEUVRAABILITY"}}</label>
+                <input name="system.manoeuvrability" type="number" value="{{system.manoeuvrability}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.DETECTION"}}</label>
+                <input name="system.detection" type="number" value="{{system.detection}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.HULL_INTEGRITY"}}</label>
+                <div class="composite">
+                    <input name="system.hullIntegrity.value" type="number" min="0" value="{{system.hullIntegrity.value}}" />
+                    <span class="sep">/</span>
+                    <span class="chip origin-mod">{{system.hullIntegrity.max}}</span>
+                </div>
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.ARMOUR"}}</label>
+                <input name="system.armour" type="number" min="0" value="{{system.armour}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.TURRET_RATING"}}</label>
+                <input name="system.turretRating" type="number" min="0" value="{{system.turretRating}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.SPACE"}}</label>
+                <div class="composite">
+                    <span class="chip origin-mod" data-tooltip="{{localize "STARSHIP.DERIVED_HINT"}}">{{derived.spaceUsed}}</span>
+                    <span class="sep">/</span>
+                    <input name="system.space.total" type="number" min="0" value="{{system.space.total}}" />
+                </div>
+            </div>
+            <div class="stat">
+                <label>{{localize "DYNASTY.SHIP_POINTS"}}</label>
+                <div class="composite">
+                    <span class="chip origin-mod" data-tooltip="{{localize "STARSHIP.DERIVED_HINT"}}">{{derived.spSpent}}</span>
+                    <span class="sep">/</span>
+                    <input name="system.sp.total" type="number" min="0" value="{{system.sp.total}}" />
+                </div>
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.POWER"}}</label>
+                <div class="composite">
+                    <span class="chip origin-mod {{#if derived.powerDeficit}}claimed{{/if}}">{{derived.powerUsed}}</span>
+                    <span class="sep">/</span>
+                    <span class="chip origin-mod">{{derived.powerGenerated}}</span>
+                </div>
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.VOID_SHIELDS"}}</label>
+                <div class="composite">
+                    <input name="system.voidShields" type="number" min="0" value="{{system.voidShields}}" />
+                    <span class="sep">/</span>
+                    <span class="chip origin-mod">{{derived.voidShieldsMax}}</span>
+                </div>
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.CREW_POPULATION"}}</label>
+                <input name="system.crewPopulation" type="number" min="0" max="100" value="{{system.crewPopulation}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.CREW_MORALE"}}</label>
+                <input name="system.crewMorale" type="number" min="0" max="100" value="{{system.crewMorale}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.WEAPON_CAPACITY"}}</label>
+                <input name="system.weaponCapacity" type="text" value="{{system.weaponCapacity}}" />
+            </div>
+        </div>
 
-        {{!-- Crew quality (rt_core p193) --}}
+        {{!-- Crew quality (Core Rulebook p193) --}}
         <div class="traits-row">
             <span class="origin-label">{{localize "STARSHIP.CREW_QUALITY"}}:</span>
             <select name="system.crewQuality">
@@ -56,16 +118,7 @@
             <span class="origin-label">{{localize "STARSHIP.HISTORY"}}:</span>
             <span class="origin-name">{{system.pastHistory}}</span>
             <button type="button" class="ladder-option" data-action="rollHistory"
-                data-tooltip="{{localize "STARSHIP.ROLL_HINT"}}">{{localize "STARSHIP.ROLL_HISTORY"}}</button>
-        </div>
-
-        {{!-- Hull picker: apply a ships-pack hull to this actor --}}
-        <div class="pick-chips">
-            <span class="pick-label">{{localize "STARSHIP.PICK_HULL"}}</span>
-            {{#each hullOptions as |h|}}
-            <a class="pick-chip {{#if (eq h.name ../system.hullName)}}selected{{/if}}"
-                data-action="pickHull" data-uuid="{{h.uuid}}">{{h.name}} ({{h.sp}} SP)</a>
-            {{/each}}
+                data-tooltip="{{localize "STARSHIP.ROLL_HISTORY"}}">{{localize "STARSHIP.ROLL_HISTORY"}}</button>
         </div>
 
         <div class="traits-row">

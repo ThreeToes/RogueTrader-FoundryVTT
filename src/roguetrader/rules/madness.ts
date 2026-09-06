@@ -62,7 +62,7 @@ export function corruptionTrack(
 	};
 }
 
-/** Disorder thresholds (rt_core p296: 40 Minor, 60 Severe, 80 Acute). */
+/** Disorder thresholds (Core Rulebook p296: 40 Minor, 60 Severe, 80 Acute). */
 export const DISORDER_THRESHOLDS = [
 	{ at: 40, severity: "Minor" },
 	{ at: 60, severity: "Severe" },

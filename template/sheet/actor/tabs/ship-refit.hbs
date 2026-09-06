@@ -1,0 +1,74 @@
+<section class="tab {{tabs.refit.cssClass}}" data-group="primary" data-tab="refit">
+    <div class="starship border">
+        <h1>{{localize "STARSHIP.TAB_REFIT"}}</h1>
+
+        {{!-- Installed components (inv-row vocabulary) --}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize "STARSHIP.COMPONENTS"}}</h2>
+            <span class="acq-group-count">{{components.length}}</span>
+        </div>
+        {{!-- Weapon-slot validation (bead om4j, Table 8-4 book p202): loud
+             warnings for unassigned/over-capacity/broadside-slot issues --}}
+        {{#each weaponIssues as |issue|}}
+        <p class="method-hint warn">⚠ {{localize "STARSHIP.WEAPON_ISSUE"}}: {{issue.name}} —
+            {{issue.message}}{{#if issue.slot}} ({{issue.slot}}){{/if}}</p>
+        {{/each}}
+
+        {{#if components.length}}
+        <div class="starship-components">
+            {{#each components as |c|}}
+            <div class="inv-row">
+                <i class="fa-solid fa-grip inv-grip"></i>
+                <span class="inv-name">{{c.name}}</span>
+                <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{c.power}}</span>
+                <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{c.space}}</span>
+                <span class="chip origin-mod">SP {{c.sp}}</span>
+                {{#if (eq c.type "ship-weapon-component")}}
+                <select data-action="setWeaponSlot" data-item-id="{{c.id}}"
+                    data-tooltip="{{localize "STARSHIP.SLOT_HINT"}}">
+                    {{selectOptions ../weaponSlots selected=c.slot localize=true blank="—"}}
+                </select>
+                {{/if}}
+                <button type="button" class="inv-delete" data-action="removeComponent" data-item-id="{{c.id}}"
+                    data-tooltip="{{localize "STARSHIP.COMPONENT_REMOVE"}}"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            {{/each}}
+        </div>
+        {{else}}
+        <p class="method-hint">{{localize "STARSHIP.COMPONENTS_EMPTY"}}</p>
+        {{/if}}
+
+        {{!-- Component picker: collapsible category groups (acq-group pattern) --}}
+        {{#each componentGroups as |group|}}
+        {{#if group.items.length}}
+        <div class="acq-group">
+            <button type="button" class="acq-group-header" data-action="toggleComponentGroup" data-group="{{group.key}}">
+                <i class="fa-solid {{#if group.open}}fa-chevron-down{{else}}fa-chevron-right{{/if}}"></i>
+                {{localize group.labelKey}}
+                <span class="acq-group-count">({{group.items.length}})</span>
+            </button>
+            {{#if group.open}}
+            <div class="pick-chips">
+                {{#each group.items as |c|}}
+                <a class="pick-chip" data-action="addComponent" data-uuid="{{c.uuid}}"
+                    data-tooltip="{{localize "WEAPON.POWER"}} {{c.power}} · {{localize "STARSHIP.SPACE"}} {{c.space}} · SP {{c.sp}}">{{c.name}}</a>
+                {{/each}}
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
+        {{/each}}
+
+        {{!-- Hull picker: apply a ships-pack hull to this actor --}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize "STARSHIP.PICK_HULL"}}</h2>
+            <span class="acq-group-count">{{hullOptions.length}}</span>
+        </div>
+        <div class="pick-chips">
+            {{#each hullOptions as |h|}}
+            <a class="pick-chip {{#if (eq h.name ../system.hullName)}}selected{{/if}}"
+                data-action="pickHull" data-uuid="{{h.uuid}}">{{h.name}} ({{h.sp}} SP)</a>
+            {{/each}}
+        </div>
+    </div>
+</section>

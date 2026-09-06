@@ -1,0 +1,77 @@
+<section class="tab {{tabs.main.cssClass}}" data-group="primary" data-tab="main">
+    <div class="npc border">
+        {{!-- Horizontal characteristic table: shorts row + values row, click to roll --}}
+        <table class="npc-chars">
+            <thead>
+                <tr>
+                    {{#each characteristics as |c|}}
+                    <th>{{c.short}}</th>
+                    {{/each}}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {{#each characteristics as |c|}}
+                    <td><a class="npc-char-roll" data-action="rollNpcTest" data-key="{{c.key}}">{{c.value}}</a></td>
+                    {{/each}}
+                </tr>
+            </tbody>
+        </table>
+
+        {{!-- Known-or-better skills (ladder >= 1); number = roll bonus --}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize "NPC.SKILLS"}}</h2>
+        </div>
+        {{#if skills.length}}
+        <ul class="npc-skills">
+            {{#each skills as |s|}}
+            <li>
+                <a class="npc-skill-roll" data-action="rollNpcSkill" data-item="{{s.id}}"
+                    data-tooltip="{{s.name}}"><i class="fa-solid fa-dice-d10"></i></a>
+                <span class="npc-skill-name">{{s.name}}</span>
+                {{#if ../editable}}
+                <select class="npc-ladder-select" data-item="{{s.id}}"
+                    data-tooltip="{{localize "NPC.LADDER_TOOLTIP"}}">
+                    {{selectOptions s.ladderOptions selected=s.ladder localize=true}}
+                </select>
+                {{else}}
+                <span class="acq-group-count">{{s.bonus}}</span>
+                {{/if}}
+                <button type="button" class="npc-skill-delete" data-action="deleteNpcSkill" data-item="{{s.id}}"
+                    data-tooltip="{{localize "NPC.DELETE_SKILL"}}"><i class="fa-solid fa-trash"></i></button>
+            </li>
+            {{/each}}
+        </ul>
+        {{else}}
+        <p class="method-hint">{{localize "NPC.SKILLS_EMPTY"}}</p>
+        {{/if}}
+
+        {{!-- Combat rolls: owned weapons --}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize "NPC.COMBAT"}}</h2>
+        </div>
+        {{#if weapons.length}}
+        <div class="starship-components">
+            {{#each weapons as |w|}}
+            <div class="inv-row" data-item-id="{{w.id}}">
+                <span class="inv-name">{{w.name}}</span>
+                <span class="npc-combat-right">
+                    <span class="chip origin-mod">{{w.damage}}</span>
+                    <button type="button" class="npc-equip-toggle {{#if w.equipped}}active{{/if}}"
+                        data-action="toggleNpcEquip"
+                        data-tooltip="{{#if w.equipped}}{{localize "NPC.STOW"}}{{else}}{{localize "NPC.EQUIP"}}{{/if}}">
+                        <i class="fa-solid {{#if w.equipped}}fa-grip-lines-vertical{{else}}fa-grip-lines{{/if}}"></i>
+                    </button>
+                    <button type="button" class="ladder-option" data-action="rollNpcWeapon"
+                        data-tooltip="{{localize "NPC.ROLL_ATTACK"}}">{{localize "NPC.ATTACK"}}</button>
+                    <button type="button" class="ladder-option" data-action="rollNpcDamage"
+                        data-tooltip="{{localize "NPC.ROLL_DAMAGE"}}">{{localize "NPC.DAMAGE"}}</button>
+                </span>
+            </div>
+            {{/each}}
+        </div>
+        {{else}}
+        <p class="method-hint">{{localize "NPC.COMBAT_EMPTY"}}</p>
+        {{/if}}
+    </div>
+</section>

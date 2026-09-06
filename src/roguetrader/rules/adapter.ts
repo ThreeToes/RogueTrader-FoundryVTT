@@ -22,7 +22,11 @@ import {
 import { resolvePower } from "./power-resolution";
 import { collectTestModifiers, mergeModifiers, type TestKind } from "./funnel";
 import { bodyLocationLabelKey } from "./labels";
-import { collectTalentDamageEffects } from "./talent-effects";
+import {
+	applyTearing,
+	collectRollMechanicEffects,
+	collectTalentDamageEffects,
+} from "./talent-effects";
 import { TestDialog } from "./test-dialog";
 
 /**
@@ -123,7 +127,7 @@ export async function postTest(
 			skillName?: string;
 		};
 		/** Profile override (bead sa6): e.g. Focus Power Tests auto-fail on
-		 * rolls of 91+ (rt_core book p157). Profile data, not an if/else. */
+		 * rolls of 91+ (Core Rulebook book p157). Profile data, not an if/else. */
 		autoFailRoll?: number | null;
 	} = {},
 ): Promise<{ outcome: TestOutcome; messageId: string | null }> {
@@ -664,7 +668,7 @@ async function postWeaponDamage(
 	const { formula } = parsed;
 	const damageRoll = new foundry.dice.Roll(formula);
 	await damageRoll.evaluate();
-	const damageTotal = damageRoll.total ?? 0;
+	let damageTotal = damageRoll.total ?? 0;
 
 	// Righteous Fury trigger (RT core, VERIFY wording): a natural 10 on a
 	// damage die. Inspect the rolled dice terms - the kernel cannot see the
@@ -685,6 +689,44 @@ async function postWeaponDamage(
 			term.faces === 10 &&
 			(term.results ?? []).some((r) => !r.discarded && r.result === 10),
 	);
+
+	// Roll-mechanic weapon qualities (bead gci0): Tearing rolls one extra
+	// damage die (lowest result discarded — book wording, NOT roll-twice);
+	// Toxic/Blast are post-resolution prompts shown on the card.
+	const mechanics = collectRollMechanicEffects(attacker, {
+		weaponId: weapon.id ?? undefined,
+		attackType: (weapon.type as string) === "melee-weapon" ? "melee-weapon" : "ranged-weapon",
+	});
+	const qualityNotes: string[] = [];
+	if (mechanics.tearing) {
+		const dieTerm = dieTerms.find(
+			(term) => term.class === "Die" && (term.faces ?? 0) > 0,
+		);
+		const faces = dieTerm?.faces ?? 10;
+		const baseResults = (dieTerm?.results ?? [])
+			.filter((r) => !r.discarded)
+			.map((r) => r.result);
+		const extraRoll = new foundry.dice.Roll(`1d${faces}`);
+		await extraRoll.evaluate();
+		const extra = extraRoll.total ?? 0;
+		const tearing = applyTearing(baseResults, extra, faces);
+		if (tearing.added > 0) {
+			damageTotal += tearing.added;
+		}
+		qualityNotes.push(
+			game.i18n!.format("CHAT.QUALITY_TEARING", {
+				discarded: tearing.discarded,
+			}),
+		);
+	}
+	if (mechanics.blast !== null) {
+		qualityNotes.push(
+			game.i18n!.format("CHAT.QUALITY_BLAST", { rating: mechanics.blast }),
+		);
+	}
+	// Toxic is conditional on the hit actually wounding (book: "anyone that
+	// takes Damage from a Toxic weapon, after reduction for Armour and
+	// Toughness Bonus"); the note is added after resolveDamage below.
 
 	const location = locationForHit(hitRoll ?? 0, rtCore);
 	const wornArmour = target.items.filter(
@@ -762,6 +804,11 @@ async function postWeaponDamage(
 	});
 
 	const locationLabelKey = bodyLocationLabelKey(location);
+	// Toxic (bead gci0, book wording): the Toughness-test prompt only when
+	// the hit dealt damage after armour + Toughness reduction.
+	if (mechanics.toxic && damage.wounds > 0) {
+		qualityNotes.push(game.i18n!.localize("CHAT.QUALITY_TOXIC"));
+	}
 	const content = await foundry.applications.handlebars.renderTemplate(
 		"systems/rogue-trader/template/chat/damage.hbs",
 		{
@@ -772,6 +819,9 @@ async function postWeaponDamage(
 			damage,
 			// Bead atx: talent damage contributors shown as breakdown rows.
 			damageContributors,
+			// Bead gci0: roll-mechanic quality notes (Tearing/Toxic/Blast);
+			// Toxic only when the hit dealt damage after soak.
+			qualityNotes,
 			isCriticalHit: isCritical,
 			targetUuid: target.uuid,
 		},
@@ -813,7 +863,7 @@ function focusTestKey(focusTest: string | undefined): string {
 }
 
 /**
- * Psychic power activation (bead sa6, rt_core Ch. VI). Flow per design bead
+ * Psychic power activation (bead sa6, Core Rulebook Ch. VI). Flow per design bead
  * mso6: strength selection (Fettered/Unfettered/Push) -> Focus Power Test
  * through the shared pipeline (dialog -> funnel -> kernel -> chat card) ->
  * Psychic Phenomena on the book's trigger -> resolution registry handling.
@@ -1034,7 +1084,7 @@ async function postPowerDamage(
 }
 
 /**
- * Navigator power activation (bead sa6, rt_core Ch. VII book p178): a plain
+ * Navigator power activation (bead sa6, Core Rulebook Ch. VII book p178): a plain
  * Characteristic Test with the mastery bonus (+0/+10/+20 Novice/Adept/
  * Master) as a funnel-visible modifier. NO Focus Power Test, NO Psy Rating,
  * NEVER Psychic Phenomena/Perils (book p178).

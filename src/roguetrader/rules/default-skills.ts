@@ -33,3 +33,21 @@ export function defaultSkillItems(catalog: SkillSourceLike[]): SkillGrant[] {
 			},
 		}));
 }
+
+/**
+ * Default-skill grants MINUS skills the actor already owns (by name,
+ * case-insensitive). The createActor hook and the sheet backfill race on a
+ * fresh actor (both guard on items.size, a TOCTOU window): filtering by
+ * existing names makes both paths idempotent no matter which lands first.
+ */
+export function missingSkillGrants(
+	catalog: SkillSourceLike[],
+	existingNames: Iterable<string>,
+): SkillGrant[] {
+	const owned = new Set(
+		[...existingNames].map((name) => name.trim().toLowerCase()),
+	);
+	return defaultSkillItems(catalog).filter(
+		(grant) => !owned.has(grant.name.trim().toLowerCase()),
+	);
+}

@@ -1,5 +1,5 @@
 /**
- * Pure character-creation logic (bead ay0, rt_core Chapter I stages 1-2).
+ * Pure character-creation logic (bead ay0, Core Rulebook Chapter I stages 1-2).
  *
  * Stage 1 characteristics (p14): roll 2d10+25 per characteristic (one total
  * re-roll allowed) OR point-buy: 25 base, +100 points total, max +20 to any

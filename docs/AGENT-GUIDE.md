@@ -40,6 +40,21 @@ Tabs dispatch via `data-action="tab"` ONLY (core `#onClickAction` → `case 'tab
 <button type="button" data-action="tab" data-tab="skills" data-group="primary">…</button>
 ```
 
+**Gotcha (v14, bead kwd follow-up):** core CSS hides `.tab[data-tab]:not(.active)`. A
+single-view body wrapped in a `data-tab` section with no `static TABS` config renders
+permanently blank (starship + dynasty sheets shipped like this). Single-view templates
+must NOT carry `data-tab` attributes.
+
+## 2a. Template verification — `bun run verify:templates`
+
+Run `bun run verify:templates` instead of ad-hoc inline scripts whenever touching
+templates or sheet context code (utils/verify-templates.mjs, bead 83tl). It (1) compiles
+every `template/**` file, (2) renders each with the full stub helper set mirrored from
+Foundry core + the system's custom helpers (`config`, `concat`), (3) fails loudly when a
+template uses `data-tab` sections while its sheet declares no `static TABS`. If Foundry
+or the system adds a helper, add the stub to the script's `stubs` map — templates using
+an unstubbed helper fail loudly, which is the point.
+
 ## 2b. LevelDB packs: embedded collections need sublevel records
 
 Foundry v14 compendium packs store embedded collections (e.g. RollTable
@@ -196,5 +211,8 @@ read its README first: per-column rectangle technique, parse-tables.yaml
 curation patches (cite page + line, loud failures), spot-check 3-5 rows against
 the PDF, both terse AND prose descriptions per item, verify ambiguity with the
 owner via beads. PDFs are machine-local at ~/Documents (Core Rulebook =
-`rt_core.pdf`, cited as "Core Rulebook" in user-facing text, `rt_core` in code
-comments). Packs register in system.json + system-manifests/dev.json.
+`rt_core.pdf`; `rt_core` is ONLY the machine slug where a literal file/directory
+name is required — CLI args like `--book rt_core`, the `extracted-text/rt_core`
+dump dir). **Terminology (bead 3it4): always cite the book as "Core Rulebook",
+never "rt_core"** — in user-facing text, code comments, curation notes, tests,
+and bead text alike. Packs register in system.json + system-manifests/dev.json.

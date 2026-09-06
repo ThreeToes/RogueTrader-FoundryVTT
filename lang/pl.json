@@ -864,7 +864,7 @@
   "CREATOR.PSYKER": "Ta kariera to psyker — zakładka Psychika jest dostępna.",
   "CREATOR.PSY_RATING_2": "zaczyna z Poziomem Psy 2",
   "CREATOR.APPLY_TITLE": "Apply to existing character",
-  "CREATOR.APPLY_CONFIRM": "Overwrite '{{name}}' with the completed creation? Characteristics, wounds, fate, skills and talents will be replaced.",
+  "CREATOR.APPLY_CONFIRM": "Overwrite '{name}' with the completed creation? Characteristics, wounds, fate, skills and talents will be replaced.",
   "CREATOR.PROFIT_FACTOR": "Modyfikator Współczynnika Zysku grupy",
   "CREATOR.STEP_EQUIPMENT": "Wybór wyposażenia",
   "CREATOR.EQUIPMENT_HINT": "Wybór wyposażenia (Etap 6): wybierz jeden przedmiot o łącznym modyfikatorze Pozyskania +0 lub lepszym — bez testu (Core Rulebook s. 273). Broń wymaga odpowiedniego Treningu Broni; decyzja należy do MG.",
@@ -1074,5 +1074,17 @@
   "SHIP_CREATOR.PREV": "Wstecz",
   "SHIP_CREATOR.NEXT": "Dalej",
   "SHIP_CREATOR.FINISH": "Stwórz statek",
-  "SHIP_CREATOR.NO_HULL": "Wybierz kadłub przed zakończeniem."
+  "SHIP_CREATOR.NO_HULL": "Wybierz kadłub przed zakończeniem.",
+  "SHIP_CREATOR.TYPE_PLASMA_DRIVE": "Napęd plazmowy",
+  "SHIP_CREATOR.TYPE_WARP_ENGINE": "Silnik warp",
+  "SHIP_CREATOR.TYPE_GELLER_FIELD": "Pole Gellera",
+  "SHIP_CREATOR.TYPE_VOID_SHIELD": "Tarcza próżni",
+  "SHIP_CREATOR.TYPE_BRIDGE": "Mostek",
+  "SHIP_CREATOR.TYPE_LIFE_SUSTAINER": "Podtrzymywacz życia",
+  "SHIP_CREATOR.TYPE_CREW_QUARTERS": "Kwatera załogi",
+  "SHIP_CREATOR.TYPE_AUGUR_ARRAY": "Macierz augurowa",
+  "SHIP_CREATOR.NOT_INSTALLED": "— nie zainstalowano —",
+  "SHIP_CREATOR.NO_OPTIONS_FOR_HULL": "Żaden komponent tego typu nie pasuje do wybranej klasy kadłuba.",
+  "SHIP_CREATOR.SLOT_HINT": "Jeden komponent na kategorię podstawową (Core Rulebook p200); wybór zastępuje poprzedni.",
+  "SHIP_CREATOR.MISSING_ESSENTIALS": "Brakuje komponentów podstawowych: {list}. Statek musi mieć po jednym komponencie z każdej kategorii (Core Rulebook p200)."
 }

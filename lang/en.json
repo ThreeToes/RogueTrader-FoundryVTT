@@ -862,7 +862,7 @@
   "CREATOR.PSYKER": "This career is a psyker — the Psychic tab is available.",
   "CREATOR.PSY_RATING_2": "starts with Psy Rating 2",
   "CREATOR.APPLY_TITLE": "Apply to existing character",
-  "CREATOR.APPLY_CONFIRM": "Overwrite '{{name}}' with the completed creation? Characteristics, wounds, fate, skills and talents will be replaced.",
+  "CREATOR.APPLY_CONFIRM": "Overwrite '{name}' with the completed creation? Characteristics, wounds, fate, skills and talents will be replaced.",
   "CREATOR.PROFIT_FACTOR": "Group Profit Factor modifier",
   "CREATOR.STEP_EQUIPMENT": "Select Equipment",
   "CREATOR.EQUIPMENT_HINT": "Select Equipment (Stage 6): choose one item with a total Acquisition Modifier of +0 or better — no test needed (Core Rulebook p273). Weapons require the appropriate Weapon Training; the GM has the final say.",
@@ -1072,5 +1072,17 @@
   "SHIP_CREATOR.PREV": "Back",
   "SHIP_CREATOR.NEXT": "Next",
   "SHIP_CREATOR.FINISH": "Create ship",
-  "SHIP_CREATOR.NO_HULL": "Pick a hull before finishing."
+  "SHIP_CREATOR.NO_HULL": "Pick a hull before finishing.",
+  "SHIP_CREATOR.TYPE_PLASMA_DRIVE": "Plasma Drive",
+  "SHIP_CREATOR.TYPE_WARP_ENGINE": "Warp Engine",
+  "SHIP_CREATOR.TYPE_GELLER_FIELD": "Geller Field",
+  "SHIP_CREATOR.TYPE_VOID_SHIELD": "Void Shield",
+  "SHIP_CREATOR.TYPE_BRIDGE": "Bridge",
+  "SHIP_CREATOR.TYPE_LIFE_SUSTAINER": "Life Sustainer",
+  "SHIP_CREATOR.TYPE_CREW_QUARTERS": "Crew Quarters",
+  "SHIP_CREATOR.TYPE_AUGUR_ARRAY": "Augur Array",
+  "SHIP_CREATOR.NOT_INSTALLED": "— not installed —",
+  "SHIP_CREATOR.NO_OPTIONS_FOR_HULL": "No components of this type fit the chosen hull class.",
+  "SHIP_CREATOR.SLOT_HINT": "One component per essential category (Core Rulebook p200); selecting replaces the previous pick.",
+  "SHIP_CREATOR.MISSING_ESSENTIALS": "The ship is missing essential components: {list}. A ship must have one component from each category (Core Rulebook p200)."
 }

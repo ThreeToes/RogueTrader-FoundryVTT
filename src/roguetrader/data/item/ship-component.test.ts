@@ -16,6 +16,7 @@ describe("ship component schema (bead f5xu)", () => {
 			[
 				"availability",
 				"category",
+				"componentType",
 				"description",
 				"hullTypes",
 				"power",

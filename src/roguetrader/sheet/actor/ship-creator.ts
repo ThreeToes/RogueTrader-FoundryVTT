@@ -19,7 +19,12 @@
 import { getPackDocuments } from "../pack-resolve";
 import { sheetContext } from "../context";
 import { crewQualityEffects, CREW_QUALITIES } from "../../rules/ship-crew";
-import { deriveShipStats, type ShipComponentLike } from "../../rules/ship-systems";
+import {
+	deriveShipStats,
+	hullClassMatches,
+	ESSENTIAL_COMPONENT_TYPES,
+	type ShipComponentLike,
+} from "../../rules/ship-systems";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -32,6 +37,8 @@ interface ShipPick {
 	space: number;
 	sp: string;
 	category: string;
+	/** The book's component-type taxonomy (essential slot / weapon type). */
+	componentType: string;
 }
 
 function emptyShipState(): {
@@ -44,6 +51,15 @@ function emptyShipState(): {
 	crewQuality: string;
 	picks: ShipPick[];
 	collapsed: Record<string, boolean>;
+	/** Last-inspected component (owner ask): flavour + stats panel data. */
+	inspected: {
+		name: string;
+		description: string;
+		special: string;
+		power: string;
+		space: number;
+		sp: string;
+	} | null;
 } {
 	return {
 		step: 0,
@@ -55,6 +71,7 @@ function emptyShipState(): {
 		crewQuality: "competent",
 		picks: [],
 		collapsed: { essential: false, supplemental: true },
+		inspected: null,
 	};
 }
 
@@ -67,7 +84,24 @@ interface PackOption {
 	sp: string;
 	category: string;
 	type: string;
+	/** The book's component-type taxonomy (bead 9cre rework). */
+	componentType: string;
+	/** Verbatim hullTypes string (hull-class matching). */
+	hullTypes: string;
+	/** Pack flavour text (HTML) shown in the selection details panel. */
+	description: string;
+	/** Special-rule notes ("External: ...", named qualities). */
+	special: string;
 }
+
+/** Supplemental-step group labels (Table 8-4 headings first, then tables 8-5/8-6/8-7). */
+const SUPPLEMENTAL_TYPE_LABELS: Readonly<Record<string, string>> = {
+	macrobattery: "SHIP_COMBAT.MACROBATTERY",
+	lance: "SHIP_COMBAT.LANCE",
+	supplemental: "STARSHIP.COMPONENTS_SUPPLEMENTAL",
+	archeotech: "STARSHIP.COMPONENTS_ARCHEOTECH",
+	xenotech: "STARSHIP.COMPONENTS_XENOTECH",
+};
 
 /** Ships-pack component vocabulary (shared by the instance + static paths). */
 async function fetchComponentOptions(): Promise<PackOption[]> {
@@ -81,6 +115,9 @@ async function fetchComponentOptions(): Promise<PackOption[]> {
 			space?: number;
 			sp?: string;
 			category?: string;
+			componentType?: string;
+			hullTypes?: string;
+			description?: string;
 		};
 	}>;
 	return docs
@@ -97,6 +134,10 @@ async function fetchComponentOptions(): Promise<PackOption[]> {
 			space: d.system?.space ?? 0,
 			sp: d.system?.sp ?? "-",
 			category: d.system?.category ?? "supplemental",
+			componentType: d.system?.componentType ?? "",
+			hullTypes: d.system?.hullTypes ?? "",
+			description: d.system?.description ?? "",
+			special: d.system?.special ?? "",
 		}));
 }
 
@@ -152,7 +193,13 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 			id?: string;
 			name?: string;
 			type?: string;
-			system?: { power?: string; space?: number; sp?: string; category?: string };
+			system?: {
+				power?: string;
+				space?: number;
+				sp?: string;
+				category?: string;
+				description?: string;
+			};
 		}>;
 		return docs
 			.filter((d) => d.type === "ship")
@@ -165,6 +212,10 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 				space: 0,
 				sp: String(d.system?.sp ?? 0),
 				category: "hull",
+				componentType: "hull",
+				hullTypes: "",
+				description: d.system?.description ?? "",
+				special: "",
 			}));
 	}
 
@@ -184,6 +235,8 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 		space?: number;
 		sp?: number;
 		weaponCapacity?: string;
+		description?: string;
+		specialRules?: string;
 	} | null> {
 		if (!this.creatorState.hullUuid) return null;
 		const doc = (await foundry.utils.fromUuid(
@@ -212,15 +265,71 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 		context.hullName = state.hullName;
 		context.hullOptions = await this.#hullOptions();
 		const options = await this.#componentOptions();
-		context.essentialOptions = options.filter((o) => o.category === "essential");
-		context.supplementalOptions = options.filter(
-			(o) => o.category !== "essential",
-		);
+		const hull = (await this.#hullStatline()) ?? {};
+		const hullClass = String(hull.hullClass ?? "").toLowerCase();
+		// Pick state is stamped onto the option rows (bead mby6 follow-up):
+		// Handlebars #if takes exactly one argument, so the template must not
+		// try `{{#if ../picked.has o.uuid}}` (two tokens + Set methods are
+		// not path-accessible).
+		const pickedUuids = new Set(state.picks.map((p) => p.uuid));
+		// Component details for the per-slot panels (owner ask, bead 9cre
+		// rework): the pack's flavour text + stats shown when a component is
+		// selected. Descriptions are pack-authored HTML.
+		const stamp = (o: PackOption) => ({
+			...o,
+			picked: pickedUuids.has(o.uuid),
+		});
+		// Essential components (book p200): ONE per category — the step
+		// renders a dropdown per Essential type, populated with that type's
+		// components (alphabetical) filtered to the hull class (book
+		// hullTypes column). The chosen pick pre-selects its dropdown, and
+		// the slot shows the selected component's stats + flavour.
+		context.essentialTypes = ESSENTIAL_COMPONENT_TYPES.map((type) => {
+			const slotOptions = options
+				.filter(
+					(o) =>
+						o.componentType === type &&
+						(!hullClass || hullClassMatches(o.hullTypes, hullClass)),
+				)
+				.sort((a, b) => a.name.localeCompare(b.name))
+				.map(stamp);
+			const selectedUuid =
+				state.picks.find((p) => p.componentType === type)?.uuid ?? null;
+			return {
+				type,
+				labelKey: `SHIP_CREATOR.TYPE_${type.toUpperCase().replace(/-/g, "_")}`,
+				options: slotOptions,
+				selected: selectedUuid,
+				detail: slotOptions.find((o) => o.uuid === selectedUuid) ?? null,
+			};
+		});
+		// Supplemental step (book p203): multiples and duplicates allowed;
+		// grouped by component type (Table 8-4 headings first: macrobatteries
+		// then lances), then alphabetical within each group.
+		const supplementalTypes = [
+			"macrobattery",
+			"lance",
+			"supplemental",
+			"archeotech",
+			"xenotech",
+		];
+		context.supplementalGroups = supplementalTypes
+			.map((type) => ({
+				type,
+				labelKey: SUPPLEMENTAL_TYPE_LABELS[type] ?? type,
+				options: options
+					.filter(
+						(o) =>
+							o.componentType === type &&
+							(!hullClass || hullClassMatches(o.hullTypes, hullClass)),
+					)
+					.sort((a, b) => a.name.localeCompare(b.name))
+					.map(stamp),
+			}))
+			.filter((g) => g.options.length > 0);
 		context.picks = state.picks;
-		context.picked = new Set(state.picks.map((p) => p.uuid));
 		// Running totals (book p198-199): the hull's generated power vs
 		// installed draw, space, and the SP budget (hull SP + crew delta).
-		const hull = (await this.#hullStatline()) ?? {};
 		const components: ShipComponentLike[] = state.picks.map((p) => ({
 			name: p.name,
 			power: p.power,
@@ -247,6 +356,26 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 			crewSpDelta: crew.spDelta,
 		};
 		context.collapse = state.collapsed;
+		// Hull details panel (owner ask): flavour + special rules from the
+		// pack when a hull is selected. Pack fields are authored HTML.
+		context.hullDetail = state.hullUuid
+			? {
+					description: hull.description ?? "",
+					specialRules: hull.specialRules ?? "",
+					speed: hull.speed ?? 0,
+					manoeuvrability: hull.manoeuvrability ?? 0,
+					detection: hull.detection ?? 0,
+					hullIntegrity: hull.hullIntegrity ?? 0,
+					armour: hull.armour ?? 0,
+					turretRating: hull.turretRating ?? 0,
+					space: hull.space ?? 0,
+					sp: hull.sp ?? 0,
+					weaponCapacity: hull.weaponCapacity ?? "",
+				}
+			: null;
+		// Last-inspected supplemental component (owner ask): clicking a chip
+		// picks it AND shows its flavour + stats in the details panel.
+		context.inspected = state.inspected ?? null;
 		return context;
 	}
 
@@ -265,14 +394,81 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (input && !input.dataset.wired) {
 				input.dataset.wired = "1";
 				input.addEventListener("input", () => {
-					if (key === "spBudget") {
-						this.creatorState.spBudget = Number(input.value) || 0;
-					} else {
-						this.creatorState.name = input.value;
-					}
-				});
+						if (key === "spBudget") {
+							this.creatorState.spBudget = Number(input.value) || 0;
+						} else {
+							this.creatorState.name = input.value;
+						}
+					});
 			}
 		}
+		// Essential-component dropdowns (bead 9cre rework, book p200): selects
+		// fire change (not click), so they wire imperatively like the NPC
+		// ladder selects. The handler replaces the pick of that essential
+		// type (one per category) or removes it on the blank option.
+		for (const select of this.element?.querySelectorAll<HTMLSelectElement>(
+			"select.ship-essential-select:not([data-wired])",
+		) ?? []) {
+			select.dataset.wired = "1";
+			select.addEventListener("change", () => {
+				this.#onPickEssential(
+					select.dataset.componentType ?? "",
+					select.value,
+				).catch((error) =>
+					console.error("rogue-trader | ship creator pick failed:", error),
+				);
+			});
+		}
+		// Hull dropdown (owner ask): change-wired like the essential selects.
+		const hullSelect = this.element?.querySelector<HTMLSelectElement>(
+			"select.ship-hull-select:not([data-wired])",
+		);
+		if (hullSelect) {
+			hullSelect.dataset.wired = "1";
+			hullSelect.addEventListener("change", () => {
+				this.#onPickHullUuid(hullSelect.value).catch((error) =>
+					console.error("rogue-trader | ship creator hull failed:", error),
+				);
+			});
+		}
+	}
+
+	/**
+	 * Essential-slot pick (book p200, ONE per category): uuid blank = the
+	 * player cleared the slot (allowed in the wizard; finish blocks until
+	 * every category is filled).
+	 */
+	async #onPickEssential(
+		this: ShipCreator,
+		componentType: string,
+		uuid: string,
+	): Promise<void> {
+		if (!componentType) return;
+		const withoutType = this.creatorState.picks.filter(
+			(p) => p.componentType !== componentType,
+		);
+		if (!uuid) {
+			this.creatorState.picks = withoutType;
+		} else {
+			const options = await fetchComponentOptions();
+			const option = options.find((o) => o.uuid === uuid);
+			if (!option) return;
+			this.creatorState.picks = [
+				...withoutType,
+				{
+					uuid,
+					id: option.id,
+					name: option.name,
+					type: option.type,
+					power: option.power,
+					space: option.space,
+					sp: option.sp,
+					category: option.category,
+					componentType: option.componentType,
+				},
+			];
+		}
+		this.render({ force: true });
 	}
 
 	static async #onPrev(this: ShipCreator): Promise<void> {
@@ -292,6 +488,12 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 		target: HTMLElement,
 	): Promise<void> {
 		const uuid = target.dataset.uuid;
+		if (!uuid) return;
+		await this.#onPickHullUuid(uuid);
+	}
+
+	/** Hull dropdown (bead 9cre rework, owner ask): change-wired select. */
+	async #onPickHullUuid(this: ShipCreator, uuid: string): Promise<void> {
 		if (!uuid) return;
 		this.creatorState.hullUuid = uuid;
 		const doc = (await foundry.utils.fromUuid(uuid)) as unknown as {
@@ -333,19 +535,36 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 			const options = await fetchComponentOptions();
 			const option = options.find((o) => o.uuid === uuid);
 			if (!option) return;
-			this.creatorState.picks = [
-				...this.creatorState.picks,
-				{
-					uuid,
-					id: option.id,
-					name: option.name,
-					type: option.type,
-					power: option.power,
-					space: option.space,
-					sp: option.sp,
-					category: option.category,
-				},
+			// Essential components: ONE per category (book p200) — a new pick
+			// of an essential type REPLACES the previous pick of that type
+			// (this is what makes the dropdowns single-select).
+			const picks =<ShipPick[]>[
+				...this.creatorState.picks.filter(
+					(p) => p.componentType !== option.componentType,
+				),
 			];
+			picks.push({
+				uuid,
+				id: option.id,
+				name: option.name,
+				type: option.type,
+				power: option.power,
+				space: option.space,
+				sp: option.sp,
+				category: option.category,
+				componentType: option.componentType,
+			});
+			this.creatorState.picks = picks;
+			// Clicking a chip also inspects it (owner ask): the details panel
+			// shows the picked component's flavour + stats.
+			this.creatorState.inspected = {
+				name: option.name,
+				description: option.description,
+				special: option.special ?? "",
+				power: option.power,
+				space: option.space,
+				sp: option.sp,
+			};
 		}
 		this.render({ force: true });
 	}
@@ -379,6 +598,24 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 		const state = this.creatorState;
 		if (!state.hullUuid) {
 			ui.notifications?.warn(game.i18n.localize("SHIP_CREATOR.NO_HULL"));
+			return;
+		}
+		// Essential completeness (book p200): "A ship must have one (no more)
+		// Component from each of the following categories, lest the ship lose
+		// some vital function" — finish blocks with the missing list.
+		const missing = ESSENTIAL_COMPONENT_TYPES.filter(
+			(type) => !state.picks.some((p) => p.componentType === type),
+		).map((type) =>
+			game.i18n.localize(
+				`SHIP_CREATOR.TYPE_${type.toUpperCase().replace(/-/g, "_")}`,
+			),
+		);
+		if (missing.length > 0) {
+			ui.notifications?.warn(
+				game.i18n.format("SHIP_CREATOR.MISSING_ESSENTIALS", {
+					list: missing.join(", "),
+				}),
+			);
 			return;
 		}
 		const hull = (await foundry.utils.fromUuid(state.hullUuid)) as unknown as {

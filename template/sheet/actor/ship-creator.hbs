@@ -12,17 +12,34 @@
             data-tooltip="{{localize "SHIP_CREATOR.SP_BUDGET_HINT"}}" />
     </div>
     <p class="method-hint">{{localize "SHIP_CREATOR.SP_BUDGET_HINT"}}</p>
-    <div class="inv-group-header">
-        <h3 class="inv-group-label">{{localize "SHIP_CREATOR.HULLS"}}</h3>
-        <span class="acq-group-count">{{hullOptions.length}}</span>
+    <div class="form-group">
+        <label>{{localize "SHIP_CREATOR.HULLS"}}</label>
+        <select class="ship-hull-select">
+            <option value="">{{localize "SHIP_CREATOR.NOT_INSTALLED"}}</option>
+            {{#each hullOptions as |h|}}
+            <option value="{{h.uuid}}" {{#if (eq h.uuid ../hullUuid)}}selected{{/if}}>{{h.name}} ({{h.sp}} SP)</option>
+            {{/each}}
+        </select>
     </div>
-    <div class="pick-chips">
-        {{#each hullOptions as |h|}}
-        <a class="pick-chip {{#if (eq h.uuid ../hullUuid)}}selected{{/if}}" data-action="pickHull" data-uuid="{{h.uuid}}">
-            {{h.name}} ({{h.sp}} SP)
-        </a>
-        {{/each}}
+    {{#if hullDetail}}
+    <div class="comp-details border">
+        <div class="starship-status">
+            <span class="chip origin-mod">SP {{hullDetail.sp}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.HULL_INTEGRITY"}} {{hullDetail.hullIntegrity}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.ARMOUR"}} {{hullDetail.armour}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.SPEED"}} {{hullDetail.speed}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.MANOEUVRAABILITY"}} {{hullDetail.manoeuvrability}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.DETECTION"}} {{hullDetail.detection}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.TURRET_RATING"}} {{hullDetail.turretRating}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{hullDetail.space}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.WEAPON_CAPACITY"}}: {{hullDetail.weaponCapacity}}</span>
+        </div>
+        {{{hullDetail.description}}}
+        {{#if hullDetail.specialRules}}
+        <div class="comp-special">{{{hullDetail.specialRules}}}</div>
+        {{/if}}
     </div>
+    {{/if}}
     {{/if}}
 
     {{!-- Step 1-2: components with running validation --}}
@@ -53,37 +70,74 @@
     {{/if}}
 
     {{#if (eq step 1)}}
-    <div class="acq-group">
-        <button type="button" class="acq-group-header" data-action="toggleGroup" data-group="essential">
-            <i class="fa-solid {{#if collapse.essential}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></i>
-            {{localize "STARSHIP.COMPONENTS_ESSENTIAL"}}
-        </button>
-        {{#if (not collapse.essential)}}
-        <div class="pick-chips">
-            {{#each essentialOptions as |o|}}
-            <a class="pick-chip {{#if ../picked.has o.uuid}}selected{{/if}}" data-action="pickComponent" data-uuid="{{o.uuid}}"
-                data-tooltip="{{localize "WEAPON.POWER"}} {{o.power}} · {{localize "STARSHIP.SPACE"}} {{o.space}} · SP {{o.sp}}">{{o.name}}</a>
+    {{!-- Essential components (Core Rulebook p200): ONE dropdown per
+         category — "A ship must have one (no more) Component from each of
+         the following categories". Options filtered to the hull class,
+         alphabetical. Selecting replaces the previous pick of that type. --}}
+    {{#each essentialTypes as |slot|}}
+    <div class="form-group">
+        <label>{{localize slot.labelKey}}</label>
+        <select class="ship-essential-select" data-component-type="{{slot.type}}"
+            data-tooltip="{{localize "SHIP_CREATOR.SLOT_HINT"}}">
+            <option value="">{{localize "SHIP_CREATOR.NOT_INSTALLED"}}</option>
+            {{#each slot.options as |o|}}
+            <option value="{{o.uuid}}" {{#if (eq o.uuid ../slot.selected)}}selected{{/if}}>{{o.name}}</option>
             {{/each}}
+        </select>
+        {{#if slot.detail}}
+        <div class="comp-details">
+            <div class="starship-status">
+                <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{slot.detail.power}}</span>
+                <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{slot.detail.space}}</span>
+                <span class="chip origin-mod">SP {{slot.detail.sp}}</span>
+            </div>
+            {{#if slot.detail.special}}<div class="comp-special">{{slot.detail.special}}</div>{{/if}}
+            {{{slot.detail.description}}}
         </div>
         {{/if}}
+        {{#unless slot.options.length}}
+        <span class="method-hint warn">{{localize "SHIP_CREATOR.NO_OPTIONS_FOR_HULL"}}</span>
+        {{/unless}}
     </div>
+    {{/each}}
     {{/if}}
 
     {{#if (eq step 2)}}
+    {{!-- Details panel (owner ask): the last-clicked component's flavour
+         + stats, from the pack. --}}
+    {{#if inspected}}
+    <div class="comp-details border">
+        <h3 class="inv-group-label">{{inspected.name}}</h3>
+        <div class="starship-status">
+            <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{inspected.power}}</span>
+            <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{inspected.space}}</span>
+            <span class="chip origin-mod">SP {{inspected.sp}}</span>
+        </div>
+        {{#if inspected.special}}<div class="comp-special">{{inspected.special}}</div>{{/if}}
+        {{{inspected.description}}}
+    </div>
+    {{/if}}
+    {{!-- Supplemental components (Core Rulebook p203): multiples and
+         duplicates allowed; grouped by component type (Table 8-4 headings
+         first), alphabetical within each group. --}}
+    {{#each supplementalGroups as |group|}}
     <div class="acq-group">
-        <button type="button" class="acq-group-header" data-action="toggleGroup" data-group="supplemental">
-            <i class="fa-solid {{#if collapse.supplemental}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></i>
-            {{localize "STARSHIP.COMPONENTS_SUPPLEMENTAL"}}
+        <button type="button" class="acq-group-header" data-action="toggleGroup" data-group="{{group.type}}">
+            <i class="fa-solid {{#if (lookup ../collapse group.type)}}fa-chevron-right{{else}}fa-chevron-down{{/if}}"></i>
+            {{localize group.labelKey}}
+            <span class="acq-group-count">({{group.options.length}})</span>
         </button>
-        {{#if (not collapse.supplemental)}}
+        {{#if (lookup ../collapse group.type)}}
+        {{else}}
         <div class="pick-chips">
-            {{#each supplementalOptions as |o|}}
-            <a class="pick-chip {{#if ../picked.has o.uuid}}selected{{/if}}" data-action="pickComponent" data-uuid="{{o.uuid}}"
+            {{#each group.options as |o|}}
+            <a class="pick-chip {{#if o.picked}}selected{{/if}}" data-action="pickComponent" data-uuid="{{o.uuid}}"
                 data-tooltip="{{localize "WEAPON.POWER"}} {{o.power}} · {{localize "STARSHIP.SPACE"}} {{o.space}} · SP {{o.sp}}">{{o.name}}</a>
             {{/each}}
         </div>
         {{/if}}
     </div>
+    {{/each}}
     {{/if}}
 
     <div class="form-group">

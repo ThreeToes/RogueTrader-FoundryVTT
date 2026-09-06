@@ -865,7 +865,7 @@
   "CREATOR.PSYKER": "Esta carrera es un psíquico — la pestaña Psíquico está disponible.",
   "CREATOR.PSY_RATING_2": "empieza con Psinote 2",
   "CREATOR.APPLY_TITLE": "Apply to existing character",
-  "CREATOR.APPLY_CONFIRM": "Overwrite '{{name}}' with the completed creation? Characteristics, wounds, fate, skills and talents will be replaced.",
+  "CREATOR.APPLY_CONFIRM": "Overwrite '{name}' with the completed creation? Characteristics, wounds, fate, skills and talents will be replaced.",
   "CREATOR.PROFIT_FACTOR": "Modificador del Factor de Beneficio del grupo",
   "CREATOR.STEP_EQUIPMENT": "Elegir equipo",
   "CREATOR.EQUIPMENT_HINT": "Elegir equipo (Etapa 6): escoge un objeto con modificador total de Adquisición de +0 o mejor; no hace falta tirada (Core Rulebook p. 273). Las armas requieren el Entrenamiento con Armas apropiado; el GM tiene la última palabra.",
@@ -1075,5 +1075,17 @@
   "SHIP_CREATOR.PREV": "Atrás",
   "SHIP_CREATOR.NEXT": "Siguiente",
   "SHIP_CREATOR.FINISH": "Crear nave",
-  "SHIP_CREATOR.NO_HULL": "Elige un casco antes de finalizar."
+  "SHIP_CREATOR.NO_HULL": "Elige un casco antes de finalizar.",
+  "SHIP_CREATOR.TYPE_PLASMA_DRIVE": "Plasma Drive",
+  "SHIP_CREATOR.TYPE_WARP_ENGINE": "Motor warp",
+  "SHIP_CREATOR.TYPE_GELLER_FIELD": "Campo Geller",
+  "SHIP_CREATOR.TYPE_VOID_SHIELD": "Escudo de vacío",
+  "SHIP_CREATOR.TYPE_BRIDGE": "Puente",
+  "SHIP_CREATOR.TYPE_LIFE_SUSTAINER": "Sostenedor de vida",
+  "SHIP_CREATOR.TYPE_CREW_QUARTERS": "Alojamiento de tripulación",
+  "SHIP_CREATOR.TYPE_AUGUR_ARRAY": "Matriz augur",
+  "SHIP_CREATOR.NOT_INSTALLED": "— no instalado —",
+  "SHIP_CREATOR.NO_OPTIONS_FOR_HULL": "Ningún componente de este tipo encaja con la clase de casco elegida.",
+  "SHIP_CREATOR.SLOT_HINT": "Un componente por categoría esencial (Core Rulebook p200); seleccionar reemplaza la elección anterior.",
+  "SHIP_CREATOR.MISSING_ESSENTIALS": "Faltan componentes esenciales: {list}. Una nave debe tener un componente de cada categoría (Core Rulebook p200)."
 }

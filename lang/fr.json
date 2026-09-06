@@ -864,7 +864,7 @@
   "CREATOR.PSYKER": "Cette carrière est un psyker — l'onglet Psychique est disponible.",
   "CREATOR.PSY_RATING_2": "commence avec une Psynote de 2",
   "CREATOR.APPLY_TITLE": "Apply to existing character",
-  "CREATOR.APPLY_CONFIRM": "Overwrite '{{name}}' with the completed creation? Characteristics, wounds, fate, skills and talents will be replaced.",
+  "CREATOR.APPLY_CONFIRM": "Overwrite '{name}' with the completed creation? Characteristics, wounds, fate, skills and talents will be replaced.",
   "CREATOR.PROFIT_FACTOR": "Modificateur de Facteur de Profit du groupe",
   "CREATOR.STEP_EQUIPMENT": "Choix de l'équipement",
   "CREATOR.EQUIPMENT_HINT": "Choix de l'équipement (Étape 6) : choisissez un objet avec un modificateur total d'Acquisition de +0 ou mieux — aucun test requis (Core Rulebook p. 273). Les armes exigent l'Entraînement aux Armes approprié ; le MJ a le dernier mot.",
@@ -1074,5 +1074,17 @@
   "SHIP_CREATOR.PREV": "Retour",
   "SHIP_CREATOR.NEXT": "Suivant",
   "SHIP_CREATOR.FINISH": "Créer le vaisseau",
-  "SHIP_CREATOR.NO_HULL": "Choisissez une coque avant de terminer."
+  "SHIP_CREATOR.NO_HULL": "Choisissez une coque avant de terminer.",
+  "SHIP_CREATOR.TYPE_PLASMA_DRIVE": "Plasma Drive",
+  "SHIP_CREATOR.TYPE_WARP_ENGINE": "Moteur warp",
+  "SHIP_CREATOR.TYPE_GELLER_FIELD": "Champ de Geller",
+  "SHIP_CREATOR.TYPE_VOID_SHIELD": "Bouclier du vide",
+  "SHIP_CREATOR.TYPE_BRIDGE": "Passerelle",
+  "SHIP_CREATOR.TYPE_LIFE_SUSTAINER": "Sustainateur de vie",
+  "SHIP_CREATOR.TYPE_CREW_QUARTERS": "Quartiers d'équipage",
+  "SHIP_CREATOR.TYPE_AUGUR_ARRAY": "Réseau augure",
+  "SHIP_CREATOR.NOT_INSTALLED": "— non installé —",
+  "SHIP_CREATOR.NO_OPTIONS_FOR_HULL": "Aucun composant de ce type ne correspond à la classe de coque choisie.",
+  "SHIP_CREATOR.SLOT_HINT": "Un composant par catégorie essentielle (Core Rulebook p200) ; sélectionner remplace le choix précédent.",
+  "SHIP_CREATOR.MISSING_ESSENTIALS": "Composants essentiels manquants : {list}. Un vaisseau doit avoir un composant de chaque catégorie (Core Rulebook p200)."
 }

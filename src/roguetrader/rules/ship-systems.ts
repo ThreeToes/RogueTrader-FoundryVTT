@@ -40,6 +40,60 @@ export const WEAPON_SLOTS = [
 ] as const;
 export type WeaponSlot = (typeof WEAPON_SLOTS)[number];
 
+// ---------------------------------------------------------------------------
+// Component-type taxonomy (bead 9cre rework, Core Rulebook p200-203)
+// ---------------------------------------------------------------------------
+
+/**
+ * The eight Essential component categories (book p200: "A ship must have
+ * one (no more) Component from each of the following categories, lest the
+ * ship lose some vital function") — the Essential Components section's own
+ * headings, in book order.
+ */
+export const ESSENTIAL_COMPONENT_TYPES = [
+	"plasma-drive",
+	"warp-engine",
+	"geller-field",
+	"void-shield",
+	"bridge",
+	"life-sustainer",
+	"crew-quarters",
+	"augur-array",
+] as const;
+
+export type EssentialComponentType = (typeof ESSENTIAL_COMPONENT_TYPES)[number];
+
+/**
+ * Whether a component's verbatim `hullTypes` string covers a hull class
+ * (bead 9cre rework). The pack's hullTypes are comma-separated book tokens
+ * ("Transports, Raiders, Frigates", "Light Cruisers, Cruisers", "All
+ * Ships", "Ork Raiders, Frigates (Onslaught-class)"). Matching rule per
+ * comma-token: case-insensitive equality OR prefix ("Frigates
+ * (Onslaught-class...)" covers frigates); "All Ships"/"All ships" covers
+ * everything. Whole-TOKEN matching keeps "Light Cruisers" from matching a
+ * cruiser hull (a plain substring test would).
+ */
+export function hullClassMatches(
+	hullTypes: string,
+	hullClass: string,
+): boolean {
+	const token = HULL_CLASS_TOKENS[hullClass] ?? hullClass;
+	if (!token) return true;
+	const tokens = (hullTypes ?? "").split(",").map((t) => t.trim().toLowerCase());
+	if (tokens.includes("all ships")) return true;
+	return tokens.some((t) => t === token || t.startsWith(token));
+}
+
+/** Hull-class (ships pack `hullClass` values) → hullTypes token. */
+export const HULL_CLASS_TOKENS: Readonly<Record<string, string>> = {
+	transport: "transports",
+	raider: "raiders",
+	frigate: "frigates",
+	"light cruiser": "light cruisers",
+	cruiser: "cruisers",
+	"space station": "space stations",
+};
+
 /** Power a component GENERATES: "35 Generated" -> 35 (Table 8-3, book p201). */
 export function parsePowerGenerated(power: string): number {
 	const m = /(\d+)\s*generated/i.exec(power ?? "");

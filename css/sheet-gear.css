@@ -927,6 +927,28 @@
 	text-shadow: 0 0 4px currentColor;
 }
 
+/* Ship creator details panels (bead 9cre rework, owner ask): flavour text
+   + stats from the pack, shown for the selected hull/component. */
+.rogue-trader.sheet .comp-details {
+	margin: 4px 0;
+	padding: 6px;
+	font-size: var(--rt-fs-md);
+}
+
+.rogue-trader.sheet .comp-details .starship-status,
+.rogue-trader.sheet .starship-status {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-bottom: 4px;
+}
+
+.rogue-trader.sheet .comp-special {
+	font-style: italic;
+	color: var(--rt-muted);
+	margin: 2px 0 4px;
+}
+
 /* NPC ladder dropdown: small, right-aligned at the end of the shared
    inventory line (the rt/inv-row name carries flex:1). */
 .rogue-trader.sheet.npc .npc-ladder-select {

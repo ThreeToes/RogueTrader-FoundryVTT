@@ -14,6 +14,8 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 	static LOCALIZATION_PREFIXES = ["SHIP_COMPONENT"];
 
 	declare category: string;
+	/** The book's component-type taxonomy (see defineSchema, bead 9cre). */
+	declare componentType: string;
 	declare hullTypes: string;
 	declare power: string;
 	declare space: number;
@@ -53,6 +55,39 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 			/** † marker: may not be selected more than once per vessel (Table 8-5). */
 			unique: new foundry.data.fields.BooleanField({ initial: false }),
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
+			/**
+			 * The book's component-type taxonomy (bead 9cre rework): Essential
+			 * components carry the category headings of the Essential
+			 * Components section (Core Rulebook p200-202 — Plasma Drives,
+			 * Warp Engines, Geller Fields, Void Shields, Bridges, Life
+			 * Sustainers, Crew Quarters, Augur Arrays; "A ship must have one
+			 * (no more) Component from each of the following categories");
+			 * weapons carry the Table 8-4 headings (p203 — Macrobatteries,
+			 * Lances); everything else carries its table grouping
+			 * (supplemental / archeotech / xenotech, Tables 8-5/8-6/8-7).
+			 * blank: true — choices force blank:false in core, but pack rows
+			 * are backfilled and the value is authoritative.
+			 */
+			componentType: new foundry.data.fields.StringField({
+				choices: [
+					"",
+					"plasma-drive",
+					"warp-engine",
+					"geller-field",
+					"void-shield",
+					"bridge",
+					"life-sustainer",
+					"crew-quarters",
+					"augur-array",
+					"macrobattery",
+					"lance",
+					"supplemental",
+					"archeotech",
+					"xenotech",
+				],
+				initial: "",
+				blank: true,
+			}),
 			// Component condition (bead xfta, book p223-224).
 			state: new foundry.data.fields.StringField({
 				choices: ["intact", "unpowered", "damaged", "destroyed"],

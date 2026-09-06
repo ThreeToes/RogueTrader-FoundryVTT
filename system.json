@@ -140,7 +140,14 @@
       "label": "Rogue Trader Critical Effects",
       "system": "rogue-trader",
       "path": "packs/criticals",
-      "type": "Item"
+      "type": "RollTable"
+    },
+    {
+      "name": "creationtables",
+      "label": "Rogue Trader Creation Tables",
+      "system": "rogue-trader",
+      "path": "packs/creationtables",
+      "type": "RollTable"
     },
     {
       "name": "careers",

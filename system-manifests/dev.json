@@ -66,6 +66,13 @@
       "type": "RollTable"
     },
     {
+      "name": "creationtables",
+      "label": "Creation Tables",
+      "system": "rogue-trader",
+      "path": "packs/creationtables",
+      "type": "RollTable"
+    },
+    {
       "name": "armour",
       "label": "Rogue Trader Armour",
       "system": "rogue-trader",

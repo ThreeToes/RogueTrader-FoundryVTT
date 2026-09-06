@@ -46,8 +46,7 @@ export async function getPackDocuments(packId: string): Promise<unknown[]> {
 	return (await pack.getDocuments()) as unknown[];
 }
 
-/** Open a resolved document's sheet, loudly reporting a missing binding. */
-export async function openDocumentSheet(
+/** Open a resolved document's sheet, loudly reporting a missing binding. */export async function openDocumentSheet(
 	item: unknown,
 	label: string,
 ): Promise<void> {

@@ -80,6 +80,7 @@ export function resolveEntryType(
 export const TABLE_PACKS: ReadonlySet<string> = new Set([
 	"criticals",
 	"psychicphenomena",
+	"creationtables",
 ]);
 
 /** A single authored result row: string shorthand or a partial result. */
@@ -89,6 +90,10 @@ type ResultRow =
 			text?: string;
 			weight?: number;
 			range?: [number, number];
+			/** System flags carried on the result (bead mby6: Table 1-5 rows
+			 * carry the structured profitFactor/shipPoints values so creators
+			 * can read them programmatically after a draw). */
+			flags?: Record<string, unknown>;
 	  };
 
 /**
@@ -107,6 +112,7 @@ export function buildTableResults(entry: {
 		text?: string;
 		weight?: number;
 		range?: [number, number];
+		flags?: Record<string, unknown>;
 	}> =
 		authored.length > 0
 			? authored.map((r) => (typeof r === "string" ? { text: r } : r))
@@ -132,6 +138,7 @@ export function buildTableResults(entry: {
 			documentId: null,
 			weight,
 			range: [start, end],
+			flags: row.flags ?? {},
 		};
 	});
 }

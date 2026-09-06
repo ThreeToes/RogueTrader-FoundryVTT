@@ -1,6 +1,7 @@
 import type { CharacteristicKey } from "../../data/actor/character";
 import { sheetContext } from "../context";
 import { getPackDocuments } from "../pack-resolve";
+import { waitForDefaultGrants } from "../default-grants";
 import {
 	allowedColumns,
 	fateFromTable,
@@ -869,10 +870,16 @@ variants: (entry.variants ?? []).map((v) => ({
 			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
 			deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
 			system?: unknown;
+			uuid?: string;
+			items?: { size?: number; map: (cb: (i: { name?: string }) => string) => string[] } | undefined;
 		},
 		state: CreatorState,
 		resolved: ResolvedOrigin,
 	): Promise<void> {
+		// The createActor hook's common-skill grant is async and NOT awaited by
+		// Actor.create — wait for it before merging on name, or the dedupe set
+		// misses the defaults (bead t093).
+		await waitForDefaultGrants(actor.uuid);
 		// iufv: creator grants carry provenance; a re-run wipes ALL
 		// creator-granted items and re-grants from the new picks (owner
 		// decision: full wipe + re-grant). Manual items (no flag) are kept.
@@ -933,13 +940,27 @@ variants: (entry.variants ?? []).map((v) => ({
 		}
 		const { grants, unmatched } = matchOriginSkills(resolved, catalog);
 		const provenance = { grantedBy: GRANTED_BY_CREATOR };
-		const itemGrants: GrantPayload[] = grants.map((grant) =>
-			skillGrantPayload(grant.name, grant.system.characteristic, provenance),
-		);
+		// Merge on name, case-insensitive + trimmed.
+		const normName = (name: string) => name.trim().toLowerCase();
+		const itemGrants: GrantPayload[] = [];
 		const manual: string[] = [...resolved.notes];
-		// Dedupe against ourselves and the surviving items (manual items the
-		// player added by hand should not be duplicated by the re-grant).
-		const seenNames = new Set(existing.map((item) => item.name ?? ""));
+		// Dedupe on NAME against the actor's LIVE items (bead: duplicate skills
+		// on new explorers). On the create path the createActor hook has
+		// already embedded the common-skill defaults by the time this runs —
+		// `existing` (targetActor snapshot) is empty there, so origin/career
+		// skills overlapping the defaults (Awareness, Common Lore, ...) were
+		// granted a second time. Merging against the live actor items makes
+		// both flows idempotent.
+		const liveItems = ((actor.items as unknown as { contents?: Array<{ name?: string }> })
+			.contents ?? (actor.items as unknown as Array<{ name?: string }>)) ?? [];
+		const seenNames = new Set(liveItems.map((item) => normName(item.name ?? "")));
+		for (const grant of grants) {
+			if (seenNames.has(normName(grant.name))) continue;
+			seenNames.add(normName(grant.name));
+			itemGrants.push(
+				skillGrantPayload(grant.name, grant.system.characteristic, provenance),
+			);
+		}
 		for (const talentName of resolved.talents) {
 			if (isUnresolvedChoice(talentName)) {
 				manual.push(talentName);
@@ -949,16 +970,17 @@ variants: (entry.variants ?? []).map((v) => ({
 			// concrete subject before granting; cancelled prompt = skipped.
 			const resolvedName = await resolveParameterisedTalent(talentName);
 			if (!resolvedName) continue;
-			if (seenNames.has(resolvedName)) continue;
-			seenNames.add(resolvedName);
+			if (seenNames.has(normName(resolvedName))) continue;
+			seenNames.add(normName(resolvedName));
 			itemGrants.push(await talentGrant(resolvedName, provenance));
 		}
 		for (const leftover of unmatched) {
 			if (isUnresolvedChoice(leftover)) manual.push(leftover);
-			else if (!seenNames.has(leftover)) {
+			else if (!seenNames.has(normName(leftover))) {
 				const resolvedName = await resolveParameterisedTalent(leftover);
 				if (!resolvedName) continue;
-				seenNames.add(resolvedName);
+				if (seenNames.has(normName(resolvedName))) continue;
+				seenNames.add(normName(resolvedName));
 				itemGrants.push(await talentGrant(resolvedName, provenance));
 			}
 		}

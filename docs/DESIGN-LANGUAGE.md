@@ -6,27 +6,47 @@ any sheet/component, match these tokens. Canonical implementations:
 
 ## Color palette
 
+All colors are design tokens on the `.rogue-trader` root (bead 3vl6), defined at
+the top of `css/sheet-gear.css` (the first file of the CSS bundle). Use the
+token, never the raw hex:
+
 | Token | Value | Use |
 |---|---|---|
-| Gold (accent) | `#b8860b` | Labels, roll anchors, active ladder, pips (border/lit), part labels |
-| Muted brown | `#7a6a53` | Secondary text, group labels, separators, units, inactive states |
-| Faded red-brown | `#8b5e52` | Destructive actions (`skill-delete`, `inv-delete`) |
-| Inactive/dim | `#5a4f3f` | "Off" segments (RoF `-`, zero overlays) |
-| Hairline border | `rgba(122, 106, 83, 0.5)` | Container/panel borders (composite groups, body parts, encumbrance bar) |
-| Footer border | `rgba(122, 106, 83, 0.4)` | `border-top` of footer strips |
-| Panel fill | `rgba(0, 0, 0, 0.2)` | Slight inset background inside bordered groups |
-| Pips lit glow | `0 0 3px rgba(184, 134, 11, 0.8)` | Lit unnaturual pip |
+| `--rt-gold` | `#b8860b` | Labels, roll anchors, active ladder, pips, part labels |
+| `--rt-gold-soft` | `#d9c38a` | Highlight text (equipped glow, active steps, rank-up notes) |
+| `--rt-muted` | `#7a6a53` | Secondary text, group labels, separators, units |
+| `--rt-muted-deep` | `#5a4f3f` | "Off" segments (RoF `-`, zero overlays), grips |
+| `--rt-muted-faint` | `#55503f` | Stowed equip toggles |
+| `--rt-danger` | `#8b5e52` | Destructive actions (`skill-delete`, `inv-delete`) |
+| `--rt-danger-deep` | `#c0392b` | Over-encumbered state, negative modifiers |
+| `--rt-danger-alarm` | `#b71c1c` | Chat-card failure values |
+| `--rt-success` | `#7ca860` | Encumbrance OK fill, positive modifiers |
+| `--rt-border-solid` | `rgba(122, 106, 83, 0.9)` | Sustain-active borders |
+| `--rt-border-strong` | `rgba(122, 106, 83, 0.5)` | Container/panel borders |
+| `--rt-border` | `rgba(122, 106, 83, 0.4)` | Footer strips, pick chips, acq headers |
+| `--rt-border-mid` | `rgba(122, 106, 83, 0.35)` | Short-description underline |
+| `--rt-border-soft` | `rgba(122, 106, 83, 0.3)` | NPC armour table rows |
+| `--rt-border-dim` / `--rt-border-faint` | `rgba(122, 106, 83, 0.25 / 0.2)` | Sustain fill, subtle rows |
+| Panel fill | `rgba(0, 0, 0, 0.2)` | Slight inset background inside bordered groups (literal) |
+| Pips lit glow | `0 0 3px rgba(184, 134, 11, 0.8)` | Lit unnatural pip (literal) |
 
 ## Typography
 
+Type steps are tokens on the same root (bead o6gx): `--rt-fs-xs` `0.75em`,
+`--rt-fs-sm` `0.78em`, `--rt-fs-md` `0.85em`, `--rt-fs-lg` `0.9em` (0.72/0.75
+fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
+`--rt-radius` `4px`, `--rt-radius-sm` `3px` (5px folded into 4px).
+
 - **Section headings**: `<h1>` inside `.stats`/`.combat`/`.inventory` — large serif
   display style, `margin-bottom: 8px` (see `.stats h1` rules).
-- **Field labels** (item/gear/weapon sheets): `0.78em`, bold, uppercase,
-  `letter-spacing: 0.05em`, gold — scoped as
-  `.rogue-trader.sheet .stats-row .stat > label`.
-- **Group labels** (`h2.skill-group-label`, `h2.inv-group-label`, `h2.skill-group-label`):
-  `0.9em`, uppercase, `#7a6a53`, `margin: 8px 0 2px`.
-- **Chip labels** (stat-footer chips, capacity): `0.78em` bold uppercase gold.
+- **Field labels** (small-caps gold, ONE shared rule — bead xcte):
+  `--rt-fs-sm`, bold, uppercase, `letter-spacing: 0.05em`, `--rt-gold` — scoped
+  as `.rogue-trader.sheet .stats-row .stat > label` plus the starship/npc
+  stat-grid, npc-chars th, career-table thead th, part-label and chip-label
+  selectors.
+- **Group labels** (`h2.skill-group-label`, `h2.inv-group-label`):
+  `--rt-fs-lg`, uppercase, `--rt-muted`, `margin: 8px 0 2px`.
+- **Chip labels** (stat-footer chips, capacity): `--rt-fs-sm` bold uppercase gold.
 
 ## Layout patterns
 

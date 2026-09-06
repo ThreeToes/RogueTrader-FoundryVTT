@@ -1,6 +1,7 @@
 import { Character } from "../../data/actor/character";
 import { RtActorSheet } from "../context";
 import { getPackDocuments } from "../pack-resolve";
+import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { derivedRank, totalSpent } from "../../rules/advancement";
 import { careers, equipStates } from "../../registry";
@@ -568,6 +569,10 @@ export class CharacterSheet extends RtActorSheet {
 	 * item exists. Covers actors created before the feature existed.
 	 */
 	async #ensureDefaultSkills(): Promise<void> {
+		// The createActor hook's grant is async and unawaited by Foundry: wait
+		// for it before the items.size guard, or a sheet opened mid-grant
+		// backfills the same defaults (bead t093).
+		await waitForDefaultGrants(this.actor.uuid);
 		if (this.actor.items.size > 0) return;
 		if (this.actor.type !== "explorer" && this.actor.type !== "npc") return;
 		const documents = (await getPackDocuments(

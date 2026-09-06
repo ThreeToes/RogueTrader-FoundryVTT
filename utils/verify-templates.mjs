@@ -122,6 +122,23 @@ for (const rel of SHARED_PARTIALS) {
 	Handlebars.registerPartial(name, compiled);
 }
 
+// Loud drift check: every file in template/shared/parts/ must be listed in
+// SHARED_PARTIALS (bead 8uyu) — an unlisted partial would skip verification.
+{
+	const sharedDir = join(TEMPLATE_ROOT, "shared/parts");
+	const onDisk = new Set(
+		(await readdir(sharedDir)).filter((f) => f.endsWith(".hbs")),
+	);
+	const listed = new Set(SHARED_PARTIALS.map((p) => p.split("/").pop()));
+	for (const file of onDisk) {
+		if (!listed.has(file)) {
+			throw new Error(
+				`verify:templates — template/shared/parts/${file} exists but is not in SHARED_PARTIALS (src/roguetrader/sheet/partials.ts); add it or remove the file.`,
+			);
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Render context: a plain empty object. Missing keys resolve to undefined and
 // render empty (Handlebars short-circuits nested paths), while helper and

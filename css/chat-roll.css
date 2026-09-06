@@ -18,8 +18,8 @@
 
 .rogue-trader.chat.roll .roll-target .label,
 .rogue-trader.chat.roll .roll-result .label {
-	font-size: 0.85em;
-	color: #7a6a53;
+	font-size: var(--rt-fs-md);
+	color: var(--rt-muted);
 }
 
 .rogue-trader.chat.roll .roll-value,
@@ -34,13 +34,13 @@
 }
 
 .rogue-trader.chat.roll .roll-result.failure .value {
-	color: #b71c1c;
+	color: var(--rt-danger-alarm);
 }
 
 .rogue-trader.chat.roll ul.modifier-breakdown {
 	margin: 4px 0 0;
 	padding-left: 1.2em;
-	font-size: 0.9em;
+	font-size: var(--rt-fs-lg);
 	color: #4a3f31;
 }
 /* Bead gci0: roll-mechanic quality notes (Tearing/Toxic/Blast) on the
@@ -48,6 +48,6 @@
 .rogue-trader.chat.damage ul.quality-notes {
 	margin: 4px 0 0;
 	padding-left: 1.2em;
-	font-size: 0.9em;
+	font-size: var(--rt-fs-lg);
 	color: #4a3f31;
 }

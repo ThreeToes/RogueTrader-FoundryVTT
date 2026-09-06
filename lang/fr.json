@@ -653,7 +653,6 @@
   "NPC.ADD_SKILL": "Ajouter une compétence",
   "NPC.DELETE_SKILL": "Réinitialiser à inconnue",
   "NPC.LADDER_TOOLTIP": "Niveau de compétence (bonus sur la caractéristique)",
-  "TYPES.Actor.pc": "Personnage joueur",
   "ROGUE_TRADER.CHARACTER.SHEET": "Rogue Trader – Personnage",
   "ROLL.TARGET": "Cible",
   "ROLL.FIRE_MODE": "Mode de tir",

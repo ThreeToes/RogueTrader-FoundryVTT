@@ -1,78 +1,79 @@
 <div class="header border">
-    {{!-- Option C (owner decision): compact identity + tracker strip.
-    Row 1 = portrait + name + career tagline (career · rank · XP as text,
-    advancement button inline — the .career-tagline pattern). Row 2 = one
-    .stat-footer strip of stat-chips for the table-hot numbers (reuse of the
-    Stats tab derived-row vocabulary). --}}
+    {{!-- Option C (owner decision): portrait owns the left column for the
+    full header height; the right column stacks the identity row (name +
+    career tagline, .career-tagline pattern) and the tracker strip (one
+    .stat-footer of stat-chips — the Stats tab derived-row vocabulary). --}}
     <div class="header-grid">
         <div class="header-portrait">
             {{> "rt/header-portrait"}}
         </div>
-        <div class="header-identity">
-            <input class="name-input" name="name" type="text" value="{{document.name}}"
-                data-tooltip="{{localize "CHARACTER.NAME"}}" />
-            <p class="header-tagline">
-                <span class="tagline-career">{{careerLabel}}</span>
-                <span class="tagline-sep">·</span>
-                <span>{{localize "CAREER.RANK"}} {{source.system.rank}}</span>
-                <button type="button" class="advancement-open" data-action="openAdvancement"
-                    data-tooltip="{{advancementTooltip}}"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
-                <span class="tagline-sep">·</span>
-                <span class="tagline-xp" data-tooltip="{{localize "CHARACTER.XP_SPENT"}}">{{xpSpent}}</span>
-                <span class="pair-sep">/</span>
-                {{#if editable}}
-                <input class="tagline-xp-total" name="system.xp.total" type="number" min="0"
-                    value="{{source.system.xp.total}}" data-tooltip="{{localize "CHARACTER.XP_TOTAL"}}" />
-                {{else}}
-                <span>{{source.system.xp.total}}</span>
-                {{/if}}
-                <span>{{localize "CHARACTER.XP"}}</span>
-            </p>
-        </div>
-    </div>
+        <div class="header-side">
+            <div class="header-identity">
+                <input class="name-input" name="name" type="text" value="{{document.name}}"
+                    data-tooltip="{{localize "CHARACTER.NAME"}}" />
+                <p class="header-tagline">
+                    <span class="tagline-career">{{careerLabel}}</span>
+                    <span class="tagline-sep">·</span>
+                    <span>{{localize "CAREER.RANK"}} {{source.system.rank}}</span>
+                    <button type="button" class="advancement-open" data-action="openAdvancement"
+                        data-tooltip="{{advancementTooltip}}"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
+                    <span class="tagline-sep">·</span>
+                    <span class="tagline-xp" data-tooltip="{{localize "CHARACTER.XP_SPENT"}}">{{xpSpent}}</span>
+                    <span class="pair-sep">/</span>
+                    {{#if editable}}
+                    <input class="tagline-xp-total" name="system.xp.total" type="number" min="0"
+                        value="{{source.system.xp.total}}" data-tooltip="{{localize "CHARACTER.XP_TOTAL"}}" />
+                    {{else}}
+                    <span>{{source.system.xp.total}}</span>
+                    {{/if}}
+                    <span>{{localize "CHARACTER.XP"}}</span>
+                </p>
+            </div>
 
-    <div class="stat-footer tracker-strip">
-        <div class="stat-chip">
-            <span class="chip-label">{{localize "TITLE.WOUNDS"}}</span>
-            <div class="chip-value">
-                {{> "rt/paired-value" nameValue="system.wounds.value" nameMax="system.wounds.max"
-                    value=source.system.wounds.value max=source.system.wounds.max min=0}}
-            </div>
-        </div>
-        <div class="stat-chip">
-            <span class="chip-label">{{localize "CHARACTER.FATE"}}</span>
-            <div class="chip-value">
-                {{> "rt/paired-value" nameValue="system.fate.value" nameMax="system.fate.max"
-                    value=source.system.fate.value max=source.system.fate.max min=0}}
-            </div>
-        </div>
-        <div class="stat-chip">
-            <span class="chip-label">{{localize "PSYCHIC_POWER.PSY_RATING"}}</span>
-            <div class="chip-value">
-                {{!-- Legacy actors predate the psyRating field: undefined must
-                     render 0, or the empty submit value fails NumberField
-                     validation on ANY form change (bead hli6). --}}
-                <input name="system.psyRating" type="number" min="0"
-                    value="{{#if source.system.psyRating}}{{source.system.psyRating}}{{else}}0{{/if}}"
-                    data-tooltip="{{localize "PSYCHIC_POWER.PSY_RATING"}}" />
-            </div>
-        </div>
-        <div class="stat-chip">
-            <span class="chip-label">{{localize "CHARACTER.INSANITY"}}</span>
-            <div class="chip-value">
-                <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
-            </div>
-        </div>
-        <div class="stat-chip">
-            <span class="chip-label">{{localize "CHARACTER.CORRUPTION"}}</span>
-            <div class="chip-value">
-                <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
-            </div>
-        </div>
-        <div class="stat-chip">
-            <span class="chip-label">{{localize "CHARACTER.FATIGUE"}}</span>
-            <div class="chip-value">
-                <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
+            <div class="stat-footer tracker-strip">
+                <div class="stat-chip">
+                    <span class="chip-label">{{localize "TITLE.WOUNDS"}}</span>
+                    <div class="chip-value">
+                        {{> "rt/paired-value" nameValue="system.wounds.value" nameMax="system.wounds.max"
+                            value=source.system.wounds.value max=source.system.wounds.max min=0}}
+                    </div>
+                </div>
+                <div class="stat-chip">
+                    <span class="chip-label">{{localize "CHARACTER.FATE"}}</span>
+                    <div class="chip-value">
+                        {{> "rt/paired-value" nameValue="system.fate.value" nameMax="system.fate.max"
+                            value=source.system.fate.value max=source.system.fate.max min=0}}
+                    </div>
+                </div>
+                <div class="stat-chip">
+                    <span class="chip-label">{{localize "PSYCHIC_POWER.PSY_RATING"}}</span>
+                    <div class="chip-value">
+                        {{!-- Legacy actors predate the psyRating field: undefined must
+                             render 0, or the empty submit value fails NumberField
+                             validation on ANY form change (bead hli6). --}}
+                        <input name="system.psyRating" type="number" min="0"
+                            value="{{#if source.system.psyRating}}{{source.system.psyRating}}{{else}}0{{/if}}"
+                            data-tooltip="{{localize "PSYCHIC_POWER.PSY_RATING"}}" />
+                    </div>
+                </div>
+                <div class="stat-chip">
+                    <span class="chip-label">{{localize "CHARACTER.INSANITY"}}</span>
+                    <div class="chip-value">
+                        <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
+                    </div>
+                </div>
+                <div class="stat-chip">
+                    <span class="chip-label">{{localize "CHARACTER.CORRUPTION"}}</span>
+                    <div class="chip-value">
+                        <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
+                    </div>
+                </div>
+                <div class="stat-chip">
+                    <span class="chip-label">{{localize "CHARACTER.FATIGUE"}}</span>
+                    <div class="chip-value">
+                        <input name="system.fatigue" type="number" min="0" value="{{source.system.fatigue}}" />
+                    </div>
+                </div>
             </div>
         </div>
     </div>

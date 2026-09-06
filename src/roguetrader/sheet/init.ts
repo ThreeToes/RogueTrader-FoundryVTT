@@ -50,6 +50,7 @@ import { CareerSheet } from "./item/career-sheet";
 import { WeaponSheet } from "./item/weapon-sheet";
 import { registerSharedPartials } from "./partials";
 import { getPackDocuments } from "./pack-resolve";
+import { trackDefaultGrants } from "./default-grants";
 
 type AnySheetCtor = new (...args: unknown[]) => object;
 
@@ -437,9 +438,31 @@ export function sheetInit() {
 		// Legacy character-type migration (bead ow8w): pc/acolyte -> explorer,
 		// clone-recreate at ready (GM-only, logs old->new ids).
 		Hooks.once("ready", () => {
-			migrateLegacyActors().catch((error) =>
-				console.error("rogue-trader | legacy-actor migration crashed:", error),
-			);
+			migrateLegacyActors()
+				.catch((error) =>
+					console.error(
+						"rogue-trader | legacy-actor migration crashed:",
+						error,
+					))
+				.finally(() => {
+					// The create-actor dropdown lists dataModel keys, so the
+					// legacy "pc" model keeps offering "Player Character". The
+					// model must exist through boot (legacy docs parse before
+					// ready) — drop it once migration has run, from both the
+					// live config and any cached documentTypes list.
+					const cfg = CONFIG as unknown as {
+						Actor?: { dataModels?: Record<string, unknown> };
+					};
+					delete cfg.Actor?.dataModels?.pc;
+					const system = game.system as unknown as {
+						documentTypes?: Record<string, string[]>;
+					};
+					if (Array.isArray(system.documentTypes?.Actor)) {
+						system.documentTypes.Actor = system.documentTypes.Actor.filter(
+							(t) => t !== "pc" && t !== "acolyte",
+						);
+					}
+				});
 		});
 		Hooks.once("ready", () => {
 			getPackDocuments("rogue-trader.skills").then((rawDocs) => {
@@ -474,7 +497,11 @@ export function sheetInit() {
 				actor.items.map((i) => i.name ?? ""),
 			);
 			if (grants.length === 0) return;
-			await actor.createEmbeddedDocuments("Item", grants);
+			const grantPromise = actor.createEmbeddedDocuments("Item", grants);
+			// Creator flow waits for the defaults before its own merge (bead
+			// t093: Actor.create resolves before async hook handlers finish).
+			trackDefaultGrants(actor.uuid ?? "", grantPromise);
+			await grantPromise;
 		});
 		registerSheet(
 			foundry.documents.Actor,

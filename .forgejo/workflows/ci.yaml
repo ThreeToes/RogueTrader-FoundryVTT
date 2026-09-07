@@ -14,36 +14,37 @@
 name: ci
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+    push:
+        branches: [master]
+    pull_request:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Install bun (pinned)
-        run: |
-          curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
-          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+            - name: Install bun (pinned)
+              run: |
+                  curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
+                  echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
 
-      - name: Test
-        run: bun test
+            - name: Test
+              run: bun test
 
-      - name: Build
-        run: bun run build
+            - name: Build
+              run: bun run build
 
-      # Phase-1 safety net: the compendia packer is documented to work with an
-      # empty/missing src/packs (machine-local, gitignored), so CI emits zero
-      # packs — assert the build still produced a loadable system manifest.
-      - name: Sanity-check release output
-        run: |
-          test -f release/system.json
-          test -f release/template.json
-          test -d release/packs || echo "no packs dir (expected on CI: src/packs is machine-local)"
+            # Phase-1 safety net: the compendia packer is documented to work with an
+            # empty/missing src/packs (machine-local, gitignored), so CI emits zero
+            # packs — assert the build still produced a loadable system manifest.
+            - name: Sanity-check release output
+              run: |
+                  test -f release/system.json
+                  test -f release/template.json
+                  test -d release/packs || echo "no packs dir (expected on CI: src/packs is machine-local)"
+

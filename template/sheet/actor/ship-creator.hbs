@@ -23,20 +23,23 @@
     </div>
     {{#if hullDetail}}
     <div class="comp-details border">
-        <div class="starship-status">
-            <span class="chip origin-mod">SP {{hullDetail.sp}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.HULL_INTEGRITY"}} {{hullDetail.hullIntegrity}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.ARMOUR"}} {{hullDetail.armour}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.SPEED"}} {{hullDetail.speed}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.MANOEUVRAABILITY"}} {{hullDetail.manoeuvrability}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.DETECTION"}} {{hullDetail.detection}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.TURRET_RATING"}} {{hullDetail.turretRating}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{hullDetail.space}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.WEAPON_CAPACITY"}}: {{hullDetail.weaponCapacity}}</span>
+        <h3 class="inv-group-label">{{hullName}}</h3>
+        <div class="stat-grid">
+            <div class="stat"><label>{{localize "SHIP_CREATOR.SP_BUDGET"}}</label><span class="comp-value">{{hullDetail.sp}}</span></div>
+            <div class="stat"><label>{{localize "STARSHIP.HULL_INTEGRITY"}}</label><span class="comp-value">{{hullDetail.hullIntegrity}}</span></div>
+            <div class="stat"><label>{{localize "STARSHIP.ARMOUR"}}</label><span class="comp-value">{{hullDetail.armour}}</span></div>
+            <div class="stat"><label>{{localize "STARSHIP.SPEED"}}</label><span class="comp-value">{{hullDetail.speed}}</span></div>
+            <div class="stat"><label>{{localize "STARSHIP.MANOEUVRAABILITY"}}</label><span class="comp-value">{{hullDetail.manoeuvrability}}</span></div>
+            <div class="stat"><label>{{localize "STARSHIP.DETECTION"}}</label><span class="comp-value">{{hullDetail.detection}}</span></div>
+            <div class="stat"><label>{{localize "STARSHIP.TURRET_RATING"}}</label><span class="comp-value">{{hullDetail.turretRating}}</span></div>
+            <div class="stat"><label>{{localize "STARSHIP.SPACE"}}</label><span class="comp-value">{{hullDetail.space}}</span></div>
+            <div class="stat"><label>{{localize "STARSHIP.WEAPON_CAPACITY"}}</label><span class="comp-value">{{hullDetail.weaponCapacity}}</span></div>
         </div>
-        {{{hullDetail.description}}}
+        <h3 class="inv-group-label">{{localize "SHIP_CREATOR.DESCRIPTION"}}</h3>
+        <div class="comp-flavour">{{{hullDetail.description}}}</div>
         {{#if hullDetail.specialRules}}
-        <div class="comp-special">{{{hullDetail.specialRules}}}</div>
+        <h3 class="inv-group-label">{{localize "SHIP_CREATOR.SPECIAL_RULES"}}</h3>
+        <div class="comp-flavour comp-special">{{{hullDetail.specialRules}}}</div>
         {{/if}}
     </div>
     {{/if}}
@@ -54,21 +57,9 @@
 
     <h2>{{#if (eq step 1)}}{{localize "SHIP_CREATOR.STEP_ESSENTIAL"}}{{else}}{{localize "SHIP_CREATOR.STEP_SUPPLEMENTAL"}}{{/if}}</h2>
 
-    {{!-- Picked components (inventory rows, removable) --}}
-    {{#if picks.length}}
-    <div class="starship-components">
-        {{#each picks as |p|}}
-        {{#> "rt/inv-row" id=p.id name=p.name deleteAction="unpickComponent" deleteTooltip=(localize "SHIP_CREATOR.UNPICK")}}
-        <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{p.power}}</span>
-        <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{p.space}}</span>
-        <span class="chip origin-mod">SP {{p.sp}}</span>
-        {{/"rt/inv-row"}}
-        {{/each}}
-    </div>
-    {{else}}
-    <p class="method-hint">{{localize "SHIP_CREATOR.NO_PICKS"}}</p>
-    {{/if}}
-
+    {{!-- The dropdowns ARE the selection (owner ask): essential slots
+         show their pick inline via the per-slot detail panels; supplemental
+         chips carry the picked highlight. No separate picked list. --}}
     {{#if (eq step 1)}}
     {{!-- Essential components (Core Rulebook p200): ONE dropdown per
          category — "A ship must have one (no more) Component from each of
@@ -81,7 +72,7 @@
             data-tooltip="{{localize "SHIP_CREATOR.SLOT_HINT"}}">
             <option value="">{{localize "SHIP_CREATOR.NOT_INSTALLED"}}</option>
             {{#each slot.options as |o|}}
-            <option value="{{o.uuid}}" {{#if (eq o.uuid ../slot.selected)}}selected{{/if}}>{{o.name}}</option>
+            <option value="{{o.uuid}}" {{#if o.picked}}selected{{/if}}>{{o.name}}</option>
             {{/each}}
         </select>
         {{#if slot.detail}}

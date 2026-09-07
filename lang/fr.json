@@ -1086,5 +1086,7 @@
   "SHIP_CREATOR.NOT_INSTALLED": "— non installé —",
   "SHIP_CREATOR.NO_OPTIONS_FOR_HULL": "Aucun composant de ce type ne correspond à la classe de coque choisie.",
   "SHIP_CREATOR.SLOT_HINT": "Un composant par catégorie essentielle (Core Rulebook p200) ; sélectionner remplace le choix précédent.",
-  "SHIP_CREATOR.MISSING_ESSENTIALS": "Composants essentiels manquants : {list}. Un vaisseau doit avoir un composant de chaque catégorie (Core Rulebook p200)."
+  "SHIP_CREATOR.MISSING_ESSENTIALS": "Composants essentiels manquants : {list}. Un vaisseau doit avoir un composant de chaque catégorie (Core Rulebook p200).",
+  "SHIP_CREATOR.DESCRIPTION": "Description",
+  "SHIP_CREATOR.SPECIAL_RULES": "Règles spéciales"
 }

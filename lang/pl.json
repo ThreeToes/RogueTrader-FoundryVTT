@@ -1086,5 +1086,7 @@
   "SHIP_CREATOR.NOT_INSTALLED": "— nie zainstalowano —",
   "SHIP_CREATOR.NO_OPTIONS_FOR_HULL": "Żaden komponent tego typu nie pasuje do wybranej klasy kadłuba.",
   "SHIP_CREATOR.SLOT_HINT": "Jeden komponent na kategorię podstawową (Core Rulebook p200); wybór zastępuje poprzedni.",
-  "SHIP_CREATOR.MISSING_ESSENTIALS": "Brakuje komponentów podstawowych: {list}. Statek musi mieć po jednym komponencie z każdej kategorii (Core Rulebook p200)."
+  "SHIP_CREATOR.MISSING_ESSENTIALS": "Brakuje komponentów podstawowych: {list}. Statek musi mieć po jednym komponencie z każdej kategorii (Core Rulebook p200).",
+  "SHIP_CREATOR.DESCRIPTION": "Opis",
+  "SHIP_CREATOR.SPECIAL_RULES": "Zasady specjalne"
 }

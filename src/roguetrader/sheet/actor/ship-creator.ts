@@ -118,6 +118,7 @@ async function fetchComponentOptions(): Promise<PackOption[]> {
 			componentType?: string;
 			hullTypes?: string;
 			description?: string;
+			special?: string;
 		};
 	}>;
 	return docs
@@ -153,7 +154,6 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 			pickHull: ShipCreator.#onPickHull,
 			toggleGroup: ShipCreator.#onToggleGroup,
 			pickComponent: ShipCreator.#onPickComponent,
-			unpickComponent: ShipCreator.#onUnpickComponent,
 			setCrewQuality: ShipCreator.#onSetCrewQuality,
 			finish: ShipCreator.#onFinish,
 		},
@@ -300,6 +300,8 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 				labelKey: `SHIP_CREATOR.TYPE_${type.toUpperCase().replace(/-/g, "_")}`,
 				options: slotOptions,
 				selected: selectedUuid,
+				// Stats + flavour block under the dropdown (kept on owner
+				// revision): the selected component's pack data.
 				detail: slotOptions.find((o) => o.uuid === selectedUuid) ?? null,
 			};
 		});
@@ -566,19 +568,6 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 				sp: option.sp,
 			};
 		}
-		this.render({ force: true });
-	}
-
-	static async #onUnpickComponent(
-		this: ShipCreator,
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const id = target.dataset.itemId;
-		if (!id) return;
-		this.creatorState.picks = this.creatorState.picks.filter(
-			(p) => p.id !== id,
-		);
 		this.render({ force: true });
 	}
 

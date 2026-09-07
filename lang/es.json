@@ -1087,5 +1087,7 @@
   "SHIP_CREATOR.NOT_INSTALLED": "— no instalado —",
   "SHIP_CREATOR.NO_OPTIONS_FOR_HULL": "Ningún componente de este tipo encaja con la clase de casco elegida.",
   "SHIP_CREATOR.SLOT_HINT": "Un componente por categoría esencial (Core Rulebook p200); seleccionar reemplaza la elección anterior.",
-  "SHIP_CREATOR.MISSING_ESSENTIALS": "Faltan componentes esenciales: {list}. Una nave debe tener un componente de cada categoría (Core Rulebook p200)."
+  "SHIP_CREATOR.MISSING_ESSENTIALS": "Faltan componentes esenciales: {list}. Una nave debe tener un componente de cada categoría (Core Rulebook p200).",
+  "SHIP_CREATOR.DESCRIPTION": "Descripción",
+  "SHIP_CREATOR.SPECIAL_RULES": "Reglas especiales"
 }

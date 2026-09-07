@@ -337,6 +337,7 @@
 .rogue-trader.sheet .chip-label,
 .rogue-trader.sheet.starship .stat-grid .stat > label,
 .rogue-trader.sheet.npc .stat-grid .stat > label,
+.rogue-trader.sheet.ship-creator .stat-grid .stat > label,
 .rogue-trader.sheet.npc table.npc-chars th,
 .rogue-trader.sheet .career-table thead th {
 	font-size: var(--rt-fs-sm);
@@ -468,6 +469,13 @@
 
 /* Career sheet: the rank tables are tall - the window content must scroll. */
 .rogue-trader.sheet.career .window-content {
+	overflow-y: auto;
+}
+
+/* Ship creator: 8 essential dropdowns + details panels + supplemental
+   groups are taller than the window - the content must scroll (AGENTS.md
+   resizable-window rule; the window is resizable, the content must follow). */
+.rogue-trader.sheet.ship-creator .window-content {
 	overflow-y: auto;
 }
 
@@ -836,14 +844,18 @@
 /* Starship statline: compact multi-column grid (design-language stats-row
    pattern) replacing the stacked full-width inputs. Label typography comes
    from the shared small-caps label rule (xcte). */
-.rogue-trader.sheet.starship .stat-grid {
+.rogue-trader.sheet.starship .stat-grid,
+.rogue-trader.sheet.npc .stat-grid,
+.rogue-trader.sheet.ship-creator .stat-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	gap: 4px 16px;
 	margin: 6px 0;
 }
 
-.rogue-trader.sheet.starship .stat-grid .stat {
+.rogue-trader.sheet.starship .stat-grid .stat,
+.rogue-trader.sheet.npc .stat-grid .stat,
+.rogue-trader.sheet.ship-creator .stat-grid .stat {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
@@ -928,10 +940,12 @@
 }
 
 /* Ship creator details panels (bead 9cre rework, owner ask): flavour text
-   + stats from the pack, shown for the selected hull/component. */
+   + stats from the pack, shown for the selected hull/component. Stats use
+   the shared stat-grid vocabulary (labels via the xcte small-caps rule,
+   extended to .ship-creator); flavour sections sit under group labels. */
 .rogue-trader.sheet .comp-details {
 	margin: 4px 0;
-	padding: 6px;
+	padding: 6px 8px;
 	font-size: var(--rt-fs-md);
 }
 
@@ -943,10 +957,21 @@
 	margin-bottom: 4px;
 }
 
+.rogue-trader.sheet .comp-details .comp-value {
+	font-size: var(--rt-fs-lg);
+	color: var(--rt-text, var(--color-text-light-highlight, inherit));
+}
+
+.rogue-trader.sheet .comp-details .comp-flavour {
+	color: var(--rt-muted);
+}
+
+.rogue-trader.sheet .comp-details .comp-flavour p {
+	margin: 0 0 4px;
+}
+
 .rogue-trader.sheet .comp-special {
 	font-style: italic;
-	color: var(--rt-muted);
-	margin: 2px 0 4px;
 }
 
 /* NPC ladder dropdown: small, right-aligned at the end of the shared

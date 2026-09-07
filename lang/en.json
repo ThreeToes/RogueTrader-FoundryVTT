@@ -1084,5 +1084,7 @@
   "SHIP_CREATOR.NOT_INSTALLED": "— not installed —",
   "SHIP_CREATOR.NO_OPTIONS_FOR_HULL": "No components of this type fit the chosen hull class.",
   "SHIP_CREATOR.SLOT_HINT": "One component per essential category (Core Rulebook p200); selecting replaces the previous pick.",
-  "SHIP_CREATOR.MISSING_ESSENTIALS": "The ship is missing essential components: {list}. A ship must have one component from each category (Core Rulebook p200)."
+  "SHIP_CREATOR.MISSING_ESSENTIALS": "The ship is missing essential components: {list}. A ship must have one component from each category (Core Rulebook p200).",
+  "SHIP_CREATOR.DESCRIPTION": "Description",
+  "SHIP_CREATOR.SPECIAL_RULES": "Special Rules"
 }

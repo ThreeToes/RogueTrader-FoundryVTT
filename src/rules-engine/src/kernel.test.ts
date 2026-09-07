@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { parseDamageFormula, resolveDamage } from "../src/damage";
-import { sumModifiers } from "../src/modifier";
-import { rtCore } from "../src/profile";
-import { locationForHit, resolveTest } from "../src/test";
+import { parseDamageFormula, resolveDamage } from "./damage";
+import { sumModifiers } from "./modifier";
+import { rtCore } from "./profile";
+import { locationForHit, resolveTest } from "./test";
 
 describe("resolveTest (rt-core)", () => {
 	test("exact target is one degree of success", () => {

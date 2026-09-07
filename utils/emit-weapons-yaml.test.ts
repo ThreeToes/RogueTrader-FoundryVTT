@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseQualities, parseRateOfFire } from "../utils/emit-weapons-yaml";
+import { parseQualities, parseRateOfFire } from "./emit-weapons-yaml";
 
 describe("parseRateOfFire (book notation -> schema record)", () => {
 	test("S/3/10 -> single + burst 3 + full auto 10", () => {

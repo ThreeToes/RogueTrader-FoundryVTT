@@ -8,7 +8,7 @@ import {
 	toTableSourceDocument,
 	type ItemSourceIndex,
 	toActorSourceDocument,
-} from "../utils/compendia";
+} from "./compendia";
 
 describe("resolveEntryType", () => {
 	test("honors a declared non-generic type", () => {

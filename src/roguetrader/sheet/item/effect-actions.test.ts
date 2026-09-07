@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import "../../../../tests/helpers/foundry-schema-stub";
+import "../../../test-helpers/foundry-schema-stub";
 import { effectEditorChoices } from "./effect-actions";
 
 describe("effect editor choices (localized dropdowns)", () => {

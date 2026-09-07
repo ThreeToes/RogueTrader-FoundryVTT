@@ -10,7 +10,7 @@ import {
 	vehicleFacings,
 	vehicleSystems,
 	vehicleTraits,
-} from "../src/roguetrader/registry";
+} from "./registry";
 
 describe("EntryRegistry", () => {
 	test("seeds initial entries", () => {

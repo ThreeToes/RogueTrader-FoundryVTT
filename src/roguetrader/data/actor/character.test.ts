@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-await import("../../../../tests/helpers/foundry-schema-stub");
+await import("../../../test-helpers/foundry-schema-stub");
 const { Character } = await import("./character");
 
 /** Minimal character with set characteristic values (test helper). */

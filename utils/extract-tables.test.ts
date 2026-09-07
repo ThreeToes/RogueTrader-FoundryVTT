@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { layoutLines, stitchColumns } from "../utils/extract-tables";
+import { layoutLines, stitchColumns } from "./extract-tables";
 
 describe("stitchColumns", () => {
 	test("joins aligned lines with ' | '", () => {

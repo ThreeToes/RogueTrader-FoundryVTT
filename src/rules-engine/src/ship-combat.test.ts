@@ -15,7 +15,7 @@ import {
 	SHIP_CRITICALS,
 	shipCritical,
 	VENT_FIRE_CREW_DAMAGE,
-} from "../src/ship-combat";
+} from "./ship-combat";
 
 // Bead cj6k: ship combat kernel (Core Rulebook Ch. VIII pp218-223), all
 // rules verified against the book layout dump before pinning here.

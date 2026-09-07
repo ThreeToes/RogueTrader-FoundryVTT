@@ -1,7 +1,7 @@
-import "./helpers/foundry-schema-stub";
-import "./helpers/foundry-schema-stub";
+import "../../../test-helpers/foundry-schema-stub";
+import "../../../test-helpers/foundry-schema-stub";
 import { describe, expect, test } from "bun:test";
-import { Character } from "../src/roguetrader/data/actor/character";
+import { Character } from "./character";
 
 /**
  * Psyker field surfacing (bead 1ooe): the psyker marker + Psy Rating are

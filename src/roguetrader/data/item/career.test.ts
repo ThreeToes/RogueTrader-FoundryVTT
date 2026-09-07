@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { StubField } from "../../../../tests/helpers/foundry-schema-stub";
+import { StubField } from "../../../test-helpers/foundry-schema-stub";
 
-await import("../../../../tests/helpers/foundry-schema-stub");
+await import("../../../test-helpers/foundry-schema-stub");
 
 const { Career } = await import("./career");
 

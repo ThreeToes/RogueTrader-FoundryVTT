@@ -1,4 +1,9 @@
 import { describe, expect, test } from "bun:test";
+
+// The stub must be installed BEFORE the data models load (they extend
+// foundry.abstract at import time); never rely on cross-file ordering
+// (bead-free convention, see tests-are-colocated note in AGENT-GUIDE).
+import "../../../test-helpers/foundry-schema-stub";
 import {
 	ShipComponent,
 	ShipWeaponComponent,

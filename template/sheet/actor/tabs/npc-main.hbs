@@ -1,5 +1,30 @@
 <section class="tab {{tabs.main.cssClass}}" data-group="primary" data-tab="main">
     <div class="npc border">
+        {{!-- Identity row (bead lib6, k4z0 GAP 1): faction/subfaction/type/
+             size/threat level. NPC-only fields; PC sheets never bind them. --}}
+        <div class="npc-identity">
+            <label class="identity-field grow">
+                <span>{{localize "NPC.FACTION"}}</span>
+                <input name="system.faction" type="text" value="{{source.system.faction}}" />
+            </label>
+            <label class="identity-field grow">
+                <span>{{localize "NPC.SUBFACTION"}}</span>
+                <input name="system.subfaction" type="text" value="{{source.system.subfaction}}" />
+            </label>
+            <label class="identity-field">
+                <span>{{localize "NPC.NPC_TYPE"}}</span>
+                <input name="system.npcType" type="text" value="{{source.system.npcType}}" />
+            </label>
+            <label class="identity-field">
+                <span>{{localize "NPC.SIZE"}}</span>
+                <input name="system.size" type="text" value="{{source.system.size}}" />
+            </label>
+            <label class="identity-field">
+                <span>{{localize "NPC.THREAT_LEVEL"}}</span>
+                <input name="system.threatLevel" type="text" value="{{source.system.threatLevel}}" />
+            </label>
+        </div>
+
         {{!-- Horizontal characteristic table: shorts row + values row, click to roll --}}
         <table class="npc-chars">
             <thead>

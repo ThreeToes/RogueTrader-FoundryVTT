@@ -1152,9 +1152,9 @@
             },
             "faction": "",
             "subfaction": "",
-            "type": "troop",
-            "threatLevel": 0,
-            "size": 4,
+            "npcType": "",
+            "threatLevel": "",
+            "size": "",
             "notes": ""
         },
         "dynasty": {

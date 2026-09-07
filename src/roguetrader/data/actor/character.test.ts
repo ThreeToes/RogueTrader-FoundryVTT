@@ -46,3 +46,43 @@ describe("Character derived values (definitional)", () => {
 		expect(c.initiativeBonus()).toBe(0);
 	});
 });
+
+describe("NPC identity fields (bead lib6)", () => {
+	test("faction/subfaction/npcType/size declared, blank-initial (PCs never need them)", async () => {
+		const { Character } = (await import("./character")) as unknown as {
+			Character: { defineSchema(): Record<string, unknown> };
+		};
+		const schema = Character.defineSchema();
+		for (const key of ["faction", "subfaction", "npcType", "size"]) {
+			const field = schema[key] as { opts?: { initial?: unknown } } | undefined;
+			expect(field, `schema missing ${key}`).toBeDefined();
+			expect(field?.opts?.initial).toBe("");
+		}
+		const threat = schema.threatLevel as {
+			opts?: { initial?: unknown };
+		} | undefined;
+		expect(threat?.opts?.initial).toBe("");
+	});
+
+	test("template.json npc block matches the schema (no silent drops)", async () => {
+		const template = (await import(
+			"../../../../template.json"
+		)) as unknown as {
+			Actor: { types: string[]; npc: Record<string, unknown> };
+		};
+		expect(template.Actor.types).toContain("npc");
+		const npc = template.Actor.npc as Record<string, unknown>;
+		// k4z0 GAP 2: threatLevel was a number in the template but a string in
+		// the schema — the template must carry the schema's blank initial.
+		expect(npc.threatLevel).toBe("");
+		// Renamed dead "type" key (system.type read like the actor type).
+		expect(npc.npcType).toBe("");
+		expect(npc.type).toBeUndefined();
+		// size is a string label now (the book uses words; 4 was never
+		// schema-backed).
+		expect(npc.size).toBe("");
+		for (const key of ["faction", "subfaction", "notes"]) {
+			expect(npc[key]).toBe("");
+		}
+	});
+});

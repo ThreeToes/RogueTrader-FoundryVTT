@@ -47,6 +47,14 @@ export class Character extends foundry.abstract.TypeDataModel<
 		text?: string;
 	}>;
 	declare threatLevel: string;
+	/** NPC-only identity fields (bead lib6, k4z0 GAP 1): declared so the
+	 * template.json npc block stops silently dropping them (d7js lesson).
+	 * Optional with "" initial — PCs never need them and neither the PC
+	 * sheet nor the creator binds them. */
+	declare faction: string;
+	declare subfaction: string;
+	declare npcType: string;
+	declare size: string;
 	declare shortDescription: string;
 	declare notes: string;
 	declare origins: {
@@ -253,6 +261,19 @@ export class Character extends foundry.abstract.TypeDataModel<
 			threatLevel: new foundry.data.fields.StringField({
 				initial: "",
 			}),
+			/**
+			 * NPC-only identity fields (bead lib6, k4z0 GAP 1): the
+			 * template.json npc block carried faction/subfaction/type/size but
+			 * the schema never declared them, so they were silently dropped at
+			 * init. Blank-initial so PCs and the creator never need them. npcType
+			 * renames the template's dead "type" key (system.type read like the
+			 * actor type); size is a string — the book labels statblocks with
+			 * words, and the old numeric 4 was never schema-backed.
+			 */
+			faction: new foundry.data.fields.StringField({ initial: "" }),
+			subfaction: new foundry.data.fields.StringField({ initial: "" }),
+			npcType: new foundry.data.fields.StringField({ initial: "" }),
+			size: new foundry.data.fields.StringField({ initial: "" }),
 			/** NPC short description (GM sheet header, bead mqdy). */
 			shortDescription: new foundry.data.fields.StringField({
 				initial: "",

@@ -912,6 +912,28 @@
 /* GM-facing NPC sheet (bead mqdy): horizontal characteristic table +
    compact skill/combat lists. Design-language tokens throughout. Label
    typography comes from the shared small-caps label rule (xcte). */
+.rogue-trader.sheet.npc .npc-identity {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 10px;
+	margin: 4px 0 8px;
+}
+
+.rogue-trader.sheet.npc .npc-identity .identity-field {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 70px;
+}
+
+.rogue-trader.sheet.npc .npc-identity .identity-field.grow {
+	flex: 1 1 140px;
+}
+
+.rogue-trader.sheet.npc .npc-identity input {
+	width: 100%;
+}
+
 .rogue-trader.sheet.npc table.npc-chars {
 	width: 100%;
 	border-collapse: collapse;

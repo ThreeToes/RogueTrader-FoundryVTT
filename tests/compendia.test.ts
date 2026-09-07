@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
+	actorItemKey,
+	actorKey,
 	buildTableResults,
 	documentId,
 	resolveEntryType,
 	toTableSourceDocument,
+	type ItemSourceIndex,
+	toActorSourceDocument,
 } from "../utils/compendia";
 
 describe("resolveEntryType", () => {
@@ -126,5 +130,179 @@ describe("documentId", () => {
 
 	test("is a 16-char Foundry id", () => {
 		expect(documentId("Lasgun")).toMatch(/^[A-Za-z0-9]{16}$/);
+	});
+});
+
+describe("actor packs (bead et3x)", () => {
+	const index: ItemSourceIndex = new Map([
+		[
+			"Lasgun",
+			[
+				{
+					pack: "weapons",
+					id: documentId("Lasgun"),
+					type: "ranged-weapon",
+					entry: {
+						name: "Lasgun",
+						system: { class: "ranged", damage: "1d10+3 E" },
+					},
+				},
+			],
+		],
+		[
+			"Flak Armour",
+			[
+				{
+					pack: "armour",
+					id: documentId("Flak Armour"),
+					type: "armour",
+					entry: { name: "Flak Armour", system: { armourPoints: { body: 4 } } },
+				},
+				{
+					pack: "gear",
+					id: documentId("Flak Armour"),
+					type: "armour",
+					entry: { name: "Flak Armour" },
+				},
+			],
+		],
+		[
+			"Common Lore",
+			[
+				{
+					pack: "skills",
+					id: documentId("Common Lore"),
+					type: "skill",
+					entry: { name: "Common Lore", system: { characteristic: "int" } },
+				},
+			],
+		],
+	]);
+
+	test("shapes an actor source with embedded items split out", () => {
+		const { actor, embedded } = toActorSourceDocument(
+			{
+				name: "Test Raider",
+				system: { threatLevel: "Trivial" },
+				items: [{ name: "Lasgun" }],
+			},
+			index,
+		);
+		expect(actor.type).toBe("npc");
+		expect(actor.system).toEqual({ threatLevel: "Trivial" });
+		expect(actor.items).toHaveLength(1);
+		expect(actor.effects).toEqual([]);
+		expect(embedded).toHaveLength(1);
+		expect(embedded[0].name).toBe("Lasgun");
+		expect((actor.items as string[])[0]).toBe(embedded[0]._id);
+	});
+
+	test("stamps the compendium source on linked embedded items", () => {
+		const { embedded } = toActorSourceDocument(
+			{ name: "X", items: [{ name: "Lasgun" }] },
+			index,
+		);
+		expect(
+			(embedded[0].flags as Record<string, Record<string, string>>)[
+				"rogue-trader"
+			].compendiumSource,
+		).toBe(`Compendium.rogue-trader.weapons.${documentId("Lasgun")}`);
+	});
+
+	test("linked clones inherit the pack entry's system data (z4aa)", () => {
+		const { embedded } = toActorSourceDocument(
+			{ name: "X", items: [{ name: "Lasgun" }] },
+			index,
+		);
+		expect(embedded[0].system).toEqual({
+			class: "ranged",
+			damage: "1d10+3 E",
+		});
+	});
+
+	test("sourceName links a specialisation clone to its base entry", () => {
+		const { embedded } = toActorSourceDocument(
+			{
+				name: "X",
+				items: [
+					{
+						name: "Common Lore (Imperium)",
+						fromPack: "skills",
+						sourceName: "Common Lore",
+						system: { ladder: 2 },
+					},
+				],
+			},
+			index,
+		);
+		expect(embedded[0].name).toBe("Common Lore (Imperium)");
+		// characteristic from the base catalog entry, ladder from the override.
+		expect(embedded[0].system).toEqual({ characteristic: "int", ladder: 2 });
+		const flags = (embedded[0].flags as Record<string, Record<string, unknown>>)[
+			"rogue-trader"
+		];
+		expect(flags.compendiumSource).toBe(
+			`Compendium.rogue-trader.skills.${documentId("Common Lore")}`,
+		);
+		expect(flags.sourceName).toBe("Common Lore");
+	});
+
+	test("fromPack disambiguates a name claimed by multiple packs", () => {
+		const { embedded } = toActorSourceDocument(
+			{ name: "X", items: [{ name: "Flak Armour", fromPack: "armour" }] },
+			index,
+		);
+		expect(
+			(embedded[0].flags as Record<string, Record<string, string>>)[
+				"rogue-trader"
+			].compendiumSource,
+		).toBe(
+			`Compendium.rogue-trader.armour.${documentId("Flak Armour")}`,
+		);
+	});
+
+	test("throws loudly for an unlinked embedded item (never silently drop)", () => {
+		expect(() =>
+			toActorSourceDocument({ name: "X", items: [{ name: "Mystery Gubbin" }] }, index),
+		).toThrow(/matches no compendium pack/);
+	});
+
+	test("throws loudly for an ambiguous name without fromPack", () => {
+		expect(() =>
+			toActorSourceDocument({ name: "X", items: ["Flak Armour"] }, index),
+		).toThrow(/ambiguous across packs/);
+	});
+
+	test("standalone opts out with intent and stamps nothing", () => {
+		const { embedded } = toActorSourceDocument(
+			{
+				name: "X",
+				items: [{ name: "One-off Gubbin", standalone: true, type: "gear" }],
+			},
+			index,
+		);
+		expect(
+			(embedded[0].flags as Record<string, unknown>)["rogue-trader"],
+		).toBeUndefined();
+	});
+
+	test("duplicate embedded names get distinct deterministic ids", () => {
+		const { actor, embedded } = toActorSourceDocument(
+			{
+				name: "X",
+				items: [
+					{ name: "Lasgun" },
+					{ name: "Lasgun" },
+				],
+			},
+			index,
+		);
+		expect(embedded[0]._id).not.toBe(embedded[1]._id);
+		expect(new Set(actor.items as string[]).size).toBe(2);
+	});
+
+	test("levelDB keys match the Foundry 14 sublevel format", () => {
+		expect(actorKey("abc")).toBe("!actors!abc");
+		expect(actorItemKey("a1", "b2")).toBe("!actors.items!a1.b2");
 	});
 });

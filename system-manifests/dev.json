@@ -155,6 +155,16 @@
       "system": "rogue-trader",
       "path": "packs/psychicphenomena",
       "type": "RollTable"
+    },
+    {
+      "name": "npcs",
+      "label": "Rogue Trader NPCs",
+      "system": "rogue-trader",
+      "path": "packs/npcs",
+      "type": "Actor",
+      "ownership": {
+        "PLAYER": "NONE"
+      }
     }
   ],
   "languages": [

@@ -3,6 +3,26 @@ import type { Modifier } from "../../rules-engine/src/modifier";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
+/**
+ * Standard RT difficulty ladder (bead wqt3). Values from the Core Rulebook
+ * difficulty table — UNVERIFIED IN WORLD: ladder wording/values still need an
+ * owner eyeball against the printed table before world use.
+ */
+export const DIFFICULTY_LADDER: ReadonlyArray<{
+	key: string;
+	value: number;
+}> = [
+	{ key: "TRIVIAL", value: 60 },
+	{ key: "EASY", value: 40 },
+	{ key: "ROUTINE", value: 20 },
+	{ key: "ORDINARY", value: 10 },
+	{ key: "CHALLENGING", value: 0 },
+	{ key: "HARD", value: -10 },
+	{ key: "VERY_HARD", value: -20 },
+	{ key: "ARDUOUS", value: -30 },
+	{ key: "HELLISH", value: -40 },
+];
+
 export interface TestDialogAttackContext {
 	/** Ranged weapon: show the fire-mode select (single/burst/full). */
 	ranged: boolean;
@@ -60,6 +80,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 			addModifier: TestDialog.#onAdd,
 			removeModifier: TestDialog.#onRemove,
 			updateModifier: TestDialog.#onUpdate,
+			updateDifficulty: TestDialog.#onDifficulty,
 			roll: TestDialog.#onRoll,
 			cancel: TestDialog.#onCancel,
 		},
@@ -74,6 +95,12 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	#baseTarget: number;
 	#contributors: Modifier[];
 	#custom: modifiersRow[];
+	// Bead wqt3: selected difficulty modifier (null = no selection).
+	// Kept for rerender persistence; the authoritative value at roll/preview
+	// time is read straight from the DOM select (same pattern as the
+	// attack-context selectors — Foundry action delegation doesn't reliably
+	// fire on select change events).
+	#difficultyValue: number | null = null;
 	#attackContext: TestDialogAttackContext | null;
 	// Bead hyv: attack-context selection state (read at roll time).
 	#attack: TestDialogAttackSelection = {};
@@ -116,17 +143,41 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		super.close({ force: true });
 	}
 
-	/** Current sum: fixed contributors + custom rows (re-read from inputs). */
+	/** Current difficulty value: DOM select wins, state is the fallback. */
+	#currentDifficulty(): number | null {
+		const select = this.element?.querySelector<HTMLSelectElement>(
+			"[data-difficulty]",
+		);
+		if (!select) return this.#difficultyValue;
+		return select.value === "" ? null : Number(select.value);
+	}
+
+	/** Current sum: fixed contributors + difficulty + custom rows. */
 	#totalModifier(): number {
 		return sumModifiers(this.#collectModifiers());
 	}
 
-	/** Build the Modifier[] payload from fixed + custom rows. */
+	/** Build the Modifier[] payload from fixed + difficulty + custom rows. */
 	#collectModifiers(): Modifier[] {
 		const rows = this.element?.querySelectorAll<HTMLElement>(
 			".modifier-row.custom",
 		);
 		const out: Modifier[] = this.#contributors.map((m) => ({ ...m }));
+		// Bead wqt3: append the difficulty as a labelled, visible contributor
+		// (additive with custom modifiers). Read from the DOM at roll time so
+		// it always reaches the funnel (bug: state-only tracking meant the
+		// selection was never piped into the roll).
+		const difficulty = this.#currentDifficulty();
+		if (difficulty !== null) {
+			const step = DIFFICULTY_LADDER.find((d) => d.value === difficulty);
+			out.push({
+				id: "difficulty",
+				source: { type: "dialog" as const, label: "ROLL.DIALOG" },
+				label: game.i18n.localize(
+					`ROLL.DIFFICULTY_${step?.key ?? "CUSTOM"}`),
+				value: difficulty,
+			});
+		}
 		if (!rows) return out;
 		rows.forEach((row) => {
 			const label =
@@ -169,6 +220,12 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		}));
 		context.customModifiers = this.#custom;
 		context.attackContext = this.#attackContext;
+		context.difficulty = DIFFICULTY_LADDER.map((d) => ({
+			key: d.key,
+			value: d.value,
+			label: game.i18n.localize(`ROLL.DIFFICULTY_${d.key}`),
+		}));
+		context.difficultyValue = this.#difficultyValue;
 		context.previewTarget = Math.min(
 			100,
 			Math.max(1, this.#baseTarget + this.#totalModifier()),
@@ -198,6 +255,17 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/** Live-label update without rerender; values picked up at roll time. */
 	static #onUpdate(this: TestDialog): void {
+		this.#updatePreview();
+	}
+
+	/** Bead wqt3: difficulty selection changed — update state + preview. */
+	static #onDifficulty(
+		this: TestDialog,
+		_event: unknown,
+		target: HTMLSelectElement,
+	): void {
+		const raw = target.value;
+		this.#difficultyValue = raw === "" ? null : Number(raw);
 		this.#updatePreview();
 	}
 

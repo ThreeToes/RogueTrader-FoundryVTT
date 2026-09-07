@@ -388,6 +388,50 @@ describe("performRoll dialog-skip path", () => {
 		expect(dialogShowCalls).toBe(1);
 		expect(rollCalls).toHaveLength(0);
 	});
+
+	// Bead wqt3: a difficulty (or any dialog-contributed) modifier must reach
+	// the funnel — visible in the card breakdown and applied to the target.
+	it("pipes dialog-contributed modifiers into the funnel and target", async () => {
+		resetSpies();
+		const originalShow = TestDialog.show;
+		TestDialog.show = (async () => {
+			dialogShowCalls += 1;
+			return {
+				modifiers: [
+					{
+						id: "difficulty",
+						source: { type: "dialog", label: "ROLL.DIALOG" },
+						label: "Trivial",
+						value: 60,
+					},
+				],
+			};
+		}) as typeof TestDialog.show;
+		const captured: Array<Record<string, unknown>> = [];
+		const originalRender = foundry.applications.handlebars.renderTemplate;
+		foundry.applications.handlebars.renderTemplate = (async (
+			_template: string,
+			vars: Record<string, unknown>,
+		) => {
+			captured.push(vars);
+			return "<div>card</div>";
+		}) as typeof originalRender;
+		try {
+			await performRoll({
+				kind: "characteristic",
+				actor: fixtureActor(),
+				key: "wp",
+			});
+		} finally {
+			TestDialog.show = originalShow;
+			foundry.applications.handlebars.renderTemplate = originalRender;
+		}
+		expect(captured).toHaveLength(1);
+		// wp is 45; the dialog's +60 difficulty must land on the clamped target.
+		expect(captured[0].target).toBe(100);
+		const analysis = captured[0].analysis as Array<{ label: string; value: number }>;
+		expect(analysis.some((m) => m.label === "Trivial" && m.value === 60)).toBe(true);
+	});
 });
 
 describe("psychic handler wiring", () => {

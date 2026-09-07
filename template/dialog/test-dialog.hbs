@@ -3,7 +3,6 @@
     <div class="attack-context">
         {{#if attackContext.ranged}}
         <div class="modifier-row fixed">
-            <span class="modifier-label">{{localize "ROLL.FIRE_MODE"}}</span>
             <select class="attack-select" data-fire-mode>
                 <option value="single">{{localize "ROLL.FIRE_MODE_SINGLE"}}</option>
                 <option value="burst">{{localize "ROLL.FIRE_MODE_BURST"}} (+10)</option>
@@ -28,6 +27,16 @@
         {{/if}}
     </div>
     {{/if}}
+
+    <div class="difficulty-row modifier-row fixed">
+        <select class="attack-select" data-difficulty data-action="updateDifficulty">
+            <option value="">{{localize "ROLL.DIFFICULTY_NONE"}}</option>
+            {{#each difficulty as |d|}}
+            <option value="{{d.value}}" {{#if (eq ../difficultyValue d.value)}}selected{{/if}}>{{d.label}}
+                ({{#if (gt d.value 0)}}+{{/if}}{{d.value}})</option>
+            {{/each}}
+        </select>
+    </div>
 
     <div class="modifier-list">
         <h3 class="inv-group-label">{{localize "ROLL.MODIFIERS"}}</h3>

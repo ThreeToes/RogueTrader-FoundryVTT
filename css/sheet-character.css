@@ -102,9 +102,11 @@
     flex: none;
 }
 
-/* Characteristic roll button on character sheets */
+/* Characteristic roll button on character sheets. Scoped to all sheets:
+   the rt/combat-weapon-row component (bead wiy0) renders .char-roll anchors
+   on the NPC main tab too, and the PC styling is the base. */
 
-.rogue-trader.sheet.character .char-roll {
+.rogue-trader.sheet .char-roll {
     flex: none;
     width: 1.5em;
     text-align: center;
@@ -112,7 +114,7 @@
     cursor: pointer;
 }
 
-.rogue-trader.sheet.character .char-roll:hover {
+.rogue-trader.sheet .char-roll:hover {
     text-shadow: 0 0 4px currentColor;
 }
 /* Skills tab */
@@ -1030,21 +1032,24 @@
     color: #a5936f;
 }
 
-/* Combat tab: weapons list */
+/* Combat tab: weapons list. Scoped to all sheets (not just .character):
+   the weapon row is the shared rt/combat-weapon-row component (bead wiy0)
+   used by the PC combat tab AND the NPC main tab, so the styling travels
+   with the component. */
 
-.rogue-trader.sheet.character .weapon-list {
+.rogue-trader.sheet .weapon-list {
     padding: 0;
     margin: 4px 0 0;
 }
 
-.rogue-trader.sheet.character .weapon-row {
+.rogue-trader.sheet .weapon-row {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 2px 0;
 }
 
-.rogue-trader.sheet.character .weapon-name {
+.rogue-trader.sheet .weapon-name {
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -1053,39 +1058,39 @@
     cursor: pointer;
 }
 
-.rogue-trader.sheet.character .weapon-name:hover {
+.rogue-trader.sheet .weapon-name:hover {
     color: var(--rt-gold);
 }
 
-.rogue-trader.sheet.character .weapon-class {
+.rogue-trader.sheet .weapon-class {
     font-size: var(--rt-fs-sm);
     text-transform: uppercase;
     color: var(--rt-muted);
 }
 
-.rogue-trader.sheet.character .weapon-roll {
+.rogue-trader.sheet .weapon-roll {
     flex: none;
     width: 1.5em;
 }
 
 /* Unequipped weapons: the attack icon is dimmed until carried (bead 05m). */
-.rogue-trader.sheet.character .weapon-roll.unequipped {
+.rogue-trader.sheet .weapon-roll.unequipped {
     opacity: 0.4;
 }
 
 /* Quick damage-roll button on the combat tab weapon rows. */
-.rogue-trader.sheet.character .damage-roll {
+.rogue-trader.sheet .damage-roll {
     flex: none;
     width: 1.5em;
 }
 
-.rogue-trader.sheet.character .weapon-stat {
+.rogue-trader.sheet .weapon-stat {
     min-width: 2.5em;
     text-align: center;
     font-weight: bold;
 }
 
-.rogue-trader.sheet.character .weapon-stat.rof {
+.rogue-trader.sheet .weapon-stat.rof {
     font-weight: normal;
     font-size: var(--rt-fs-lg);
 }

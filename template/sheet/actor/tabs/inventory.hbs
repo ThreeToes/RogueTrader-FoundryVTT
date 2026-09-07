@@ -28,18 +28,14 @@
         <h2 class="inv-group-label">{{localize group.label}}</h2>
         <div class="inv-list">
             {{#each group.items as |item|}}
-            {{!-- Shared inventory line (bead npc-parity): the equip toggle +
-                 optional weapon-roll anchor + name + weight + delete. --}}
+            {{!-- Shared weapon/item lines (beads npc-parity + wiy0): the
+                 weapon row is the shared rt/weapon-row component (one
+                 definition for PC + NPC); other gear keeps the plain
+                 rt/inv-row call. --}}
             {{#if item.isWeapon}}
-            {{#> "rt/inv-row" id=item.id uuid=item.uuid name=item.name draggable=true gripVertical=true
-                openItem=true openItemTooltip=(localize "GEAR.OPEN_SHEET")
-                equipToggle=true equipped=item.equipped equipAction="toggleEquip" equipTooltip=item.equipStateLabel
-                leadingIcon="fa-solid fa-dice-d10" leadingAction="rollWeapon"
-                leadingTooltip=(ifThen item.equipped (localize "WEAPON.ATTACK") item.equipStateLabel)
-                leadingClasses=(ifThen item.equipped "weapon-roll" "weapon-roll unequipped")
-                weight=(concat item.weight " kg") weightTooltip=(localize "GEAR.WEIGHT")
-                deleteAction="deleteItem" deleteTooltip=(localize "GEAR.DELETE")}}
-            {{/"rt/inv-row"}}
+            {{#> "rt/weapon-row" id=item.id uuid=item.uuid name=item.name
+                weight=item.weight equipped=item.equipped equipStateLabel=item.equipStateLabel}}
+            {{/"rt/weapon-row"}}
             {{else}}
             {{#> "rt/inv-row" id=item.id uuid=item.uuid name=item.name draggable=true gripVertical=true
                 openItem=true openItemTooltip=(localize "GEAR.OPEN_SHEET")

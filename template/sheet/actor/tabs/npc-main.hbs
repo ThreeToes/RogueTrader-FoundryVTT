@@ -70,24 +70,21 @@
         <p class="method-hint">{{localize "NPC.SKILLS_EMPTY"}}</p>
         {{/if}}
 
-        {{!-- Combat rolls: owned weapons on the shared inventory line --}}
+        {{!-- Combat rolls: owned weapons on the shared rt/combat-weapon-row
+             component (bead wiy0, owner: PC combat-tab look) — same code as
+             the PC combat tab, with the NPC action names. --}}
         <div class="inv-group-header">
             <h2 class="inv-group-label">{{localize "NPC.COMBAT"}}</h2>
         </div>
         {{#if weapons.length}}
-        <div class="inv-list">
+        <ol class="weapon-list">
             {{#each weapons as |w|}}
-            {{#> "rt/inv-row" id=w.id name=w.name
-                equipToggle=true equipped=w.equipped equipAction="toggleNpcEquip"
-                equipTooltip=(ifThen w.equipped (localize "NPC.STOW") (localize "NPC.EQUIP"))}}
-                <span class="chip origin-mod">{{w.damage}}</span>
-                <button type="button" class="ladder-option" data-action="rollNpcWeapon"
-                    data-tooltip="{{localize "NPC.ROLL_ATTACK"}}">{{localize "NPC.ATTACK"}}</button>
-                <button type="button" class="ladder-option" data-action="rollNpcDamage"
-                    data-tooltip="{{localize "NPC.ROLL_DAMAGE"}}">{{localize "NPC.DAMAGE"}}</button>
-            {{/"rt/inv-row"}}
+            {{> "rt/combat-weapon-row" id=w.id name=w.name classLabel=w.classLabel
+                damage=w.damage penetration=w.penetration isRanged=w.isRanged
+                rof=w.rof clip=w.clip
+                rollAction="rollNpcWeapon" damageAction="rollNpcDamage"}}
             {{/each}}
-        </div>
+        </ol>
         {{else}}
         <p class="method-hint">{{localize "NPC.COMBAT_EMPTY"}}</p>
         {{/if}}

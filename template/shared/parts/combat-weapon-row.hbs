@@ -1,0 +1,32 @@
+{{!-- Shared combat weapon row (bead wiy0): ONE definition of the combat-tab
+     weapon stat row, used by BOTH the PC combat tab
+     (template/sheet/actor/tabs/combat.hbs) and the NPC main tab combat list
+     (template/sheet/actor/tabs/npc-main.hbs). Anatomy: to-hit roll anchor +
+     damage-roll anchor + click-to-open name + class + damage + penetration +
+     ranged RoF/clip stats.
+     Hash: id, name, classLabel, damage, penetration, isRanged (bool),
+     rof {singleShot, burst, fullAuto} (rendered only when isRanged), clip,
+     rollAction (to-hit action, default "rollWeapon"),
+     damageAction (default "rollDamage"). --}}
+<li class="weapon-row" data-item-id="{{id}}">
+    <a class="char-roll weapon-roll" data-action="{{rollAction}}"
+        data-tooltip="{{localize "WEAPON.ATTACK"}}"
+    ><i class="fa-solid fa-dice-d10"></i></a>
+    <a class="char-roll damage-roll" data-action="{{damageAction}}"
+        data-tooltip="{{localize "WEAPON.ROLL_DAMAGE"}}"
+    ><i class="fa-solid fa-burst"></i></a>
+    <span class="weapon-name" data-action="openItem"
+        data-tooltip="{{localize "GEAR.OPEN_SHEET"}}"
+    >{{name}}</span>
+    <span class="weapon-class" data-tooltip="{{localize "WEAPON.CLASS"}}">{{localize classLabel}}</span>
+    <span class="weapon-stat" data-tooltip="{{localize "WEAPON.DAMAGE_FULL"}}">
+        <i class="fa-solid fa-burst weapon-icon"></i>{{damage}}
+    </span>
+    <span class="weapon-stat" data-tooltip="{{localize "WEAPON.PENETRATION_FULL"}}">{{penetration}}</span>
+    {{#if isRanged}}
+    <span class="weapon-stat rof" data-tooltip="{{localize "RANGED_WEAPON.RATE_OF_FIRE"}}">
+        {{rof.singleShot}}/{{rof.burst}}/{{rof.fullAuto}}
+    </span>
+    <span class="weapon-stat" data-tooltip="{{localize "RANGED_WEAPON.CLIP"}}">{{clip}}</span>
+    {{/if}}
+</li>

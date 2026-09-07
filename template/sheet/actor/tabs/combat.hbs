@@ -52,28 +52,11 @@
         {{#if weapons.length}}
         <ol class="weapon-list">
             {{#each weapons as |w|}}
-            <li class="weapon-row" data-item-id="{{w.id}}">
-                <a class="char-roll weapon-roll" data-action="rollWeapon"
-                    data-tooltip="{{localize "WEAPON.ATTACK"}}"
-                ><i class="fa-solid fa-dice-d10"></i></a>
-                <a class="char-roll damage-roll" data-action="rollDamage"
-                    data-tooltip="{{localize "WEAPON.ROLL_DAMAGE"}}"
-                ><i class="fa-solid fa-burst"></i></a>
-                <span class="weapon-name" data-action="openItem"
-                    data-tooltip="{{localize "GEAR.OPEN_SHEET"}}"
-                >{{w.name}}</span>
-                <span class="weapon-class" data-tooltip="{{localize "WEAPON.CLASS"}}">{{localize w.classLabel}}</span>
-                <span class="weapon-stat" data-tooltip="{{localize "WEAPON.DAMAGE_FULL"}}">
-                    <i class="fa-solid fa-burst weapon-icon"></i>{{w.damage}}
-                </span>
-                <span class="weapon-stat" data-tooltip="{{localize "WEAPON.PENETRATION_FULL"}}">{{w.penetration}}</span>
-                {{#if w.isRanged}}
-                <span class="weapon-stat rof" data-tooltip="{{localize "RANGED_WEAPON.RATE_OF_FIRE"}}">
-                    {{w.rof.singleShot}}/{{w.rof.burst}}/{{w.rof.fullAuto}}
-                </span>
-                <span class="weapon-stat" data-tooltip="{{localize "RANGED_WEAPON.CLIP"}}">{{w.clip}}</span>
-                {{/if}}
-            </li>
+            {{!-- Shared combat weapon row (bead wiy0): one component for the
+                 PC combat tab and the NPC main tab. --}}
+            {{> "rt/combat-weapon-row" id=w.id name=w.name classLabel=w.classLabel
+                damage=w.damage penetration=w.penetration isRanged=w.isRanged
+                rof=w.rof clip=w.clip}}
             {{/each}}
         </ol>
         {{else}}

@@ -28,12 +28,15 @@ export class NpcSheet extends RtActorSheet {
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
+			openItem: NpcSheet.#onOpenItem,
 			rollNpcTest: NpcSheet.#onRollTest,
 			rollNpcSkill: NpcSheet.#onRollSkill,
 			rollNpcWeapon: NpcSheet.#onRollWeapon,
 			rollNpcDamage: NpcSheet.#onRollDamage,
 			rollNpcPower: NpcSheet.#onRollPower,
-			setNpcLadder: NpcSheet.#onSetLadder,
+			// setNpcLadder is wired imperatively on select change (see _onRender)
+			// and must NOT be registered as a click action (breaks the
+			// ClickAction contract — its signature is (actor, itemId, value)).
 			deleteNpcSkill: NpcSheet.#onDeleteSkill,
 			toggleNpcEquip: NpcSheet.#onToggleEquip,
 			deleteNpcItem: NpcSheet.#onDeleteItem,
@@ -154,18 +157,40 @@ export class NpcSheet extends RtActorSheet {
 			})
 			.sort((a, b) => a.name.localeCompare(b.name)) as never;
 
-		// Combat: owned weapons with attack + damage rolls. equipState drives
-		// the equip/stow toggle (owner spec: NPCs are HOLDING their listed
-		// weapons, so drops default to carried — see #onDrop).
+		// Combat: owned weapons with attack + damage rolls, rendered on the
+		// shared rt/combat-weapon-row component (bead wiy0, PC combat-tab
+		// anatomy): roll + damage anchors, class label, damage, penetration,
+		// ranged RoF/clip. equipState drives the drop defaults (owner spec:
+		// NPCs are HOLDING their listed weapons — see #onDrop); the equip
+		// toggle is not part of the combat-row anatomy.
 		context.weapons = this.actor.items
 			.filter((i) => isWeaponType(i.type as string))
 			.map((i) => {
-				const s = i.system as unknown as { damage?: string };
+				const sys = i.system as unknown as {
+					class: string;
+					damage?: string;
+					penetration?: number;
+					clip?: number;
+					rateOfFire?: {
+						singleShot: boolean;
+						burst: number;
+						fullAuto: number;
+					};
+				};
+				const isRanged = i.type === "ranged-weapon";
 				return {
 					id: i.id ?? "",
 					name: i.name ?? "",
-					damage: s.damage ?? "",
-					equipped: equipStateOf(i) !== "stowed",
+					classLabel: `CLASS.${(sys.class ?? "melee").toUpperCase()}`,
+					damage: sys.damage || "\u2013",
+					penetration: sys.penetration ?? 0,
+					isRanged,
+					rof: {
+						singleShot: sys.rateOfFire?.singleShot ? "S" : "\u2013",
+						burst: sys.rateOfFire?.burst || "\u2013",
+						fullAuto: sys.rateOfFire?.fullAuto || "\u2013",
+					},
+					clip: sys.clip ?? 0,
 				};
 			}) as never;
 
@@ -235,6 +260,19 @@ export class NpcSheet extends RtActorSheet {
 			{ relativeTo: this.actor },
 		);
 		return context;
+	}
+
+	/** Open an owned item's sheet (parity with the PC inventory rows, wiy0). */
+	static async #onOpenItem(
+		this: { actor: foundry.documents.Actor },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId =
+			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		if (!itemId) return;
+		const item = this.actor.items.get(itemId);
+		if (item) item.sheet?.render(true);
 	}
 
 	/** Click a characteristic cell to roll it. */

@@ -15,6 +15,8 @@ export const SHARED_PARTIALS = [
 	"shared/parts/compact-header.hbs",
 	"shared/parts/paired-value.hbs",
 	"shared/parts/inv-row.hbs",
+	"shared/parts/weapon-row.hbs",
+	"shared/parts/combat-weapon-row.hbs",
 ] as const;
 
 const PREFIX = "systems/rogue-trader/template/";

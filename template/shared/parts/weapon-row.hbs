@@ -1,0 +1,25 @@
+{{!-- Shared weapon-row component (bead wiy0): ONE definition of the weapon
+     inventory line, used by BOTH the PC inventory (template/sheet/actor/tabs/
+     inventory.hbs) and the NPC combat list (template/sheet/actor/tabs/
+     npc-main.hbs) so the rows render identically.
+     Wraps the rt/inv-row skeleton with the full weapon anatomy: grip handle,
+     draggable affordance, click-to-open item sheet, equip toggle (circle-
+     check with the equip-state tooltip), leading dice-d10 to-hit anchor
+     (weapon-roll / weapon-roll.unequipped classes), weight, delete.
+     Hash: id, uuid, name, weight (raw number), equipped (bool),
+     equipStateLabel (equip tooltip + unequipped roll-anchor tooltip),
+     rollAction (to-hit action, default "rollWeapon"),
+     equipAction (default "toggleEquip"),
+     deleteAction (default "deleteItem").
+     The block body renders inside the row (e.g. the NPC damage chip +
+     Damage button); the PC passes no block. --}}
+{{#> "rt/inv-row" id=id uuid=uuid name=name draggable=true gripVertical=true
+    openItem=true openItemTooltip=(localize "GEAR.OPEN_SHEET")
+    equipToggle=true equipped=equipped equipAction=equipAction equipTooltip=equipStateLabel
+    leadingIcon="fa-solid fa-dice-d10" leadingAction=rollAction
+    leadingTooltip=(ifThen equipped (localize "WEAPON.ATTACK") equipStateLabel)
+    leadingClasses=(ifThen equipped "weapon-roll" "weapon-roll unequipped")
+    weight=(concat weight " kg") weightTooltip=(localize "GEAR.WEIGHT")
+    deleteAction=deleteAction deleteTooltip=(localize "GEAR.DELETE")}}
+    {{> @partial-block}}
+{{/"rt/inv-row"}}

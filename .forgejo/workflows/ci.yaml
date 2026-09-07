@@ -1,0 +1,49 @@
+# CI (bead 7nm5, phase 1): checkout -> install bun -> install deps -> test -> build.
+#
+# Phase 1 scope (owner): a plain green/red pipeline. The public/private
+# release split (packs vs no-packs, GitHub mirror vs Forgejo release) is a
+# later phase on the same bead.
+#
+# Forgejo Actions notes:
+# - Workflows live in .forgejo/workflows/ (Gitea Actions compatible syntax).
+# - `uses:` resolves against the instance's default action URL (data.forgejo.org
+#   on standard installs); adjust if your instance configures another mirror.
+# - `runs-on: ubuntu-latest` assumes the instance's default label mapping —
+#   point it at your runner's label if it differs (e.g. docker://node images).
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install bun (pinned)
+        run: |
+          curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
+          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Test
+        run: bun test
+
+      - name: Build
+        run: bun run build
+
+      # Phase-1 safety net: the compendia packer is documented to work with an
+      # empty/missing src/packs (machine-local, gitignored), so CI emits zero
+      # packs — assert the build still produced a loadable system manifest.
+      - name: Sanity-check release output
+        run: |
+          test -f release/system.json
+          test -f release/template.json
+          test -d release/packs || echo "no packs dir (expected on CI: src/packs is machine-local)"

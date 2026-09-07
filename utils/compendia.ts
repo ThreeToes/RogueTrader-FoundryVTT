@@ -534,9 +534,7 @@ export async function warnUnregisteredPacks(): Promise<void> {
 	const registered = new Set(
 		(manifest.packs ?? []).map((pack) => pack.name).filter(Boolean),
 	);
-	const folders = (await readdir(PACK_SRC, { withFileTypes: true }))
-		.filter((d) => d.isDirectory() && !d.name.startsWith("."))
-		.map((d) => d.name);
+	const folders = await listPackFolders();
 	const packFolders: string[] = [];
 	for (const folder of folders) {
 		const files = await readdir(path.join(PACK_SRC, folder));
@@ -553,10 +551,26 @@ export async function warnUnregisteredPacks(): Promise<void> {
 	}
 }
 
+/**
+ * Pack folders under PACK_SRC (dot-prefixed machine-local dirs excluded).
+ * A MISSING src/packs is the normal CI state (the dir is gitignored):
+ * yield no folders rather than throwing, matching the documented
+ * "pipeline works fine with an empty src/packs" contract.
+ */
+async function listPackFolders(): Promise<string[]> {
+	try {
+		const entries = await readdir(PACK_SRC, { withFileTypes: true });
+		return entries
+			.filter((d) => d.isDirectory() && !d.name.startsWith("."))
+			.map((d) => d.name);
+	} catch (error) {
+		if ((error as { code?: string }).code === "ENOENT") return [];
+		throw error;
+	}
+}
+
 async function main() {
-	const folders = (await readdir(PACK_SRC, { withFileTypes: true }))
-		.filter((d) => d.isDirectory() && !d.name.startsWith("."))
-		.map((d) => d.name);
+	const folders = await listPackFolders();
 
 	await warnUnregisteredPacks();
 

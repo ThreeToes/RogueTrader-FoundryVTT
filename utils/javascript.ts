@@ -1,7 +1,7 @@
 export async function bundleTypescript() {
 	const result = await Bun.build({
 		entrypoints: ["./src/roguetrader/entry-point.ts"],
-		outdir: "./release",
+		outdir: "./release/rogue_trader",
 		target: "browser",
 	});
 

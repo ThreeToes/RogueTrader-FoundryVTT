@@ -104,7 +104,7 @@ answerable there in minutes.
   build:languages | build:templates` (aggregate: `bun run build`).
 - `release/` is symlinked into the test world (`~/Documents/rogue-trader-test`), so a
   Foundry refresh in the browser **IS the deploy step**.
-- Build prunes `release/template`.
+- Build prunes `release/rogue_trader/template`.
 - Foundry pack migrations regenerate gitignored LevelDB artifacts — don't delete them.
 
 ## 7. i18n discipline
@@ -140,7 +140,8 @@ behavior. UI/lifecycle changes require a live-world check per
 The packer (`bun run build:packs`, utils/compendia.ts) converts YAML to Foundry 14
 native LevelDB packs. **Authoring sources are local-only** — `src/packs/` is
 gitignored and NO copyrighted game data (RT book skill/talent/lists) may be
-committed or shipped. Input contract, per `src/packs/<pack>/*.yaml`:
+committed or shipped. Input contract, per `src/packs/rogue_trader/<pack>/*.yaml`
+(pack sources are per-system under `rogue_trader/`, bead iw26):
 
 ```yaml
 - name: My Talent          # becomes the item name; deterministic id derived
@@ -156,7 +157,10 @@ committed or shipped. Input contract, per `src/packs/<pack>/*.yaml`:
         label: My Talent
 ```
 
-Emit: `release/packs/<pack>` LevelDB (keys `!items!<id>`). Add a matching `packs`
+Emit: `release/rogue_trader/packs/<pack>` LevelDB (keys `!items!<id>`). The
+system package root is `release/rogue_trader/` (per-system build output,
+bead mail) — manifest `packs[].path` entries stay relative to that root.
+Add a matching `packs`
 entry to the dev manifest (system-manifests/dev.json) when authoring a new pack.
 Users who want official book lists import them via Foundry's own compendium
 importer themselves — the system ships the machinery, not the data.

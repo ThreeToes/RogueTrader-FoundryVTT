@@ -5,8 +5,12 @@
 // committed. The pipeline works fine with an empty src/packs/ (no packs are
 // emitted); locally authored YAML is packed the same way.
 //
+// Pack sources are per-system: src/packs/rogue_trader/<pack>/<pack>.yaml
+// (bead iw26) so the private content repo can hold future 40k systems side
+// by side. This packer packs the rogue-trader system only.
+//
 // Format verified against a Foundry-migrated pack (old nedb .db auto-migration):
-// - each pack is a plain classic-level DB at release/packs/<pack>
+// - each pack is a plain classic-level DB at release/rogue_trader/packs/<pack>
 // - valueEncoding json; documents keyed `!items!<16-char id>` (abstract-level
 //   sublevel prefix for the items collection)
 // - document shape: {_id, name, type, system, effects: [], _stats:{coreVersion}}
@@ -17,8 +21,8 @@ import path from "node:path";
 import { ClassicLevel } from "classic-level";
 import yaml from "yaml";
 
-const PACK_SRC = "./src/packs";
-const PACK_DEST = "./release/packs";
+const PACK_SRC = "./src/packs/rogue_trader";
+const PACK_DEST = "./release/rogue_trader/packs";
 
 /** Foundry randomID charset (16 chars). */
 const ID_CHARS =
@@ -553,7 +557,7 @@ export async function warnUnregisteredPacks(): Promise<void> {
 
 /**
  * Pack folders under PACK_SRC (dot-prefixed machine-local dirs excluded).
- * A MISSING src/packs is the normal CI state (the dir is gitignored):
+ * A MISSING src/packs/rogue_trader is the normal CI state (the dir is gitignored):
  * yield no folders rather than throwing, matching the documented
  * "pipeline works fine with an empty src/packs" contract.
  */

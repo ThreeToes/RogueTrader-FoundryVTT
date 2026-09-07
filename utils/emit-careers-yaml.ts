@@ -23,9 +23,9 @@ import { readFileSync, existsSync } from "node:fs";
 import yaml from "yaml";
 
 const PARSED = "src/packs/.extraction-src/careers-parsed.json";
-const SKILLS_YAML = "src/packs/skills/skills.yaml";
-const TALENTS_YAML = "src/packs/talents/talents.yaml";
-const OUT = "src/packs/careers/careers.yaml";
+const SKILLS_YAML = "src/packs/rogue_trader/skills/skills.yaml";
+const TALENTS_YAML = "src/packs/rogue_trader/talents/talents.yaml";
+const OUT = "src/packs/rogue_trader/careers/careers.yaml";
 
 if (!existsSync(PARSED)) {
 	throw new Error(`run src/packs/.extraction-src/parse-careers.mjs first (${PARSED} missing)`);

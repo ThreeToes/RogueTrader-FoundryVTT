@@ -211,7 +211,7 @@ export async function main(
 		: "src/packs/.extraction-src/weapons2-parsed.json";
 	const outArg = argv.includes("--out")
 		? argv[argv.indexOf("--out") + 1]
-		: "src/packs/weapons/weapons.yaml";
+		: "src/packs/rogue_trader/weapons/weapons.yaml";
 	const proseArg = argv.includes("--prose")
 		? argv[argv.indexOf("--prose") + 1]
 		: "src/packs/.extraction-src/weapons2-prose.json";

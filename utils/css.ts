@@ -10,7 +10,7 @@ const SOURCES = [
 	"css/sheet-character.css",
 	"css/chat-roll.css",
 ];
-const DEST = "./release/css/rogue-trader.css";
+const DEST = "./release/rogue_trader/css/rogue-trader.css";
 
 const parts: string[] = [];
 for (const src of SOURCES) {

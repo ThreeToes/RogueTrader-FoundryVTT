@@ -77,7 +77,7 @@
             {{#> "rt/inv-row" id=c.id name=c.name}}
             <select data-action="setComponentState" data-item-id="{{c.id}}"
                 data-tooltip="{{localize "SHIP_COMBAT.STATE_HINT"}}">
-                {{selectOptions ../combat.componentStates selected=c.state}}
+                {{selectOptions @root.combat.componentStates selected=c.state}}
             </select>
             {{/"rt/inv-row"}}
             {{/each}}

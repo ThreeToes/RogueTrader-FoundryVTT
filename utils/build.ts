@@ -14,21 +14,23 @@ const WATCH_PATHS = [
 ];
 
 async function copyStaticFiles() {
-	await cp("./system-manifests/dev.json", "./release/system.json", {
+	await cp("./system-manifests/dev.json", "./release/rogue_trader/system.json", {
 		force: true,
 	});
-	await cp("./lang", "./release/lang", { recursive: true, force: true });
+	await cp("./lang", "./release/rogue_trader/lang", { recursive: true, force: true });
 	// template.json (document type declarations) ships with the system; the
 	// create-dialog type lists read it, so a stale copy breaks new types.
-	await cp("./template.json", "./release/template.json", { force: true });
-	// Prune-then-copy: release/template must mirror ./template exactly so
+	await cp("./template.json", "./release/rogue_trader/template.json", {
+		force: true,
+	});
+	// Prune-then-copy: release/rogue_trader/template must mirror ./template exactly so
 	// stale legacy templates never ship (release directory cleanup, v9o).
-	await rm("./release/template", { recursive: true, force: true });
-	await cp("./template", "./release/template", {
+	await rm("./release/rogue_trader/template", { recursive: true, force: true });
+	await cp("./template", "./release/rogue_trader/template", {
 		recursive: true,
 		force: true,
 	});
-	await cp("./asset", "./release/asset", { recursive: true, force: true });
+	await cp("./asset", "./release/rogue_trader/asset", { recursive: true, force: true });
 }
 
 async function build() {

@@ -55,7 +55,7 @@
             {{#> "rt/inv-row" id=s.id name=s.name
                 leadingIcon="fa-solid fa-dice-d10" leadingAction="rollNpcSkill" leadingTooltip=s.name
                 deleteAction="deleteNpcSkill" deleteTooltip=(localize "NPC.DELETE_SKILL")}}
-                {{#if ../editable}}
+                {{#if @root.editable}}
                 <select class="npc-ladder-select" data-item="{{s.id}}"
                     data-tooltip="{{localize "NPC.LADDER_TOOLTIP"}}">
                     {{selectOptions s.ladderOptions selected=s.ladder localize=true}}

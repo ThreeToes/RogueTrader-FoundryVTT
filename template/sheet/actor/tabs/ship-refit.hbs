@@ -32,7 +32,7 @@
             {{#if (eq c.type "ship-weapon-component")}}
             <select data-action="setWeaponSlot" data-item-id="{{c.id}}"
                 data-tooltip="{{localize "STARSHIP.SLOT_HINT"}}">
-                {{selectOptions ../../weaponSlots selected=c.slot localize=true blank="—"}}
+                {{selectOptions @root.weaponSlots selected=c.slot localize=true blank="—"}}
             </select>
             {{/if}}
             {{/"rt/inv-row"}}

@@ -42,9 +42,11 @@ jobs:
             # Phase-1 safety net: the compendia packer is documented to work with an
             # empty/missing src/packs (machine-local, gitignored), so CI emits zero
             # packs — assert the build still produced a loadable system manifest.
+            # System output is per-system under release/ (bead mail): the rogue-trader
+            # package root is release/rogue_trader/.
             - name: Sanity-check release output
               run: |
-                  test -f release/system.json
-                  test -f release/template.json
-                  test -d release/packs || echo "no packs dir (expected on CI: src/packs is machine-local)"
+                  test -f release/rogue_trader/system.json
+                  test -f release/rogue_trader/template.json
+                  test -d release/rogue_trader/packs || echo "no packs dir (expected on CI: src/packs is machine-local)"
 

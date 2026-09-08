@@ -45,35 +45,38 @@ describe("resolveEncumbrance", () => {
 	});
 });
 
-describe("carriedWeight (bead yar: equip-state filter)", () => {
-	test("carried weapons and gear count, stowed do not", () => {
+describe("carriedWeight (owner decision 2026-09-08: stowed counts, bead xhcc)", () => {
+	test("everything counts regardless of equip state", () => {
 		expect(
 			carriedWeight([
 				{ type: "ranged-weapon", weight: 4, equipState: "carried" },
-				{ type: "melee-weapon", weight: 3, equipState: "carried" },
+				{ type: "melee-weapon", weight: 3, equipState: "stowed" },
 				{ type: "gear", weight: 10, equipState: "carried" },
 				{ type: "gear", weight: 20, equipState: "stowed" },
 			]),
-		).toBe(17);
+		).toBe(37);
 	});
 
-	test("worn armour counts, stowed armour does not", () => {
+	test("worn AND stowed armour count", () => {
 		expect(
 			carriedWeight([
 				{ type: "armour", weight: 7, equipState: "worn" },
 				{ type: "armour", weight: 15, equipState: "stowed" },
 			]),
-		).toBe(7);
+		).toBe(22);
 	});
 
-	test("worn state on weapons does not count (weapons ready = carried)", () => {
+	test("equip state is irrelevant (missing state counts too)", () => {
+		expect(carriedWeight([{ type: "gear", weight: 5 }])).toBe(5);
+	});
+
+	test("negative weights clamp to zero per item", () => {
 		expect(
-			carriedWeight([{ type: "ranged-weapon", weight: 4, equipState: "worn" }]),
-		).toBe(0);
-	});
-
-	test("missing equip state counts as stowed (raw data safe default)", () => {
-		expect(carriedWeight([{ type: "gear", weight: 5 }])).toBe(0);
+			carriedWeight([
+				{ type: "gear", weight: -5 },
+				{ type: "gear", weight: 3 },
+			]),
+		).toBe(3);
 	});
 });
 

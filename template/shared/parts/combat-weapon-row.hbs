@@ -7,12 +7,16 @@
      Hash: id, name, classLabel, damage, penetration, isRanged (bool),
      rof {singleShot, burst, fullAuto} (rendered only when isRanged), clip,
      rollAction (to-hit action, default "rollWeapon"),
-     damageAction (default "rollDamage"). --}}
+     damageAction (default "rollDamage").
+     DEFAULTS ARE REAL (bead txf2): Handlebars does not default missing hash
+     keys (undefined -> data-action="" -> dead click), so both go through
+     ifThen. NOTE the NPC caller MUST pass its own names (rollNpcWeapon/
+     rollNpcDamage) — a shared default cannot serve two action namespaces. --}}
 <li class="weapon-row" data-item-id="{{id}}">
-    <a class="char-roll weapon-roll" data-action="{{rollAction}}"
+    <a class="char-roll weapon-roll" data-action="{{ifThen rollAction rollAction "rollWeapon"}}"
         data-tooltip="{{localize "WEAPON.ATTACK"}}"
     ><i class="fa-solid fa-dice-d10"></i></a>
-    <a class="char-roll damage-roll" data-action="{{damageAction}}"
+    <a class="char-roll damage-roll" data-action="{{ifThen damageAction damageAction "rollDamage"}}"
         data-tooltip="{{localize "WEAPON.ROLL_DAMAGE"}}"
     ><i class="fa-solid fa-burst"></i></a>
     <span class="weapon-name" data-action="openItem"

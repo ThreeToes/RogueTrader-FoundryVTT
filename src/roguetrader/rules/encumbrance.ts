@@ -58,25 +58,23 @@ export function resolveEncumbrance(
 	return { weight, capacity, ratio, percent, state, stateLabel };
 }
 
-/** Minimal owned-item shape for the equip-state weight filter. */
+/** Minimal owned-item shape for the encumbrance weight sum. */
 export interface CarriedItemLike {
 	type?: string;
 	weight?: number;
+	/** Accepted for structural compatibility with raw items; IGNORED by the
+	 * sum (stowed counts — owner decision 2026-09-08, bead xhcc). */
 	equipState?: string;
 }
 
 /**
- * Carried weight (bead yar): only READY items count — carried weapons and
- * gear, worn armour (the adapter's equip-state model; worn armour is on the
- * body and weighs on the wearer, VERIFY against the book's carrying rules).
- * Stowed items contribute nothing, matching the display intent "carried
- * weight".
+ * Total carried load (owner decision 2026-09-08, bead xhcc): ALL inventoried
+ * weight counts — worn and stowed armour, carried AND stowed weapons/gear.
+ * Stowed items are still hauled on the person, so they weigh; this supersedes
+ * bead yar's READY-only rule (which zeroed a fully stowed load). Equip state
+ * remains meaningful for the attack equip-gate (rules/adapter.ts), which is
+ * unaffected. Negative weights clamp to zero per item.
  */
 export function carriedWeight(items: CarriedItemLike[]): number {
-	return items.reduce((sum, item) => {
-		const ready =
-			(item.type === "armour" && item.equipState === "worn") ||
-			(item.type !== "armour" && item.equipState === "carried");
-		return ready ? sum + Math.max(0, item.weight ?? 0) : sum;
-	}, 0);
+	return items.reduce((sum, item) => sum + Math.max(0, item.weight ?? 0), 0);
 }

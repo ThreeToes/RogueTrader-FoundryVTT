@@ -11,15 +11,19 @@
      rollAction (to-hit action, default "rollWeapon"),
      equipAction (default "toggleEquip"),
      deleteAction (default "deleteItem").
+     DEFAULTS ARE REAL (bead txf2): Handlebars does not default missing hash
+     keys (they resolve to undefined -> data-action="" -> dead click), so
+     every defaulted arg goes through ifThen. Callers passing their own
+     action names (sheets with different action namespaces) override them.
      The block body renders inside the row (e.g. the NPC damage chip +
      Damage button); the PC passes no block. --}}
 {{#> "rt/inv-row" id=id uuid=uuid name=name draggable=true gripVertical=true
     openItem=true openItemTooltip=(localize "GEAR.OPEN_SHEET")
-    equipToggle=true equipped=equipped equipAction=equipAction equipTooltip=equipStateLabel
-    leadingIcon="fa-solid fa-dice-d10" leadingAction=rollAction
+    equipToggle=true equipped=equipped equipAction=(ifThen equipAction equipAction "toggleEquip") equipTooltip=equipStateLabel
+    leadingIcon="fa-solid fa-dice-d10" leadingAction=(ifThen rollAction rollAction "rollWeapon")
     leadingTooltip=(ifThen equipped (localize "WEAPON.ATTACK") equipStateLabel)
     leadingClasses=(ifThen equipped "weapon-roll" "weapon-roll unequipped")
     weight=(concat weight " kg") weightTooltip=(localize "GEAR.WEIGHT")
-    deleteAction=deleteAction deleteTooltip=(localize "GEAR.DELETE")}}
+    deleteAction=(ifThen deleteAction deleteAction "deleteItem") deleteTooltip=(localize "GEAR.DELETE")}}
     {{> @partial-block}}
 {{/"rt/inv-row"}}

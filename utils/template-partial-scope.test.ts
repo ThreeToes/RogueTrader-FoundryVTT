@@ -39,12 +39,22 @@ const stubs = {
 	},
 	concat: (...parts: unknown[]) =>
 		parts.slice(0, -1).map(String).join(""),
+	ifThen: (cond: unknown, thenValue: unknown, elseValue: unknown) =>
+		cond ? thenValue : elseValue,
 	eq: (a: unknown, b: unknown) => a === b,
 	ne: (a: unknown, b: unknown) => a !== b,
 };
 
-/** The shared partial the sheets register as "rt/inv-row" (init time). */
+/** The shared partials the sheets register (init time). */
 const INV_ROW = readFileSync("template/shared/parts/inv-row.hbs", "utf8");
+const WEAPON_ROW = readFileSync(
+	"template/shared/parts/weapon-row.hbs",
+	"utf8",
+);
+const COMBAT_WEAPON_ROW = readFileSync(
+	"template/shared/parts/combat-weapon-row.hbs",
+	"utf8",
+);
 
 function compile(name: string): HandlebarsTemplateDelegate {
 	const source = readFileSync(`template/sheet/actor/tabs/${name}`, "utf8");
@@ -53,7 +63,19 @@ function compile(name: string): HandlebarsTemplateDelegate {
 		handlebars.registerHelper(name, fn as never);
 	}
 	handlebars.registerPartial("rt/inv-row", INV_ROW);
+	handlebars.registerPartial("rt/weapon-row", WEAPON_ROW);
+	handlebars.registerPartial("rt/combat-weapon-row", COMBAT_WEAPON_ROW);
 	return handlebars.compile(source);
+}
+
+/** Compile a shared partial standalone (for direct partial tests). */
+function compilePartial(partialPath: string): HandlebarsTemplateDelegate {
+	const handlebars = Handlebars.create();
+	for (const [name, fn] of Object.entries(stubs)) {
+		handlebars.registerHelper(name, fn as never);
+	}
+	handlebars.registerPartial("rt/inv-row", INV_ROW);
+	return handlebars.compile(readFileSync(partialPath, "utf8"));
 }
 
 describe("template partial-block scope (in-world ship-sheet crash)", () => {
@@ -108,5 +130,75 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		// With the old ../editable the #if fell to the else branch always.
 		expect(html).toContain("npc-ladder-select");
 		expect(html).toContain('<option value="a"');
+	});
+
+	it("inventory weapon rows get real data-actions (equip + roll, bead txf2)", () => {
+		const render = compile("inventory.hbs");
+		const html = render({
+			encumbrance: {
+				state: "ok",
+				capacity: 10,
+				percent: 10,
+				weight: 1,
+				stateLabel: "INVENTORY.STATE_OK",
+			},
+			inventory: [
+				{
+					label: "Weapons",
+					items: [
+						{
+							id: "w1",
+							name: "Lasgun",
+							isWeapon: true,
+							weight: 3,
+							equipped: true,
+							equipStateLabel: "Carried",
+						},
+					],
+				},
+			],
+		});
+		// inventory.hbs passes NO rollAction/equipAction to rt/weapon-row —
+		// before the fix both anchors rendered data-action="" (dead clicks).
+		expect(html).toContain('data-action="rollWeapon"');
+		expect(html).toContain('data-action="toggleEquip"');
+	});
+
+	it("combat tab weapon rows default to the PC action names (bead txf2)", () => {
+		const render = compile("combat.hbs");
+		const html = render({
+			weapons: [
+				{
+					id: "w1",
+					name: "Lasgun",
+					classLabel: "WEAPON.CLASS_BASIC",
+					damage: "1d10+3",
+					penetration: 0,
+					isRanged: true,
+					rof: { singleShot: "S", burst: "-", fullAuto: "-" },
+					clip: 30,
+				},
+			],
+		});
+		// combat.hbs passes no action names — the partial must default to the
+		// PC actions; before the fix both anchors rendered data-action="".
+		expect(html).toContain('data-action="rollWeapon"');
+		expect(html).toContain('data-action="rollDamage"');
+	});
+
+	it("combat-weapon-row honours explicit caller action names (NPC override)", () => {
+		const render = compilePartial("template/shared/parts/combat-weapon-row.hbs");
+		const html = render({
+			id: "w1",
+			name: "Lasgun",
+			classLabel: "WEAPON.CLASS_BASIC",
+			damage: "1d10+3",
+			penetration: 0,
+			isRanged: false,
+			rollAction: "rollNpcWeapon",
+			damageAction: "rollNpcDamage",
+		});
+		expect(html).toContain('data-action="rollNpcWeapon"');
+		expect(html).toContain('data-action="rollNpcDamage"');
 	});
 });

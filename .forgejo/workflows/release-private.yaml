@@ -96,6 +96,17 @@ jobs:
                   test -d release/rogue_trader/packs/talents
                   test -d release/rogue_trader/packs/npcs
 
+            # act runner images are slimmer than GitHub-hosted ubuntu-latest:
+            # zip/jq are not preinstalled (live failure 2026-09-08: "zip: command
+            # not found"). Install only what's missing; act containers run as
+            # root, other runners get sudo.
+            - name: Ensure build tools (zip, jq)
+              run: |
+                  command -v zip >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && exit 0
+                  if [ "$(id -u)" = "0" ]; then SUDO=""; else SUDO="sudo"; fi
+                  $SUDO apt-get update -qq
+                  $SUDO apt-get install -y -qq zip jq
+
             - name: Zip system package
               run: |
                   cd release

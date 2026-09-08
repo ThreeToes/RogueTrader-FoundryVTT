@@ -1,4 +1,4 @@
-import { watch } from "node:fs";
+import { existsSync, watch } from "node:fs";
 import { cp, rm } from "node:fs/promises";
 import { bundlePacks } from "./compendia";
 import { bundleCss } from "./css";
@@ -14,7 +14,18 @@ const WATCH_PATHS = [
 ];
 
 async function copyStaticFiles() {
-	await cp("./system-manifests/dev.json", "./release/rogue_trader/system.json", {
+	// Which manifest ships as system.json (bead 7nm5 phase 3): dev builds ship
+	// system-manifests/dev.json; release builds (Forgejo release-private
+	// action) set RELEASE_MANIFEST=1 and ship rogue-trader-release.json — the
+	// Foundry-facing manifest carrying version + manifest/download URLs.
+	const manifestSource =
+		process.env.RELEASE_MANIFEST === "1"
+			? "./system-manifests/rogue-trader-release.json"
+			: "./system-manifests/dev.json";
+	if (!existsSync(manifestSource)) {
+		throw new Error(`build: system manifest missing: ${manifestSource}`);
+	}
+	await cp(manifestSource, "./release/rogue_trader/system.json", {
 		force: true,
 	});
 	await cp("./lang", "./release/rogue_trader/lang", { recursive: true, force: true });

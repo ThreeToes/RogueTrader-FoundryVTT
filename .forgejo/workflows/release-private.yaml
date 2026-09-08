@@ -1,0 +1,133 @@
+# Private release (bead 7nm5, phase 3): manual, Forgejo-only. NEVER pushes to
+# GitHub. Builds the FULL system WITH compendia (src/packs is cloned from the
+# private content repo), tags master, and publishes a Forgejo release with the
+# system zip attached.
+#
+# Foundry-facing contract (https://foundryvtt.com/article/system-development/):
+# - system-manifests/rogue-trader-release.json is THE release manifest. Its
+#   `manifest` field (stable raw URL on master) is what Foundry consults for
+#   update checks — it must never move. Its `download` field points at this
+#   release's zip attachment.
+# - The download URL is deterministic BEFORE the release exists
+#   (releases/download/v{version}/rogue-trader.zip), so the manifest can be
+#   committed + tagged first and the release created second.
+# - Zip shape: rogue-trader.zip contains a single top-level rogue_trader/ dir
+#   with system.json inside — Foundry accepts a single top-level folder.
+#
+# Packs access: 40k-ttrpg-content is PUBLIC on this Forgejo instance (owner,
+# 2026-09-08) — the packs clone is a plain anonymous https clone, no secret.
+#
+# Secrets required:
+# - GITEA_TOKEN: API token for release creation/asset upload. Forgejo Actions
+#   provides this automatically; if your instance does not, add it as a repo
+#   secret.
+#
+# Anonymous-read requirement: Foundry fetches the raw manifest URL and the
+# release download WITHOUT credentials — both must be reachable anonymously
+# (or by Foundry's own means) or manifest-install breaks.
+
+name: release-private
+
+on:
+    workflow_dispatch:
+        inputs:
+            bump:
+                description: Semver bump level
+                required: true
+                default: patch
+                type: choice
+                options:
+                    - major
+                    - minor
+                    - patch
+
+env:
+    FORGEJO_URL: https://prancingpony.jumblerumbling.com
+    REPO: stephen/foundryvtt-rogue-trader
+    PACKS_REPO: stephen/40k-ttrpg-content
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Checkout data packs into src/packs
+              run: |
+                  git clone --depth 1 \
+                    "https://prancingpony.jumblerumbling.com/${{ env.PACKS_REPO }}.git" \
+                    src/packs
+                  test -d src/packs/rogue_trader/talents || {
+                      echo "::error::pack sources not where the packer expects them (src/packs/rogue_trader/)"; exit 1; }
+
+            - name: Install bun (pinned)
+              run: |
+                  curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
+                  echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Bump release manifest version
+              id: bump
+              env:
+                  BUMP: ${{ inputs.bump }}
+              run: |
+                  bun utils/bump-release-manifest.mjs --bump="${BUMP}" | tee "$GITHUB_OUTPUT"
+
+            - name: Build (with compendia, release manifest)
+              env:
+                  RELEASE_MANIFEST: "1"
+              run: bun run build
+
+            - name: Sanity-check build output
+              env:
+                  VERSION: ${{ steps.bump.outputs.version }}
+                  DOWNLOAD: ${{ steps.bump.outputs.download }}
+              run: |
+                  node -e '
+                    const fs = require("fs");
+                    const m = JSON.parse(fs.readFileSync("release/rogue_trader/system.json", "utf8"));
+                    if (m.version !== process.env.VERSION) throw new Error(`zip manifest version ${m.version} != ${process.env.VERSION}`);
+                    if (m.download !== process.env.DOWNLOAD) throw new Error(`zip manifest download ${m.download} != ${process.env.DOWNLOAD}`);
+                    if (!Array.isArray(m.packs) || m.packs.length === 0) throw new Error("zip manifest has no packs");
+                  '
+                  test -d release/rogue_trader/packs/talents
+                  test -d release/rogue_trader/packs/npcs
+
+            - name: Zip system package
+              run: |
+                  cd release
+                  zip -r ../rogue-trader.zip rogue_trader
+                  cd ..
+                  unzip -l rogue-trader.zip | grep -q "rogue_trader/system.json"
+
+            - name: Commit manifest, tag, push
+              env:
+                  VERSION: ${{ steps.bump.outputs.version }}
+              run: |
+                  git config user.name "forgejo-release-bot"
+                  git config user.email "release-bot@noreply.jumblerumbling.com"
+                  git add system-manifests/rogue-trader-release.json
+                  git commit -m "Release v${VERSION}"
+                  git tag "v${VERSION}"
+                  git push origin HEAD:master
+                  git push origin "v${VERSION}"
+
+            - name: Create Forgejo release and attach zip
+              env:
+                  GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+                  VERSION: ${{ steps.bump.outputs.version }}
+              run: |
+                  RELEASE_ID=$(curl -sf -X POST \
+                    -H "Authorization: token ${GITEA_TOKEN}" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"tag_name\":\"v${VERSION}\",\"name\":\"v${VERSION}\",\"body\":\"Rogue Trader system release v${VERSION} (includes compendium packs).\"}" \
+                    "${FORGEJO_URL}/api/v1/repos/${REPO}/releases" | jq -r '.id')
+                  test -n "${RELEASE_ID}" && test "${RELEASE_ID}" != "null"
+                  curl -sf -X POST \
+                    -H "Authorization: token ${GITEA_TOKEN}" \
+                    -F "attachment=@rogue-trader.zip" \
+                    "${FORGEJO_URL}/api/v1/repos/${REPO}/releases/${RELEASE_ID}/assets?name=rogue-trader.zip"
+                  echo "release ${RELEASE_ID}: ${FORGEJO_URL}/${REPO}/releases/tag/v${VERSION}"

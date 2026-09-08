@@ -162,6 +162,13 @@ system package root is `release/rogue_trader/` (per-system build output,
 bead mail) — manifest `packs[].path` entries stay relative to that root.
 Add a matching `packs`
 entry to the dev manifest (system-manifests/dev.json) when authoring a new pack.
+
+Two manifests ship: `dev.json` for local dev builds, and
+`rogue-trader-release.json` — the Foundry-facing release manifest (version +
+`manifest`/`download` URLs per foundryvtt.com/article/system-development/).
+Set `RELEASE_MANIFEST=1` to build with the release manifest (the Forgejo
+release-private action does this); the release action also bumps the release
+manifest's version via `utils/bump-release-manifest.mjs`.
 Users who want official book lists import them via Foundry's own compendium
 importer themselves — the system ships the machinery, not the data.
 

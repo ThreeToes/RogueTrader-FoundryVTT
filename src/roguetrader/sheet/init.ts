@@ -31,6 +31,7 @@ import {
 	rollWeaponAttack,
 	rollPsychicPower,
 	rollNavigatorPower,
+	rollFearTest,
 	performRoll,
 } from "../rules/adapter";
 import type { DamageApplyFlag, DamageRollFlag } from "../rules/chat-flags";
@@ -211,6 +212,7 @@ export function sheetInit() {
 		git.rogueTrader.rollWeaponAttack = rollWeaponAttack;
 		git.rogueTrader.rollPsychicPower = rollPsychicPower;
 		git.rogueTrader.rollNavigatorPower = rollNavigatorPower;
+		git.rogueTrader.rollFearTest = rollFearTest;
 
 		// Module extension point for test modifiers (funnel v2, see rules/funnel.ts).
 		const rtc = CONFIG as unknown as {

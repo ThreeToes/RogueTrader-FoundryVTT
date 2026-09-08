@@ -47,6 +47,13 @@ import {
 } from "./psychic";
 import { resolvePower } from "./power-resolution";
 import { collectTestModifiers, mergeModifiers, type TestKind } from "./funnel";
+import {
+	degreesOfFailure,
+	fearImmune,
+	fearReroll,
+	fearSeverityModifier,
+	shockOutcome,
+} from "./fear";
 import { isWeaponType, equipStateOf } from "../data/accessors";
 import { postCard, type RtMessageFlags } from "./chat-flags";
 import { TestDialog } from "./test-dialog";
@@ -62,7 +69,8 @@ export type RollKind =
 	| "psychic"
 	| "navigator"
 	| "ship-weapon"
-	| "ship-repair";
+	| "ship-repair"
+	| "fear";
 
 /** Shared request data. The title is derived per kind in the handler. */
 interface RollBase {
@@ -132,6 +140,23 @@ export interface ShipRepairRollRequest extends RollBase {
 	itemId: string;
 }
 
+/**
+ * Fear Test (bead jpbm, Core Rulebook p295): a Willpower test rolled by the
+ * character CONFRONTING the fearsome thing. `rating` is the Fear (X) of the
+ * source (an NPC's Fear trait, a Rite of Fear aura, a scene hazard); the
+ * severity penalty −(rating−1)×10 rides on the breakdown as a visible
+ * modifier (Table 10-3).
+ */
+export interface FearRollRequest extends RollBase {
+	kind: "fear";
+	/** Fear rating of the source (Table 10-3 difficulty ladder). */
+	rating: number;
+	/** Combat failure rolls the Shock Table; non-combat posts the −10 note. */
+	situation?: "combat" | "non-combat";
+	/** Display name of the fear source for the card. */
+	sourceName?: string;
+}
+
 export type RollRequest =
 	| CharacteristicRollRequest
 	| SkillRollRequest
@@ -139,7 +164,8 @@ export type RollRequest =
 	| PsychicRollRequest
 	| NavigatorRollRequest
 	| ShipWeaponRollRequest
-	| ShipRepairRollRequest;
+	| ShipRepairRollRequest
+	| FearRollRequest;
 
 // ---------------------------------------------------------------------------
 // Handler contract
@@ -176,6 +202,8 @@ export interface PreparedRoll {
 	flags?: RtMessageFlags;
 	/** Profile override (bead sa6: Focus Power 91+ auto-fail). */
 	autoFailRoll?: number | null;
+	/** Profile override (bead jpbm: Fearless auto-passes the Fear Test). */
+	autoPassRoll?: number | null;
 	/** Kind-specific data carried from prepare to after (e.g. psychic strength). */
 	kindData?: Record<string, unknown>;
 }
@@ -212,6 +240,8 @@ export interface RollHandler<K extends RollKind> {
 		prepared: PreparedRoll,
 		outcome: TestOutcome,
 		messageId: string | null,
+		/** Resolved test numbers + final modifier list (bead jpbm). */
+		info?: { target: number; modifiers: Modifier[] },
 	): Promise<void>;
 }
 
@@ -262,7 +292,7 @@ export async function runTest(
 	prepared: PreparedRoll,
 	modifiers: Modifier[],
 	context: RollContext,
-): Promise<{ outcome: TestOutcome; messageId: string | null }> {
+): Promise<{ outcome: TestOutcome; messageId: string | null; target: number }> {
 	const collected = collectTestModifiers(
 		actor,
 		{
@@ -284,8 +314,16 @@ export async function runTest(
 		target,
 		roll: rollResult,
 		profile:
-			prepared.autoFailRoll !== undefined
-				? { ...rtCore, autoFailRoll: prepared.autoFailRoll }
+			prepared.autoFailRoll !== undefined || prepared.autoPassRoll !== undefined
+				? {
+						...rtCore,
+						...(prepared.autoFailRoll !== undefined
+							? { autoFailRoll: prepared.autoFailRoll }
+							: {}),
+						...(prepared.autoPassRoll !== undefined
+							? { autoPassRoll: prepared.autoPassRoll }
+							: {}),
+					}
 				: rtCore,
 	});
 	const outcomeLabel = outcome.success
@@ -309,7 +347,7 @@ export async function runTest(
 		},
 		prepared.flags,
 	);
-	return { outcome, messageId: message?.id ?? null };
+	return { outcome, messageId: message?.id ?? null, target };
 }
 
 // ---------------------------------------------------------------------------
@@ -1129,6 +1167,128 @@ export const navigatorHandler: RollHandler<"navigator"> = {
 };
 
 /**
+ * Fear Test (bead jpbm, Core Rulebook p294-296): a Willpower test whose
+ * severity penalty (Table 10-3) rides the breakdown as a visible modifier;
+ * context flag "fear" lets authored guarded effects (Resistance (Fear) +10,
+ * bead czx guards) apply to fear tests only. Immunity (Fearless) forces the
+ * pass via autoPassRoll and is announced on the card. Combat failure rolls
+ * the Shock Table (d100 + 10 per degree of failure, p295); non-combat
+ * failure posts the −10 concentration note (+1d5 IP when failed by 30+, p296).
+ */
+export const fearHandler: RollHandler<"fear"> = {
+	async prepare(request) {
+		const actor = request.actor;
+		if (!Number.isInteger(request.rating) || request.rating < 1) {
+			ui.notifications?.warn(
+				game.i18n.format("FEAR.INVALID_RATING", { rating: request.rating }),
+			);
+			return null;
+		}
+		const system = systemOf(actor);
+		const characteristic = system.characteristics.wp;
+		if (!characteristic) {
+			ui.notifications?.warn(
+				game.i18n.format("ROLL.UNKNOWN_CHARACTERISTIC", { key: "wp" }),
+			);
+			return null;
+		}
+		const immune = fearImmune(actor);
+		const sourceLabel = request.sourceName
+			? ` — ${game.i18n.localize("FEAR.SOURCE_PREFIX")} ${request.sourceName}`
+			: "";
+		return {
+			title: `${actor.name} — ${game.i18n.localize("FEAR.TEST_TITLE")}${sourceLabel}`,
+			baseTarget: characteristic.value,
+			testKind: "fear",
+			testKey: "wp",
+			// Severity modifier FIRST in the breakdown (visible, Table 10-3);
+			// authored guarded rows join via the funnel (flag "fear" below).
+			initialModifiers: [
+				fearSeverityModifier(request.rating),
+				...(request.modifiers ?? []),
+			],
+			weapon: null,
+			context: { flags: { fear: true } },
+			templateVars: {
+				immune,
+				situation: request.situation ?? "combat",
+			},
+			// Fearless et al: the roll is made but cannot fail (p294 Fearless
+			// prose; immune actors act normally).
+			autoPassRoll: immune ? 100 : null,
+			kindData: {
+				rating: request.rating,
+				situation: request.situation ?? "combat",
+				sourceName: request.sourceName ?? "",
+			},
+		};
+	},
+	async after(request, prepared, outcome, _messageId, info) {
+		const rerolled = (prepared.kindData?.rerolled as boolean) ?? false;
+		// Unshakeable Faith (book p108: "may re-roll failed Fear Tests"): one
+		// automatic re-roll with the SAME modifier set, visibly noted; the
+		// re-roll's own outcome replaces the original (no second re-roll).
+		if (
+			!outcome.success &&
+			!rerolled &&
+			fearReroll(request.actor)
+		) {
+			const reroll = await runTest(
+				request.actor,
+				{
+					...prepared,
+					title: `${prepared.title} — ${game.i18n.localize("FEAR.REROLL_NOTE")}`,
+					kindData: { ...prepared.kindData, rerolled: true },
+				},
+				info?.modifiers ?? [],
+				prepared.context,
+			);
+			outcome.success = reroll.outcome.success;
+			outcome.roll = reroll.outcome.roll;
+			outcome.degrees = reroll.outcome.degrees;
+		}
+		if (outcome.success) return;
+		const situation =
+			(prepared.kindData?.situation as string) ?? "combat";
+		const finalTarget = info?.target ?? prepared.baseTarget;
+		if (situation !== "combat") {
+			// Non-combat failure (p296): −10 on concentration Tests while
+			// nearby; failed by 30 or more also gains +1d5 Insanity Points.
+			const failedBy = degreesOfFailure(finalTarget, outcome.roll);
+			await postCard(
+				request.actor,
+				"systems/rogue-trader/template/chat/fear-shock.hbs",
+				{
+					title: prepared.title,
+					shockText: game.i18n.localize("FEAR.NONCOMBAT_FAILURE"),
+					insanityNote:
+						failedBy >= 4
+							? game.i18n.localize("FEAR.NONCOMBAT_INSANITY")
+							: "",
+				},
+			);
+			return;
+		}
+		// Combat failure (p295): Shock Table, d100 + 10 per degree of failure.
+		const shockDie = new foundry.dice.Roll("1d100");
+		await shockDie.evaluate();
+		const shockTotal =
+			(shockDie.total ?? 0) +
+			10 * degreesOfFailure(finalTarget, outcome.roll);
+		const row = shockOutcome(shockTotal);
+		await postCard(
+			request.actor,
+			"systems/rogue-trader/template/chat/fear-shock.hbs",
+			{
+				title: prepared.title,
+				shockRoll: shockTotal,
+				shockText: game.i18n.localize(row.textKey),
+			},
+		);
+	},
+};
+
+/**
  * The handler registry: exhaustive over RollKind. Adding a kind requires a
  * handler here (compile error otherwise) and performRoll needs no edit.
  */
@@ -1142,6 +1302,7 @@ export const rollHandlers: {
 	navigator: navigatorHandler,
 	"ship-weapon": shipWeaponHandler,
 	"ship-repair": shipRepairHandler,
+	fear: fearHandler,
 };
 
 // ---------------------------------------------------------------------------
@@ -1189,13 +1350,16 @@ export async function performRoll(request: RollRequest): Promise<void> {
 	const context = handler.testContext?.(request, prepared, dialog) ??
 		prepared.context;
 
-	const { outcome, messageId } = await runTest(
+	const { outcome, messageId, target } = await runTest(
 		request.actor,
 		prepared,
 		modifiers,
 		context,
 	);
-	await handler.after?.(request, prepared, outcome, messageId);
+	await handler.after?.(request, prepared, outcome, messageId, {
+		target,
+		modifiers,
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -1291,6 +1455,33 @@ export async function rollNavigatorPower(
 	options: RollTestOptions = {},
 ): Promise<void> {
 	await performRoll({ kind: "navigator", actor, itemId, skipDialog: options.skipDialog });
+}
+
+/**
+ * Fear Test (bead jpbm, Core Rulebook p295): the confronted character makes
+ * a Willpower test against the source's Fear (X) severity. Talents and
+ * traits feed the check via the funnel (guarded effects with condition
+ * "fear") and fear-immunity/fear-reroll effect kinds.
+ */
+export async function rollFearTest(
+	actor: Actor,
+	rating: number,
+	options: {
+		situation?: "combat" | "non-combat";
+		sourceName?: string;
+		modifiers?: Modifier[];
+		skipDialog?: boolean;
+	} = {},
+): Promise<void> {
+	await performRoll({
+		kind: "fear",
+		actor,
+		rating,
+		situation: options.situation,
+		sourceName: options.sourceName,
+		modifiers: options.modifiers,
+		skipDialog: options.skipDialog,
+	});
 }
 
 /** Ship weapon salvo (bead xfta, Core Rulebook pp220-222). */

@@ -440,6 +440,36 @@ describe("talent contributor", () => {
 		});
 	});
 
+	test("guarded fear effects apply on Fear Tests only (bead jpbm)", () => {
+		const resistanceActor = {
+			items: [
+				{
+					name: "Resistance (Fear)",
+					type: "talent",
+					system: {
+						effects: [
+							{ kind: "test-modifier", testKey: "", value: 10, label: "Resistance", condition: "fear" },
+						],
+					},
+				},
+			],
+		};
+		// Fear Tests carry the "fear" context flag (roll-system fearHandler).
+		const fearMods = collectTestModifiers(resistanceActor, {
+			kind: "fear",
+			key: "wp",
+			flags: { fear: true },
+		}).filter((m) => m.label === "Resistance");
+		expect(fearMods).toHaveLength(1);
+		expect(fearMods[0].value).toBe(10);
+		// Any other test kind: the flag is absent, the row is inert.
+		const plainMods = collectTestModifiers(resistanceActor, {
+			kind: "characteristic",
+			key: "wp",
+		}).filter((m) => m.label === "Resistance");
+		expect(plainMods).toHaveLength(0);
+	});
+
 	// Guarded effects (bead czx): a condition field gates the effect on a
 	// TestModifierContext flag, matching the talentConditions registry.
 	const guardedActor = {

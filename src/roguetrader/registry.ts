@@ -207,6 +207,10 @@ const TALENT_CONDITIONS = {
 	frenzied: "CONDITION.FRENZIED",
 	aimed: "CONDITION.AIMED",
 	opposed: "CONDITION.OPPOSED",
+	// Bead jpbm: fear tests set the context flag "fear" (roll-system), so
+	// authored effects like Resistance (Fear) +10 gate on it. Distinct i18n
+	// key from the CONDITION.FEAR status-condition label.
+	fear: "CONDITION.FEAR_TESTS",
 } as const;
 
 export const talentCategories = new EntryRegistry(TALENT_CATEGORIES);

@@ -134,6 +134,7 @@ describe("handler registry (bead mvu2)", () => {
 		expect(Object.keys(rollHandlers).sort()).toEqual(
 			[
 				"characteristic",
+				"fear",
 				"navigator",
 				"psychic",
 				"ship-repair",

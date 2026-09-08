@@ -36,7 +36,11 @@ export type TestKind =
 	// Focus Power Test (bead sa6, Core Rulebook p157): a Characteristic/Skill test
 	// with the +5-per-effective-PR bonus expressed as a funnel-visible
 	// modifier, so power/talent effects contribute via the normal funnel.
-	| "focus-power";
+	| "focus-power"
+	// Fear Test (bead jpbm, Core Rulebook p295): a Willpower test whose
+	// severity penalty is a funnel-visible modifier; context flag "fear" lets
+	// authored guarded effects (Resistance +10 etc.) apply here only.
+	| "fear";
 
 export interface TestModifierContext {
 	/** What kind of test is being rolled. */

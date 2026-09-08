@@ -1,0 +1,21 @@
+<div class="rogue-trader chat roll">
+    <div class="background border">
+        <h1>{{title}}</h1>
+        <div class="roll-summary">
+            {{#if shockRoll}}
+            <div class="roll-target">
+                <span class="label">{{localize "FEAR.SHOCK_ROLL"}}</span>
+                <span class="value">{{shockRoll}}</span>
+            </div>
+            {{/if}}
+            <div class="roll-result failure">
+                <span class="label">{{shockText}}</span>
+            </div>
+            {{#if insanityNote}}
+            <div class="roll-result">
+                <span class="label">{{insanityNote}}</span>
+            </div>
+            {{/if}}
+        </div>
+    </div>
+</div>

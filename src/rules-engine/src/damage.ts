@@ -78,6 +78,12 @@ export interface DamageRequest {
 	 */
 	isCritical?: boolean;
 	/**
+	 * Target-side flat soak independent of armour and toughness (bead zyv1:
+	 * trait effects like damage-reduction). Added to soak before wounds;
+	 * penetration never touches it — only armour absorbs Pen.
+	 */
+	flatReduction?: number;
+	/**
 	 * Whether the raw damage dice showed the profile's Righteous Fury trigger
 	 * (e.g. a natural 10 on a damage die). The kernel cannot inspect the
 	 * Foundry roll itself, so the adapter reports the trigger here; without
@@ -101,6 +107,8 @@ export interface DamageOutcome {
 	wounds: number;
 	/** Echo of the request's flatDamage/criticalDamage (card breakdown). */
 	flatDamage: number;
+	/** Echo of the request's flatReduction (card breakdown). */
+	flatReduction: number;
 	criticalDamage: number;
 	/** True when the primitive-armour doubling rule was applied (VERIFY). */
 	primitiveDouble: boolean;
@@ -117,13 +125,14 @@ export function resolveDamage(request: DamageRequest): DamageOutcome {
 	const penApplied = Math.min(penetration, armourValue);
 	const effectiveArmour = armourValue - penApplied;
 	const flatDamage = Math.max(0, request.flatDamage ?? 0);
+	const flatReduction = Math.max(0, request.flatReduction ?? 0);
 	const criticalDamage =
 		Math.max(0, request.criticalDamage ?? 0) *
 		(request.isCritical === true ? 1 : 0);
 	// Flat/critical damage join the rolled total BEFORE soak: they are part of
 	// the hit's damage, so armour and toughness reduce them normally.
 	const totalDamage = roll + flatDamage + criticalDamage;
-	const soak = toughnessBonus + effectiveArmour;
+	const soak = toughnessBonus + effectiveArmour + flatReduction;
 	const absorbed = Math.min(totalDamage, soak);
 	let wounds = Math.max(0, totalDamage - soak);
 
@@ -150,6 +159,7 @@ export function resolveDamage(request: DamageRequest): DamageOutcome {
 		location,
 		rawRoll: roll,
 		flatDamage,
+		flatReduction,
 		criticalDamage,
 		penApplied,
 		armour: armourValue,

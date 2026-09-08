@@ -333,3 +333,82 @@ describe("roll-mechanic kinds are discoverable (bead gci0)", () => {
 		}
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Target-side trait damage machinery (bead zyv1).
+// ---------------------------------------------------------------------------
+import {
+	collectTargetTraitDamageEffects,
+} from "./talent-effects";
+
+describe("collectTargetTraitDamageEffects (bead zyv1)", () => {
+	const trait = (name: string, effects: unknown[]) => ({
+		name,
+		type: "trait",
+		system: { effects },
+	});
+
+	test("tb-multiplier traits expose the multiplier; strongest wins", () => {
+		const t = collectTargetTraitDamageEffects({
+			items: [
+				trait("Unnatural Toughness (×2)", [
+					{ kind: "tb-multiplier", value: 2 },
+				]),
+				trait("Stranger trait", [{ kind: "tb-multiplier", value: 3 }]),
+			],
+		});
+		expect(t.tbMultiplier).toBe(3);
+	});
+
+	test("damage-reduction rows become additive Modifier contributors", () => {
+		const t = collectTargetTraitDamageEffects({
+			items: [
+				trait("Machine (6)", [
+					{ kind: "damage-reduction", value: 6 },
+				]),
+				trait("Plated", [{ kind: "damage-reduction", value: 2, label: "Plating" }]),
+			],
+		});
+		expect(t.reduction).toHaveLength(2);
+		expect(t.reduction.reduce((s, m) => s + m.value, 0)).toBe(8);
+		expect(t.reduction[0].label).toBe("Machine (6)");
+		expect(t.reduction[0].source).toEqual({ type: "item", label: "SOURCE.FROM_TRAITS" });
+		expect(t.reduction[1].id).toContain("Plated");
+	});
+
+	test("non-trait items and non-damage kinds are ignored", () => {
+		const t = collectTargetTraitDamageEffects({
+			items: [
+				{
+					name: "Crushing Blow",
+					type: "talent",
+					system: {
+						effects: [{ kind: "damage-reduction", value: 5 }],
+					},
+				},
+				trait("Fear (2)", [{ kind: "test-modifier", value: -10 }]),
+			],
+		});
+		expect(t.tbMultiplier).toBeNull();
+		expect(t.reduction).toHaveLength(0);
+	});
+
+	test("invalid values are skipped, not zeroed (loud data)", () => {
+		const t = collectTargetTraitDamageEffects({
+			items: [
+				trait("Bad multiplier", [{ kind: "tb-multiplier", value: 0 }]),
+				trait("Bad reduction", [{ kind: "damage-reduction", value: -3 }]),
+				trait("NaN", [{ kind: "damage-reduction", value: Number.NaN }]),
+			],
+		});
+		expect(t.tbMultiplier).toBeNull();
+		expect(t.reduction).toHaveLength(0);
+	});
+
+	test("no items at all is a clean empty collection", () => {
+		expect(collectTargetTraitDamageEffects({})).toEqual({
+			tbMultiplier: null,
+			reduction: [],
+		});
+	});
+});

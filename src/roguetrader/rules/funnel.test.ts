@@ -396,6 +396,50 @@ describe("talent contributor", () => {
 		});
 	});
 
+	// Rulebook traits (bead zyv1): innate items — always live, no equip
+	// state; test-side effect rows feed the funnel like talents do.
+	describe("trait item effects (bead zyv1)", () => {
+		const trait = (effects: unknown[]) => ({
+			name: "Machine (6)",
+			type: "trait",
+			system: { effects },
+		});
+		const collect = (items: unknown[]) =>
+			collectTestModifiers(
+				{ items },
+				{ kind: "attack", key: "ws" },
+			).filter((m) => m.id.startsWith("item:trait") || m.label === "Trait Effect");
+
+		test("unkeyed test-modifier rows contribute on any test kind", () => {
+			const mods = collect([
+				trait([{ kind: "test-modifier", testKey: "", value: -10, label: "Trait Effect" }]),
+			]);
+			expect(mods).toHaveLength(1);
+			expect(mods[0].value).toBe(-10);
+			expect(mods[0].source).toEqual({ type: "item", label: "SOURCE.FROM_TRAITS" });
+		});
+
+		test("attack-modifier rows apply only to attack tests", () => {
+			const mods = collectTestModifiers(
+				{ items: [trait([{ kind: "attack-modifier", testKey: "ws", value: 10, label: "Trait Effect" }])] },
+				{ kind: "attack", key: "ws" },
+			).filter((m) => m.label === "Trait Effect");
+			expect(mods).toHaveLength(1);
+			const nonAttack = collectTestModifiers(
+				{ items: [trait([{ kind: "attack-modifier", testKey: "ws", value: 10, label: "Trait Effect" }])] },
+				{ kind: "characteristic", key: "ws" },
+			).filter((m) => m.label === "Trait Effect");
+			expect(nonAttack).toHaveLength(0);
+		});
+
+		test("damage-side kinds never contribute test modifiers", () => {
+			expect(collect([
+				trait([{ kind: "tb-multiplier", value: 2, label: "Trait Effect" }]),
+				trait([{ kind: "damage-reduction", value: 6, label: "Trait Effect" }]),
+			])).toHaveLength(0);
+		});
+	});
+
 	// Guarded effects (bead czx): a condition field gates the effect on a
 	// TestModifierContext flag, matching the talentConditions registry.
 	const guardedActor = {

@@ -87,6 +87,47 @@ describe("sumModifiers", () => {
 });
 
 describe("resolveDamage (rt-core)", () => {
+	test("flatReduction (bead zyv1, trait damage-reduction) adds to soak post-Pen", () => {
+		// Pen 5 eats all 3 armour; the trait's flat reduction still soaks.
+		const withReduction = resolveDamage({
+			roll: 12,
+			penetration: 5,
+			toughnessBonus: 3,
+			location: "body",
+			armourValue: 3,
+			flatReduction: 4,
+			profile: rtCore,
+		});
+		expect(withReduction.soak).toBe(7);
+		expect(withReduction.flatReduction).toBe(4);
+		expect(withReduction.wounds).toBe(5);
+		expect(withReduction.absorbed).toBe(7);
+
+		// Without the reduction: soak 3, wounds 9.
+		const plain = resolveDamage({
+			roll: 12,
+			penetration: 5,
+			toughnessBonus: 3,
+			location: "body",
+			armourValue: 3,
+			profile: rtCore,
+		});
+		expect(plain.soak).toBe(3);
+		expect(plain.wounds).toBe(9);
+	});
+
+	test("negative flatReduction is clamped to 0", () => {
+		const outcome = resolveDamage({
+			roll: 10,
+			toughnessBonus: 2,
+			location: "body",
+			armourValue: 0,
+			flatReduction: -5,
+			profile: rtCore,
+		});
+		expect(outcome.soak).toBe(2);
+	});
+
 	test("soak = effective armour + TB, pen reduces armour only", () => {
 		const outcome = resolveDamage({
 			roll: 12,

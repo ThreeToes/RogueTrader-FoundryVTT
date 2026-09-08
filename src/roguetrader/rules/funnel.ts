@@ -314,6 +314,9 @@ interface ItemLike {
 
 const SOURCE_LABELS: Record<string, string> = {
 	talent: "SOURCE.FROM_TALENTS",
+	// Rulebook traits (Ch XIV) are innate items; their test-side effect rows
+	// flow through the same contributor (bead zyv1).
+	trait: "SOURCE.FROM_TRAITS",
 	armour: "SOURCE.FROM_ARMOUR",
 	gear: "SOURCE.FROM_GEAR",
 	"melee-weapon": "SOURCE.FROM_WEAPONS",

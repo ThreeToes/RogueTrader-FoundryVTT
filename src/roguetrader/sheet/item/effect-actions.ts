@@ -72,6 +72,8 @@ const EFFECT_KIND_LABEL_KEYS: Record<string, string> = {
 	"skill-rank": "EFFECT_KIND.SKILL_RANK",
 	"damage-flat": "EFFECT_KIND.DAMAGE_FLAT",
 	"critical-damage": "EFFECT_KIND.CRITICAL_DAMAGE",
+	"tb-multiplier": "EFFECT_KIND.TB_MULTIPLIER",
+	"damage-reduction": "EFFECT_KIND.DAMAGE_REDUCTION",
 };
 
 /**

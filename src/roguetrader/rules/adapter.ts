@@ -12,6 +12,8 @@ import {
 	applyTearing,
 	collectRollMechanicEffects,
 	collectTalentDamageEffects,
+	collectTargetTraitDamageEffects,
+	targetToughnessMultiplier,
 } from "./talent-effects";
 import type { DamageRollFlag } from "./chat-flags";
 import { isWeaponType } from "../data/accessors";
@@ -245,10 +247,19 @@ async function postWeaponDamage(
 			),
 		),
 	);
-	const toughnessBonus = Math.floor(
+	const naturalToughnessBonus = Math.floor(
 		((systemOf(target)).characteristics.t?.value ?? 0) /
 			10,
 	);
+	// Bead zyv1: target-side trait damage machinery. Unnatural Toughness
+	// (×N) multiplies the TB; Machine is modelled in the pack as armour items
+	// and needs no extra handling here. The multiplier rule lives in the
+	// rules layer (targetToughnessMultiplier): max of the canonical
+	// characteristics.t.unnatural field and the trait tb-multiplier effects,
+	// so the same book trait carried both ways never double-counts.
+	const traitDamage = collectTargetTraitDamageEffects(target);
+	const toughnessBonus =
+		naturalToughnessBonus * targetToughnessMultiplier(target, traitDamage);
 
 	// Talent damage effects (bead fjw): damage-flat joins the roll before
 	// soak; critical-damage applies only when the to-hit was critical.
@@ -262,10 +273,13 @@ async function postWeaponDamage(
 		weaponId: weapon.id ?? undefined,
 	});
 	// Card breakdown: flat damage always; critical-damage rows only on a
-	// critical hit (they are gated in the kernel by isCritical).
-	const damageContributors = isCritical
-		? [...talentDamage.damage, ...talentDamage.critical]
-		: [...talentDamage.damage];
+	// critical hit (they are gated in the kernel by isCritical); trait
+	// damage-reduction rows always (they soak regardless of the hit type).
+	const damageContributors = [
+		...(isCritical ? talentDamage.critical : []),
+		...talentDamage.damage,
+		...traitDamage.reduction,
+	];
 
 	const damage = resolveDamage({
 		roll: damageTotal,
@@ -277,6 +291,10 @@ async function postWeaponDamage(
 		location,
 		armourValue,
 		flatDamage: talentDamage.damage.reduce(
+			(sum, mod) => sum + mod.value,
+			0,
+		),
+		flatReduction: traitDamage.reduction.reduce(
 			(sum, mod) => sum + mod.value,
 			0,
 		),

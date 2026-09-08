@@ -15,6 +15,7 @@ import { isWeaponType } from "../data/accessors";
 
 interface ItemLike {
 	name?: string;
+	id?: string;
 	type?: string;
 	system?: {
 		effects?: Array<{
@@ -133,6 +134,19 @@ talentEffectHandlers.register("blast", (_actor, _talent, effect) => {
 	return Number.isFinite(value) ? value : 0;
 });
 
+// Target-side trait damage kinds (bead zyv1): discovery/registry entries so
+// the effect editor offers them and talentEffectHandlers.kinds() lists them.
+// Consumed from the TARGET's trait items by collectTargetTraitDamageEffects
+// (below) — NOT from talents, whose damage kinds are attacker-side (bead fjw).
+talentEffectHandlers.register("tb-multiplier", (_actor, _talent, effect) => {
+	const value = Number(effect.value ?? 0);
+	return Number.isFinite(value) && value > 0 ? value : null;
+});
+talentEffectHandlers.register("damage-reduction", (_actor, _talent, effect) => {
+	const value = Number(effect.value ?? 0);
+	return Number.isFinite(value) && value !== 0 ? value : null;
+});
+
 /** Parsed roll-mechanic inputs for one attack (bead gci0). */
 export interface RollMechanics {
 	tearing: boolean;
@@ -197,6 +211,85 @@ export function collectRollMechanicEffects(
 				if (Number.isFinite(rating)) {
 					out.blast = Math.max(out.blast ?? 0, rating);
 				}
+			}
+		}
+	}
+	return out;
+}
+
+// ---------------------------------------------------------------------------
+// Target-side trait damage machinery (bead zyv1). Rulebook traits (Ch XIV,
+// Core Rulebook) are INNATE items (type "trait", always live per
+// effectsAreLive) whose effect rows shape how incoming damage is soaked:
+//
+//   tb-multiplier    Unnatural Toughness (×2): value = the multiplier (2).
+//                    Applied to the target's Toughness Bonus by the adapter.
+//   damage-reduction Machine-style flat soak: value = soak points. Penetration
+//                    does NOT touch it (only armour absorbs Pen).
+//
+// NOTE (pack decision): the npcs pack expresses Machine (X) as a standalone
+// armour item (statblocks print it as "Armour (Machine): All X"), so those
+// NPCs must NOT also carry damage-reduction rows — that would double-count.
+// The damage-reduction kind exists for traits where the book pins a flat
+// soak without armour semantics.
+// ---------------------------------------------------------------------------
+export interface TargetTraitDamageCollection {
+	/** kind "tb-multiplier": the multiplier value (natural = 1, ×2 = 2, ...). */
+	tbMultiplier: number | null;
+	/** kind "damage-reduction" contributors (added to soak, post-Pen). */
+	reduction: Modifier[];
+}
+
+/**
+ * TB multiplier for one target (bead zyv1): the STRONGER of the canonical
+ * characteristics.t.unnatural field and the trait tb-multiplier effects.
+ * They express the same book trait, so combining them must never
+ * double-count — max wins. Never below 1 (natural).
+ */
+export function targetToughnessMultiplier(
+	target: unknown,
+	collected: TargetTraitDamageCollection,
+): number {
+	const unnatural =
+		(
+			target as {
+				system?: { characteristics?: { t?: { unnatural?: number } } };
+			}
+		).system?.characteristics?.t?.unnatural ?? 1;
+	return Math.max(1, unnatural, collected.tbMultiplier ?? 1);
+}
+
+/**
+ * Collect damage-side effects from the TARGET's trait items (bead zyv1).
+ * Pure; the adapter turns the result into TB multiplier and flat soak and
+ * keeps the rows visible in the damage-card breakdown.
+ */
+export function collectTargetTraitDamageEffects(
+	target: unknown,
+): TargetTraitDamageCollection {
+	const out: TargetTraitDamageCollection = { tbMultiplier: null, reduction: [] };
+	const items = (target as { items?: ItemLike[] }).items;
+	if (!items) return out;
+	for (const item of items) {
+		if (item.type !== "trait") continue;
+		for (const effect of item.system?.effects ?? []) {
+			const value = Number(effect.value);
+			// Invalid or non-positive values are skipped, never zeroed: bad
+			// pack data must not silently become "no effect".
+			if (!Number.isFinite(value) || value <= 0) continue;
+			if (effect.kind === "tb-multiplier") {
+				// Multipliers don't stack: the strongest one wins (a creature
+				// with two ×N sources is unexpected, but the invariant is safe).
+				out.tbMultiplier = Math.max(out.tbMultiplier ?? 0, value);
+			} else if (effect.kind === "damage-reduction") {
+				// Item name rides on the id so same-shaped rows on different
+				// traits stay additive (funnel dedupe lesson).
+				out.reduction.push({
+					id: `trait-reduction:${item.name ?? ""}:${effect.label ?? ""}`,
+					source: { type: "item", label: "SOURCE.FROM_TRAITS" },
+					label: effect.label || item.name || "",
+					value,
+				});
 			}
 		}
 	}

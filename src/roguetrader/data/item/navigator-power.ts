@@ -1,4 +1,5 @@
 import { CHARACTERISTIC_KEYS } from "../actor/character";
+import { sourceField } from "./source";
 
 /**
  * Navigator powers (bead sa6, Core Rulebook Ch. VII book pp178-181). Distinct
@@ -72,6 +73,8 @@ export class NavigatorPower extends foundry.abstract.TypeDataModel<
 			shortDescription: new foundry.data.fields.StringField({
 				initial: "",
 			}),
+			// Source attribution (bead zzlq): books.yaml slug + printed page.
+			source: sourceField(),
 		};
 	}
 

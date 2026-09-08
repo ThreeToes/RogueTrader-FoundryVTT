@@ -1,4 +1,5 @@
 import { effectsField, type EffectData } from "./effects";
+import { sourceField } from "./source";
 
 /**
  * Rulebook traits (bead 25ii): innate creature features from the Core
@@ -41,6 +42,8 @@ export class Trait extends foundry.abstract.TypeDataModel<
 			 * prose only. Raw capture; the funnel bead (zyv1) wires consumption.
 			 */
 			effects: effectsField(),
+			// Source attribution (bead zzlq): books.yaml slug + printed page.
+			source: sourceField(),
 			/** Short free-text summary (pickers/list display). */
 			shortDescription: new foundry.data.fields.StringField({
 				initial: "",

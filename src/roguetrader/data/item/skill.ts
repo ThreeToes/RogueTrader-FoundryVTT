@@ -1,4 +1,5 @@
 import { CHARACTERISTIC_KEYS } from "../actor/character";
+import { sourceField } from "./source";
 
 /**
  * Skills as Items (content-as-data): the RT core catalog ships as a
@@ -61,6 +62,8 @@ export class Skill extends foundry.abstract.TypeDataModel<
 			grantedBy: new foundry.data.fields.StringField({
 				initial: "",
 			}),
+			// Source attribution (bead zzlq): books.yaml slug + printed page.
+			source: sourceField(),
 		};
 	}
 

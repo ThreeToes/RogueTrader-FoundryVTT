@@ -2,6 +2,7 @@ import { equipStates } from "../../registry";
 import { Availability, normalizeAvailability } from "./availability";
 import { Craftsmanship } from "./craftsmanship";
 import { effectsField } from "./effects";
+import { sourceField } from "./source";
 
 export class Gear extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,
@@ -51,6 +52,8 @@ export class Gear extends foundry.abstract.TypeDataModel<
 			shortDescription: new foundry.data.fields.StringField(),
 			description: new foundry.data.fields.HTMLField(),
 			effects: effectsField(),
+			// Source attribution (bead zzlq): books.yaml slug + printed page.
+			source: sourceField(),
 		};
 	}
 }

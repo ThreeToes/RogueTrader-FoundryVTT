@@ -1,5 +1,6 @@
 import { talentCategories } from "../../registry";
 import { effectsField, type EffectData } from "./effects";
+import { sourceField } from "./source";
 
 /**
  * Talents as Items (content-as-data, mirroring Skill): actors own `talent`
@@ -61,6 +62,8 @@ export class Talent extends foundry.abstract.TypeDataModel<
 				initial: "",
 			}),
 			effects: effectsField(),
+			// Source attribution (bead zzlq): books.yaml slug + printed page.
+			source: sourceField(),
 			/** Short free-text description shown in pickers. */
 			shortDescription: new foundry.data.fields.StringField({
 				initial: "",

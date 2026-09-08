@@ -1,3 +1,6 @@
+import { CHARACTERISTIC_KEYS } from "../actor/character";
+import { sourceField } from "./source";
+
 /**
  * Careers as Items (content-as-data, mirroring Talent/Skill): actors pick a
  * career; the catalog lives in registries (CONFIG.ROGUE_TRADER.careers) and
@@ -43,15 +46,10 @@ export class Career extends foundry.abstract.TypeDataModel<
 			}),
 			/** Long prose description (career section, HTML for prose-mirror). */
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
-			/** Citation: which book/page this career (or alt-rank set) came from. */
-			source: new foundry.data.fields.SchemaField({
-				book: new foundry.data.fields.StringField({ initial: "Core Rulebook" }),
-				page: new foundry.data.fields.NumberField({
-					integer: true,
-					min: 0,
-					initial: 0,
-				}),
-			}),
+			/** Citation: which book/page this career (or alt-rank set) came from.
+			 * Bead zzlq: unified on the shared sourceField — book is the
+			 * books.yaml SLUG (display resolves via books.yaml titles). */
+			source: sourceField(),
 			/**
 			 * Characteristic Advance Scheme: per-characteristic XP costs for the
 			 * four book progression levels (Simple/Intermediate/Trained/Expert).

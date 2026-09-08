@@ -1,5 +1,6 @@
 import { DamageType } from "./damage-types";
 import { effectsField, type EffectData } from "./effects";
+import { sourceField } from "./source";
 
 /** Psychic power sub-types (RT core, VERIFY against the book when seeding). */
 export const psychicPowerSubtypes = [
@@ -97,6 +98,8 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 			 * talents — effectsAreLive); other kinds go to registered handlers.
 			 */
 			effects: effectsField(),
+			// Source attribution (bead zzlq): books.yaml slug + printed page.
+			source: sourceField(),
 			/** Focus Power Test characteristic/skill (e.g. "Willpower"). */
 			focusTest: new foundry.data.fields.StringField({
 				initial: "",

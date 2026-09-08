@@ -243,6 +243,30 @@ function toSourceDocument(entry: Record<string, unknown>, folder: string) {
 }
 
 /**
+ * Source-attribution audit (bead zzlq): every Item entry should carry
+ * system.source {book, page}. Missing = warn per pack (not a hard failure:
+ * pre-zzlq authoring may lag), so extraction beads see the debt loudly.
+ */
+function auditSourceAttribution(
+	packKey: string,
+	entries: Array<Record<string, unknown>>,
+): void {
+	const missing = entries
+		.filter((entry) => {
+			const source = (entry.system as { source?: { book?: string; page?: number } })
+				?.source;
+			return !source?.book || !source.page;
+		})
+		.map((entry) => String(entry.name ?? "unnamed"));
+	if (missing.length > 0) {
+		console.warn(
+			`[packs] ${packKey}: ${missing.length}/${entries.length} entries missing system.source ` +
+				`(bead zzlq): ${missing.join(", ")}`,
+		);
+	}
+}
+
+/**
  * Build a name -> sources index across every Item pack so actor-pack
  * embedded items can be stamped with their compendium source uuid
  * (Compendium.rogue-trader.<pack>.<id>). Table and actor packs are skipped.
@@ -470,6 +494,9 @@ async function buildPack(
 
 	for (const file of sourceFiles) {
 		const entries = await readYamlEntries(path.join(PACK_SRC, folder, file));
+		if (!isActorPack && !isTablePack) {
+			auditSourceAttribution(`${folder}/${file.replace(/\.yaml$/, "")}`, entries);
+		}
 		for (const source of entries) {
 			if (isActorPack) {
 				// Foundry stores Actor docs under the `!actors!` sublevel with

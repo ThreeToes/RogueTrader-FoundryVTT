@@ -122,6 +122,27 @@
       "type": "Item"
     },
     {
+      "name": "shiptables",
+      "label": "Rogue Trader Ship Tables",
+      "system": "rogue-trader",
+      "path": "packs/shiptables",
+      "type": "Item"
+    },
+    {
+      "name": "gametables",
+      "label": "Rogue Trader Game Tables",
+      "system": "rogue-trader",
+      "path": "packs/gametables",
+      "type": "Item"
+    },
+    {
+      "name": "traits",
+      "label": "Rogue Trader Traits",
+      "system": "rogue-trader",
+      "path": "packs/traits",
+      "type": "Item"
+    },
+    {
       "name": "cybernetics",
       "label": "Rogue Trader Cybernetics",
       "system": "rogue-trader",

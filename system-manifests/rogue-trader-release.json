@@ -1,280 +1,301 @@
 {
-  "id": "rogue-trader",
-  "title": "Rogue Trader",
-  "description": "Unofficial Foundry VTT System for Rogue Trader.",
-  "version": "0.0.4",
-  "minimumCoreVersion": 13,
-  "compatibility": {
-    "minimum": 13,
-    "verified": 14,
-    "maximum": 14
-  },
-  "templateVersion": 2,
-  "authors": [
-    {
-      "name": "ThreeToes"
-    }
-  ],
-  "scripts": [],
-  "esmodules": [
-    "./entry-point.js"
-  ],
-  "styles": [
-    "./css/rogue-trader.css"
-  ],
-  "packs": [
-    {
-      "name": "aptitudes",
-      "label": "Character Aptitudes",
-      "system": "rogue-trader",
-      "path": "packs/aptitudes",
-      "type": "Item"
+    "id": "rogue-trader",
+    "title": "Rogue Trader",
+    "description": "Unofficial Foundry VTT System for Rogue Trader.",
+    "version": "0.0.4",
+    "minimumCoreVersion": 13,
+    "compatibility": {
+        "minimum": 13,
+        "verified": 14,
+        "maximum": 14
     },
-    {
-      "name": "skills",
-      "label": "Rogue Trader Skills",
-      "system": "rogue-trader",
-      "path": "packs/skills",
-      "type": "Item"
+    "templateVersion": 2,
+    "authors": [
+        {
+            "name": "ThreeToes"
+        }
+    ],
+    "scripts": [],
+    "esmodules": [
+        "./entry-point.js"
+    ],
+    "styles": [
+        "./css/rogue-trader.css"
+    ],
+    "packs": [
+        {
+            "name": "aptitudes",
+            "label": "Character Aptitudes",
+            "system": "rogue-trader",
+            "path": "packs/aptitudes",
+            "type": "Item"
+        },
+        {
+            "name": "skills",
+            "label": "Rogue Trader Skills",
+            "system": "rogue-trader",
+            "path": "packs/skills",
+            "type": "Item"
+        },
+        {
+            "name": "talents",
+            "label": "Rogue Trader Talents",
+            "system": "rogue-trader",
+            "path": "packs/talents",
+            "type": "Item"
+        },
+        {
+            "name": "careers",
+            "label": "Rogue Trader Careers",
+            "system": "rogue-trader",
+            "path": "packs/careers",
+            "type": "Item"
+        },
+        {
+            "name": "weapons",
+            "label": "Rogue Trader Weapons",
+            "system": "rogue-trader",
+            "path": "packs/weapons",
+            "type": "Item"
+        },
+        {
+            "name": "criticals",
+            "label": "Critical Hit Effects",
+            "system": "rogue-trader",
+            "path": "packs/criticals",
+            "type": "RollTable"
+        },
+        {
+            "name": "creationtables",
+            "label": "Creation Tables",
+            "system": "rogue-trader",
+            "path": "packs/creationtables",
+            "type": "RollTable"
+        },
+        {
+            "name": "armour",
+            "label": "Rogue Trader Armour",
+            "system": "rogue-trader",
+            "path": "packs/armour",
+            "type": "Item"
+        },
+        {
+            "name": "gear",
+            "label": "Rogue Trader Gear",
+            "system": "rogue-trader",
+            "path": "packs/gear",
+            "type": "Item"
+        },
+        {
+            "name": "drugs",
+            "label": "Rogue Trader Drugs and Consumables",
+            "system": "rogue-trader",
+            "path": "packs/drugs",
+            "type": "Item"
+        },
+        {
+            "name": "tools",
+            "label": "Rogue Trader Tools",
+            "system": "rogue-trader",
+            "path": "packs/tools",
+            "type": "Item"
+        },
+        {
+            "name": "origin-traits",
+            "label": "Rogue Trader Origin Traits",
+            "system": "rogue-trader",
+            "path": "packs/origin-traits",
+            "type": "Item"
+        },
+        {
+            "name": "mutations",
+            "label": "Rogue Trader Mutations",
+            "system": "rogue-trader",
+            "path": "packs/mutations",
+            "type": "Item"
+        },
+        {
+            "name": "madness",
+            "label": "Rogue Trader Madness",
+            "system": "rogue-trader",
+            "path": "packs/madness",
+            "type": "Item"
+        },
+        {
+            "name": "cybernetics",
+            "label": "Rogue Trader Cybernetics",
+            "system": "rogue-trader",
+            "path": "packs/cybernetics",
+            "type": "Item"
+        },
+        {
+            "name": "ships",
+            "label": "Rogue Trader Starships",
+            "system": "rogue-trader",
+            "path": "packs/ships",
+            "type": "Item"
+        },
+        {
+            "name": "psychicpowers",
+            "label": "Rogue Trader Psychic Powers",
+            "system": "rogue-trader",
+            "path": "packs/psychicpowers",
+            "type": "Item"
+        },
+        {
+            "name": "navigatorpowers",
+            "label": "Navigator Powers",
+            "system": "rogue-trader",
+            "path": "packs/navigatorpowers",
+            "type": "Item"
+        },
+        {
+            "name": "psychicphenomena",
+            "label": "Psychic Phenomena & Perils of the Warp",
+            "system": "rogue-trader",
+            "path": "packs/psychicphenomena",
+            "type": "RollTable"
+        },
+        {
+            "name": "npcs",
+            "label": "Rogue Trader NPCs",
+            "system": "rogue-trader",
+            "path": "packs/npcs",
+            "type": "Actor",
+            "ownership": {
+                "PLAYER": "NONE"
+            }
+        },
+        {
+            "name": "shiptables",
+            "label": "Rogue Trader Ship Tables",
+            "system": "rogue-trader",
+            "path": "packs/shiptables",
+            "type": "Item"
+        },
+        {
+            "name": "gametables",
+            "label": "Rogue Trader Game Tables",
+            "system": "rogue-trader",
+            "path": "packs/gametables",
+            "type": "Item"
+        },
+        {
+            "name": "traits",
+            "label": "Rogue Trader Traits",
+            "system": "rogue-trader",
+            "path": "packs/traits",
+            "type": "Item"
+        }
+    ],
+    "languages": [
+        {
+            "lang": "en",
+            "name": "English",
+            "path": "lang/en.json"
+        },
+        {
+            "lang": "es",
+            "name": "Español",
+            "path": "lang/es.json"
+        },
+        {
+            "lang": "fr",
+            "name": "Français",
+            "path": "lang/fr.json"
+        },
+        {
+            "lang": "pl",
+            "name": "Polski",
+            "path": "lang/pl.json"
+        }
+    ],
+    "documentTypes": {
+        "Actor": {
+            "npc": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "vehicle": {
+                "htmlFields": [
+                    "description"
+                ]
+            }
+        },
+        "Item": {
+            "gear": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "ranged-weapon": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "melee-weapon": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "armour": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "skill": {},
+            "talent": {},
+            "psychicpower": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "ammunition": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "force-field": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "weapon-modification": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "tool": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "drug": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "special-ability": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "aptitude": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
+            "trait": {}
+        }
     },
-    {
-      "name": "talents",
-      "label": "Rogue Trader Talents",
-      "system": "rogue-trader",
-      "path": "packs/talents",
-      "type": "Item"
-    },
-    {
-      "name": "careers",
-      "label": "Rogue Trader Careers",
-      "system": "rogue-trader",
-      "path": "packs/careers",
-      "type": "Item"
-    },
-    {
-      "name": "weapons",
-      "label": "Rogue Trader Weapons",
-      "system": "rogue-trader",
-      "path": "packs/weapons",
-      "type": "Item"
-    },
-    {
-      "name": "criticals",
-      "label": "Critical Hit Effects",
-      "system": "rogue-trader",
-      "path": "packs/criticals",
-      "type": "RollTable"
-    },
-    {
-      "name": "creationtables",
-      "label": "Creation Tables",
-      "system": "rogue-trader",
-      "path": "packs/creationtables",
-      "type": "RollTable"
-    },
-    {
-      "name": "armour",
-      "label": "Rogue Trader Armour",
-      "system": "rogue-trader",
-      "path": "packs/armour",
-      "type": "Item"
-    },
-    {
-      "name": "gear",
-      "label": "Rogue Trader Gear",
-      "system": "rogue-trader",
-      "path": "packs/gear",
-      "type": "Item"
-    },
-    {
-      "name": "drugs",
-      "label": "Rogue Trader Drugs and Consumables",
-      "system": "rogue-trader",
-      "path": "packs/drugs",
-      "type": "Item"
-    },
-    {
-      "name": "tools",
-      "label": "Rogue Trader Tools",
-      "system": "rogue-trader",
-      "path": "packs/tools",
-      "type": "Item"
-    },
-    {
-      "name": "origin-traits",
-      "label": "Rogue Trader Origin Traits",
-      "system": "rogue-trader",
-      "path": "packs/origin-traits",
-      "type": "Item"
-    },
-    {
-      "name": "mutations",
-      "label": "Rogue Trader Mutations",
-      "system": "rogue-trader",
-      "path": "packs/mutations",
-      "type": "Item"
-    },
-    {
-      "name": "madness",
-      "label": "Rogue Trader Madness",
-      "system": "rogue-trader",
-      "path": "packs/madness",
-      "type": "Item"
-    },
-    {
-      "name": "cybernetics",
-      "label": "Rogue Trader Cybernetics",
-      "system": "rogue-trader",
-      "path": "packs/cybernetics",
-      "type": "Item"
-    },
-    {
-      "name": "ships",
-      "label": "Rogue Trader Starships",
-      "system": "rogue-trader",
-      "path": "packs/ships",
-      "type": "Item"
-    },
-    {
-      "name": "psychicpowers",
-      "label": "Rogue Trader Psychic Powers",
-      "system": "rogue-trader",
-      "path": "packs/psychicpowers",
-      "type": "Item"
-    },
-    {
-      "name": "navigatorpowers",
-      "label": "Navigator Powers",
-      "system": "rogue-trader",
-      "path": "packs/navigatorpowers",
-      "type": "Item"
-    },
-    {
-      "name": "psychicphenomena",
-      "label": "Psychic Phenomena & Perils of the Warp",
-      "system": "rogue-trader",
-      "path": "packs/psychicphenomena",
-      "type": "RollTable"
-    },
-    {
-      "name": "npcs",
-      "label": "Rogue Trader NPCs",
-      "system": "rogue-trader",
-      "path": "packs/npcs",
-      "type": "Actor",
-      "ownership": {
-        "PLAYER": "NONE"
-      }
-    }
-  ],
-  "languages": [
-    {
-      "lang": "en",
-      "name": "English",
-      "path": "lang/en.json"
-    },
-    {
-      "lang": "es",
-      "name": "Español",
-      "path": "lang/es.json"
-    },
-    {
-      "lang": "fr",
-      "name": "Français",
-      "path": "lang/fr.json"
-    },
-    {
-      "lang": "pl",
-      "name": "Polski",
-      "path": "lang/pl.json"
-    }
-  ],
-  "documentTypes": {
-    "Actor": {
-      "npc": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "vehicle": {
-        "htmlFields": [
-          "description"
-        ]
-      }
-    },
-    "Item": {
-      "gear": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "ranged-weapon": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "melee-weapon": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "armour": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "skill": {},
-      "talent": {},
-      "psychicpower": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "ammunition": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "force-field": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "weapon-modification": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "tool": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "drug": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "special-ability": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "aptitude": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "trait": {}
-    }
-  },
-  "gridDistance": 1,
-  "gridUnits": "m",
-  "primaryTokenAttribute": null,
-  "secondaryTokenAttribute": null,
-  "url": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader",
-  "socket": true,
-  "license": "LICENSE.md",
-  "manifest": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/raw/branch/master/system-manifests/rogue-trader-release.json",
-  "download": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/releases/download/v0.0.4/rogue-trader.zip"
+    "gridDistance": 1,
+    "gridUnits": "m",
+    "primaryTokenAttribute": null,
+    "secondaryTokenAttribute": null,
+    "url": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader",
+    "socket": true,
+    "license": "LICENSE.md",
+    "manifest": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/raw/branch/master/system-manifests/rogue-trader-release.json",
+    "download": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/releases/download/v0.0.4/rogue-trader.zip"
 }

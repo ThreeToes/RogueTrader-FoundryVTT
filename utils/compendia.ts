@@ -101,19 +101,62 @@ export const TABLE_PACKS: ReadonlySet<string> = new Set([
  */
 export const ACTOR_PACKS: ReadonlySet<string> = new Set(["npcs"]);
 
-/**
- * LevelDB key builders for Actor packs (et3x). Verified against Foundry
- * 14.366 core (server-document.mjs): sublevel names join the document
- * hierarchy with "." (actors, actors.items, ...), keys are
- * `!<sublevelName>!<dbKey>`, and an embedded record's dbKey is its parent id
- * chain joined with "." (`<actorId>.<itemId>`).
- */
 export function actorKey(actorId: string): string {
 	return `!actors!${actorId}`;
 }
 
 export function actorItemKey(actorId: string, itemId: string): string {
 	return `!actors.items!${actorId}.${itemId}`;
+}
+
+/**
+ * Journal packs (bead rb5g): rules/lore-reference compendiums. Foundry
+ * LevelDB stores JournalEntry docs under `!journal!<id>` with their embedded
+ * pages split into `!journal.pages!<journalId>.<pageId>` records (same
+ * pattern as actors/actors.items, _getSublevelNames verified).
+ */
+export const JOURNAL_PACKS: ReadonlySet<string> = new Set(["rules", "lore"]);
+
+export function journalKey(journalId: string): string {
+	return `!journal!${journalId}`;
+}
+
+export function journalPageKey(journalId: string, pageId: string): string {
+	return `!journal.pages!${journalId}.${pageId}`;
+}
+
+/** One resolvable link target: pack key + document id. */
+export interface LinkTarget {
+	pack: string;
+	id: string;
+}
+
+/** Name -> link targets, across every pack (items, actors, journals). */
+export type LinkIndex = Map<string, LinkTarget[]>;
+
+/**
+ * Resolve `[[name]]` / `[[name|label]]` authoring links in journal page
+ * text to Foundry @UUID links (Compendium.rogue-trader.<pack>.<id>).
+ * Unresolvable names stay literal with a loud warning — never silent.
+ */
+export function resolveLinks(text: string, index: LinkIndex): string {
+	return text.replace(/\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g, (_m, name, label) => {
+		const targets = index.get(String(name).trim()) ?? [];
+		if (targets.length === 0) {
+			console.warn(
+				`compendia: journal link "[[${name}]]" matches no compendium document — left as plain text (loud failure, bead rb5g/lore)`,
+			);
+			return label ? `[${name}]` : name;
+		}
+		if (targets.length > 1) {
+			console.warn(
+				`compendia: journal link "[[${name}]]" is ambiguous across packs [${targets.map((t) => t.pack).join(", ")}] — using the first`,
+			);
+		}
+		const t = targets[0];
+		const linkLabel = (label ?? name).trim();
+		return `@UUID[Compendium.rogue-trader.${t.pack}.${t.id}]{${linkLabel}}`;
+	});
 }
 
 /** Where one pack's item lives, for compendium-source stamping (et3x). */
@@ -276,7 +319,12 @@ export async function buildItemSourceIndex(
 ): Promise<ItemSourceIndex> {
 	const index: ItemSourceIndex = new Map();
 	for (const dir of dirs) {
-		if (TABLE_PACKS.has(dir.name) || ACTOR_PACKS.has(dir.name)) continue;
+		if (
+			TABLE_PACKS.has(dir.name) ||
+			ACTOR_PACKS.has(dir.name) ||
+			JOURNAL_PACKS.has(dir.name)
+		)
+			continue;
 		let files: string[] = [];
 		try {
 			files = (await readdir(path.join(PACK_SRC, dir.name))).filter((f) =>
@@ -298,6 +346,49 @@ export async function buildItemSourceIndex(
 					entry,
 				});
 				index.set(name, list);
+			}
+		}
+	}
+	return index;
+}
+
+/**
+ * Build the link index for journal-page `[[name]]` links (bead rb5g/lore):
+ * EVERY pack contributes — item entries by name, actor entries (npcs
+ * statblocks), journal entries, and RollTable docs.
+ */
+export async function buildLinkIndex(
+	dirs: Array<{ name: string }>,
+): Promise<LinkIndex> {
+	const index: LinkIndex = new Map();
+	const add = (name: string, pack: string, entry?: Record<string, unknown>) => {
+		if (!name) return;
+		const list = index.get(name) ?? [];
+		list.push({
+			pack,
+			id: documentId(name, entry?._id as string | undefined),
+		});
+		index.set(name, list);
+	};
+	for (const dir of dirs) {
+		let files: string[] = [];
+		try {
+			files = (await readdir(path.join(PACK_SRC, dir.name))).filter((f) =>
+				f.endsWith(".yaml"),
+			);
+		} catch {
+			continue;
+		}
+		for (const file of files) {
+			const entries = await readYamlEntries(path.join(PACK_SRC, dir.name, file));
+			for (const entry of entries) {
+				add(String(entry.name ?? ""), dir.name, entry);
+				// Actor packs: embedded items are link targets too (e.g. an NPC
+				// species' own statblock items) — index them under the pack.
+				for (const item of Array.isArray(entry.items) ? entry.items : []) {
+					const raw = typeof item === "string" ? { name: item } : item;
+					if (raw && raw.name) add(String(raw.name), dir.name);
+				}
 			}
 		}
 	}
@@ -436,6 +527,54 @@ export function toEmbeddedItemDocument(
  * Authoring shape: {name, type: <actor subtype, default npc>, system,
  * items: [embedded item entries], img?, prototypeToken?, flags?}.
  */
+/** Shape a rules.yaml entry into a JournalEntry source document + pages. */
+export function toJournalSourceDocument(
+	entry: Record<string, unknown>,
+	linkIndex: LinkIndex,
+): { journal: Record<string, unknown>; pages: Array<Record<string, unknown>> } {
+	const name = String(entry.name ?? "unnamed");
+	const rawPages = Array.isArray(entry.pages) ? entry.pages : [];
+	let sort = 0;
+	const pages = rawPages.map((raw) => {
+		const pageEntry =
+			typeof raw === "string"
+				? { name: raw, text: raw }
+				: (raw as Record<string, unknown>);
+		const pageName = String(pageEntry.name ?? "unnamed");
+		const text = String(pageEntry.text ?? "");
+		sort += 1;
+		return {
+			_id: documentId(`${name} — ${pageName}`, pageEntry._id as string | undefined),
+			name: pageName,
+			type: "text",
+			title: { show: true, level: 2 },
+			text: { format: 1, content: resolveLinks(text, linkIndex), markdown: undefined },
+			src: "",
+			image: { caption: "" },
+			video: null,
+			document: null,
+			sort,
+			category: "",
+			ownership: { default: 0 },
+			flags: {},
+			_stats: { coreVersion: 14 },
+		};
+	});
+	const journal: Record<string, unknown> = {
+		_id: documentId(name, entry._id as string | undefined),
+		name,
+		pages: pages.map((p) => String(p._id)),
+		category: null,
+		folder: null,
+		sort: 0,
+		ownership: { default: 0 },
+		_stats: { coreVersion: 14 },
+		flags: entry.flags ?? {},
+	};
+	if (typeof entry.img === "string" && entry.img) journal.img = entry.img;
+	return { journal, pages };
+}
+
 export function toActorSourceDocument(
 	entry: Record<string, unknown>,
 	index: ItemSourceIndex,
@@ -471,8 +610,10 @@ async function buildPack(
 	folder: string,
 	ClassicLevelCtor: typeof ClassicLevel,
 	itemIndex: ItemSourceIndex,
+	linkIndex: LinkIndex,
 ): Promise<number> {
 	const isTablePack = TABLE_PACKS.has(folder);
+	const isJournalPack = JOURNAL_PACKS.has(folder);
 	const isActorPack = ACTOR_PACKS.has(folder);
 	const packPath = path.resolve(PACK_DEST, folder);
 
@@ -494,7 +635,7 @@ async function buildPack(
 
 	for (const file of sourceFiles) {
 		const entries = await readYamlEntries(path.join(PACK_SRC, folder, file));
-		if (!isActorPack && !isTablePack) {
+		if (!isActorPack && !isTablePack && !isJournalPack) {
 			auditSourceAttribution(`${folder}/${file.replace(/\.yaml$/, "")}`, entries);
 		}
 		for (const source of entries) {
@@ -510,6 +651,22 @@ async function buildPack(
 					batch.put(
 						actorItemKey(actorId, String(item._id)),
 						item as unknown as string,
+					);
+				}
+				count++;
+				continue;
+			}
+			if (isJournalPack) {
+				// Foundry stores JournalEntry docs under `!journal!` with their
+				// embedded pages split into `!journal.pages!<journalId>.<pageId>`
+				// records (same embedded-collection pattern as actors, et3x).
+				const { journal, pages } = toJournalSourceDocument(source, linkIndex);
+				const journalId = String(journal._id);
+				batch.put(journalKey(journalId), journal as unknown as string);
+				for (const page of pages) {
+					batch.put(
+						journalPageKey(journalId, String(page._id)),
+						page as unknown as string,
 					);
 				}
 				count++;
@@ -608,13 +765,15 @@ async function main() {
 	// Item-name index across every Item pack, so actor-pack embedded items
 	// can be stamped with Compendium.rogue-trader.<pack>.<id> sources (et3x).
 	const itemIndex = await buildItemSourceIndex(folders.map((name) => ({ name })));
+	// Journal-page [[name]] link index across every pack (rb5g/lore).
+	const linkIndex = await buildLinkIndex(folders.map((name) => ({ name })));
 
 	for (const folder of folders) {
 		const sourceFiles = (await readdir(path.join(PACK_SRC, folder))).filter(
 			(file) => file.endsWith(".yaml"),
 		);
 		if (sourceFiles.length === 0) continue;
-		const count = await buildPack(folder, ClassicLevel, itemIndex);
+		const count = await buildPack(folder, ClassicLevel, itemIndex, linkIndex);
 		// Legacy nedb artifact: Foundry prefers the LevelDB dir when CURRENT
 		// exists, but delete the stale .db so there is a single source of truth.
 		await rm(path.resolve(PACK_DEST, `${folder}.db`), { force: true });

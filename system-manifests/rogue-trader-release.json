@@ -186,6 +186,20 @@
             "system": "rogue-trader",
             "path": "packs/traits",
             "type": "Item"
+        },
+        {
+            "name": "rules",
+            "label": "Rogue Trader Rules Reference",
+            "system": "rogue-trader",
+            "path": "packs/rules",
+            "type": "JournalEntry"
+        },
+        {
+            "name": "lore",
+            "label": "Rogue Trader Lore",
+            "system": "rogue-trader",
+            "path": "packs/lore",
+            "type": "JournalEntry"
         }
     ],
     "languages": [

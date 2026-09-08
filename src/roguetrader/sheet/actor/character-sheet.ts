@@ -36,7 +36,11 @@ import {
 	mergeOwnedAndCatalogRows,
 	type OwnedSkillLike,
 } from "../skills-domain";
-import { openDocumentSheet, resolvePackDocument } from "../pack-resolve";
+import {
+	openDocumentSheet,
+	openPackItemAction,
+	resolvePackDocument,
+} from "../pack-resolve";
 import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
@@ -93,24 +97,13 @@ export class CharacterSheet extends RtActorSheet {
 	 * Open the COMPENDIUM version of an item (bead oaaz): reads data-uuid
 	 * (pack uuid resolved in _prepareContext), robust pack resolution per
 	 * the wwuc root cause. Used by the Background tab's talent book icons.
+	 * Thin wrapper over the shared action (bead kwm9 — NpcSheet uses it too).
 	 */
-	static async #onOpenPackItem(
-		this: { actor: foundry.documents.Actor },
+	static #onOpenPackItem(
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const uuid = target.dataset.uuid;
-		if (!uuid) return;
-		try {
-			const item = await resolvePackDocument(uuid);
-			if (!item) {
-				console.warn(`rogue-trader | pack item link: "${uuid}" did not resolve`);
-				return;
-			}
-			await openDocumentSheet(item, "pack item link");
-		} catch (error) {
-			console.error("rogue-trader | pack item link failed:", error);
-		}
+		return openPackItemAction(_event, target);
 	}
 
 	/** Delete an owned inventory item. */

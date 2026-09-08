@@ -58,3 +58,28 @@ export async function getPackDocuments(packId: string): Promise<unknown[]> {
 	}
 	await sheet.render({ force: true });
 }
+/**
+ * Sheet action: open the compendium source of an owned item (bead kwm9,
+ * shared by CharacterSheet + NpcSheet). Reads data-uuid off the target —
+ * the packer stamps flags["rogue-trader"].compendiumSource on every
+ * embedded item that resolves from a pack (et3x). Items without a stamp
+ * (standalone book traits, homebrew) render no link, so a missing uuid is
+ * a normal no-op.
+ */
+export async function openPackItemAction(
+	_event: unknown,
+	target: HTMLElement,
+): Promise<void> {
+	const uuid = target.dataset.uuid;
+	if (!uuid) return;
+	try {
+		const item = await resolvePackDocument(uuid);
+		if (!item) {
+			console.warn(`rogue-trader | pack item link: "${uuid}" did not resolve`);
+			return;
+		}
+		await openDocumentSheet(item, "pack item link");
+	} catch (error) {
+		console.error("rogue-trader | pack item link failed:", error);
+	}
+}

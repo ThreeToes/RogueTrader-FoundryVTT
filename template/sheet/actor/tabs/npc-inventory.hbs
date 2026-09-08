@@ -28,6 +28,10 @@
                             <i class="fa-solid {{#if a.worn}}fa-circle-check{{else}}fa-circle{{/if}}"></i>
                         </a>
                         <span class="npc-item-name" data-item-id="{{a.id}}">{{a.name}}</span>
+                        {{#if a.uuid}}
+                        <a class="inv-pack-link" data-action="openPackItem" data-uuid="{{a.uuid}}"
+                            data-tooltip="{{localize "NPC.OPEN_PACK"}}"><i class="fa-solid fa-book-open"></i></a>
+                        {{/if}}
                         <span class="chip {{#if a.worn}}origin-mod{{/if}}"
                             data-tooltip="{{#if a.worn}}{{localize "ARMOUR.WORN_TOOLTIP"}}{{else}}{{localize "ARMOUR.STOWED_TOOLTIP"}}{{/if}}">
                             {{#if a.worn}}{{localize "EQUIP_STATE.WORN"}}{{else}}{{localize "EQUIP_STATE.STOWED"}}{{/if}}
@@ -62,6 +66,10 @@
                         <span class="chip {{#if item.ready}}origin-mod{{/if}}">
                             {{#if item.ready}}{{localize "EQUIP_STATE.CARRIED"}}{{else}}{{localize "EQUIP_STATE.STOWED"}}{{/if}}
                         </span>
+                        {{/if}}
+                        {{#if item.source}}
+                        <a class="inv-pack-link" data-action="openPackItem" data-uuid="{{item.source}}"
+                            data-tooltip="{{localize "NPC.OPEN_PACK"}}"><i class="fa-solid fa-book-open"></i></a>
                         {{/if}}
                         <a class="npc-item-delete" data-action="deleteNpcItem" data-item-id="{{item.id}}"
                             data-tooltip="{{localize "GEAR.DELETE"}}"><i class="fa-solid fa-xmark"></i></a>

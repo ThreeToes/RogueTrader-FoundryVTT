@@ -81,7 +81,7 @@
             {{#each weapons as |w|}}
             {{> "rt/combat-weapon-row" id=w.id name=w.name classLabel=w.classLabel
                 damage=w.damage penetration=w.penetration isRanged=w.isRanged
-                rof=w.rof clip=w.clip
+                rof=w.rof clip=w.clip uuid=w.uuid
                 rollAction="rollNpcWeapon" damageAction="rollNpcDamage"}}
             {{/each}}
         </ol>

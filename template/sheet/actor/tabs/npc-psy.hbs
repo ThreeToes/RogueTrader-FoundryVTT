@@ -4,7 +4,7 @@
         {{#if powers.length}}
         <div class="inv-list">
             {{#each powers as |p|}}
-            {{#> "rt/inv-row" id=p.id name=p.name}}
+            {{#> "rt/inv-row" id=p.id name=p.name uuid=p.uuid}}
             <button type="button" class="ladder-option" data-action="rollNpcPower"
                 data-tooltip="{{localize "NPC.ROLL_POWER"}}">{{localize "NPC.ROLL"}}</button>
             {{/"rt/inv-row"}}

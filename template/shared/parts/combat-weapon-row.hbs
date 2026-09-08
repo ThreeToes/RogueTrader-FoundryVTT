@@ -22,6 +22,10 @@
     <span class="weapon-name" data-action="openItem"
         data-tooltip="{{localize "GEAR.OPEN_SHEET"}}"
     >{{name}}</span>
+    {{#if uuid}}
+    <a class="inv-pack-link" data-action="openPackItem" data-uuid="{{uuid}}"
+        data-tooltip="{{localize "NPC.OPEN_PACK"}}"><i class="fa-solid fa-book-open"></i></a>
+    {{/if}}
     <span class="weapon-class" data-tooltip="{{localize "WEAPON.CLASS"}}">{{localize classLabel}}</span>
     <span class="weapon-stat" data-tooltip="{{localize "WEAPON.DAMAGE_FULL"}}">
         <i class="fa-solid fa-burst weapon-icon"></i>{{damage}}

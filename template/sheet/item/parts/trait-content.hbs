@@ -1,0 +1,73 @@
+<section class="trait-content">
+    <div class="stats border">
+        <h1>{{localize "TRAIT.HEADER"}}</h1>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "TRAIT.BENEFIT"}}</label>
+                {{#if editable}}
+                <input name="system.benefit" type="text" value="{{source.system.benefit}}"
+                    data-tooltip="{{localize "TRAIT.BENEFIT_HINT"}}" />
+                {{else}}
+                <p class="static-value">{{source.system.benefit}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "TITLE.DESCRIPTION"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.description"
+                    value="{{source.system.description}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{descriptionHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat talents-effects">
+                <label>{{localize "TALENT.EFFECTS"}}</label>
+                {{#if editable}}
+                <p class="untrained-hint">{{localize "TALENT.EFFECTS_HINT"}}</p>
+                <div class="effect-add-row">
+                    <a data-action="addEffect"><i class="fas fa-plus"></i> {{localize "EFFECTS.ADD"}}</a>
+                </div>
+                {{#each source.system.effects as |effect i|}}
+                <div class="stats-row">
+                    <select name="system.effects.{{i}}.kind"
+                        data-tooltip="{{localize "TALENT.KIND_HINT"}}">
+                        {{selectOptions ../kindChoices selected=effect.kind}}
+                    </select>
+                    <select name="system.effects.{{i}}.testKey"
+                        data-tooltip="{{localize "TALENT.TEST_KEY_HINT"}}">
+                        {{selectOptions ../testKeyChoices selected=effect.testKey}}
+                    </select>
+                    <input name="system.effects.{{i}}.value" type="number" value="{{effect.value}}"
+                        data-tooltip="{{localize "TALENT.VALUE_HINT"}}" />
+                    <input name="system.effects.{{i}}.label" type="text" value="{{effect.label}}"
+                        data-tooltip="{{localize "ROLL.LABEL"}}" />
+                    <a class="effect-remove" data-action="removeEffect" data-index="{{i}}"
+                        title="{{localize "EFFECTS.REMOVE"}}"><i class="fas fa-times"></i></a>
+                </div>
+                {{/each}}
+                {{else}}
+                {{#if source.system.effects.length}}
+                <ul class="static-effects">
+                    {{#each source.system.effects as |effect|}}
+                    <li>{{effect.label}} ({{effect.kind}}{{#if effect.testKey}}: {{effect.testKey}}{{/if}}) {{#if (gt effect.value 0)}}+{{/if}}{{effect.value}}</li>
+                    {{/each}}
+                </ul>
+                {{else}}
+                <p class="untrained-hint">{{localize "TALENT.NO_EFFECTS"}}</p>
+                {{/if}}
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

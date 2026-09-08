@@ -13,6 +13,7 @@ import { MadnessEntry } from "../data/item/madness";
 import { RangedWeapon } from "../data/item/ranged-weapon";
 import { Skill } from "../data/item/skill";
 import { Talent } from "../data/item/talent";
+import { Trait } from "../data/item/trait";
 import { Career } from "../data/item/career";
 import { Starship, ShipComplication } from "../data/item/starship";
 import {
@@ -57,6 +58,7 @@ import { PsychicPowerSheet } from "./item/psychic-power-sheet";
 import { NavigatorPowerSheet } from "./item/navigator-power-sheet";
 import { SkillSheet } from "./item/skill-sheet";
 import { TalentSheet } from "./item/talent-sheet";
+import { TraitSheet } from "./item/trait-sheet";
 import { CareerSheet } from "./item/career-sheet";
 import { WeaponSheet } from "./item/weapon-sheet";
 import { registerSharedPartials } from "./partials";
@@ -335,6 +337,10 @@ export function sheetInit() {
 				origintrait: { model: OriginTrait, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				mutation: { model: Mutation, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				madnessentry: { model: MadnessEntry, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				// Rulebook traits (bead 25ii): innate creature features. Always
+				// live in effectsAreLive (no equip state); mechanical traits feed
+				// the funnel via their effect rows (bead zyv1).
+				trait: { model: Trait, sheet: TraitSheet, label: "TYPES.Item.trait" },
 				ammunition: { model: Ammunition, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				"force-field": { model: ForceField, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				"weapon-modification": {

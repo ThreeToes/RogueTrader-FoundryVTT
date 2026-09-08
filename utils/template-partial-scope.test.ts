@@ -240,4 +240,58 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		expect(talentRow).not.toContain("toggleNpcEquip");
 		expect(talentRow).toContain("deleteNpcItem");
 	});
+
+	it("npc-inventory renders pack links only for items with a source (bead kwm9)", () => {
+		const render = compile("npc-inventory.hbs");
+		const html = render({
+			armourTotals: [],
+			armourItems: [
+				{
+					id: "a1",
+					name: "Flak Armour",
+					worn: true,
+					uuid: "Compendium.rogue-trader.weapons.abc",
+				},
+			],
+			itemGroups: [
+				{
+					labelKey: "TYPES.Item.gear",
+					items: [
+						{ id: "g1", name: "Rope", type: "gear", equippable: true, ready: true, source: "" },
+					],
+				},
+			],
+		});
+		// armour row has a source stamp -> link renders
+		expect(html).toContain('data-action="openPackItem"');
+		expect(html).toContain('data-uuid="Compendium.rogue-trader.weapons.abc"');
+		// gear row without a source renders NO link (no dead affordance)
+		const gearRow = html.split("Rope")[1]?.split("</li>")[0] ?? "";
+		expect(gearRow).not.toContain("openPackItem");
+	});
+
+	it("combat-weapon-row renders the pack link only when a uuid is passed (bead kwm9)", () => {
+		const render = compilePartial("template/shared/parts/combat-weapon-row.hbs");
+		const withUuid = render({
+			id: "w1",
+			name: "Lasgun",
+			classLabel: "WEAPON.CLASS_BASIC",
+			damage: "1d10+3",
+			penetration: 0,
+			isRanged: false,
+			uuid: "Compendium.rogue-trader.weapons.abc",
+			rollAction: "rollNpcWeapon",
+			damageAction: "rollNpcDamage",
+		});
+		expect(withUuid).toContain('data-action="openPackItem"');
+		const withoutUuid = render({
+			id: "w2",
+			name: "Sword",
+			classLabel: "WEAPON.CLASS_BASIC",
+			damage: "1d10",
+			penetration: 0,
+			isRanged: false,
+		});
+		expect(withoutUuid).not.toContain("openPackItem");
+	});
 });

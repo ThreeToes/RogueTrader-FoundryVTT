@@ -9,7 +9,12 @@ import {
 	systemOf,
 } from "../../data/accessors";
 import { cloneItemFromDrop, npcEquipDefaultSystemOverrides } from "../drop-clone";
-import { equipToggleState, npcInventoryGroups } from "../npc-inventory";
+import {
+	compendiumSourceOf,
+	equipToggleState,
+	npcInventoryGroups,
+} from "../npc-inventory";
+import { openPackItemAction } from "../pack-resolve";
 import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
 import { RtActorSheet } from "../context";
 
@@ -41,6 +46,7 @@ export class NpcSheet extends RtActorSheet {
 			deleteNpcSkill: NpcSheet.#onDeleteSkill,
 			toggleNpcEquip: NpcSheet.#onToggleEquip,
 			deleteNpcItem: NpcSheet.#onDeleteItem,
+			openPackItem: NpcSheet.#onOpenPackItem,
 		},
 	};
 
@@ -242,6 +248,7 @@ export class NpcSheet extends RtActorSheet {
 				id: i.id ?? "",
 				name: i.name ?? "",
 				type: i.type as string,
+				uuid: compendiumSourceOf(i),
 			})) as never;
 
 		context.isPsyker =
@@ -265,6 +272,15 @@ export class NpcSheet extends RtActorSheet {
 		if (!itemId) return;
 		const item = this.actor.items.get(itemId);
 		if (item) item.sheet?.render(true);
+	}
+
+	/** Open the COMPENDIUM source of an owned item (bead kwm9): thin wrapper
+	 * over the shared pack-resolve action (also used by CharacterSheet). */
+	static #onOpenPackItem(
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		return openPackItemAction(_event, target);
 	}
 
 	/** Click a characteristic cell to roll it. */

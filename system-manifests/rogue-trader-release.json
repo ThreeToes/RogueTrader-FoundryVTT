@@ -264,7 +264,8 @@
         "htmlFields": [
           "description"
         ]
-      }
+      },
+      "trait": {}
     }
   },
   "gridDistance": 1,

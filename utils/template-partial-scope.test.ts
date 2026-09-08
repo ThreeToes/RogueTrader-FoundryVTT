@@ -201,4 +201,43 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		expect(html).toContain('data-action="rollNpcWeapon"');
 		expect(html).toContain('data-action="rollNpcDamage"');
 	});
+
+	it("npc-inventory renders equip toggles + grouped lists (bead 2dvj)", () => {
+		const render = compile("npc-inventory.hbs");
+		const html = render({
+			armourTotals: [],
+			armourItems: [{ id: "a1", name: "Flak Armour", worn: false }],
+			itemGroups: [
+				{
+					labelKey: "TYPES.Item.ranged-weapon",
+					items: [
+						{
+							id: "w1",
+							name: "Lasgun",
+							type: "ranged-weapon",
+							equippable: true,
+							ready: false,
+						},
+					],
+				},
+				{
+					labelKey: "TYPES.Item.talent",
+					items: [
+						{ id: "t1", name: "Rapid Reload", type: "talent", equippable: false, ready: false },
+					],
+				},
+			],
+		});
+		// The sheet action existed but NO template ever rendered it — both the
+		// armour chip and weapon rows must carry the toggle action now.
+		expect(html).toContain('data-action="toggleNpcEquip"');
+		// grouped: ranged weapons get a stow/carry affordance...
+		expect(html).toContain('data-tooltip="NPC.EQUIP"');
+		// ...armour rows get the wear/stow toggle...
+		expect(html).toContain('data-tooltip="NPC.WEAR"');
+		// ...talents get neither (no equip affordance beyond the delete).
+		const talentRow = html.split("Rapid Reload")[1]?.split("</li>")[0] ?? "";
+		expect(talentRow).not.toContain("toggleNpcEquip");
+		expect(talentRow).toContain("deleteNpcItem");
+	});
 });

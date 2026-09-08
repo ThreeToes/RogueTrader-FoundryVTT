@@ -9,6 +9,7 @@ import {
 	systemOf,
 } from "../../data/accessors";
 import { cloneItemFromDrop, npcEquipDefaultSystemOverrides } from "../drop-clone";
+import { equipToggleState, npcInventoryGroups } from "../npc-inventory";
 import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
 import { RtActorSheet } from "../context";
 
@@ -226,18 +227,9 @@ export class NpcSheet extends RtActorSheet {
 				name: item.name ?? "",
 				worn: equipStateOf(item) === "worn",
 			}));
-		context.items = this.actor.items
-			.filter(
-				(item) =>
-					!["skill", "psychicpower", "navigatorpower"].includes(
-						item.type as string,
-					),
-			)
-			.map((item) => ({
-				id: item.id ?? "",
-				name: item.name ?? "",
-				type: item.type as string,
-				})) as never;
+		// Grouped inventory lists (bead 2dvj): named groups with localized
+		// type labels + a loud catch-all; armour is the left-column panel.
+		context.itemGroups = npcInventoryGroups(this.actor.items);
 
 		// Psychic/navigator powers for the conditional tab.
 		context.powers = this.actor.items
@@ -384,7 +376,9 @@ export class NpcSheet extends RtActorSheet {
 		await this.actor.items.get(itemId)?.delete();
 	}
 
-	/** Equip/stow toggle (owner spec): NPCs wield the weapons they hold. */
+	/** Equip/stow toggle (owner spec): NPCs wield the weapons they hold.
+	 * Armour-aware (bead 2dvj): armour cycles worn/stowed, weapons and gear
+	 * cycle stowed/carried — the old flat toggle produced invalid states. */
 	static async #onToggleEquip(
 		this: { actor: foundry.documents.Actor },
 		_event: unknown,
@@ -395,7 +389,9 @@ export class NpcSheet extends RtActorSheet {
 		const item = this.actor.items.get(itemId);
 		if (!item) return;
 		const current = equipStateOf(item);
-		await item.update({ system: { equipState: current === "stowed" ? "carried" : "stowed" } });
+		const next = equipToggleState(item.type as string, current);
+		if (next === current) return;
+		await item.update({ system: { equipState: next } });
 	}
 
 	/**

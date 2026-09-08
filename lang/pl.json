@@ -673,6 +673,8 @@
   "NPC.EQUIP": "Dobyć (trzymać tę broń)",
   "NPC.STOW": "Schować",
   "NPC.ITEMS": "Przedmioty",
+  "NPC.GROUP_OTHER": "Inne przedmioty",
+  "NPC.WEAR": "Załóż",
   "NPC.ITEMS_EMPTY": "Brak przedmiotów.",
   "NPC.ROLL_POWER": "Użyj mocy",
   "NPC.ROLL": "Użyj",

@@ -393,6 +393,8 @@
   "NPC.EQUIP": "Equip (wield this weapon)",
   "NPC.STOW": "Stow",
   "NPC.ITEMS": "Items",
+  "NPC.GROUP_OTHER": "Other Items",
+  "NPC.WEAR": "Wear",
   "NPC.ITEMS_EMPTY": "No items.",
   "NPC.ROLL_POWER": "Use power",
   "NPC.ROLL": "Use",

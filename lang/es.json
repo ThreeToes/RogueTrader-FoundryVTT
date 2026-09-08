@@ -637,6 +637,8 @@
   "NPC.EQUIP": "Equipar (empuñar esta arma)",
   "NPC.STOW": "Guardar",
   "NPC.ITEMS": "Objetos",
+  "NPC.GROUP_OTHER": "Otros objetos",
+  "NPC.WEAR": "Vestir",
   "NPC.ITEMS_EMPTY": "Sin objetos.",
   "NPC.ROLL_POWER": "Usar poder",
   "NPC.ROLL": "Usar",

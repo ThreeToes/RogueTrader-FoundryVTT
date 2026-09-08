@@ -2,7 +2,10 @@
     <div class="npc border npc-inventory">
         <h1>{{localize "NPC.TAB_INVENTORY"}}</h1>
         <div class="npc-inventory-grid">
-            {{!-- Left: armour stats (AP per body location, worn armour only) --}}
+            {{!-- Left: armour stats (AP per body location, worn armour only)
+                 + armour list with WEAR/STOW toggles (bead 2dvj: the toggle
+                 affordance finally rendered — the sheet action existed but
+                 nothing called it) and delete. --}}
             <div class="npc-inventory-left">
                 <h2 class="inv-group-label">{{localize "ARMOUR.HEADER"}}</h2>
                 <table class="npc-armour">
@@ -19,33 +22,56 @@
                 <ul class="npc-armour-list">
                     {{#each armourItems as |a|}}
                     <li>
-                        <span class="npc-item-name">{{a.name}}</span>
+                        <a class="npc-item-equip {{#if a.worn}}equipped{{/if}}"
+                            data-action="toggleNpcEquip" data-item-id="{{a.id}}"
+                            data-tooltip="{{#if a.worn}}{{localize "NPC.STOW"}}{{else}}{{localize "NPC.WEAR"}}{{/if}}">
+                            <i class="fa-solid {{#if a.worn}}fa-circle-check{{else}}fa-circle{{/if}}"></i>
+                        </a>
+                        <span class="npc-item-name" data-item-id="{{a.id}}">{{a.name}}</span>
                         <span class="chip {{#if a.worn}}origin-mod{{/if}}"
                             data-tooltip="{{#if a.worn}}{{localize "ARMOUR.WORN_TOOLTIP"}}{{else}}{{localize "ARMOUR.STOWED_TOOLTIP"}}{{/if}}">
                             {{#if a.worn}}{{localize "EQUIP_STATE.WORN"}}{{else}}{{localize "EQUIP_STATE.STOWED"}}{{/if}}
                         </span>
+                        <a class="npc-item-delete" data-action="deleteNpcItem" data-item-id="{{a.id}}"
+                            data-tooltip="{{localize "GEAR.DELETE"}}"><i class="fa-solid fa-xmark"></i></a>
                     </li>
                     {{/each}}
                 </ul>
                 {{/if}}
             </div>
 
-            {{!-- Right: minimal item list (everything but skills/weapons/armour/powers) --}}
+            {{!-- Right: grouped item lists (bead 2dvj — no more all-types-in-
+                 one-list). Named groups use the localized TYPES.Item labels;
+                 the catch-all group keeps unlisted types visible. Weapons and
+                 gear get stow/carry toggles; talents and other types do not. --}}
             <div class="npc-inventory-right">
-                <h2 class="inv-group-label">{{localize "NPC.ITEMS"}}</h2>
-                {{#if items.length}}
+                {{#each itemGroups as |group|}}
+                <h2 class="inv-group-label">{{localize group.labelKey}}</h2>
                 <ul class="npc-item-list">
-                    {{#each items as |item|}}
+                    {{#each group.items as |item|}}
                     <li>
+                        {{#if item.equippable}}
+                        <a class="npc-item-equip {{#if item.ready}}equipped{{/if}}"
+                            data-action="toggleNpcEquip" data-item-id="{{item.id}}"
+                            data-tooltip="{{#if item.ready}}{{localize "NPC.STOW"}}{{else}}{{localize "NPC.EQUIP"}}{{/if}}">
+                            <i class="fa-solid {{#if item.ready}}fa-circle-check{{else}}fa-circle{{/if}}"></i>
+                        </a>
+                        {{/if}}
                         <span class="npc-item-name" data-item-id="{{item.id}}">{{item.name}}</span>
+                        {{#if item.equippable}}
+                        <span class="chip {{#if item.ready}}origin-mod{{/if}}">
+                            {{#if item.ready}}{{localize "EQUIP_STATE.CARRIED"}}{{else}}{{localize "EQUIP_STATE.STOWED"}}{{/if}}
+                        </span>
+                        {{/if}}
                         <a class="npc-item-delete" data-action="deleteNpcItem" data-item-id="{{item.id}}"
                             data-tooltip="{{localize "GEAR.DELETE"}}"><i class="fa-solid fa-xmark"></i></a>
                     </li>
                     {{/each}}
                 </ul>
-                {{else}}
+                {{/each}}
+                {{#unless itemGroups.length}}
                 <p class="method-hint">{{localize "NPC.ITEMS_EMPTY"}}</p>
-                {{/if}}
+                {{/unless}}
             </div>
         </div>
     </div>

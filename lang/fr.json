@@ -649,6 +649,8 @@
   "NPC.EQUIP": "Équiper (brandir cette arme)",
   "NPC.STOW": "Ranger",
   "NPC.ITEMS": "Objets",
+  "NPC.GROUP_OTHER": "Autres objets",
+  "NPC.WEAR": "Porter",
   "NPC.ITEMS_EMPTY": "Aucun objet.",
   "NPC.ROLL_POWER": "Utiliser le pouvoir",
   "NPC.ROLL": "Utiliser",

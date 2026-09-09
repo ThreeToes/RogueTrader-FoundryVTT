@@ -105,10 +105,9 @@
                 </div>
                 {{else}}
                 <p class="static-value">
-                    {{source.system.rateOfFire.singleShot}}S /
-                    {{source.system.rateOfFire.burst}} /
-                    {{source.system.rateOfFire.fullAuto}}
-                    &middot; {{source.system.clip}} {{localize "RANGED_WEAPON.CLIP"}}
+                    {{#if source.system.rateOfFire.singleShot}}S{{else}}&ndash;{{/if}} /
+                    {{#if source.system.rateOfFire.burst}}{{source.system.rateOfFire.burst}}{{else}}&ndash;{{/if}} /
+                    {{#if source.system.rateOfFire.fullAuto}}{{source.system.rateOfFire.fullAuto}}{{else}}&ndash;{{/if}}
                 </p>
                 {{/if}}
             </div>

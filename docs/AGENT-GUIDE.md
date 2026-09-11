@@ -160,15 +160,20 @@ committed or shipped. Input contract, per `src/packs/rogue_trader/<pack>/*.yaml`
 Emit: `release/rogue_trader/packs/<pack>` LevelDB (keys `!items!<id>`). The
 system package root is `release/rogue_trader/` (per-system build output,
 bead mail) — manifest `packs[].path` entries stay relative to that root.
-Add a matching `packs`
-entry to the dev manifest (system-manifests/dev.json) when authoring a new pack.
+Add a matching entry to the pack-declaration fragment
+(`src/packs/rogue_trader/manifest-packs.yaml`) when authoring a new pack.
 
 Two manifests ship: `dev.json` for local dev builds, and
 `rogue-trader-release.json` — the Foundry-facing release manifest (version +
 `manifest`/`download` URLs per foundryvtt.com/article/system-development/).
-Set `RELEASE_MANIFEST=1` to build with the release manifest (the Forgejo
-release-private action does this); the release action also bumps the release
-manifest's version via `utils/bump-release-manifest.mjs`.
+Both carry an empty `"packs": []` stamp in the committed repo: the pack
+definitions live in the private content repo fragment (above) and the build
+merges them into the manifest it copies, so the public mirror carries no
+compendium surface. Release builds (`RELEASE_MANIFEST=1`) fail loudly if the
+fragment is missing; dev builds ship without packs when no content clone is
+present. Set `RELEASE_MANIFEST=1` to build with the release manifest (the
+Forgejo release-private action does this); the release action also bumps the
+release manifest's version via `utils/bump-release-manifest.mjs`.
 Users who want official book lists import them via Foundry's own compendium
 importer themselves — the system ships the machinery, not the data.
 
@@ -226,4 +231,6 @@ owner via beads. PDFs are machine-local at ~/Documents (Core Rulebook =
 name is required — CLI args like `--book rt_core`, the `extracted-text/rt_core`
 dump dir). **Terminology (bead 3it4): always cite the book as "Core Rulebook",
 never "rt_core"** — in user-facing text, code comments, curation notes, tests,
-and bead text alike. Packs register in system.json + system-manifests/dev.json.
+and bead text alike. Packs register via the privately-held fragment
+`src/packs/rogue_trader/manifest-packs.yaml` (merged into the shipped
+system.json at build; committed manifests carry a `"packs": []` stamp).

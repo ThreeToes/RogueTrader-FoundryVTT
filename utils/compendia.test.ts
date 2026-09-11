@@ -6,6 +6,8 @@ import {
 	buildTableResults,
 	documentId,
 	folderId,
+	readManifestPacks,
+	MANIFEST_PACKS_YAML,
 	resolveEntryGroup,
 	resolveEntryType,
 	toTableSourceDocument,
@@ -513,5 +515,43 @@ describe("compendium folder groupings (bead nsqt)", () => {
 				buildPackFolders("weapons", [{ name: "A", group: "Pistols/Las" }]),
 			).toThrow(/has no parent folder/);
 		});
+	});
+});
+
+/**
+ * Pack-declaration fragment (bead: manifest fragment move): every authored
+ * pack folder must carry an entry, and structured shape must hold — the
+ * fragment feeds the shipped system.json verbatim, so a bad entry ships
+ * broken. Skipped wholesale when there is no content clone (CI), same as the
+ * governance warning itself.
+ */
+describe("readManifestPacks (manifest-packs.yaml fragment)", () => {
+	test("fragment shape and pack-folder coverage", async () => {
+		const packs = await readManifestPacks();
+		if (!packs) return;
+		const names = packs.map((pack) => pack.name).filter(Boolean) as string[];
+		expect(names.length).toBe(packs.length);
+		expect(new Set(names).size).toBe(names.length);
+		// Every declared pack points where the packer emits it.
+		for (const pack of packs) {
+			expect(String(pack.path)).toBe(`packs/${String(pack.name)}`);
+			expect(String(pack.system)).toBe("rogue-trader");
+		}
+		// Stable spine: removing a fragment entry must be loud, not silent.
+		for (const required of [
+			"skills",
+			"talents",
+			"npcs",
+			"rules",
+			"intothemaw",
+		]) {
+			expect(names).toContain(required);
+		}
+	});
+
+	test("fragment path constant matches the content-repo location", () => {
+		expect(MANIFEST_PACKS_YAML).toBe(
+			"./src/packs/rogue_trader/manifest-packs.yaml",
+		);
 	});
 });

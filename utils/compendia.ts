@@ -1003,18 +1003,38 @@ async function buildPack(
 	return count;
 }
 
+/** Path of the privately-held pack-declaration fragment (bead: manifest fragment). */
+export const MANIFEST_PACKS_YAML = "./src/packs/rogue_trader/manifest-packs.yaml";
+
+/** Read the packs array from the fragment; null when absent (no packs clone). */
+export async function readManifestPacks(): Promise<
+	Array<Record<string, unknown>> | null
+> {
+	if (!existsSync(MANIFEST_PACKS_YAML)) return null;
+	const parsed = yaml.parse(await readFile(MANIFEST_PACKS_YAML, "utf8")) as {
+		packs?: Array<Record<string, unknown>>;
+	};
+	if (!Array.isArray(parsed.packs) || parsed.packs.length === 0) {
+		throw new Error(
+			`compendia: ${MANIFEST_PACKS_YAML} must hold a non-empty top-level "packs" array`,
+		);
+	}
+	return parsed.packs;
+}
+
 /**
- * Governance check (bead 8uh): an authored pack folder that has no packs[]
- * entry in the dev manifest is invisible in Foundry. Warn (do not fail).
+ * Governance check (bead 8uh): an authored pack folder with no entry in the
+ * privately-held pack-declaration fragment (manifest-packs.yaml, bead:
+ * manifest fragment) never reaches the shipped manifest and is invisible in
+ * Foundry. Warn (do not fail).
  */
 export async function warnUnregisteredPacks(): Promise<void> {
-	const manifestPath = "./system-manifests/dev.json";
-	if (!existsSync(manifestPath)) return;
-	const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
-		packs?: Array<{ name?: string }>;
-	};
+	const fragment = await readManifestPacks();
+	if (!fragment) return;
 	const registered = new Set(
-		(manifest.packs ?? []).map((pack) => pack.name).filter(Boolean),
+		fragment
+			.map((pack) => String(pack.name ?? ""))
+			.filter(Boolean),
 	);
 	const folders = await listPackFolders();
 	const packFolders: string[] = [];
@@ -1026,7 +1046,7 @@ export async function warnUnregisteredPacks(): Promise<void> {
 	for (const folder of packFolders) {
 		if (!registered.has(folder)) {
 			console.warn(
-				`[packs] WARNING: pack "${folder}" has no entry in system-manifests/dev.json and will be invisible in Foundry. Add to "packs":\n` +
+				`[packs] WARNING: pack "${folder}" has no entry in ${MANIFEST_PACKS_YAML} and will be invisible in Foundry. Add to "packs":\n` +
 					`    { "name": "${folder}", "label": "${folder}", "system": "rogue-trader", "path": "packs/${folder}", "type": "Item" }`,
 			);
 		}

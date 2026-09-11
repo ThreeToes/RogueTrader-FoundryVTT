@@ -60,6 +60,8 @@ jobs:
                     src/packs
                   test -d src/packs/rogue_trader/talents || {
                       echo "::error::pack sources not where the packer expects them (src/packs/rogue_trader/)"; exit 1; }
+                  test -f src/packs/rogue_trader/manifest-packs.yaml || {
+                      echo "::error::pack-declaration fragment missing (src/packs/rogue_trader/manifest-packs.yaml)"; exit 1; }
 
             - name: Install bun (pinned)
               run: |

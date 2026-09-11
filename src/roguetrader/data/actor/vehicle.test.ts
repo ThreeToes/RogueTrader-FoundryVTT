@@ -72,6 +72,41 @@ describe("Vehicle data model", () => {
 		expect(slot.fields.rating.opts.initial).toBe(0);
 		expect(slot.fields.damaged.opts.initial).toBe(false);
 	});
+
+	test("template.json vehicle block matches the schema (no silent drops)", async () => {
+		const template = (await import(
+			"../../../../template.json"
+		)) as unknown as {
+			Actor: { types: string[]; vehicle: Record<string, unknown> };
+		};
+		// dh2j: without the type entry Foundry cannot create Vehicle actors
+		// through the UI and the registered sheet is unreachable dead code.
+		expect(template.Actor.types).toContain("vehicle");
+		const vehicle = template.Actor.vehicle as Record<string, unknown>;
+		const si = vehicle.structuralIntegrity as Record<string, number>;
+		expect(si).toEqual({ value: 0, max: 0 });
+		// Armour facings seeded from the vehicleFacings registry, all 0.
+		expect(vehicle.armour).toEqual({
+			front: 0,
+			left: 0,
+			right: 0,
+			rear: 0,
+			top: 0,
+			bottom: 0,
+		});
+		expect(vehicle.handling).toBe(0);
+		expect(vehicle.speed).toBe(0);
+		// vehicleClass carries the schema's registry initial, not a blank.
+		expect(vehicle.vehicleClass).toBe("ground");
+		expect(vehicle.traits).toEqual([]);
+		expect(vehicle.systems).toEqual({});
+		expect(vehicle.crew).toEqual([]);
+		expect(vehicle.mountedWeapons).toEqual([]);
+		expect(vehicle.description).toBe("");
+		const token = vehicle.prototypeToken as Record<string, unknown>;
+		const bar1 = token.bar1 as Record<string, string>;
+		expect(bar1.attribute).toBe("system.structuralIntegrity");
+	});
 });
 
 interface StubSchemaFieldLike {

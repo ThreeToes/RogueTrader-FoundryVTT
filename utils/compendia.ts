@@ -99,7 +99,7 @@ export const TABLE_PACKS: ReadonlySet<string> = new Set([
  * (deleteOrphanDocuments), so every item record must belong to a stored
  * actor.
  */
-export const ACTOR_PACKS: ReadonlySet<string> = new Set(["npcs"]);
+export const ACTOR_PACKS: ReadonlySet<string> = new Set(["npcs", "vehicles"]);
 
 export function actorKey(actorId: string): string {
 	return `!actors!${actorId}`;

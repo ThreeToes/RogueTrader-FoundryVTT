@@ -188,6 +188,13 @@
             }
         },
         {
+            "name": "vehicles",
+            "label": "Rogue Trader Vehicles",
+            "system": "rogue-trader",
+            "path": "packs/vehicles",
+            "type": "Actor"
+        },
+        {
             "name": "rules",
             "label": "Rogue Trader Rules Reference",
             "system": "rogue-trader",

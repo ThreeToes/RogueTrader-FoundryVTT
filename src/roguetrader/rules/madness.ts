@@ -103,7 +103,132 @@ export function mutationTestsDue(corruptionPoints: number): number {
 	return Math.floor(corruptionPoints / 30);
 }
 
+/**
+ * Next disorder threshold above `points` (40/60/80), or null once all are
+ * passed — pure display helper for sheet progress (never stored).
+ */
+export function nextDisorderThreshold(insanityPoints: number): number | null {
+	return (
+		DISORDER_THRESHOLDS.find((band) => insanityPoints < band.at)?.at ?? null
+	);
+}
+
+/**
+ * Next mutation-test threshold above `points` (multiples of 30, capped at 90
+ * — the track goes Damned at 100), or null; pure display helper.
+ */
+export function nextMutationThreshold(corruptionPoints: number): number | null {
+	const next = (Math.floor(corruptionPoints / 30) + 1) * 30;
+	return next <= 90 ? next : null;
+}
+
+import {
+	carriedConditions,
+	snapOutReady,
+} from "./conditions";
+
+/**
+ * Which ledger kind a dropped pack item maps to (bead rdh1), or null when
+ * the drop is an ordinary item copy: madness-pack disorders/malignancies
+ * carry system.kind; mutation-pack rows carry tableKey "mutations".
+ */
+export function afflictionLedgerKind(source: {
+	kind?: string;
+	tableKey?: string;
+}): AfflictionKind | null {
+	if (source.kind === "disorder" || source.kind === "malignancy") {
+		return source.kind;
+	}
+	if (source.tableKey === "mutations" || source.kind === "mutation") {
+		return "mutation";
+	}
+	return null;
+}
+
 // ---------------------------------------------------------------- Ledger
+
+/**
+ * Sheet context for the madness tracks + carried conditions (beads 1g2t +
+ * q1ql): shared by the background and combat tabs. PURE — takes the cached
+ * pack rows and a structural actor; the sheet just spreads the result.
+ */
+export interface MadnessPoints {
+	insanity?: number;
+	corruption?: number;
+	afflictions?: unknown;
+}
+
+interface ConditionsActorLike {
+	effects?: Array<{
+		id?: string;
+		name?: string;
+		statuses?: string[];
+		flags?: { "rogue-trader"?: { snapOut?: boolean } };
+	}>;
+}
+
+export function madnessSheetContext(
+	rows: TrackRowLike[],
+	system: MadnessPoints,
+	actor: ConditionsActorLike,
+): {
+	madness: {
+		insanityPoints: number;
+		corruptionPoints: number;
+		insanityDegree: string;
+		insanityModifier: number;
+		corruptionDegree: string;
+		corruptionModifier: number;
+		nextDisorder: number | null;
+		nextMutation: number | null;
+		dueDisorders: Array<{ at: number; severity: string }>;
+		afflictions: AfflictionLedgerEntry[];
+		afflictionGroups: Array<{
+			label: string;
+			entries: Array<{ name: string; severity: string; text: string }>;
+		}>;
+	};
+	conditions: { snapOutReady: boolean; carried: string[] };
+} {
+	const insanity = insanityTrack(rows, system.insanity ?? 0);
+	const corr = corruptionTrack(rows, system.corruption ?? 0);
+	const ledger = (system.afflictions ?? []) as AfflictionLedgerEntry[];
+	const byKind = (kind: AfflictionKind, label: string) => ({
+		label,
+		entries: ledger
+			.filter((entry) => entry.kind === kind)
+			.map((entry) => ({
+				name: entry.name,
+				severity: entry.severity ?? "",
+				text: entry.text,
+			})),
+	});
+	return {
+		madness: {
+			insanityPoints: system.insanity ?? 0,
+			corruptionPoints: system.corruption ?? 0,
+			insanityDegree: insanity.degree,
+			insanityModifier: insanity.modifier,
+			corruptionDegree: corr.degree,
+			corruptionModifier: corr.modifier,
+			nextDisorder: nextDisorderThreshold(system.insanity ?? 0),
+			nextMutation: nextMutationThreshold(system.corruption ?? 0),
+			dueDisorders: dueDisorders(system.insanity ?? 0, ledger),
+			afflictions: ledger,
+			afflictionGroups: [
+				byKind("disorder", "AFFLICTION.DISORDER"),
+				byKind("malignancy", "AFFLICTION.MALIGNANCY"),
+				byKind("mutation", "AFFLICTION.MUTATION"),
+			],
+		},
+		// Transient conditions (bead q1ql): the combat tab shows the snap-out
+		// affordance only when a snap-out-capable status is carried.
+		conditions: {
+			snapOutReady: snapOutReady(actor),
+			carried: carriedConditions(actor).map((c) => c.name),
+		},
+	};
+}
 
 export type AfflictionKind = "disorder" | "malignancy" | "mutation";
 

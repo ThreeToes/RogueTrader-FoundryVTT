@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
 	addAffliction,
+	afflictionLedgerKind,
 	corruptionTrack,
 	dueDisorders,
 	insanityTrack,
 	malignancyTestsDue,
 	mutationTestsDue,
+	nextDisorderThreshold,
+	nextMutationThreshold,
 	traumaRoll,
 	type TrackRowLike,
 } from "./madness";
@@ -16,11 +19,14 @@ const track: TrackRowLike[] = [
 	{ kind: "insanity-track", rollMin: 40, rollMax: 59, degree: "Disturbed", modifier: 0 },
 	{ kind: "insanity-track", rollMin: 60, rollMax: 79, degree: "Unhinged", modifier: -10 },
 	{ kind: "insanity-track", rollMin: 80, rollMax: 99, degree: "Deranged", modifier: -20 },
+	{ kind: "insanity-track", rollMin: 100, rollMax: 999, degree: "Terminally Insane", modifier: -20 },
 ];
 const corruption: TrackRowLike[] = [
 	{ kind: "corruption-track", rollMin: 1, rollMax: 30, degree: "Tainted", modifier: 0 },
 	{ kind: "corruption-track", rollMin: 31, rollMax: 60, degree: "Soiled", modifier: -10 },
+	{ kind: "corruption-track", rollMin: 61, rollMax: 90, degree: "Debased", modifier: -20 },
 	{ kind: "corruption-track", rollMin: 91, rollMax: 99, degree: "Profane", modifier: -30 },
+	{ kind: "corruption-track", rollMin: 100, rollMax: 999, degree: "Damned", modifier: -30 },
 ];
 
 describe("insanityTrack (Table 10-5)", () => {
@@ -31,6 +37,15 @@ describe("insanityTrack (Table 10-5)", () => {
 		expect(insanityTrack(track, 70)).toEqual({ degree: "Unhinged", modifier: -10 });
 		expect(insanityTrack(track, 85)).toEqual({ degree: "Deranged", modifier: -20 });
 	});
+
+	test("boundary points land inside their band (0 and 100+)", () => {
+		expect(insanityTrack(track, 0)).toEqual({ degree: "Stable", modifier: 0 });
+		expect(insanityTrack(track, 9)).toEqual({ degree: "Stable", modifier: 0 });
+		expect(insanityTrack(track, 10)).toEqual({ degree: "Unsettled", modifier: 10 });
+		expect(insanityTrack(track, 99)).toEqual({ degree: "Deranged", modifier: -20 });
+		expect(insanityTrack(track, 100)).toEqual({ degree: "Terminally Insane", modifier: -20 });
+		expect(insanityTrack(track, 150)).toEqual({ degree: "Terminally Insane", modifier: -20 });
+	});
 });
 
 describe("corruptionTrack (Table 10-7)", () => {
@@ -38,6 +53,26 @@ describe("corruptionTrack (Table 10-7)", () => {
 		expect(corruptionTrack(corruption, 10)).toEqual({ degree: "Tainted", modifier: 0 });
 		expect(corruptionTrack(corruption, 35)).toEqual({ degree: "Soiled", modifier: -10 });
 		expect(corruptionTrack(corruption, 95)).toEqual({ degree: "Profane", modifier: -30 });
+	});
+
+	test("boundary points: no tier at 0 CP, Damned at 100", () => {
+		expect(corruptionTrack(corruption, 0)).toEqual({ degree: "", modifier: 0 });
+		expect(corruptionTrack(corruption, 30)).toEqual({ degree: "Tainted", modifier: 0 });
+		expect(corruptionTrack(corruption, 31)).toEqual({ degree: "Soiled", modifier: -10 });
+		expect(corruptionTrack(corruption, 99)).toEqual({ degree: "Profane", modifier: -30 });
+		expect(corruptionTrack(corruption, 100)).toEqual({ degree: "Damned", modifier: -30 });
+	});
+
+	test("next-threshold display helpers", () => {
+		expect(nextDisorderThreshold(0)).toBe(40);
+		expect(nextDisorderThreshold(40)).toBe(60);
+		expect(nextDisorderThreshold(79)).toBe(80);
+		expect(nextDisorderThreshold(80)).toBeNull();
+		expect(nextMutationThreshold(0)).toBe(30);
+		expect(nextMutationThreshold(29)).toBe(30);
+		expect(nextMutationThreshold(30)).toBe(60);
+		expect(nextMutationThreshold(89)).toBe(90);
+		expect(nextMutationThreshold(90)).toBeNull();
 	});
 });
 
@@ -88,5 +123,22 @@ describe("affliction ledger", () => {
 		expect(addAffliction(base, { kind: "malignancy", name: "Palsy", text: "" })).toBe(base);
 		const grown = addAffliction(base, { kind: "malignancy", name: "Hatred", text: "" });
 		expect(grown).toHaveLength(2);
+	});
+});
+describe("afflictionLedgerKind (drop classifier, bead rdh1)", () => {
+	test("madness-pack kinds map to ledger kinds", () => {
+		expect(afflictionLedgerKind({ kind: "disorder" })).toBe("disorder");
+		expect(afflictionLedgerKind({ kind: "malignancy" })).toBe("malignancy");
+	});
+
+	test("mutation-pack rows map via tableKey", () => {
+		expect(afflictionLedgerKind({ tableKey: "mutations" })).toBe("mutation");
+		expect(afflictionLedgerKind({ kind: "mutation" })).toBe("mutation");
+	});
+
+	test("everything else is an ordinary item drop", () => {
+		expect(afflictionLedgerKind({})).toBeNull();
+		expect(afflictionLedgerKind({ kind: "shock-table" })).toBeNull();
+		expect(afflictionLedgerKind({ tableKey: "criticals" })).toBeNull();
 	});
 });

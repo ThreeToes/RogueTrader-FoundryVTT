@@ -48,6 +48,15 @@ import {
 import { resolvePower } from "./power-resolution";
 import { collectTestModifiers, mergeModifiers, type TestKind } from "./funnel";
 import {
+	carriedConditions,
+	conditionEffectData,
+	snapOutReady,
+	shockCondition,
+	systemStatus,
+	type ConditionData,
+	unnervedCondition,
+} from "./conditions";
+import {
 	degreesOfFailure,
 	fearImmune,
 	fearReroll,
@@ -1253,17 +1262,22 @@ export const fearHandler: RollHandler<"fear"> = {
 		const finalTarget = info?.target ?? prepared.baseTarget;
 		if (situation !== "combat") {
 			// Non-combat failure (p296): −10 on concentration Tests while
-			// nearby; failed by 30 or more also gains +1d5 Insanity Points.
+			// nearby (carried as the "unnerved" status, bead q1ql); failed by 30
+			// or more also gains +1d5 Insanity Points.
 			const failedBy = degreesOfFailure(finalTarget, outcome.roll);
+			const condition = unnervedCondition();
+			const insanityGain = failedBy >= 4 ? await rollInsanityGain("1d5") : 0;
+			await applyCondition(request.actor, condition, outcome.roll);
 			await postCard(
 				request.actor,
 				"systems/rogue-trader/template/chat/fear-shock.hbs",
 				{
 					title: prepared.title,
 					shockText: game.i18n.localize("FEAR.NONCOMBAT_FAILURE"),
+					conditionName: conditionLabel(condition.statusId),
 					insanityNote:
 						failedBy >= 4
-							? game.i18n.localize("FEAR.NONCOMBAT_INSANITY")
+							? `${game.i18n.localize("FEAR.NONCOMBAT_INSANITY")}${insanityGain ? ` (${insanityGain})` : ""}`
 							: "",
 				},
 			);
@@ -1276,6 +1290,11 @@ export const fearHandler: RollHandler<"fear"> = {
 			(shockDie.total ?? 0) +
 			10 * degreesOfFailure(finalTarget, outcome.roll);
 		const row = shockOutcome(shockTotal);
+		// Apply the row's condition + Insanity gain (bead q1ql): statuses are
+		// the Foundry-native carrier; the card shows what landed.
+		const condition = shockCondition(shockTotal);
+		const insanityGain = await rollInsanityGain(condition.insanity);
+		await applyCondition(request.actor, condition, shockTotal);
 		await postCard(
 			request.actor,
 			"systems/rogue-trader/template/chat/fear-shock.hbs",
@@ -1283,6 +1302,8 @@ export const fearHandler: RollHandler<"fear"> = {
 				title: prepared.title,
 				shockRoll: shockTotal,
 				shockText: game.i18n.localize(row.textKey),
+				conditionName: conditionLabel(condition.statusId),
+				insanityGain,
 			},
 		);
 	},
@@ -1304,6 +1325,135 @@ export const rollHandlers: {
 	"ship-repair": shipRepairHandler,
 	fear: fearHandler,
 };
+
+// ---------------------------------------------------------------------------
+// Status conditions (bead q1ql) — Foundry-side helpers. The pure mapping
+// lives in rules/conditions.ts; these touch actor documents.
+// ---------------------------------------------------------------------------
+
+/** Localized condition name for chat/AE display. */
+function conditionLabel(statusId: string): string {
+	const status = systemStatus(statusId);
+	return status
+		? game.i18n?.localize(status.labelKey) ?? status.id
+		: statusId;
+}
+
+/** Roll an insanity-gain formula ("0" / "1" / "1d5" / "1d5+1" / ...). */
+async function rollInsanityGain(formula: string): Promise<number> {
+	if (!formula || formula === "0") return 0;
+	const roll = new foundry.dice.Roll(formula);
+	await roll.evaluate();
+	return roll.total ?? 0;
+}
+
+/**
+ * Apply a condition to the actor: replace any carried system-status effects
+ * (one transient condition at a time), create the ActiveEffect (token marker
+ * + system.testModifier change via the funnel's "effect" contributor), and
+ * apply the book's Insanity gain to system.insanity (visible on the card).
+ */
+async function applyCondition(
+	actor: Actor,
+	condition: ConditionData,
+	rollTotal: number,
+): Promise<void> {
+	const carried = carriedConditions(actor)
+		.map((c) => c.id)
+		.filter((id) => id !== "");
+	if (carried.length > 0) {
+		await actor.deleteEmbeddedDocuments("ActiveEffect", carried);
+	}
+	const data = conditionEffectData(
+		condition,
+		rollTotal,
+		conditionLabel(condition.statusId),
+	);
+	if (!data) {
+		console.warn(
+			`rogue-trader: unknown condition status "${condition.statusId}" — not applied (bead q1ql)`,
+		);
+		return;
+	}
+	await actor.createEmbeddedDocuments("ActiveEffect", [data]);
+	if (condition.insanity && condition.insanity !== "0") {
+		const gain = await rollInsanityGain(condition.insanity);
+		if (gain > 0) {
+			const system = systemOf(actor) as unknown as { insanity?: number };
+			await actor.update({
+				"system.insanity": (system.insanity ?? 0) + gain,
+			});
+		}
+	}
+}
+
+/**
+ * "Snap out of it" (Core Rulebook p296): a Willpower Test at the beginning
+ * of the character's Turn; success ends the snap-out-capable condition.
+ * Failure keeps the condition (the player may test again next Turn).
+ */
+export async function rollSnapOut(
+	actor: Actor,
+	options: RollTestOptions = {},
+): Promise<void> {
+	if (!snapOutReady(actor)) {
+		ui.notifications?.warn(game.i18n.localize("FEAR.SNAP_OUT_NONE"));
+		return;
+	}
+	const characteristic = systemOf(actor).characteristics.wp;
+	if (!characteristic) {
+		ui.notifications?.warn(
+			game.i18n.format("ROLL.UNKNOWN_CHARACTERISTIC", { key: "wp" }),
+		);
+		return;
+	}
+	const modifiers = [
+		...(options.modifiers ?? []),
+	];
+	const title = `${actor.name} — ${game.i18n.localize("FEAR.SNAP_OUT")}`;
+	let finalModifiers = modifiers;
+	if (!options.skipDialog) {
+		const result = await TestDialog.show({
+			title,
+			baseTarget: characteristic.value,
+			contributors: dialogContributors(actor, "characteristic", "wp", modifiers, null),
+		});
+		if (result === null) return;
+		finalModifiers = result.modifiers;
+	}
+	const { outcome } = await runTest(
+		actor,
+		{
+			title,
+			baseTarget: characteristic.value,
+			testKind: "characteristic",
+			testKey: "wp",
+			initialModifiers: finalModifiers,
+			weapon: null,
+			context: { flags: { snapOut: true } },
+			templateVars: {},
+			kindData: {},
+		},
+		finalModifiers,
+		{ flags: { snapOut: true } },
+	);
+	if (!outcome.success) {
+		await postCard(actor, "systems/rogue-trader/template/chat/fear-shock.hbs", {
+			title,
+			shockText: game.i18n.localize("FEAR.SNAP_OUT_FAIL"),
+		});
+		return;
+	}
+	const carried = carriedConditions(actor).filter((c) => c.snapOut);
+	const ids = carried.map((c) => c.id).filter((id) => id !== "");
+	if (ids.length > 0) {
+		await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
+	}
+	await postCard(actor, "systems/rogue-trader/template/chat/fear-shock.hbs", {
+		title,
+		shockText: game.i18n.localize("FEAR.SNAP_OUT_SUCCESS"),
+	});
+}
 
 // ---------------------------------------------------------------------------
 // Orchestrator

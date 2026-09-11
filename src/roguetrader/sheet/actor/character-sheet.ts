@@ -8,6 +8,7 @@ import { RtActorSheet } from "../context";
 import { getPackDocuments } from "../pack-resolve";
 import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
+import { postCard } from "../../rules/chat-flags";
 import { derivedRank, totalSpent } from "../../rules/advancement";
 import { careers, equipStates } from "../../registry";
 import { effectiveMechanics, originByKey } from "../../origins";
@@ -17,17 +18,24 @@ import {
 } from "../../rules/origin-traits";
 import {
 	corruptionTrack,
-	dueDisorders,
 	insanityTrack,
-	malignancyTestsDue,
+	madnessSheetContext,
+	type MadnessPoints,
 } from "../../rules/madness";
 import type { Modifier } from "../../rules-engine/src/modifier";
 import {
 	performRoll,
+	rollSnapOut,
 	rollWeaponDamage,
 	toggleSustainedPower,
 } from "../../rules/adapter";
 import { missingSkillGrants } from "../../rules/default-skills";
+import {
+	addAffliction,
+	afflictionLedgerKind,
+	dueDisorders,
+	type AfflictionLedgerEntry,
+} from "../../rules/madness";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { deriveCapacity, resolveEncumbrance, carriedWeight } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
@@ -78,8 +86,16 @@ export class CharacterSheet extends RtActorSheet {
 			claimGrant: CharacterSheet.#onClaimGrant,
 			rollTraumaTest: CharacterSheet.#onRollTraumaTest,
 			rollMalignancyTest: CharacterSheet.#onRollMalignancyTest,
+			snapOut: CharacterSheet.#onSnapOut,
 		},
 	};
+
+	/** "Snap out of it" (p296, bead q1ql): success ends the condition. */
+	static async #onSnapOut(this: {
+		actor: foundry.documents.Actor;
+	}): Promise<void> {
+		await rollSnapOut(this.actor);
+	}
 
 	static async #onOpenItem(
 		this: { actor: foundry.documents.Actor },
@@ -275,6 +291,17 @@ export class CharacterSheet extends RtActorSheet {
 		this.render({ force: true } as never);
 	}
 
+	/** Cached madness-pack rows (CONFIG registry, epic 1g2t). */
+	static #madnessRows(): unknown[] {
+		return (
+			(CONFIG as unknown as {
+				ROGUE_TRADER?: {
+					madness?: { getRows?: () => unknown[] };
+				};
+			}).ROGUE_TRADER?.madness?.getRows?.() ?? []
+		);
+	}
+
 	/**
 	 * Trauma Test (epic 1g2t, p296): Willpower test modified by the Insanity
 	 * Track; on failure the GM rolls d100 + 10/degree of failure on Table 10-6
@@ -286,12 +313,10 @@ export class CharacterSheet extends RtActorSheet {
 		const system = this.actor.system as unknown as {
 			insanity?: number;
 		};
-		const rows = (
-			CONFIG as unknown as {
-				ROGUE_TRADER?: { madness?: { getRows?: () => unknown[] } };
-			}
-		).ROGUE_TRADER?.madness?.getRows?.() ?? [];
-		const track = insanityTrack(rows as never, system.insanity ?? 0);
+		const track = insanityTrack(
+			CharacterSheet.#madnessRows() as never,
+			system.insanity ?? 0,
+		);
 		const modifiers: Modifier[] = track.modifier
 			? [{
 					id: "trauma:track",
@@ -318,12 +343,10 @@ export class CharacterSheet extends RtActorSheet {
 		const system = this.actor.system as unknown as {
 			corruption?: number;
 		};
-		const rows = (
-			CONFIG as unknown as {
-				ROGUE_TRADER?: { madness?: { getRows?: () => unknown[] } };
-			}
-		).ROGUE_TRADER?.madness?.getRows?.() ?? [];
-		const track = corruptionTrack(rows as never, system.corruption ?? 0);
+		const track = corruptionTrack(
+			CharacterSheet.#madnessRows() as never,
+			system.corruption ?? 0,
+		);
 		const modifiers: Modifier[] = track.modifier
 			? [{
 					id: "malignancy:track",
@@ -568,6 +591,7 @@ export class CharacterSheet extends RtActorSheet {
 	/**
 	 * Drop an external Item onto the inventory to copy it into the actor.
 	 * Drops of uuids already owned are no-ops (reordering comes later).
+	 * Affliction pack items (bead rdh1) become LEDGER entries, not copies.
 	 */
 	protected async _onDrop(event: DragEvent): Promise<unknown> {
 		const data = foundry.applications.ux.TextEditor.getDragEventData(event) as {
@@ -577,6 +601,12 @@ export class CharacterSheet extends RtActorSheet {
 		if (data.type !== "Item" || !data.uuid) return;
 		const source = await foundry.utils.fromUuid(data.uuid);
 		if (!(source instanceof foundry.documents.Item)) return;
+		const afflictionKind = afflictionLedgerKind(
+			source.system as unknown as { kind?: string; tableKey?: string },
+		);
+		if (afflictionKind) {
+			return dropAffliction(this.actor, afflictionKind, source);
+		}
 		if (this.actor.items.find((item) => item.uuid === source.uuid)) return;
 		return this.actor.createEmbeddedDocuments("Item", [source.toObject()]);
 	}
@@ -1041,30 +1071,15 @@ export class CharacterSheet extends RtActorSheet {
 			fatigueMax: fatigueThreshold(system),
 		};
 
-		// Madness tracks (epic 1g2t): degrees + test modifiers from the cached
-		// madness pack; affliction ledger for display.
-		const madnessRows = (
-			CONFIG as unknown as {
-				ROGUE_TRADER?: {
-					madness?: { getRows?: () => unknown[] };
-				};
-			}
-		).ROGUE_TRADER?.madness?.getRows?.() ?? [];
-		const insanity = insanityTrack(madnessRows as never, system.insanity ?? 0);
-		const corr = corruptionTrack(madnessRows as never, system.corruption ?? 0);
-		context.madness = {
-			insanityDegree: insanity.degree,
-			insanityModifier: insanity.modifier,
-			corruptionDegree: corr.degree,
-			corruptionModifier: corr.modifier,
-			dueDisorders: dueDisorders(system.insanity ?? 0, (system.afflictions ?? []) as never),
-			afflictions: (system.afflictions ?? []) as unknown as Array<{
-				kind: string;
-				name: string;
-				severity?: string;
-				text?: string;
-			}>,
-		};
+		// Madness tracks + conditions (epic 1g2t, q1ql): pure helper.
+		Object.assign(
+			context,
+			madnessSheetContext(
+				CharacterSheet.#madnessRows() as never,
+				system as unknown as MadnessPoints,
+				this.actor as unknown as never,
+			),
+		);
 
 		const enrich = (text: string) =>
 			foundry.applications.ux.TextEditor.enrichHTML(text, {
@@ -1078,4 +1093,45 @@ export class CharacterSheet extends RtActorSheet {
 
 		return context;
 	}
+}
+
+/**
+ * Convert a dropped affliction pack item into a ledger entry (bead rdh1).
+ * Module-level to keep it off the class body. Disorder severity: the first
+ * due threshold (40 Minor / 60 Severe / 80 Acute) when one is owed, else
+ * blank for the GM to set; the pack's severity field lists eligible
+ * severities, not the gained one.
+ */
+async function dropAffliction(
+	actor: foundry.documents.Actor,
+	kind: "disorder" | "malignancy" | "mutation",
+	source: foundry.documents.Item,
+): Promise<unknown> {
+	const system = actor.system as unknown as {
+		afflictions?: AfflictionLedgerEntry[];
+		insanity?: number;
+	};
+	const ledger = system.afflictions ?? [];
+	let severity = "";
+	if (kind === "disorder") {
+		const due = dueDisorders(system.insanity ?? 0, ledger);
+		severity = due[0]?.severity ?? "";
+	}
+	const entry = addAffliction(ledger, {
+		kind,
+		name: source.name ?? "",
+		severity,
+		text:
+			(source.system as unknown as { description?: string }).description ??
+			"",
+	});
+	if (entry === ledger) return null; // already suffered
+	await actor.update({
+		"system.afflictions": entry,
+	} as unknown as never);
+	await postCard(actor, "systems/rogue-trader/template/chat/fear-shock.hbs", {
+		title: source.name ?? "",
+		shockText: game.i18n!.localize("AFFLICTION.ADDED"),
+	});
+	return null;
 }

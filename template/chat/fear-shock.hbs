@@ -11,6 +11,18 @@
             <div class="roll-result failure">
                 <span class="label">{{shockText}}</span>
             </div>
+            {{#if conditionName}}
+            <div class="roll-result">
+                <span class="label">{{localize "FEAR.CONDITION_APPLIED"}}:</span>
+                <span class="value">{{conditionName}}</span>
+            </div>
+            {{/if}}
+            {{#if insanityGain}}
+            <div class="roll-result">
+                <span class="label">{{localize "FEAR.INSANITY_GAINED"}}:</span>
+                <span class="value">{{insanityGain}}</span>
+            </div>
+            {{/if}}
             {{#if insanityNote}}
             <div class="roll-result">
                 <span class="label">{{insanityNote}}</span>

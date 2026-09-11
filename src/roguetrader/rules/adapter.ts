@@ -35,6 +35,7 @@ export {
 	rollPsychicPower,
 	rollNavigatorPower,
 	rollFearTest,
+	rollSnapOut,
 	rollShipSalvo,
 	rollShipRepair,
 	performRoll,

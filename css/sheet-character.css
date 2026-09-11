@@ -677,6 +677,12 @@
 	color: var(--rt-muted);
 }
 
+.rogue-trader .background .origin-label .madness-points {
+	width: 4em;
+	text-align: center;
+	padding: 0 4px;
+}
+
 .rogue-trader .background .origin-name {
 	cursor: help;
 }

@@ -62,5 +62,17 @@
         {{else}}
         <p class="untrained-hint">{{localize "COMBAT.NO_WEAPONS"}}</p>
         {{/if}}
+        {{#if conditions.snapOutReady}}
+        <div class="inv-group-header">
+            <h1>{{localize "STATUS.HEADER"}}</h1>
+            <div class="traits-row">
+                {{#each conditions.carried as |name|}}
+                <span class="chip origin-note">{{name}}</span>
+                {{/each}}
+                <button type="button" class="ladder-option" data-action="snapOut"
+                    data-tooltip="{{localize "FEAR.SNAP_OUT_HINT"}}">{{localize "FEAR.SNAP_OUT"}}</button>
+            </div>
+        </div>
+        {{/if}}
     </div>
 </section>

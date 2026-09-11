@@ -33,9 +33,14 @@ import {
 	rollNavigatorPower,
 	rollFearTest,
 	performRoll,
+	rollSnapOut,
 } from "../rules/adapter";
 import type { DamageApplyFlag, DamageRollFlag } from "../rules/chat-flags";
 import { missingSkillGrants } from "../rules/default-skills";
+import {
+	STATUS_IMG,
+	SYSTEM_STATUSES,
+} from "../rules/conditions";
 import { testContributors } from "../rules/funnel";
 import {
 	HOMEBREW_SETTING,
@@ -196,10 +201,30 @@ async function rollDamageButton(button: HTMLButtonElement): Promise<void> {
 	});
 }
 
+/**
+ * System statuses (bead q1ql, p0af): transient conditions (Shock/Fear
+ * outcomes, Stunned, On Fire...) as Foundry-native token markers. The pure
+ * registry lives in rules/conditions.ts; carried as ActiveEffects whose
+ * system.testModifier change the funnel's "effect" contributor already
+ * consumes. REPLACES the core defaults wholesale (p0af): the stock
+ * D&D-flavoured statuses have no meaning here and clutter the HUD; our
+ * "unconscious"/"stunned" ids intentionally shadow the core ones.
+ */
+function registerSystemStatuses(): void {
+	(CONFIG as unknown as { statusEffects?: unknown[] }).statusEffects =
+		SYSTEM_STATUSES.map((status) => ({
+			id: status.id,
+			name: game.i18n?.localize(status.labelKey) ?? status.id,
+			img: STATUS_IMG[status.id] ?? "icons/svg/aura.svg",
+			statuses: [status.id],
+		}));
+}
+
 export function sheetInit() {
 	Hooks.once("init", () => {
 		attachRegistriesToConfig();
 		registerSharedPartials();
+		registerSystemStatuses();
 
 		// Public roll API for modules/macros (bead mvu2): the full roll set
 		// plus performRoll for module-defined request kinds.
@@ -213,6 +238,7 @@ export function sheetInit() {
 		git.rogueTrader.rollPsychicPower = rollPsychicPower;
 		git.rogueTrader.rollNavigatorPower = rollNavigatorPower;
 		git.rogueTrader.rollFearTest = rollFearTest;
+		git.rogueTrader.rollSnapOut = rollSnapOut;
 
 		// Module extension point for test modifiers (funnel v2, see rules/funnel.ts).
 		const rtc = CONFIG as unknown as {

@@ -4,7 +4,8 @@
             "explorer",
             "npc",
             "dynasty",
-            "starship"
+            "starship",
+            "vehicle"
         ],
         "templates": {
             "characteristics": {
@@ -1170,6 +1171,37 @@
                 "actorLink": true,
                 "bar1": {
                     "attribute": "hullIntegrity"
+                },
+                "sight": {
+                    "enabled": false
+                }
+            }
+        },
+        "vehicle": {
+            "structuralIntegrity": {
+                "value": 0,
+                "max": 0
+            },
+            "armour": {
+                "front": 0,
+                "left": 0,
+                "right": 0,
+                "rear": 0,
+                "top": 0,
+                "bottom": 0
+            },
+            "handling": 0,
+            "speed": 0,
+            "size": "",
+            "vehicleClass": "ground",
+            "traits": [],
+            "systems": {},
+            "crew": [],
+            "mountedWeapons": [],
+            "description": "",
+            "prototypeToken": {
+                "bar1": {
+                    "attribute": "system.structuralIntegrity"
                 },
                 "sight": {
                     "enabled": false

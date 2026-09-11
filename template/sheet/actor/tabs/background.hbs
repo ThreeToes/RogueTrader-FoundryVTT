@@ -76,16 +76,37 @@
                 </span>
             </div>
             <div class="traits-row">
-                <span class="origin-label">{{localize "MADNESS.INSANITY"}}: {{madness.insanityDegree}}</span>
-                <span class="origin-label">{{localize "MADNESS.CORRUPTION"}}: {{madness.corruptionDegree}}</span>
+                <span class="origin-label">{{localize "MADNESS.INSANITY"}}:
+                    {{#if editable}}<input name="system.insanity" type="number" min="0"
+                        value="{{source.system.insanity}}" class="madness-points" />{{else}}{{madness.insanityPoints}}{{/if}}
+                    {{madness.insanityDegree}}</span>
+                <span class="origin-label">{{localize "MADNESS.CORRUPTION"}}:
+                    {{#if editable}}<input name="system.corruption" type="number" min="0"
+                        value="{{source.system.corruption}}" class="madness-points" />{{else}}{{madness.corruptionPoints}}{{/if}}
+                    {{madness.corruptionDegree}}</span>
+                {{#if madness.nextDisorder}}<span class="origin-label"
+                    data-tooltip="{{localize "MADNESS.NEXT_DISORDER_HINT"}}">{{localize "MADNESS.NEXT_DISORDER"}}:
+                    {{madness.nextDisorder}}</span>{{/if}}
+                {{#if madness.nextMutation}}<span class="origin-label"
+                    data-tooltip="{{localize "MADNESS.NEXT_MUTATION_HINT"}}">{{localize "MADNESS.NEXT_MUTATION"}}:
+                    {{madness.nextMutation}}</span>{{/if}}
                 {{#if madness.dueDisorders.length}}
                 <span class="chip grant-ack" data-tooltip="{{localize "MADNESS.DISORDERS_DUE"}}">
                     {{localize "MADNESS.DISORDERS_DUE"}}
                 </span>
                 {{/if}}
-                {{#each madness.afflictions as |a|}}
-                <a class="chip origin-note" data-tooltip="{{a.text}}">{{a.name}}</a>
+                {{!-- Afflictions grouped by kind (bead rdh1): drag from the
+                     madness/mutations compendiums onto the sheet to add. --}}
+                {{#each madness.afflictionGroups as |group|}}
+                {{#if group.entries.length}}
+                <span class="origin-label">{{localize group.label}}:</span>
+                {{#each group.entries as |a|}}
+                <a class="chip origin-note" data-tooltip="{{a.text}}">{{a.name}}{{#if a.severity}} ({{a.severity}}){{/if}}</a>
                 {{/each}}
+                {{/if}}
+                {{/each}}
+                <span class="origin-label" data-tooltip="{{localize "AFFLICTION.IMPORT_HINT"}}">
+                    {{localize "AFFLICTION.IMPORT"}}</span>
             </div>
         </div>
 

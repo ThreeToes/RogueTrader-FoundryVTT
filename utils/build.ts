@@ -17,21 +17,29 @@ async function copyStaticFiles() {
 	// Which manifest ships as system.json (bead 7nm5 phase 3): dev builds ship
 	// system-manifests/dev.json; release builds (Forgejo release-private
 	// action) set RELEASE_MANIFEST=1 and ship rogue-trader-release.json — the
-	// Foundry-facing manifest carrying version + manifest/download URLs.
-	const isRelease = process.env.RELEASE_MANIFEST === "1";
-	const manifestSource = isRelease
-		? "./system-manifests/rogue-trader-release.json"
-		: "./system-manifests/dev.json";
+	// Foundry-facing manifest carrying version + manifest/download URLs. A
+	// PATH value ships that manifest instead (e.g. the public GitHub mirror
+	// manifest, bead bpk2).
+	const releaseEnv = process.env.RELEASE_MANIFEST;
+	const manifestSource = !releaseEnv
+		? "./system-manifests/dev.json"
+		: releaseEnv === "1"
+			? "./system-manifests/rogue-trader-release.json"
+			: releaseEnv;
 	if (!existsSync(manifestSource)) {
 		throw new Error(`build: system manifest missing: ${manifestSource}`);
 	}
-	// Merge the privately-held packs array into the shipped manifest (both dev
-	// and release builds). Release builds throw if the fragment is missing so
-	// a stale packs-repo checkout cannot silently publish a packless system;
-	// CI/local builds keep working without a packs clone.
+	// Merge the privately-held packs array into the shipped manifest when a
+	// content clone + fragment are present. Only the PRIVATE release manifest
+	// demands packs (throw when the fragment is missing so a stale checkout
+	// cannot silently publish a packless system); every other manifest — dev
+	// builds, the packless public release manifest (bead bpk2) — simply ships
+	// without packs, matching the documented empty-src/packs CI contract.
+	const requiresPacks =
+		manifestSource === "./system-manifests/rogue-trader-release.json";
 	const packs = await readManifestPacks();
 	const manifestSourceText = await readFile(manifestSource, "utf8");
-	const manifestText = await packManifest(manifestSourceText, packs, isRelease);
+	const manifestText = await packManifest(manifestSourceText, packs, requiresPacks);
 	await writeFile("./release/rogue_trader/system.json", manifestText);
 	await cp("./lang", "./release/rogue_trader/lang", { recursive: true, force: true });
 	// template.json (document type declarations) ships with the system; the
@@ -57,7 +65,7 @@ async function copyStaticFiles() {
 function packManifest(
 	source: string,
 	packs: Array<Record<string, unknown>> | null,
-	isRelease: boolean,
+	requiresPacks: boolean,
 ): string {
 	if (packs) {
 		if (!source.includes("\"packs\": []")) {
@@ -71,7 +79,7 @@ function packManifest(
 		);
 	}
 	if (!source.includes("\"packs\": []")) return source;
-	if (isRelease) {
+	if (requiresPacks) {
 		throw new Error(
 			"build: release manifest has no packs and manifest-packs.yaml is missing — clone the content repo",
 		);

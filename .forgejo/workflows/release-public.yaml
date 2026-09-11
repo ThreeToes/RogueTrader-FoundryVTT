@@ -1,0 +1,181 @@
+# Public release (bead bpk2): manual, Forgejo-dispatched. Builds the packless
+# PUBLIC system and publishes it as a GitHub release on the mirror repo.
+#
+# Relationship to release-private: run the PRIVATE release first — this
+# workflow stamps the PUBLIC manifest's version to MATCH the private release
+# manifest (no independent bump), so public and private releases share one
+# version per release cycle. The public build never touches src/packs (no
+# clone) and the shipped zip must contain NO compendium packs — enforced
+# below with loud checks.
+#
+# Foundry-facing contract:
+# - system-manifests/rogue-trader-public.json is the GitHub mirror's release
+#   manifest: `manifest` = stable raw URL on the mirror's default branch
+#   (must never move), `download` = the GitHub release asset URL.
+# - Same two-phase trick as the private flow: the manifest carries the
+#   deterministic pre-release download URL
+#   (releases/download/v{version}/rogue-trader.zip) and is re-patched with the
+#   asset URL the GitHub API reports after the release exists.
+# - NO tags are created or pushed on the mirror: the release POST derives its
+#   tag from the already-pushed commit (target_commitish). Only code commits
+#   (including the manifest update) and the release artifact go to GitHub.
+#
+# Secrets required:
+# - PUBLIC_RELEASE_PAT: GitHub PAT with repo scope on
+#   ThreeToes/RogueTrader-FoundryVTT (code push, tag push, release creation,
+#   asset upload).
+
+name: release-public
+
+on:
+    workflow_dispatch:
+        inputs:
+            branch:
+                description: GitHub mirror branch to push
+                required: false
+                default: master
+                type: string
+
+env:
+    GITHUB_REPO: ThreeToes/RogueTrader-FoundryVTT
+    PRIVATE_MANIFEST: system-manifests/rogue-trader-release.json
+    PUBLIC_MANIFEST: system-manifests/rogue-trader-public.json
+
+jobs:
+    release-public:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install bun (pinned)
+              run: |
+                  curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
+                  echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            # Version parity: the public release mirrors the private one —
+            # never an independent bump. Refuse to run when the private
+            # manifest version is already published on the mirror (re-run
+            # would clobber the GitHub release).
+            - name: Sync public manifest with private release version
+              id: sync
+              env:
+                  GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+                  FORGEJO_URL: https://prancingpony.jumblerumbling.com
+                  FORGEJO_REPO: stephen/foundryvtt-rogue-trader
+              run: |
+                  bun utils/sync-public-manifest.mjs sync | tee "$GITHUB_OUTPUT"
+                  VERSION=$(grep '^version=' "$GITHUB_OUTPUT" | cut -d= -f2)
+                  TAG="v${VERSION}"
+                  # The private release must exist first (public mirrors it).
+                  PRIVATE_RELEASE=$(curl -sf \
+                    -H "Authorization: token ${GITEA_TOKEN}" \
+                    "${FORGEJO_URL}/api/v1/repos/${FORGEJO_REPO}/releases/tags/${TAG}")
+                  test -n "${PRIVATE_RELEASE}" && test "${PRIVATE_RELEASE}" != "null" || {
+                      echo "::error::no Forgejo release ${TAG} — run release-private first"; exit 1; }
+                  # Mirror-side guard: a release already exists for this tag =
+                  # already published (this only READS; nothing tags anything).
+                  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                    -H "Authorization: Bearer ${{ secrets.PUBLIC_RELEASE_PAT }}" \
+                    "https://api.github.com/repos/${{ env.GITHUB_REPO }}/releases/tags/${TAG}")
+                  test "${STATUS}" != "200" || {
+                      echo "::error::GitHub release ${TAG} already exists — nothing to publish"; exit 1; }
+
+            - name: Build (public manifest, packless)
+              env:
+                  RELEASE_MANIFEST: system-manifests/rogue-trader-public.json
+              run: bun run build
+
+            # act runner images are slimmer than GitHub-hosted ubuntu-latest:
+            # zip/jq are not preinstalled (live failure 2026-09-08: "zip: command
+            # not found"). Install only what's missing; act containers run as
+            # root, other runners get sudo.
+            - name: Ensure build tools (zip, jq, unzip)
+              run: |
+                  command -v zip >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1 && exit 0
+                  if [ "$(id -u)" = "0" ]; then SUDO=""; else SUDO="sudo"; fi
+                  $SUDO apt-get update -qq
+                  $SUDO apt-get install -y -qq zip jq unzip
+
+            - name: Sanity-check public build output
+              env:
+                  VERSION: ${{ steps.sync.outputs.version }}
+                  PRIVATE_MANIFEST: ${{ env.PRIVATE_MANIFEST }}
+              run: |
+                  node -e '
+                    const fs = require("fs");
+                    const m = JSON.parse(fs.readFileSync("release/rogue_trader/system.json", "utf8"));
+                    const priv = JSON.parse(fs.readFileSync(process.env.PRIVATE_MANIFEST, "utf8"));
+                    if (m.version !== process.env.VERSION) throw new Error(`zip manifest version ${m.version} != ${process.env.VERSION}`);
+                    if (m.version !== priv.version) throw new Error(`public version ${m.version} != private ${priv.version}`);
+                    if (!Array.isArray(m.packs)) throw new Error("zip manifest has no packs array");
+                    if (m.packs.length !== 0) throw new Error(`public build must be packless, got ${m.packs.length}`);
+                  '
+                  # Loud no-book-content gate (bead bpk2): the shipped zip must
+                  # carry no compendium packs at all.
+                  cd release && zip -r ../rogue-trader.zip rogue_trader && cd ..
+                  if unzip -l rogue-trader.zip | grep -q "packs/"; then
+                      echo "::error::rogue-trader.zip contains compendium packs"; exit 1
+                  fi
+                  echo "zip is packless"
+
+            - name: Push code and manifest to GitHub
+              env:
+                  PAT: ${{ secrets.PUBLIC_RELEASE_PAT }}
+                  BRANCH: ${{ inputs.branch }}
+                  TAG: ${{ steps.sync.outputs.tag }}
+              run: |
+                  git config user.name "forgejo-release-bot"
+                  git config user.email "release-bot@noreply.jumblerumbling.com"
+                  git add "${{ env.PUBLIC_MANIFEST }}"
+                  git commit -m "Public release ${TAG}" || echo "manifest unchanged"
+                  git remote add github \
+                    "https://x-access-token:${PAT}@github.com/${{ env.GITHUB_REPO }}.git"
+                  # Code + manifest commits only — no tag push (bead bpk2).
+                  git push github "HEAD:${BRANCH}"
+
+            - name: Create GitHub release and attach zip
+              id: ghrelease
+              env:
+                  PAT: ${{ secrets.PUBLIC_RELEASE_PAT }}
+                  TAG: ${{ steps.sync.outputs.tag }}
+                  BRANCH: ${{ inputs.branch }}
+                  VERSION: ${{ steps.sync.outputs.version }}
+              run: |
+                  RELEASE_JSON=$(curl -sf -X POST \
+                    -H "Authorization: Bearer ${PAT}" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"tag_name\":\"${TAG}\",\"target_commitish\":\"${BRANCH}\",\"name\":\"${TAG}\",\"body\":\"Rogue Trader system release ${TAG} (machinery only, no compendium packs).\"}" \
+                    "https://api.github.com/repos/${{ env.GITHUB_REPO }}/releases")
+                  RELEASE_ID=$(echo "${RELEASE_JSON}" | jq -r '.id')
+                  test -n "${RELEASE_ID}" && test "${RELEASE_ID}" != "null" || {
+                      echo "::error::GitHub release creation failed: ${RELEASE_JSON}"; exit 1; }
+                  ASSET_URL=$(curl -sf -X POST \
+                    -H "Authorization: Bearer ${PAT}" \
+                    -H "Content-Type: application/octet-stream" \
+                    --data-binary @rogue-trader.zip \
+                    "https://uploads.github.com/repos/${{ env.GITHUB_REPO }}/releases/${RELEASE_ID}/assets?name=rogue-trader.zip" \
+                    | jq -r '.browser_download_url')
+                  test -n "${ASSET_URL}" && test "${ASSET_URL}" != "null" || {
+                      echo "::error::asset upload failed"; exit 1; }
+                  echo "asset=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+                  echo "GitHub release ${RELEASE_ID}: ${ASSET_URL}"
+
+            - name: Patch manifest download URL and push manifest update
+              env:
+                  ASSET: ${{ steps.ghrelease.outputs.asset }}
+                  BRANCH: ${{ inputs.branch }}
+                  TAG: ${{ steps.sync.outputs.tag }}
+              run: |
+                  bun utils/sync-public-manifest.mjs set-download --url="${ASSET}"
+                  git add "${{ env.PUBLIC_MANIFEST }}"
+                  if ! git diff --cached --quiet; then
+                      git commit -m "Public release ${TAG}: pin download URL to release asset"
+                      git push origin HEAD:master
+                      git push github "HEAD:${BRANCH}"
+                  else
+                      echo "no manifest update needed (asset URL matched the provisional URL)"
+                  fi

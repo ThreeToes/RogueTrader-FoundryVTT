@@ -27,10 +27,17 @@ export class Career extends foundry.abstract.TypeDataModel<
 		string,
 		{ simple: number; intermediate: number; trained: number; expert: number }
 	>;
-	declare startingSkills: string[];
+declare startingSkills: string[];
 	declare startingTalents: string[];
 	declare startingGear: string[];
 	declare ranks: CareerRank[];
+	declare species: {
+		key: string;
+		label: string;
+		baseCharacteristics: Record<string, number>;
+		startingFate: number;
+		woundsFormula: string;
+	};
 
 	static override defineSchema() {
 		return {
@@ -99,6 +106,33 @@ export class Career extends foundry.abstract.TypeDataModel<
 			 * from Table 2-2, stored per-rank (owner decision: option a) so
 			 * splat books can extend or alter progression without code.
 			 */
+			/**
+			 * Species block (bead koau schema prerequisite): xenos careers
+			 * (Dark Eldar Table 4-1, Kroot Characteristics) generate each
+			 * characteristic as 2d10+X instead of the human flat 2d10+25, with
+			 * species-specific wounds/fate. Blank key = human (creator uses its
+			 * human defaults and the origin fate tables); startingFate 0 = not
+			 * specified on this career (use the origin rules). Characteristic
+			 * keys mirror CHARACTERISTIC_KEYS; values are the book's "2d10+"
+			 * adds. woundsFormula is verbatim (e.g. "1d5+1 and add twice TB").
+			 */
+			species: new foundry.data.fields.SchemaField({
+				key: new foundry.data.fields.StringField({ initial: "" }),
+				label: new foundry.data.fields.StringField({ initial: "" }),
+				baseCharacteristics: new foundry.data.fields.TypedObjectField(
+					new foundry.data.fields.NumberField({
+						integer: true,
+						min: 0,
+						initial: 25,
+					}),
+				),
+				startingFate: new foundry.data.fields.NumberField({
+					integer: true,
+					min: 0,
+					initial: 0,
+				}),
+				woundsFormula: new foundry.data.fields.StringField({ initial: "" }),
+			}),
 			ranks: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.SchemaField({
 					rank: new foundry.data.fields.NumberField({

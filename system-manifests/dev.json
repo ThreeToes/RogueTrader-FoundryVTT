@@ -207,6 +207,13 @@
             "system": "rogue-trader",
             "path": "packs/lore",
             "type": "JournalEntry"
+        },
+        {
+            "name": "intothemaw",
+            "label": "Rogue Trader: Into the Maw",
+            "system": "rogue-trader",
+            "path": "packs/intothemaw",
+            "type": "JournalEntry"
         }
     ],
     "languages": [

@@ -47,4 +47,16 @@ describe("PsychicPower data model", () => {
 			expect((schema[key] as StubField).opts.initial).toBe("");
 		}
 	});
+
+	test("discipline field: registry-keyed choices, blank initial (hkc5)", () => {
+		const discipline = schema.discipline as StubField;
+		// Core Rulebook p159 seed: the three Astropath disciplines; splats
+		// (Navis Primer Voidfrost/Soul Ward/Theosophamy) register at init.
+		expect(discipline.opts.choices).toHaveProperty("telepathy");
+		expect(discipline.opts.choices).toHaveProperty("telekinesis");
+		expect(discipline.opts.choices).toHaveProperty("divination");
+		// Blank = legacy/un-grouped entry (the existing pack predates the
+		// field); hkc5 fills the values + registers the NP disciplines.
+		expect(discipline.opts.initial).toBe("");
+	});
 });

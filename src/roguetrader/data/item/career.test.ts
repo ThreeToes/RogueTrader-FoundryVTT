@@ -39,9 +39,33 @@ describe("Career data model", () => {
 			"startingTalents",
 			"startingGear",
 			"ranks",
+			// koau schema prerequisite: xenos careers (SR Table 4-1, NP Kroot
+			// p50) generate 2d10+X per characteristic instead of human 25.
+			"species",
 		]) {
 			expect(schema[field]).toBeDefined();
 		}
+	});
+
+	test("species block shape: blank key = human, per-char 2d10+ adds (koau)", () => {
+		const schema = Career.defineSchema() as unknown as Record<
+			string,
+			StubField
+		>;
+		const species = schema.species as unknown as {
+			fields: Record<string, StubField>;
+		};
+		// Blank species key = human; consumers fall back to the human
+		// defaults and origin fate tables.
+		expect(species.fields.key.opts.initial).toBe("");
+		expect(species.fields.label.opts.initial).toBe("");
+		// baseCharacteristic adds default to the human 25.
+		expect(species.fields.baseCharacteristics.of.opts.initial).toBe(25);
+		// startingFate 0 = not specified (use origin rules); SR Dark Eldar
+		// begin with 1 (captured as 1 in the pack data).
+		expect(species.fields.startingFate.opts.initial).toBe(0);
+		// woundsFormula is verbatim book text, blank for humans.
+		expect(species.fields.woundsFormula.opts.initial).toBe("");
 	});
 
 	test("ranks array carries rank/xpLevel/advances with advance subfields", () => {

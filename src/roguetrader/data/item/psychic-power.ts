@@ -1,6 +1,7 @@
 import { DamageType } from "./damage-types";
 import { effectsField, type EffectData } from "./effects";
 import { sourceField } from "./source";
+import { psychicDisciplines } from "../../registry";
 
 /** Psychic power sub-types (RT core, VERIFY against the book when seeding). */
 export const psychicPowerSubtypes = [
@@ -55,6 +56,16 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 				initial: "focus",
 				required: true,
 				nullable: false,
+			}),
+			/**
+			 * Discipline the technique belongs to (bead hkc5 schema
+			 * prerequisite): registry key into psychicDisciplines (Core
+			 * Rulebook p159 seed: telepathy/telekinesis/divination; splats
+			 * register more at init). Blank for legacy/un-grouped entries.
+			 */
+			discipline: new foundry.data.fields.StringField({
+				choices: psychicDisciplines.choices,
+				initial: "",
 			}),
 			/** Psy rating multiplier or flat rating captured raw. */
 			rating: new foundry.data.fields.NumberField({

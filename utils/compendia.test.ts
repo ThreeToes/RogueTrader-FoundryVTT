@@ -8,6 +8,7 @@ import {
 	toTableSourceDocument,
 	type ItemSourceIndex,
 	toActorSourceDocument,
+	toJournalSourceDocument,
 } from "./compendia";
 
 describe("resolveEntryType", () => {
@@ -304,5 +305,49 @@ describe("actor packs (bead et3x)", () => {
 	test("levelDB keys match the Foundry 14 sublevel format", () => {
 		expect(actorKey("abc")).toBe("!actors!abc");
 		expect(actorItemKey("a1", "b2")).toBe("!actors.items!a1.b2");
+	});
+});
+
+describe("journal ownership (bead wdeq)", () => {
+	const index: ItemSourceIndex = new Map();
+
+	test("entry ownership flows to the journal and every page", () => {
+		const { journal, pages } = toJournalSourceDocument(
+			{
+				name: "Rules",
+				ownership: { default: 2 },
+				pages: [{ name: "A", text: "a" }, { name: "B", text: "b" }],
+			},
+			index,
+		);
+		expect(journal.ownership).toEqual({ default: 2 });
+		for (const page of pages) {
+			expect(page.ownership).toEqual({ default: 2 });
+		}
+	});
+
+	test("page-level ownership overrides the journal entry", () => {
+		const { pages } = toJournalSourceDocument(
+			{
+				name: "Rules",
+				ownership: { default: 2 },
+				pages: [
+					{ name: "Open", text: "a", ownership: { default: 3 } },
+					{ name: "Closed", text: "b" },
+				],
+			},
+			index,
+		);
+		expect(pages[0].ownership).toEqual({ default: 3 });
+		expect(pages[1].ownership).toEqual({ default: 2 });
+	});
+
+	test("GM-only fallback for adventure packs (intothemaw contract)", () => {
+		const { journal, pages } = toJournalSourceDocument(
+			{ name: "Adventure", pages: [{ name: "A", text: "a" }] },
+			index,
+		);
+		expect(journal.ownership).toEqual({ default: 0 });
+		expect(pages[0].ownership).toEqual({ default: 0 });
 	});
 });

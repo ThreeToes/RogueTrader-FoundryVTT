@@ -128,6 +128,31 @@ const VEHICLE_FACINGS = {
 	bottom: "VEHICLE_FACING.BOTTOM",
 } as const;
 
+/**
+ * Weapon families (bead erzk): the book's Weapon Training talent groups
+ * (Core Rulebook printed p95/p100/p104-105, "Talent Groups:") plus the
+ * ranged/melee weapon-table sections (Table 5-3/5-4 headings). These key
+ * Weapon.weaponFamily, the field the Weapon Training gate resolves
+ * against — "he must have a corresponding Weapon Training Talent".
+ * Thrown is a family key for grenade/missile-class rows (Thrown Weapon
+ * Training sells only a Universal group).
+ */
+const WEAPON_FAMILIES = {
+	las: "WEAPON_FAMILY.LAS",
+	sp: "WEAPON_FAMILY.SP",
+	bolt: "WEAPON_FAMILY.BOLT",
+	melta: "WEAPON_FAMILY.MELTA",
+	plasma: "WEAPON_FAMILY.PLASMA",
+	flame: "WEAPON_FAMILY.FLAME",
+	launcher: "WEAPON_FAMILY.LAUNCHER",
+	primitive: "WEAPON_FAMILY.PRIMITIVE",
+	chain: "WEAPON_FAMILY.CHAIN",
+	power: "WEAPON_FAMILY.POWER",
+	shock: "WEAPON_FAMILY.SHOCK",
+	exotic: "WEAPON_FAMILY.EXOTIC",
+	thrown: "WEAPON_FAMILY.THROWN",
+} as const;
+
 /** Core vehicle traits. Extend freely via the registry. */
 const VEHICLE_TRAITS = {
 	"open-topped": "VEHICLE_TRAIT.OPEN_TOPPED",
@@ -197,6 +222,7 @@ export const bodyLocations = new EntryRegistry(BODY_LOCATIONS);
 export const qualities = new EntryRegistry(QUALITIES);
 export const protectionTypes = new EntryRegistry(PROTECTION_TYPES);
 export const vehicleClasses = new EntryRegistry(VEHICLE_CLASSES);
+export const weaponFamilies = new EntryRegistry(WEAPON_FAMILIES);
 export const vehicleFacings = new EntryRegistry(VEHICLE_FACINGS);
 export const vehicleTraits = new EntryRegistry(VEHICLE_TRAITS);
 export const vehicleSystems = new EntryRegistry(VEHICLE_SYSTEMS);
@@ -240,6 +266,21 @@ const CAREERS = {
 
 export const careers = new EntryRegistry(CAREERS);
 
+/**
+ * Psychic disciplines (bead hkc5 schema prerequisite): the disciplines a
+ * psyker may learn techniques from. Core Rulebook seed is the three
+ * Astropath disciplines (Core Rulebook p159); splat books (Navis Primer:
+ * Voidfrost, Soul Ward, Theosophamy — and ITS) register further entries
+ * at init — disciplines are content, not code, mirroring careers.
+ */
+const PSYCHIC_DISCIPLINES = {
+	telepathy: "PSYCHIC_DISCIPLINE.TELEPATHY",
+	telekinesis: "PSYCHIC_DISCIPLINE.TELEKINESIS",
+	divination: "PSYCHIC_DISCIPLINE.DIVINATION",
+} as const;
+
+export const psychicDisciplines = new EntryRegistry(PSYCHIC_DISCIPLINES);
+
 type RogueTraderRegistries = {
 	bodyLocations: EntryRegistry;
 	qualities: EntryRegistry;
@@ -252,6 +293,8 @@ type RogueTraderRegistries = {
 	talents: EntryRegistry;
 	equipStates: EntryRegistry;
 	careers: EntryRegistry;
+	weaponFamilies: EntryRegistry;
+	psychicDisciplines: EntryRegistry;
 };
 
 /**
@@ -279,4 +322,6 @@ export function attachRegistriesToConfig() {
 	rt.talents = talents;
 	rt.equipStates = equipStates;
 	rt.careers = careers;
+	rt.weaponFamilies = weaponFamilies;
+	rt.psychicDisciplines = psychicDisciplines;
 }

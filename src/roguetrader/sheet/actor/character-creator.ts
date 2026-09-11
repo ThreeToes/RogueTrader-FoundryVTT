@@ -1,49 +1,54 @@
 import type { CharacteristicKey } from "../../data/actor/character";
-import { sheetContext } from "../context";
-import { getPackDocuments } from "../pack-resolve";
-import { waitForDefaultGrants } from "../default-grants";
 import {
 	allowedColumns,
+	type CharMod,
 	fateFromTable,
 	heirloomForRoll,
 	heirloomItems,
 	ORIGIN_ROW_LABEL_KEYS,
 	ORIGIN_ROWS,
-	originByKey,
-	originsInRow,
-	resolveOrigins,
-	SUGGESTED_HOME_WORLDS,
-	type CharMod,
 	type OriginPick,
 	type OriginRow,
+	originByKey,
+	originsInRow,
 	type ResolvedOrigin,
+	resolveOrigins,
+	SUGGESTED_HOME_WORLDS,
 } from "../../origins";
+import { careers } from "../../registry";
 import {
+	availabilityModifier,
+	isTrainedFor,
+	WEAPON_CLASSES,
+	type WeaponTrainingCoverage,
+	weaponTrainingCoverage,
+} from "../../rules/acquisition";
+import {
+	type CatalogSkill,
+	CHARACTERISTIC_BASE,
 	finalCharacteristics,
 	isUnresolvedChoice,
 	matchOriginSkills,
 	POINT_BUY_MAX,
 	validatePointBuy,
 	woundsFromOrigin,
-	CHARACTERISTIC_BASE,
-	type CatalogSkill,
 } from "../../rules/creation";
-import { careers } from "../../registry";
-import { availabilityModifier } from "../../rules/acquisition";
 import {
 	GRANTED_BY_CREATOR,
+	type GrantPayload,
 	originRowFromStoredKey,
 	reconcileForCreator,
 	skillGrantPayload,
-	type GrantPayload,
 } from "../../rules/grants";
-import {
-	talentGrant,
-	promptParameterisedSubject,
-} from "./grant-helpers";
+import { sheetContext } from "../context";
+import { waitForDefaultGrants } from "../default-grants";
+import { getPackDocuments } from "../pack-resolve";
+import { promptParameterisedSubject, talentGrant } from "./grant-helpers";
 
 /** yclz: prompt for a parameterised talent's subject; resolved names pass through. */
-async function resolveParameterisedTalent(name: string): Promise<string | null> {
+async function resolveParameterisedTalent(
+	name: string,
+): Promise<string | null> {
 	return promptParameterisedSubject(name);
 }
 
@@ -51,7 +56,15 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
 
 const CHARACTERISTIC_ORDER: CharacteristicKey[] = [
-	"ws", "bs", "s", "t", "ag", "int", "per", "wp", "fel",
+	"ws",
+	"bs",
+	"s",
+	"t",
+	"ag",
+	"int",
+	"per",
+	"wp",
+	"fel",
 ];
 
 interface CreatorState {
@@ -75,12 +88,24 @@ interface CreatorState {
 		corruption: number[];
 		corrOrInsanity: number[];
 	};
-	/** Stage 6: the starting free acquisition (item name + pack payload). */
-	acquisition: { name: string; payload: object } | null;
+	/** Stage 6: the starting free acquisition (item key + pack payload). */
+	acquisition: { key: string; name: string; payload: object } | null;
 	/** Stage 6 collapsed group state (bead a2rd): group key -> collapsed. */
 	acqCollapsed: Record<string, boolean>;
 	/** Stage 3.5 (bead rboc): rolled heirloom (1d100 result + entry name). */
 	heirloom: { roll: number; name: string } | null;
+}
+
+interface AcqOption {
+	/** Stable chip key (pack + name); payloads live in #acquisitionPayloads. */
+	key: string;
+	name: string;
+	payload: object;
+	tooltip: string;
+	group: string;
+	/** Weapon-training gate (book p272 bullet 2): false = not selectable. */
+	selectable: boolean;
+	selected: boolean;
 }
 
 function emptyState(): CreatorState {
@@ -88,14 +113,30 @@ function emptyState(): CreatorState {
 		step: 0,
 		name: "",
 		method: "roll",
-		base: { ws: 25, bs: 25, s: 25, t: 25, ag: 25, int: 25, per: 25, wp: 25, fel: 25 },
+		base: {
+			ws: 25,
+			bs: 25,
+			s: 25,
+			t: 25,
+			ag: 25,
+			int: 25,
+			per: 25,
+			wp: 25,
+			fel: 25,
+		},
 		allocated: {},
 		rolled: {},
 		rerollUsed: false,
 		picks: {},
 		corrOrInsTrack: {},
 		careerKey: "",
-		rolledDice: { wounds: [], fateD10: null, insanity: [], corruption: [], corrOrInsanity: [] },
+		rolledDice: {
+			wounds: [],
+			fateD10: null,
+			insanity: [],
+			corruption: [],
+			corrOrInsanity: [],
+		},
 		acquisition: null,
 		acqCollapsed: {},
 		heirloom: null,
@@ -126,7 +167,9 @@ async function roll(formula: string): Promise<number> {
  * Factor and Ship Points, Select Equipment) are group-level or advancement-
  * engine dependent and remain out of scope for the creator itself.
  */
-export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) {
+export class CharacterCreator extends HandlebarsApplicationMixin(
+	ApplicationV2,
+) {
 	static DEFAULT_OPTIONS = {
 		id: "rogue-trader-character-creator",
 		classes: ["rogue-trader", "sheet", "character-creator"],
@@ -159,9 +202,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 	 */
 	targetActor: foundry.documents.Actor | null = null;
 
-	constructor(
-		options: { actor?: foundry.documents.Actor } & object = {},
-	) {
+	constructor(options: { actor?: foundry.documents.Actor } & object = {}) {
 		super(options as never);
 		this.targetActor = options.actor ?? null;
 		if (this.targetActor) {
@@ -174,14 +215,16 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 			// Existing characteristics prefill as rolled values; the player can
 			// re-roll (book: one re-roll) or switch to point-buy.
 			for (const key of CHARACTERISTIC_ORDER) {
-				this.creatorState.rolled[key] = system.characteristics[key]?.value ?? 25;
+				this.creatorState.rolled[key] =
+					system.characteristics[key]?.value ?? 25;
 			}
 		}
 	}
 
 	static PARTS = {
 		form: {
-			template: "systems/rogue-trader/template/sheet/actor/character-creator.hbs",
+			template:
+				"systems/rogue-trader/template/sheet/actor/character-creator.hbs",
 		},
 	};
 
@@ -218,7 +261,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 	}
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options as never));
+		const context = sheetContext(
+			await super._prepareContext(_options as never),
+		);
 		const state = this.creatorState;
 		context.step = state.step;
 		context.name = state.name;
@@ -268,7 +313,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 				detail = {
 					entry,
 					effect: entry.effect ?? null,
-variants: (entry.variants ?? []).map((v) => ({
+					variants: (entry.variants ?? []).map((v) => ({
 						...v,
 						selected: pick?.variantKey === v.key,
 					})),
@@ -288,22 +333,32 @@ variants: (entry.variants ?? []).map((v) => ({
 						value: option,
 						selected: pick?.optionChoice === option,
 					})),
-					hasCharChoice: (mechanicsForPick?.characteristicChoice?.length ?? 0) > 0,
+					hasCharChoice:
+						(mechanicsForPick?.characteristicChoice?.length ?? 0) > 0,
 					charChoices: (mechanicsForPick?.characteristicChoice ?? []).map(
 						(group: CharMod[]) => ({
 							value: JSON.stringify(group),
 							label: group
-								.map((m) => `${m.value > 0 ? "+" : ""}${m.value} ${m.key.toUpperCase()}`)
+								.map(
+									(m) =>
+										`${m.value > 0 ? "+" : ""}${m.value} ${m.key.toUpperCase()}`,
+								)
 								.join(", "),
 							selected:
-								JSON.stringify(pick?.charChoice ?? []) === JSON.stringify(group),
+								JSON.stringify(pick?.charChoice ?? []) ===
+								JSON.stringify(group),
 						}),
 					),
 					hasAlternate: (mechanicsForPick?.alternateChoice?.length ?? 0) > 0,
 					alternates: (mechanicsForPick?.alternateChoice ?? []).map(
-						(alt, index) => ({ ...alt, index, selected: pick?.alternate === index }),
+						(alt, index) => ({
+							...alt,
+							index,
+							selected: pick?.alternate === index,
+						}),
 					),
-					hasCorrIns: (mechanicsForPick?.corruptionOrInsanityDice?.length ?? 0) > 0,
+					hasCorrIns:
+						(mechanicsForPick?.corruptionOrInsanityDice?.length ?? 0) > 0,
 					corrOrInsDice: mechanicsForPick?.corruptionOrInsanityDice ?? [],
 					skills: mechanicsForPick?.skills ?? [],
 					talents: mechanicsForPick?.talents ?? [],
@@ -312,7 +367,13 @@ variants: (entry.variants ?? []).map((v) => ({
 					notes: mechanicsForPick?.notes ?? [],
 				};
 			}
-			return { row, labelKey: ORIGIN_ROW_LABEL_KEYS[row], pickKey: pick?.key ?? "", options, detail };
+			return {
+				row,
+				labelKey: ORIGIN_ROW_LABEL_KEYS[row],
+				pickKey: pick?.key ?? "",
+				options,
+				detail,
+			};
 		});
 
 		// Review: resolved origin + dice totals.
@@ -320,26 +381,37 @@ variants: (entry.variants ?? []).map((v) => ({
 		const base = this.#baseCharacteristics();
 		const chars = finalCharacteristics(base, resolved.characteristics);
 		const tb = Math.floor(chars.t / 10);
-		const woundsTotal = woundsFromOrigin(tb, state.rolledDice.wounds, resolved.woundBonus);
+		const woundsTotal = woundsFromOrigin(
+			tb,
+			state.rolledDice.wounds,
+			resolved.woundBonus,
+		);
 		const fateBase = resolved.fateTable
 			? fateFromTable(resolved.fateTable, state.rolledDice.fateD10 ?? 1)
 			: 0;
 		const fateTotal = Math.max(0, fateBase + resolved.fateDelta);
-		const corrInsTotal = state.rolledDice.corrOrInsanity.reduce((a, b) => a + b, 0);
+		const corrInsTotal = state.rolledDice.corrOrInsanity.reduce(
+			(a, b) => a + b,
+			0,
+		);
 		const insanityTotal =
 			resolved.insanity +
 			state.rolledDice.insanity.reduce((a, b) => a + b, 0) +
-			(Object.values(state.corrOrInsTrack).includes("insanity") ? corrInsTotal : 0);
+			(Object.values(state.corrOrInsTrack).includes("insanity")
+				? corrInsTotal
+				: 0);
 		const corruptionTotal =
 			resolved.corruption +
 			state.rolledDice.corruption.reduce((a, b) => a + b, 0) +
-			(Object.values(state.corrOrInsTrack).includes("corruption") ? corrInsTotal : 0);
+			(Object.values(state.corrOrInsTrack).includes("corruption")
+				? corrInsTotal
+				: 0);
 		context.review = {
 			characteristics: CHARACTERISTIC_ORDER.map((key) => ({
 				key,
 				labelKey: `CHARACTERISTIC.${key.toUpperCase()}`,
 				value: chars[key],
-				delta: (resolved.characteristics[key] ?? 0),
+				delta: resolved.characteristics[key] ?? 0,
 			})),
 			woundsTotal,
 			fateTotal,
@@ -373,7 +445,8 @@ variants: (entry.variants ?? []).map((v) => ({
 			: "";
 
 		// Stage 6 (gjvg): the starting free acquisition — items with a total
-		// modifier of +0 or better need no test (Core Rulebook p273 "Acquisition
+		// modifier of +0 or better need no test (Core Rulebook printed p272,
+		// file page-0273, heading "Acquisition and Starting
 		// and Starting Characters"). Availability modifier ≥ 0 (scarce+).
 		// The group's PF/SP (stage 5) are a GROUP/GM-level decision and live
 		// on the dynasty document, NOT in the creator (owner redesign).
@@ -402,45 +475,125 @@ variants: (entry.variants ?? []).map((v) => ({
 			ORIGIN_ROWS.every((row) => {
 				const pick = state.picks[row];
 				if (!pick) return true;
-				const detail = (context.originRows as Array<{ row: string; detail: { hasCorrIns?: boolean } } | undefined>)?.find(
-					(r) => r?.row === row,
-				)?.detail;
+				const detail = (
+					context.originRows as Array<
+						{ row: string; detail: { hasCorrIns?: boolean } } | undefined
+					>
+				)?.find((r) => r?.row === row)?.detail;
 				if (!detail?.hasCorrIns) return true;
 				return Boolean(state.corrOrInsTrack[row]);
 			});
 		return context;
 	}
 
+	/** Payloads for the acquisition chips, keyed by AcqOption.key. Full
+	 * item JSON never goes through the DOM (the old data-payload attribute
+	 * broke on JSON quotes — the "fix that selection up" bug). */
+	#acquisitionPayloads = new Map<string, object>();
+
 	/**
 	 * Items from the equipment packs qualifying as the starting free
-	 * acquisition (availability modifier >= +0, Table 9-35). Payload carries
-	 * the pack document clone (meh0 flavour) for the grant.
+	 * acquisition (availability modifier >= +0, Table 9-35; printed p272 —
+	 * the file-page-0273 heading "Acquisition and Starting Characters" is
+	 * printed page 272 under the dump's +1 offset). Book bullets:
+	 * "They may choose a single item with a total Acquisition Modifier of
+	 * +0 or more without the need to make an Acquisition Test" and "In the
+	 * case of weapons, a character may only choose those which he can use.
+	 * i.e., he must have a corresponding Weapon Training Talent."
+	 *
+	 * Weapon gate: the weapon schema has no family field (Las/SP/...), so
+	 * the gate is enforced at CLASS level — a weapon is selectable when the
+	 * PC has any Weapon Training of the matching class (Universal covers
+	 * everything). A specific-family talent only truly covers its families;
+	 * that finer check needs a name->family mapping that does not exist in
+	 * the schema (see comment on #coveredWeaponClasses).
 	 */
-	async #startingAcquisitions(): Promise<Array<Record<string, unknown>>> {
-		const out: Array<Record<string, unknown>> = [];
-		const packs = ["rogue-trader.weapons", "rogue-trader.armour", "rogue-trader.gear", "rogue-trader.drugs", "rogue-trader.tools"];
+	async #startingAcquisitions(): Promise<Array<AcqOption>> {
+		const out: AcqOption[] = [];
+		this.#acquisitionPayloads.clear();
+		const coverage = await this.#weaponTrainingCoverage();
+		const packs = [
+			"rogue-trader.weapons",
+			"rogue-trader.armour",
+			"rogue-trader.gear",
+			"rogue-trader.drugs",
+			"rogue-trader.tools",
+		];
 		for (const packName of packs) {
 			const docs = (await getPackDocuments(packName)) as unknown as Array<{
 				name?: string;
 				type?: string;
-				system?: { availability?: string; description?: string };
+				system?: {
+					availability?: string;
+					class?: string;
+					weaponFamily?: string;
+					description?: string;
+				};
 				toObject: () => object;
 			}>;
 			for (const doc of docs) {
 				if (!doc.name) continue;
 				const modifier = availabilityModifier(doc.system?.availability ?? "");
 				if (modifier === null || modifier < 0) continue;
+				const key = `${packName}::${doc.name}`;
 				const payload = doc.toObject() as object;
+				this.#acquisitionPayloads.set(key, payload);
+				const isWeapon =
+					doc.type === "melee-weapon" || doc.type === "ranged-weapon";
+				const selectable =
+					!isWeapon ||
+					isTrainedFor(coverage, {
+						class: doc.system?.class,
+						weaponFamily: doc.system?.weaponFamily,
+						name: doc.name,
+					});
 				out.push({
+					key,
 					name: `${doc.name} (${game.i18n!.localize("CREATOR.ACQ_MODIFIER")} ${modifier >= 0 ? "+" : ""}${modifier})`,
-					payload: JSON.stringify(payload),
+					payload,
 					tooltip: (doc.system?.description ?? "").slice(0, 300),
-					selected: this.creatorState.acquisition?.name === doc.name,
 					group: packName.replace("rogue-trader.", ""),
+					selectable,
+					selected: this.creatorState.acquisition?.key === key,
 				});
 			}
 		}
 		return out.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+	}
+
+	/**
+	 * Weapon-training coverage for the starting-acquisition gate, from the
+	 * chosen career's startingTalents plus origin talents (book p272 bullet
+	 * 2; pure rule logic in rules/acquisition.ts weaponTrainingCoverage).
+	 */
+	async #weaponTrainingCoverage(): Promise<WeaponTrainingCoverage> {
+		const state = this.creatorState;
+		if (!state.careerKey) {
+			// No career chosen yet (page navigation) — everything selectable,
+			// matching the pre-gate behaviour until the talent list exists.
+			return {
+				classes: new Set(WEAPON_CLASSES),
+				byCategory: {},
+				exotic: new Set(),
+			};
+		}
+		const talentNames = [...(this.#resolved.talents ?? [])];
+		const careerDocs = (await getPackDocuments(
+			"rogue-trader.careers",
+		)) as unknown as Array<{
+			name?: string;
+			system?: { key?: string; startingTalents?: string[] };
+		}>;
+		const career = careerDocs.find((c) => c.system?.key === state.careerKey);
+		if (!career) {
+			return {
+				classes: new Set(WEAPON_CLASSES),
+				byCategory: {},
+				exotic: new Set(),
+			};
+		}
+		talentNames.push(...(career.system?.startingTalents ?? []));
+		return weaponTrainingCoverage(talentNames);
 	}
 
 	/**
@@ -449,9 +602,7 @@ variants: (entry.variants ?? []).map((v) => ({
 	 * Groups start collapsed; a group containing the current selection
 	 * always renders open so the choice stays visible.
 	 */
-	#acquisitionGroups(
-		items: Array<Record<string, unknown>>,
-	): Array<{
+	#acquisitionGroups(items: Array<Record<string, unknown>>): Array<{
 		key: string;
 		labelKey: string;
 		count: number;
@@ -474,7 +625,9 @@ variants: (entry.variants ?? []).map((v) => ({
 				key,
 				labelKey,
 				count: list.length,
-				open: !state.acqCollapsed[key] || list.some((item) => Boolean(item.selected)),
+				open:
+					!state.acqCollapsed[key] ||
+					list.some((item) => Boolean(item.selected)),
 				items: list,
 			};
 		});
@@ -484,7 +637,13 @@ variants: (entry.variants ?? []).map((v) => ({
 	async #rollOriginDice(): Promise<void> {
 		const resolved = this.#resolved;
 		const state = this.creatorState;
-		state.rolledDice = { wounds: [], fateD10: null, insanity: [], corruption: [], corrOrInsanity: [] };
+		state.rolledDice = {
+			wounds: [],
+			fateD10: null,
+			insanity: [],
+			corruption: [],
+			corrOrInsanity: [],
+		};
 		for (const notation of resolved.woundsDice) {
 			state.rolledDice.wounds.push(await roll(notation));
 		}
@@ -505,7 +664,8 @@ variants: (entry.variants ?? []).map((v) => ({
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		this.creatorState.method = target.dataset.method === "points" ? "points" : "roll";
+		this.creatorState.method =
+			target.dataset.method === "points" ? "points" : "roll";
 		this.render({ force: true });
 	}
 
@@ -550,10 +710,7 @@ variants: (entry.variants ?? []).map((v) => ({
 		const delta = Number(target.dataset.delta ?? 0);
 		if (!key) return;
 		const current = this.creatorState.allocated[key] ?? 0;
-		const next = Math.min(
-			POINT_BUY_MAX,
-			Math.max(0, current + delta),
-		);
+		const next = Math.min(POINT_BUY_MAX, Math.max(0, current + delta));
 		this.creatorState.allocated[key] = next;
 		this.render({ force: true });
 	}
@@ -627,19 +784,19 @@ variants: (entry.variants ?? []).map((v) => ({
 		this.render({ force: true });
 	}
 
-	/** Stage 6 (p273): choose the single starting free acquisition. */
+	/** Stage 6 (printed p272): choose the single starting free acquisition. */
 	static async #onToggleAcqGroup(
 		this: CharacterCreator,
 		_event: unknown,
 		target: HTMLElement,
-	): Promise<void> {		const key = target.dataset.group;
+	): Promise<void> {
+		const key = target.dataset.group;
 		if (!key) return;
 		const collapsed = this.creatorState.acqCollapsed;
 		if (collapsed[key]) delete collapsed[key];
 		else collapsed[key] = true;
 		this.render({ force: true });
 	}
-
 
 	/**
 	 * Stage 3.5 (bead rboc, Core Rulebook Table 1-2 p31): roll 1d100 for the
@@ -660,19 +817,29 @@ variants: (entry.variants ?? []).map((v) => ({
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const raw = target.dataset.payload ?? "";
-		if (!raw) {
+		const key = target.dataset.acqKey ?? "";
+		if (!key) {
+			this.creatorState.acquisition = null;
+		} else if (this.creatorState.acquisition?.key === key) {
+			// Toggle: clicking the selected chip clears the choice.
 			this.creatorState.acquisition = null;
 		} else {
-			try {
-				const payload = JSON.parse(raw) as { name?: string };
-				this.creatorState.acquisition = {
-					name: payload.name ?? "",
-					payload: payload as object,
-				};
-			} catch {
-				this.creatorState.acquisition = null;
+			if (target.dataset.selectable === "false") {
+				ui.notifications!.warn(game.i18n!.localize("CREATOR.ACQ_BLOCKED"));
+				return;
 			}
+			const payload = this.#acquisitionPayloads.get(key);
+			if (!payload) {
+				// Loud: stale render vs rebuilt index — never grant nothing
+				// silently.
+				console.warn(`rogue-trader | no acquisition payload for "${key}"`);
+				return;
+			}
+			this.creatorState.acquisition = {
+				key,
+				name: (payload as { name?: string }).name ?? "",
+				payload,
+			};
 		}
 		this.render({ force: true });
 	}
@@ -681,28 +848,45 @@ variants: (entry.variants ?? []).map((v) => ({
 	static async #onCreate(this: CharacterCreator): Promise<void> {
 		const state = this.creatorState;
 		const resolved = this.#resolved;
-		const chars = finalCharacteristics(this.#baseCharacteristics(), resolved.characteristics);
+		const chars = finalCharacteristics(
+			this.#baseCharacteristics(),
+			resolved.characteristics,
+		);
 		const tb = Math.floor(chars.t / 10);
-		const wounds = woundsFromOrigin(tb, state.rolledDice.wounds, resolved.woundBonus);
+		const wounds = woundsFromOrigin(
+			tb,
+			state.rolledDice.wounds,
+			resolved.woundBonus,
+		);
 		const fate = Math.max(
 			0,
 			(resolved.fateTable
 				? fateFromTable(resolved.fateTable, state.rolledDice.fateD10 ?? 1)
 				: 0) + resolved.fateDelta,
 		);
-		const corrInsTotal = state.rolledDice.corrOrInsanity.reduce((a, b) => a + b, 0);
+		const corrInsTotal = state.rolledDice.corrOrInsanity.reduce(
+			(a, b) => a + b,
+			0,
+		);
 		const insanity =
 			resolved.insanity +
 			state.rolledDice.insanity.reduce((a, b) => a + b, 0) +
-			(Object.values(state.corrOrInsTrack).includes("insanity") ? corrInsTotal : 0);
+			(Object.values(state.corrOrInsTrack).includes("insanity")
+				? corrInsTotal
+				: 0);
 		const corruption =
 			resolved.corruption +
 			state.rolledDice.corruption.reduce((a, b) => a + b, 0) +
-			(Object.values(state.corrOrInsTrack).includes("corruption") ? corrInsTotal : 0);
+			(Object.values(state.corrOrInsTrack).includes("corruption")
+				? corrInsTotal
+				: 0);
 
 		const systemPayload = {
 			characteristics: Object.fromEntries(
-				CHARACTERISTIC_ORDER.map((key) => [key, { value: chars[key], unnatural: 1 }]),
+				CHARACTERISTIC_ORDER.map((key) => [
+					key,
+					{ value: chars[key], unnatural: 1 },
+				]),
 			),
 			wounds: { value: wounds, max: wounds },
 			fate: { value: fate, max: fate },
@@ -743,7 +927,10 @@ variants: (entry.variants ?? []).map((v) => ({
 			// actor already has content (blank new PCs apply silently).
 			const target = this.targetActor as unknown as {
 				update: (data: object) => Promise<unknown>;
-				createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+				createEmbeddedDocuments: (
+					t: string,
+					data: object[],
+				) => Promise<unknown>;
 				deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
 				sheet?: { render: (options?: object) => unknown };
 			};
@@ -765,7 +952,10 @@ variants: (entry.variants ?? []).map((v) => ({
 				});
 				if (!confirmed) return;
 			}
-			await target.update({ name: state.name || this.targetActor.name, system: systemPayload } as never);
+			await target.update({
+				name: state.name || this.targetActor.name,
+				system: systemPayload,
+			} as never);
 			await this.#applyGrantsAndSummary(target, state, resolved);
 			await this.#applyAcquisition(target, state);
 			this.close();
@@ -794,20 +984,26 @@ variants: (entry.variants ?? []).map((v) => ({
 
 	/**
 	 * Stage 6 apply (bead gjvg): grant the character's single starting free
-	 * acquisition (p273, modifier +0 or better — chosen on step 3). The
+	 * acquisition (printed p272, modifier +0 or better — chosen on step 3). The
 	 * group's PF/SP are NOT set here — they live on the dynasty document
 	 * (owner redesign: keep group-level decisions out of the creator).
 	 */
-	async #applyAcquisition(
-		actor: unknown,
-		state: CreatorState,
-	): Promise<void> {
+	async #applyAcquisition(actor: unknown, state: CreatorState): Promise<void> {
 		if (state.acquisition && state.acquisition.payload) {
 			const target = actor as {
-				createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+				createEmbeddedDocuments: (
+					t: string,
+					data: object[],
+				) => Promise<unknown>;
 			};
 			await target.createEmbeddedDocuments("Item", [
-				{ ...state.acquisition.payload, system: { ...(state.acquisition.payload as { system?: object }).system, grantedBy: GRANTED_BY_CREATOR } },
+				{
+					...state.acquisition.payload,
+					system: {
+						...(state.acquisition.payload as { system?: object }).system,
+						grantedBy: GRANTED_BY_CREATOR,
+					},
+				},
 			] as never);
 		}
 		// Stage 3.5 heirloom (bead rboc): grant the rolled Table 1-2 entry as a
@@ -816,19 +1012,26 @@ variants: (entry.variants ?? []).map((v) => ({
 		if (state.heirloom) {
 			const entry = heirloomItems.find((e) => e.name === state.heirloom?.name);
 			if (!entry) {
-				console.error(`rogue-trader | unknown heirloom "${state.heirloom.name}"`);
+				console.error(
+					`rogue-trader | unknown heirloom "${state.heirloom.name}"`,
+				);
 				return;
 			}
 			const target = actor as {
-				createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
+				createEmbeddedDocuments: (
+					t: string,
+					data: object[],
+				) => Promise<unknown>;
 			};
 			const grants: object[] = [];
 			if (entry.grant.kind === "pack-item") {
-				const docs = (await getPackDocuments(entry.grant.pack)) as unknown as Array<{
-						name?: string;
-						type?: string;
-						toObject: () => object;
-					}>;
+				const docs = (await getPackDocuments(
+					entry.grant.pack,
+				)) as unknown as Array<{
+					name?: string;
+					type?: string;
+					toObject: () => object;
+				}>;
 				const doc = docs.find((d) => d.name === entry.grant.item);
 				if (!doc) {
 					console.error(
@@ -836,7 +1039,10 @@ variants: (entry.variants ?? []).map((v) => ({
 					);
 					return;
 				}
-				const data = doc.toObject() as { name?: string; system?: Record<string, unknown> };
+				const data = doc.toObject() as {
+					name?: string;
+					system?: Record<string, unknown>;
+				};
 				grants.push({
 					...data,
 					...(entry.grant.rename ? { name: entry.grant.rename } : {}),
@@ -871,7 +1077,12 @@ variants: (entry.variants ?? []).map((v) => ({
 			deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
 			system?: unknown;
 			uuid?: string;
-			items?: { size?: number; map: (cb: (i: { name?: string }) => string) => string[] } | undefined;
+			items?:
+				| {
+						size?: number;
+						map: (cb: (i: { name?: string }) => string) => string[];
+				  }
+				| undefined;
 		},
 		state: CreatorState,
 		resolved: ResolvedOrigin,
@@ -892,9 +1103,11 @@ variants: (entry.variants ?? []).map((v) => ({
 			system?: { grantedBy?: string };
 		}>;
 		const legacyNames = new Set<string>();
-		const oldOrigins = ((this.targetActor?.system ?? {}) as {
-			origins?: Record<string, string>;
-		}).origins;
+		const oldOrigins = (
+			(this.targetActor?.system ?? {}) as {
+				origins?: Record<string, string>;
+			}
+		).origins;
 		if (oldOrigins) {
 			const oldPicks: Partial<Record<OriginRow, OriginPick>> = {};
 			for (const [storedKey, value] of Object.entries(oldOrigins)) {
@@ -926,7 +1139,7 @@ variants: (entry.variants ?? []).map((v) => ({
 
 		// Grants: catalog-matched skills, then talents (cloning the pack
 		// document, meh0), then unmatched options (talents, or manual if
-					// unresolved).
+		// unresolved).
 		const catalog: CatalogSkill[] = [];
 		const pack = game.packs!.get("rogue-trader.skills");
 		if (pack) {
@@ -935,7 +1148,11 @@ variants: (entry.variants ?? []).map((v) => ({
 				system: { characteristic: string };
 			}>;
 			for (const doc of docs) {
-				if (doc.name) catalog.push({ name: doc.name, characteristic: doc.system.characteristic });
+				if (doc.name)
+					catalog.push({
+						name: doc.name,
+						characteristic: doc.system.characteristic,
+					});
 			}
 		}
 		const { grants, unmatched } = matchOriginSkills(resolved, catalog);
@@ -951,9 +1168,14 @@ variants: (entry.variants ?? []).map((v) => ({
 		// skills overlapping the defaults (Awareness, Common Lore, ...) were
 		// granted a second time. Merging against the live actor items makes
 		// both flows idempotent.
-		const liveItems = ((actor.items as unknown as { contents?: Array<{ name?: string }> })
-			.contents ?? (actor.items as unknown as Array<{ name?: string }>)) ?? [];
-		const seenNames = new Set(liveItems.map((item) => normName(item.name ?? "")));
+		const liveItems =
+			(actor.items as unknown as { contents?: Array<{ name?: string }> })
+				.contents ??
+			(actor.items as unknown as Array<{ name?: string }>) ??
+			[];
+		const seenNames = new Set(
+			liveItems.map((item) => normName(item.name ?? "")),
+		);
 		for (const grant of grants) {
 			if (seenNames.has(normName(grant.name))) continue;
 			seenNames.add(normName(grant.name));
@@ -1012,10 +1234,10 @@ variants: (entry.variants ?? []).map((v) => ({
 			state.careerKey === "astropath-transcendent" ||
 			state.careerKey === "navigator"
 				? `<p>${game.i18n!.localize("CREATOR.PSYKER")}${
-					state.careerKey === "astropath-transcendent"
-						? ` — ${game.i18n!.localize("CREATOR.PSY_RATING_2")}`
-						: ""
-				}</p>`
+						state.careerKey === "astropath-transcendent"
+							? ` — ${game.i18n!.localize("CREATOR.PSY_RATING_2")}`
+							: ""
+					}</p>`
 				: "";
 		await foundry.documents.ChatMessage.create({
 			content: `<div class="rogue-trader creator-summary"><h3>${state.name}</h3><ul>${rows}</ul>${pf}${initiative}${psykerNote}${notes}</div>`,

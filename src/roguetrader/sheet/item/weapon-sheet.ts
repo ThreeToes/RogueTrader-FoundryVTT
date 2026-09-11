@@ -5,6 +5,7 @@ import {
 	RANGED_CLASSES,
 	WeaponClass,
 } from "../../data/item/weapon-class";
+import { weaponFamilies } from "../../registry";
 import { effectActions, effectEditorChoices } from "./effect-actions";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -59,6 +60,10 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.isRanged = this.document.type === "ranged-weapon";
 		context.isMelee = this.document.type === "melee-weapon";
 
+		// Weapon family (bead erzk): the Weapon Training talent-group the
+		// gate resolves against. Blank = uncurated (schema initial).
+		context.familyChoices = Object.fromEntries(weaponFamilies.entries());
+
 		// Damage type choices mirror the schema (E/I/R/X book types).
 		context.damageTypeChoices = Object.fromEntries(
 			Object.values(DamageType).map((value) => [
@@ -83,7 +88,10 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		};
 
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
+		Object.assign(
+			context,
+			effectEditorChoices((key) => game.i18n.localize(key)),
+		);
 
 		// Description tab: enriched HTML from the system description
 		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).

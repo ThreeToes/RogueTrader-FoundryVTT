@@ -115,7 +115,11 @@ export function actorItemKey(actorId: string, itemId: string): string {
  * pages split into `!journal.pages!<journalId>.<pageId>` records (same
  * pattern as actors/actors.items, _getSublevelNames verified).
  */
-export const JOURNAL_PACKS: ReadonlySet<string> = new Set(["rules", "lore"]);
+export const JOURNAL_PACKS: ReadonlySet<string> = new Set([
+	"rules",
+	"lore",
+	"intothemaw",
+]);
 
 export function journalKey(journalId: string): string {
 	return `!journal!${journalId}`;
@@ -543,6 +547,12 @@ export function toJournalSourceDocument(
 		const pageName = String(pageEntry.name ?? "unnamed");
 		const text = String(pageEntry.text ?? "");
 		sort += 1;
+		// Ownership is authoring-controlled (bead wdeq): the journal entry's
+		// `ownership` field flows to every page; a page may override it.
+		// Fallback {default: 0} = GM-only (what an adventure pack like
+		// intothemaw wants); rules/lore author entries as {default: 2}.
+		const pageOwnership = (pageEntry.ownership as Record<string, unknown>) ??
+			(entry.ownership as Record<string, unknown>) ?? { default: 0 };
 		return {
 			_id: documentId(`${name} — ${pageName}`, pageEntry._id as string | undefined),
 			name: pageName,
@@ -555,11 +565,14 @@ export function toJournalSourceDocument(
 			document: null,
 			sort,
 			category: "",
-			ownership: { default: 0 },
+			ownership: pageOwnership,
 			flags: {},
 			_stats: { coreVersion: 14 },
 		};
 	});
+	const journalOwnership = (entry.ownership as Record<string, unknown>) ?? {
+		default: 0,
+	};
 	const journal: Record<string, unknown> = {
 		_id: documentId(name, entry._id as string | undefined),
 		name,
@@ -567,7 +580,7 @@ export function toJournalSourceDocument(
 		category: null,
 		folder: null,
 		sort: 0,
-		ownership: { default: 0 },
+		ownership: journalOwnership,
 		_stats: { coreVersion: 14 },
 		flags: entry.flags ?? {},
 	};

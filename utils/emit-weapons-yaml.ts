@@ -95,6 +95,128 @@ const LAUNCHER_NOTE =
 	"Damage and special qualities vary with the grenade or missile loaded (see Table 5-6).";
 
 /**
+ * Weapon family per row (bead erzk): derived from the book's Table 5-3/5-4
+ * family section headings (Las Weapons, Solid Projectile Weapons, ...) and
+ * Table 5-6 (Grenades and Missiles). Exotic = the Exotic sections (p129).
+ * Any row whose name is unmapped is a LOUD failure — add the name here
+ * (and to the committed pack) rather than guessing.
+ */
+const WEAPON_FAMILY_MAP: Record<string, string> = {
+	// Table 5-4 — Las Weapons
+	"Archeotech Laspistol": "las",
+	"Belasco Dueling Pistol": "las",
+	"Hellpistol (Lucius)": "las",
+	"Hellgun (Lucius)": "las",
+	"Las Gauntlets": "las",
+	"Lascarbine (Locke)": "las",
+	Lasgun: "las",
+	Laspistol: "las",
+	"Long-las": "las",
+	"Man Portable Lascannon": "las",
+	// Table 5-4 — Solid Projectile Weapons
+	Autogun: "sp",
+	Autopistol: "sp",
+	"Hand Cannon": "sp",
+	"Heavy Stubber (Orthlack)": "sp",
+	"Heavy Stubber (Ursid)": "sp",
+	"Naval Pistol (Mars)": "sp",
+	"Naval Shotcannon": "sp",
+	"Pump-Action Shotgun": "sp",
+	Shotgun: "sp",
+	"Shotgun Pistol": "sp",
+	"Stub Automatic": "sp",
+	"Stub Revolver": "sp",
+	// Table 5-4 — Bolt Weapons
+	"Boltgun (Locke)": "bolt",
+	"Bolt Pistol (Ceres)": "bolt",
+	"Storm Bolter (Mars)": "bolt",
+	"Heavy Bolter (Solar)": "bolt",
+	// Table 5-4 — Melta Weapons
+	"Inferno Pistol (Mars)": "melta",
+	"Meltagun (Mars)": "melta",
+	"Meltagun (Mezoa)": "melta",
+	"Thermal Lance (Mars)": "melta",
+	"Multi-Melta (Mars)": "melta",
+	// Table 5-4 — Plasma Weapons
+	"Plasma Pistol (Ryza)": "plasma",
+	"Plasma Gun (Mezoa)": "plasma",
+	"Plasma Cannon (Ryza)": "plasma",
+	// Table 5-4 — Flame Weapons
+	"Hand Flamer (Mezoa)": "flame",
+	"Flamer (Mezoa)": "flame",
+	"Heavy Flamer (Locke)": "flame",
+	// Table 5-4 — Low-Tech (Primitive) Weapons + Primitive melee section
+	Bolas: "primitive",
+	Bow: "primitive",
+	Crossbow: "primitive",
+	"Hand Bow": "primitive",
+	"Flintlock Pistol": "primitive",
+	Musket: "primitive",
+	Sling: "primitive",
+	"Ork Choppa": "primitive",
+	"Great Weapon": "primitive",
+	Groxwhip: "primitive",
+	Improvised: "primitive",
+	Knife: "primitive",
+	"Kraken Tooth Dagger": "primitive",
+	"Shield†††": "primitive",
+	Spear: "primitive",
+	Staff: "primitive",
+	Sword: "primitive",
+	Truncheon: "primitive",
+	Warhammer: "primitive",
+	// Table 5-4 — Launchers
+	"Grenade Launcher (Mezoa)": "launcher",
+	"Grenade Launcher (Voss)": "launcher",
+	"Missile Launcher (Locke)": "launcher",
+	// Table 5-6 — Grenades and Missiles
+	"Anti-Plant": "thrown",
+	Blind: "thrown",
+	Filament: "thrown",
+	Frag: "thrown",
+	"Frag Missile": "launcher",
+	Geode: "thrown",
+	Hallucinogen: "thrown",
+	Krak: "thrown",
+	"Krak Missile": "launcher",
+	"Photon Flash": "thrown",
+	Plasma: "thrown",
+	Smoke: "thrown",
+	Stun: "thrown",
+	Virus: "thrown",
+	// Exotic sections (ranged p129, melee p132)
+	"Crux Beam Gun": "exotic",
+	Dartcaster: "exotic",
+	"Digi-laser": "exotic",
+	"Digi-melta": "exotic",
+	"Digi-needler": "exotic",
+	"Digi-flame": "exotic",
+	"Graviton Gun": "exotic",
+	"Kroot Rifle": "exotic",
+	"Kroot Rifle (Melee)": "exotic",
+	"Needle Pistol": "exotic",
+	"Needle Rifl": "exotic",
+	"Ork Shoota": "exotic",
+	"Ork Slugga": "exotic",
+	"Shuriken Catapult": "exotic",
+	"Shuriken Pistol": "exotic",
+	"Chain Axe": "chain",
+	"Chainsword (Hecate)": "chain",
+	"Omnissian Axe (Sollex)": "power",
+	"Power Axe (Mezoa)": "power",
+	"Power Fist (Mezoa)": "power",
+	"Power Maul (High)": "power",
+	"Power Maul (Low)": "power",
+	"Power Sword (Mordian)": "power",
+	"Fractal Blade": "power",
+	"Ghost Sword": "power",
+	"Harlequin’s Kiss": "exotic",
+	"Officer's Cutlass": "shock",
+	"Shock Glove": "shock",
+	"Shock-Staff": "shock",
+};
+
+/**
  * Prose block name -> weapon row names (book prose vs table row names don't
  * always line up: pattern names, family prose, section headers). Rows not
  * covered here get no description; prose blocks not mapped are skipped.
@@ -241,8 +363,15 @@ export async function main(
 	const docs = parsed.map((r) => {
 		const special = parseQualities(r.special);
 		const isLauncher = r.special.startsWith("Varies with ammunition");
+		const family = WEAPON_FAMILY_MAP[r.name];
+		if (!family) {
+			throw new Error(
+				`unmapped weapon family for "${r.name}" (add it to WEAPON_FAMILY_MAP, bead erzk)`,
+			);
+		}
 		const system: Record<string, unknown> = {
 			class: r.class,
+			weaponFamily: family,
 			range: r.range,
 			damage: r.damage,
 			// Book letters (E/I/R/X) -> schema enum values via the shared

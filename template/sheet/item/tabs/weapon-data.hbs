@@ -12,6 +12,16 @@
                 <p class="static-value">{{localize (lookup classChoices source.system.class)}}</p>
                 {{/if}}
             </div>
+            <div class="stat family">
+                <label>{{localize "WEAPON.FAMILY"}}</label>
+                {{#if editable}}
+                <select name="system.weaponFamily">
+                    {{selectOptions familyChoices selected=source.system.weaponFamily localize=true blank="—"}}
+                </select>
+                {{else}}
+                <p class="static-value">{{#if source.system.weaponFamily}}{{localize (lookup familyChoices source.system.weaponFamily)}}{{else}}—{{/if}}</p>
+                {{/if}}
+            </div>
             <div class="stat range">
                 <label>{{localize "WEAPON.RANGE"}}</label>
                 {{#if editable}}

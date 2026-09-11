@@ -29,6 +29,17 @@ export abstract class Weapon extends Gear {
 				required: true,
 				nullable: false,
 			}),
+			/**
+			 * Weapon family (bead erzk): the book's Weapon Training talent
+			 * group (Las, SP, Bolt, Melta, Plasma, Flame, Launcher, Primitive,
+			 * Chain, Power, Shock, Exotic, Thrown — registry keys). This is what
+			 * the Weapon Training gate resolves (Core Rulebook printed p272:
+			 * "he must have a corresponding Weapon Training Talent"). No
+			 * `choices` constraint so blank initial and in-flight authoring
+			 * validate; pack completeness is enforced by the pack tests + the
+			 * emit mapping's loud failures.
+			 */
+			weaponFamily: new foundry.data.fields.StringField({ initial: "" }),
 			/** Effective range: metres ("90"), formula ("SBx3"), or "—". */
 			range: new foundry.data.fields.StringField({
 				required: true,

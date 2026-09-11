@@ -10,6 +10,8 @@ import {
 	vehicleFacings,
 	vehicleSystems,
 	vehicleTraits,
+	weaponFamilies,
+	psychicDisciplines,
 } from "./registry";
 
 describe("EntryRegistry", () => {
@@ -83,6 +85,25 @@ describe("EntryRegistry", () => {
 		for (const key of vehicleSystems.keys()) {
 			expect(vehicleSystems.get(key)).toMatch(/^VEHICLE_SYSTEM\./);
 		}
+	});
+
+	test("weapon families are seeded with localization keys (bead erzk)", () => {
+		for (const key of weaponFamilies.keys()) {
+			expect(weaponFamilies.get(key)).toMatch(/^WEAPON_FAMILY\./);
+		}
+		// The book's training families must all be present (printed p272:
+		// the Weapon Training gate resolves against these).
+		expect(weaponFamilies.choices).toHaveProperty("las");
+		expect(weaponFamilies.choices).toHaveProperty("sp");
+		expect(weaponFamilies.choices).toHaveProperty("primitive");
+	});
+
+	test("psychic disciplines are seeded with localization keys (hkc5)", () => {
+		for (const key of psychicDisciplines.keys()) {
+			expect(psychicDisciplines.get(key)).toMatch(/^PSYCHIC_DISCIPLINE\./);
+		}
+		// Core Rulebook p159: the three Astropath disciplines.
+		expect(psychicDisciplines.keys()).toHaveLength(3);
 	});
 
 	test("talent registries are seeded with localization keys", () => {

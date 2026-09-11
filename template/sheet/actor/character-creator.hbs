@@ -189,8 +189,10 @@
     </section>
     {{/if}}
 
-    {{!-- Step 3: Stage 6 — Select Equipment (Core Rulebook p33-34): the --}}
-    {{!-- starting free acquisition (total modifier +0 or better, p273). --}}
+    {{!-- Step 3: Stage 6 — Select Equipment (Core Rulebook printed p272,
+    file page-0273): the single starting free ACQUISITION — one item with a
+    total Acquisition Modifier of +0 or better, no Acquisition Test needed.
+    Weapons additionally require the matching Weapon Training Talent. --}}
     {{!-- The group's Profit Factor / Ship Points (Stage 5) are a GM-level --}}
     {{!-- decision on the dynasty document, NOT a creator step. --}}
     {{#if (eq step 3)}}
@@ -221,7 +223,7 @@
             {{#if group.open}}
             <div class="origin-options">
                 {{#each group.items as |item|}}
-                <a class="origin-chip {{#if item.selected}}selected{{/if}}" data-action="chooseAcquisition" data-payload="{{item.payload}}"
+                <a class="origin-chip acq-chip {{#if item.selected}}selected{{/if}} {{#unless item.selectable}}disabled{{/unless}}" data-action="chooseAcquisition" data-acq-key="{{item.key}}" data-selectable="{{item.selectable}}"
                     data-tooltip="{{item.tooltip}}">{{item.name}}</a>
                 {{/each}}
             </div>

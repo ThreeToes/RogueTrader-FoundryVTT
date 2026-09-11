@@ -2,8 +2,11 @@ import { describe, expect, test } from "bun:test";
 import {
 	actorItemKey,
 	actorKey,
+	buildPackFolders,
 	buildTableResults,
 	documentId,
+	folderId,
+	resolveEntryGroup,
 	resolveEntryType,
 	toTableSourceDocument,
 	type ItemSourceIndex,
@@ -349,5 +352,166 @@ describe("journal ownership (bead wdeq)", () => {
 		);
 		expect(journal.ownership).toEqual({ default: 0 });
 		expect(pages[0].ownership).toEqual({ default: 0 });
+	});
+});
+
+describe("compendium folder groupings (bead nsqt)", () => {
+	describe("resolveEntryGroup", () => {
+		test("weapons group by weaponFamily with book section labels", () => {
+			expect(
+				resolveEntryGroup(
+					{ name: "Lasgun", system: { weaponFamily: "las" } },
+					"weapons",
+				),
+			).toBe("Las Weapons");
+			expect(
+				resolveEntryGroup(
+					{ name: "Frag", system: { weaponFamily: "thrown" } },
+					"weapons",
+				),
+			).toBe("Thrown Weapons");
+		});
+
+		test("weapons unmapped family fails loudly", () => {
+			expect(() =>
+				resolveEntryGroup(
+					{ name: "Mystery Gun", system: { weaponFamily: "plasma-cutter" } },
+					"weapons",
+				),
+			).toThrow(/no folder label for weaponFamily/);
+		});
+
+		test("armour unmapped name fails loudly", () => {
+			expect(() =>
+				resolveEntryGroup({ name: "Mystery Suit" }, "armour"),
+			).toThrow(/unmapped — extend ARMOUR_GROUPS/);
+		});
+
+		test("gear groups by name suffix before page bands", () => {
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Hot-Shot Charge Pack (Unusual Ammunition)",
+						system: { source: { book: "rt_core", page: 136 } },
+					},
+					"gear",
+				),
+			).toBe("Unusual Ammunition");
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Bolt Shells (Ammunition)",
+						system: { source: { book: "rt_core", page: 136 } },
+					},
+					"gear",
+				),
+			).toBe("Ammunition");
+		});
+
+		test("gear groups rt_core Weapon Upgrades and Gear bands", () => {
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Mono (Weapon Upgrade)",
+						system: { source: { book: "rt_core", page: 133 } },
+					},
+					"gear",
+				),
+			).toBe("Weapon Upgrades");
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Void Suit",
+						system: { source: { book: "rt_core", page: 140 } },
+					},
+					"gear",
+				),
+			).toBe("Gear");
+		});
+
+		test("gear Backpack override (Table 5-13, p140; cite flagged on nn96)", () => {
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Backpack",
+						system: { source: { book: "rt_core", page: 135 } },
+					},
+					"gear",
+				),
+			).toBe("Gear");
+		});
+
+		test("tools group wholesale as the book's Tools section", () => {
+			expect(
+				resolveEntryGroup(
+					{ name: "Multikey", system: { source: { book: "rt_core", page: 145 } } },
+					"tools",
+				),
+			).toBe("Tools");
+		});
+
+		test("authoring group: key overrides the derivation", () => {
+			expect(
+				resolveEntryGroup(
+					{ name: "Odd Item", group: "Custom/Deep", system: {} },
+					"aptitudes",
+				),
+			).toBe("Custom/Deep");
+		});
+
+		test("ungrouped packs default to root", () => {
+			expect(resolveEntryGroup({ name: "Cyber Heart" }, "cybernetics")).toBe(
+				null,
+			);
+		});
+
+		test("a non-string group override fails loudly", () => {
+			expect(() =>
+				resolveEntryGroup({ name: "X", group: 42 }, "weapons"),
+			).toThrow(/must be a non-empty string/);
+		});
+	});
+
+	describe("buildPackFolders", () => {
+		test("emits deterministic folder docs and stamps labels", () => {
+			const entries = [
+				{ name: "A", system: { weaponFamily: "las" } },
+				{ name: "B", system: { weaponFamily: "las" } },
+				{ name: "C", system: { weaponFamily: "chain" } },
+			];
+			const { folders, byLabel } = buildPackFolders("weapons", entries);
+			expect(folders).toHaveLength(2);
+			const las = folders.find((f) => f.name === "Las Weapons");
+			const chain = folders.find((f) => f.name === "Chain Weapons");
+			expect(las?.type).toBe("Item");
+			expect(las?.folder).toBeNull();
+			// Deterministic ids: same label → same _id across rebuilds.
+			expect(folderId("weapons", "Las Weapons")).toBe(las?._id);
+			expect(byLabel.get("Las Weapons")).toBe(las?._id);
+			expect(byLabel.get("Chain Weapons")).toBe(chain?._id);
+			// Sort is stable insertion order (depth, then alphabetical:
+			// "Chain Weapons" sorts before "Las Weapons").
+			expect(chain?.sort).toBeLessThan(las?.sort ?? 0);
+		});
+
+		test("nests '/' labels under their parent folder", () => {
+			const { folders, byLabel } = buildPackFolders("weapons", [
+				{ name: "A", group: "Pistols" },
+				{ name: "B", group: "Pistols/Las" },
+			]);
+			expect(folders).toHaveLength(2);
+			const pistols = folders.find((f) => f.name === "Pistols");
+			const las = folders.find((f) => f.name === "Las");
+			expect(las?.folder).toBe(byLabel.get("Pistols"));
+			expect(las?.folder).toBe(pistols?._id);
+			// Children sort after their parent.
+			expect(pistols?.sort).toBeLessThan(las?.sort ?? 0);
+		});
+
+		test("missing nested parent fails loudly", () => {
+			expect(() =>
+				buildPackFolders("weapons", [{ name: "A", group: "Pistols/Las" }]),
+			).toThrow(/has no parent folder/);
+		});
 	});
 });

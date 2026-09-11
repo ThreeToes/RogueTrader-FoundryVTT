@@ -77,6 +77,254 @@ export function resolveEntryType(
 }
 
 /**
+ * Compendium folder groupings (bead nsqt).
+ *
+ * Foundry 14 supports Folder documents inside compendium packs
+ * (CompendiumFolderCollection): folder docs live under the pack DB's
+ * `!folders!` sublevel (verified dist/database/backend/compendium-folder.mjs
+ * — `sublevels.folders` — and client compendium-collection.mjs loading
+ * `metadata.folders`), each item carries `folder: <folderId>`, and the
+ * Folder schema (common/documents/folder.mjs) is name/type/folder/sorting/
+ * sort/color/flags/_stats with folder.type a PRIMARY type ("Item", not the
+ * system's melee-weapon/ranged-weapon subtypes — CONST.FOLDER_DOCUMENT_TYPES).
+ *
+ * Groups derive from the books' own section headers, not invented taxonomy:
+ * - weapons: by weaponFamily (the Weapon Training group, registry keys),
+ *   labelled with the Core Rulebook Ch V section headers (printed pages
+ *   in the comments below). "Thrown Weapons" is the one authoring label —
+ *   the family spans the book's "Grenades and Missiles" (p125) AND thrown
+ *   weapons (Bolas, Knife, Spear-thrower), so no single book header fits.
+ * - armour: hand-mapped per entry (rt_core Table 5-7 sections p137-139;
+ *   FC Table 3-8, p93 — "artificer armour is highly modified power
+ *   armour", FC p95). "Exotic Armour" is an authoring label for the FC
+ *   armours that match no rt_core section.
+ * - gear: by source page bands (book TOC: Weapon Upgrades 133, Ammunition
+ *   135, Unusual Ammo 136, Gear 139) + the name suffixes the pack already
+ *   carries; FC gear (its "Gear" section starts p94).
+ * - tools: the whole pack is the book's "Tools" section (p143-146).
+ *
+ * A top-level `group:` key on a yaml entry overrides the derivation and
+ * supports nesting with "/" (e.g. `group: Pistols/Las`). Unmapped entries
+ * fail loudly (emit throws) — never silently drop, per conventions.
+ */
+const WEAPON_GROUP_LABELS: Record<string, string> = {
+	// Core Rulebook Ch V section headers (printed pp117-132).
+	las: "Las Weapons",
+	sp: "Solid Projectile Weapons",
+	bolt: "Bolt Weapons",
+	melta: "Melta Weapons",
+	plasma: "Plasma Weapons",
+	flame: "Flame Weapons",
+	primitive: "Primitive Weapons",
+	launcher: "Launchers",
+	exotic: "Exotic Weapons",
+	chain: "Chain Weapons",
+	power: "Power Weapons",
+	shock: "Shock Weapons",
+	// Authoring label: family spans "Grenades and Missiles" (p125) plus
+	// thrown weapons proper (Bolas, Knife, Spear-thrower).
+	thrown: "Thrown Weapons",
+};
+
+/** Armour name → folder label (rt_core pp137-139 sections; FC p93). */
+const ARMOUR_GROUPS: Record<string, string> = {
+	// rt_core Table 5-7: Primitive Armour (p137).
+	"Heavy Leathers/Furs": "Primitive Armour",
+	"Grox Hide/Chainmail": "Primitive Armour",
+	"Feudal World Plate": "Primitive Armour",
+	"Burnscour Beast Hide": "Primitive Armour",
+	// rt_core Table 5-7: Flak Armour (p137).
+	"Flak Helmet": "Flak Armour",
+	"Flak Cloak": "Flak Armour",
+	"Flak Coat": "Flak Armour",
+	"Guard Flak Armour": "Flak Armour",
+	// rt_core Table 5-7: Mesh Armour (p138).
+	"Mesh Cowl": "Mesh Armour",
+	"Xeno Mesh": "Mesh Armour",
+	"Mesh Combat Cloak": "Mesh Armour",
+	"Mesh Vest": "Mesh Armour",
+	// rt_core Table 5-7: Carapace Armour (p138).
+	"Carapace Helm": "Carapace Armour",
+	"Enforcer Light Carapace": "Carapace Armour",
+	"Carapace Chestplate": "Carapace Armour",
+	"Storm Trooper Carapace": "Carapace Armour",
+	// rt_core Table 5-7: Power Armour (p139).
+	"Advanced Helmet Systems": "Power Armour",
+	"Armoured Bodyglove": "Power Armour",
+	"Light Power Armour": "Power Armour",
+	"Power Armour": "Power Armour",
+	// FC Table 3-8 (p93): artificer armour is modified power armour (p95);
+	// the rest match no rt_core section (authoring label).
+	"Artificer Armour": "Power Armour",
+	"Artificer Armour (Consecrated)": "Power Armour",
+	"Vaporian Mirror Armour": "Exotic Armour",
+	"Engine Armour": "Exotic Armour",
+	"Sabbat-pattern Helm": "Exotic Armour",
+};
+
+/**
+ * Gear folder by source band (book TOC printed pages: Weapon Upgrades 133,
+ * Ammunition 135, Unusual Ammo 136, Gear 139; FC "Gear" 94). The 136 page
+ * overlap between Ammunition and Unusual Ammo is split by the name suffixes
+ * the gear pack already carries.
+ */
+const GEAR_PAGE_GROUPS: Array<{
+	book: string;
+	min: number;
+	max: number;
+	label: string;
+}> = [
+	{ book: "rt_core", min: 133, max: 134, label: "Weapon Upgrades" },
+	{ book: "rt_core", min: 139, max: 140, label: "Gear" },
+	{ book: "faith_and_coin", min: 94, max: 101, label: "Gear" },
+];
+
+/** Packs the grouper covers; every other pack stays ungrouped. */
+const GROUPED_PACKS: ReadonlySet<string> = new Set([
+	"weapons",
+	"armour",
+	"gear",
+	"tools",
+]);
+
+/**
+ * Derive an item's compendium folder label (or null for root). Authoring
+ * `group:` wins; then per-pack derivation; nothing mapped = null. Throws on
+ * a `group:` override that is not a non-empty string, and on weapons/armour
+ * entries the derivation cannot place (loud failure, per conventions).
+ */
+export function resolveEntryGroup(
+	entry: Record<string, unknown>,
+	pack: string,
+): string | null {
+	const override = entry.group;
+	if (override !== undefined) {
+		if (typeof override !== "string" || !override.trim()) {
+			throw new Error(
+				`grouping: ${pack}/${String(entry.name)}: "group:" must be a non-empty string (use null to force root)`,
+			);
+		}
+		return override.trim();
+	}
+	if (!GROUPED_PACKS.has(pack)) return null;
+	const system = (entry.system ?? {}) as Record<string, unknown>;
+	if (pack === "weapons") {
+		const family = String(system.weaponFamily ?? "");
+		const label = WEAPON_GROUP_LABELS[family];
+		if (!label) {
+			throw new Error(
+				`grouping: weapons/${String(entry.name)}: no folder label for weaponFamily "${family}" — extend WEAPON_GROUP_LABELS (loud failure)`,
+			);
+		}
+		return label;
+	}
+	if (pack === "armour") {
+		const label = ARMOUR_GROUPS[String(entry.name ?? "")];
+		if (!label) {
+			throw new Error(
+				`grouping: armour/${String(entry.name)}: unmapped — extend ARMOUR_GROUPS (loud failure)`,
+			);
+		}
+		return label;
+	}
+	const source = ((entry.system ?? {}) as { source?: { book?: string; page?: number } })
+		.source ?? (entry.source as { book?: string; page?: number } | undefined) ?? {};
+	const book = String(source.book ?? "");
+	const page = Number(source.page ?? NaN);
+	if (pack === "gear") {
+		const name = String(entry.name ?? "");
+		// Hand-set curation (bead nsqt): every entry carries a comment citing
+		// where it was verified.
+		// Backpack: the printed Table 5-13: Gear row sits on p140 (file 0141),
+		// but the yaml cite reads p135 — flagged on bead nn96 for the cite
+		// audit; grouped here by name so the band map need not lie about pages.
+		if (name === "Backpack") return "Gear";
+		if (name.includes("(Unusual Ammunition)")) return "Unusual Ammunition";
+		if (name.includes("(Ammunition)")) return "Ammunition";
+		for (const band of GEAR_PAGE_GROUPS) {
+			if (book === band.book && page >= band.min && page <= band.max) {
+				return band.label;
+			}
+		}
+		throw new Error(
+			`grouping: gear/${name}: unmapped for ${book} p${page} — extend GEAR_PAGE_GROUPS (loud failure)`,
+		);
+	}
+	if (pack === "tools") return "Tools";
+	return null;
+}
+
+/** Deterministic _id for a compendium folder (label + owning pack). */
+export function folderId(pack: string, label: string): string {
+	return documentId(`folder:${pack}:${label}`);
+}
+
+/**
+ * Shape a folder label into a Foundry Folder source document. `type` is the
+ * PRIMARY document type the pack holds ("Item" — not system subtypes like
+ * melee-weapon; CONST.FOLDER_DOCUMENT_TYPES). `parent` is the _id of the
+ * containing folder, or null.
+ */
+export function toFolderSourceDocument(
+	pack: string,
+	label: string,
+	parent: string | null,
+	sort: number,
+): Record<string, unknown> {
+	return {
+		_id: folderId(pack, label),
+		name: label.split("/").pop() ?? label,
+		type: "Item",
+		description: "",
+		folder: parent,
+		sorting: "a",
+		sort,
+		color: null,
+		flags: {},
+		_stats: { coreVersion: 14 },
+	};
+}
+
+/**
+ * Build the folder set for one pack: unique group labels → folder docs with
+ * parent links for "/"-nested labels, plus the per-item folder _id stamp.
+ * Insertion order keeps folder sort stable across rebuilds.
+ */
+export function buildPackFolders(
+	pack: string,
+	entries: Array<Record<string, unknown>>,
+): { folders: Array<Record<string, unknown>>; byLabel: Map<string, string> } {
+	const labels = new Set<string>();
+	for (const entry of entries) {
+		const group = resolveEntryGroup(entry, pack);
+		if (group) labels.add(group);
+	}
+	// Create parents before children so "/"-nested labels get their parents.
+	const ordered = [...labels].sort((a, b) => {
+		const depth = a.split("/").length - b.split("/").length;
+		return depth !== 0 ? depth : a.localeCompare(b);
+	});
+	const byLabel = new Map<string, string>();
+	const folders: Array<Record<string, unknown>> = [];
+	let sort = 0;
+	for (const label of ordered) {
+		const parts = label.split("/");
+		const parentKey =
+			parts.length > 1 ? byLabel.get(parts.slice(0, -1).join("/")) : undefined;
+		if (parts.length > 1 && parentKey === undefined) {
+			throw new Error(
+				`grouping: ${pack}: group "${label}" has no parent folder — add a "${parts.slice(0, -1).join("/")}" group (loud failure)`,
+			);
+		}
+		const doc = toFolderSourceDocument(pack, label, parentKey ?? null, sort);
+		byLabel.set(label, String(doc._id));
+		folders.push(doc);
+		sort += 10;
+	}
+	return { folders, byLabel };
+}
+
+/**
  * Packs whose documents are RollTables rather than Items. Foundry LevelDB
  * packs key each collection by document class: items live under `!items!`,
  * roll tables under `!tables!`.
@@ -646,11 +894,38 @@ async function buildPack(
 	const batch = database.batch();
 	let count = 0;
 
+	// Read every yaml file once, up front. Grouping (bead nsqt) needs the
+	// pack's full entry set so "/"-nested group parents resolve regardless of
+	// which file holds them, and item documents need their folder _id stamps.
+	const fileEntries = new Map<string, Array<Record<string, unknown>>>();
 	for (const file of sourceFiles) {
 		const entries = await readYamlEntries(path.join(PACK_SRC, folder, file));
 		if (!isActorPack && !isTablePack && !isJournalPack) {
-			auditSourceAttribution(`${folder}/${file.replace(/\.yaml$/, "")}`, entries);
+			auditSourceAttribution(
+				`${folder}/${file.replace(/\.yaml$/, "")}`,
+				entries,
+			);
 		}
+		fileEntries.set(file, entries);
+	}
+
+	// Folder emission: Item packs only. Folder docs go under `!folders!<id>`;
+	// item docs carry `folder: <id>` (see toFolderSourceDocument for the
+	// Foundry-14 verification notes).
+	let folderStamps = new Map<string, string>();
+	if (!isTablePack && !isActorPack && !isJournalPack) {
+		const { folders: packFolders, byLabel } = buildPackFolders(
+			folder,
+			[...fileEntries.values()].flat(),
+		);
+		for (const f of packFolders) {
+			batch.put(`!folders!${String(f._id)}`, f as unknown as string);
+		}
+		folderStamps = byLabel;
+		count += packFolders.length;
+	}
+
+	for (const entries of fileEntries.values()) {
 		for (const source of entries) {
 			if (isActorPack) {
 				// Foundry stores Actor docs under the `!actors!` sublevel with
@@ -688,6 +963,12 @@ async function buildPack(
 			const doc: Record<string, unknown> = isTablePack
 				? toTableSourceDocument(source)
 				: toSourceDocument(source, folder);
+			if (folderStamps.size > 0) {
+				// Stamp the compendium folder (bead nsqt): root documents carry
+				// folder: null, grouped ones their folder's _id.
+				const group = resolveEntryGroup(source, folder);
+				doc.folder = group ? (folderStamps.get(group) ?? null) : null;
+			}
 			if (isTablePack) {
 				// Foundry stores RollTable results as an EMBEDDED collection:
 				// the table doc carries only the result ids, and each result

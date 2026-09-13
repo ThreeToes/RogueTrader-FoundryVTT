@@ -1,0 +1,57 @@
+<div class="planet-creator">
+    <div class="creator-header">
+        <input type="text" name="planet-name" value="{{name}}" placeholder="{{localize "PLANET_CREATOR.NAME_PLACEHOLDER"}}" />
+    </div>
+
+    <div class="starship-status">
+        {{#each drawn as |d|}}
+        <span class="chip origin-mod">{{d.label}}: {{d.name}} ({{d.roll}})</span>
+        {{/each}}
+    </div>
+
+    <h2>{{stage.label}} <span class="step-counter">{{stage.number}}/{{stage.total}}</span></h2>
+    <p class="method-hint">{{stage.hint}}</p>
+
+    {{#if (eq stage.key "development")}}
+    {{#if species}}
+    <div class="form-group">
+        <label>{{localize "PLANET_CREATOR.SPECIES"}}</label>
+        <p class="static-value">{{species}}</p>
+    </div>
+    {{else}}
+    <p class="method-hint">{{localize "PLANET_CREATOR.NEED_INHABITANTS"}}</p>
+    {{/if}}
+    {{/if}}
+
+    <div class="form-group planet-roller">
+        <label>{{localize "PLANET_CREATOR.MODIFIER"}}</label>
+        <a class="bump" data-action="bump" data-stage="{{stage.key}}" data-delta="-1">–</a>
+        <span class="mod-value">{{stage.state.modifier}}</span>
+        <a class="bump" data-action="bump" data-stage="{{stage.key}}" data-delta="1">+</a>
+        <a class="roll-draw" data-action="roll" data-stage="{{stage.key}}">
+            <i class="fas fa-dice-d20"></i> {{localize "PLANET_CREATOR.ROLL"}} (1d{{stage.die}}{{#if stage.state.modifier}} {{#if (gt stage.state.modifier 0)}}+{{/if}}{{stage.state.modifier}}{{/if}})
+        </a>
+    </div>
+
+    {{#if stage.state.uuid}}
+    <div class="comp-details border">
+        <h3 class="inv-group-label">{{stage.drawnDetail.name}} <span class="chip origin-mod">1d{{stage.die}}{{#if stage.state.modifier}} {{#if (gt stage.state.modifier 0)}}+{{/if}}{{stage.state.modifier}}{{/if}} → {{stage.state.result}}{{#if stage.state.label}}: {{stage.state.label}}{{/if}}</span></h3>
+        {{#if stage.drawnDetail.summary}}
+        <p class="comp-value">{{stage.drawnDetail.summary}}</p>
+        {{/if}}
+        <div class="comp-flavour">{{{stage.drawnDetail.description}}}</div>
+    </div>
+    {{else}}
+    <p class="static-value">{{localize "PLANET_CREATOR.NOT_DRAWN"}}</p>
+    {{/if}}
+
+    <div class="creator-footer">
+        {{> "rt/creator-nav"
+            backLabel=(localize "PLANET_CREATOR.PREV")
+            backDisabled=(eq stage.index 0)
+            forwardAction=(ifThen stage.last "finish" "next")
+            forwardLabel=(ifThen stage.last (localize "PLANET_CREATOR.FINISH") (localize "PLANET_CREATOR.NEXT"))
+            forwardPrimary=stage.last
+        }}
+    </div>
+</div>

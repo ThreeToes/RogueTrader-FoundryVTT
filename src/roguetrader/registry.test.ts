@@ -102,8 +102,14 @@ describe("EntryRegistry", () => {
 		for (const key of psychicDisciplines.keys()) {
 			expect(psychicDisciplines.get(key)).toMatch(/^PSYCHIC_DISCIPLINE\./);
 		}
-		// Core Rulebook p159: the three Astropath disciplines.
-		expect(psychicDisciplines.keys()).toHaveLength(3);
+		// Core Rulebook p159: the three base disciplines; bead hkc5 adds the
+		// Navis Primer/Into the Storm disciplines (theosophamy, voidfrost,
+		// soul-ward).
+		expect(psychicDisciplines.keys()).toHaveLength(7);
+		expect(psychicDisciplines.choices).toHaveProperty("theosophamy");
+		expect(psychicDisciplines.choices).toHaveProperty("voidfrost");
+		expect(psychicDisciplines.choices).toHaveProperty("soul-ward");
+		expect(psychicDisciplines.choices).toHaveProperty("waaagh");
 	});
 
 	test("talent registries are seeded with localization keys", () => {

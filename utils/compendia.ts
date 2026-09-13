@@ -73,6 +73,12 @@ export function resolveEntryType(
 		const weaponClass = (entry.system as { class?: string } | undefined)?.class;
 		return weaponClass === "melee" ? "melee-weapon" : "ranged-weapon";
 	}
+	if (folder === "gametables") {
+		// Game reference tables (planet/system generation rows): dedicated
+		// `game-table` type so they are not plain Gear and can attach to
+		// planet actors (owner ask).
+		return "game-table";
+	}
 	return FOLDER_TYPE_DEFAULTS[folder] ?? "gear";
 }
 

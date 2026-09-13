@@ -235,13 +235,13 @@
     {{/if}}
 
     <footer class="creator-nav">
-        {{#unless (eq step 0)}}
-        <button type="button" data-action="prev">{{localize "CREATOR.BACK"}}</button>
-        {{/unless}}
-        {{#if (eq step 3)}}
-        <button type="button" class="create" data-action="create" {{#unless canCreate}}disabled{{/unless}}>{{localize "CREATOR.CREATE"}}</button>
-        {{else}}
-        <button type="button" data-action="next">{{localize "CREATOR.NEXT"}}</button>
-        {{/if}}
+        {{> "rt/creator-nav"
+            backLabel=(localize "CREATOR.BACK")
+            backHidden=(eq step 0)
+            forwardAction=(ifThen (eq step 3) "create" "next")
+            forwardLabel=(ifThen (eq step 3) (localize "CREATOR.CREATE") (localize "CREATOR.NEXT"))
+            forwardPrimary=(eq step 3)
+            forwardDisabled=(ifThen canCreate false true)
+        }}
     </footer>
 </div>

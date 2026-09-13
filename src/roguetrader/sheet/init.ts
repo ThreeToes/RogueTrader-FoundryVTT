@@ -56,7 +56,10 @@ import { VehicleSheet } from "./actor/vehicle-sheet";
 import { DynastySheet } from "./actor/dynasty-sheet";
 import { Dynasty } from "../data/actor/dynasty";
 import { StarshipActor } from "../data/actor/starship-actor";
+import { PlanetActor } from "../data/actor/planet-actor";
 import { ShipSheet } from "./actor/ship-sheet";
+import { PlanetSheet } from "./actor/planet-sheet";
+import { PlanetCreator } from "./actor/planet-creator";
 import { NpcSheet } from "./actor/npc-sheet";
 import { registerConfigHelper } from "./handlebars";
 import { ArmourSheet } from "./item/armour-sheet";
@@ -64,6 +67,8 @@ import { GearSheet } from "./item/gear-sheet";
 import { ShipComponentSheet } from "./item/ship-component-sheet";
 import { ShipComplicationSheet } from "./item/ship-complication-sheet";
 import { ShipHullSheet } from "./item/ship-hull-sheet";
+import { GameTable } from "../data/item/game-table";
+import { GameTableSheet } from "./item/game-table-sheet";
 import { PsychicPowerSheet } from "./item/psychic-power-sheet";
 import { NavigatorPowerSheet } from "./item/navigator-power-sheet";
 import { SkillSheet } from "./item/skill-sheet";
@@ -353,6 +358,10 @@ export function sheetInit() {
 				},
 				"ship-component": { model: ShipComponent, sheet: ShipComponentSheet, label: "TYPES.Item.ship-component" },
 				"ship-weapon-component": { model: ShipWeaponComponent, sheet: ShipComponentSheet, label: "TYPES.Item.ship-weapon-component" },
+				// Game reference tables (planet/system generation rows):
+				// dedicated type so they are not plain Gear; attach to planet
+				// actors as embedded documents.
+				"game-table": { model: GameTable, sheet: GameTableSheet, label: "TYPES.Item.game-table" },
 				// Compendium-sourced aptitudes are description-only items; reuse
 				// the Gear model (all fields have initials) and its generic sheet
 				// (bead r7w).
@@ -416,6 +425,8 @@ export function sheetInit() {
 				dynasty: { model: Dynasty, sheet: DynastySheet, label: "DYNASTY.SHEET" },
 				// Starship actor (bead kwd): dedicated starship sheet.
 				starship: { model: StarshipActor, sheet: ShipSheet, label: "STARSHIP.SHEET" },
+				// Planet actor (owner ask, planet tables): SOI world record.
+				planet: { model: PlanetActor, sheet: PlanetSheet, label: "TYPES.Actor.planet" },
 			},
 		};
 		for (const [type, entry] of Object.entries(SHEET_REGISTRY.Item)) {
@@ -694,5 +705,50 @@ export function sheetInit() {
 		hooksOn.on("getActorContextOptions", shipCreatorEntry);
 		hooksOn.on("getEntryContextAbstractSidebarTab", shipCreatorEntry);
 		hooksOn.on("getActorDirectoryEntryContext", shipCreatorEntry);
+
+		// Planet creator (owner ask, planet tables): "Create Planet (wizard)"
+		// on the Actors directory menu, same permission model as the ship
+		// creator. Planet entries open the creator in update-in-place mode.
+		const planetCreatorEntry = (
+			_app: unknown,
+			entryOptions: Array<{
+				label: string;
+				icon: string;
+				onClick: (event?: PointerEvent, element?: HTMLElement) => void;
+			}>,
+		) => {
+			entryOptions.push({
+				label: "PLANET_CREATOR.MENU",
+				icon: "fa-solid fa-globe",
+				onClick: (_event?: PointerEvent, element?: HTMLElement) => {
+					const entryEl = element?.closest<HTMLElement>(
+						"[data-entry-id], [data-document-id]",
+					);
+					const resolvedId =
+						entryEl?.dataset.entryId ??
+						entryEl?.dataset.documentId ??
+						element?.dataset?.documentId;
+					const actor = resolvedId
+						? ((game.actors as unknown as {
+								get: (id: string) => unknown;
+							}).get(resolvedId) as foundry.documents.Actor | undefined)
+						: undefined;
+					const isPlanet =
+						actor && (actor.type as string) === "planet";
+					if (!isPlanet && !canCreateActors) {
+						ui.notifications?.warn(
+							game.i18n!.localize("CREATOR.NO_CREATE_PERMISSION"),
+						);
+						return;
+					}
+					new PlanetCreator({
+						actor: isPlanet ? actor : undefined,
+					} as never).render({ force: true } as never);
+				},
+			});
+		};
+		hooksOn.on("getActorContextOptions", planetCreatorEntry);
+		hooksOn.on("getEntryContextAbstractSidebarTab", planetCreatorEntry);
+		hooksOn.on("getActorDirectoryEntryContext", planetCreatorEntry);
 	});
 }

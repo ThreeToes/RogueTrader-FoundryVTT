@@ -1,0 +1,47 @@
+<section class="planet-content">
+    <div class="stats border">
+        <h1>{{localize "PLANET.PROFILE"}}</h1>
+        <div class="stats-row">
+            {{#each profile as |f|}}
+            <div class="stat">
+                <label>{{f.label}}</label>
+                {{#if ../editable}}
+                <input name="{{f.name}}" type="text" value="{{f.value}}" />
+                {{else}}
+                <p class="static-value">{{f.value}}</p>
+                {{/if}}
+            </div>
+            {{/each}}
+        </div>
+    </div>
+
+    <div class="stats border">
+        <h1>{{localize "PLANET.TABLES"}}</h1>
+        <p class="hint">{{localize "PLANET.TABLES_HINT"}}</p>
+        {{#if attachedGroups.length}}
+        {{#each attachedGroups as |group|}}
+        <h2>{{group.label}}</h2>
+        <ul class="attached-tables">
+            {{#each group.tables as |t|}}
+            <li class="attached-table" data-item-uuid="{{t.uuid}}">
+                <span class="attached-roll">{{t.roll}}</span>
+                <span class="attached-name">{{t.name}}</span>
+                <p class="attached-summary">{{t.summary}}</p>
+                {{#if ../editable}}
+                <a class="attached-remove" data-action="removeTable" data-item-uuid="{{t.uuid}}"
+                    title="{{localize 'PLANET.REMOVE_TABLE'}}"><i class="fas fa-trash"></i></a>
+                {{/if}}
+            </li>
+            {{/each}}
+        </ul>
+        {{/each}}
+        {{else}}
+        <p class="static-value">{{localize "PLANET.NO_TABLES"}}</p>
+        {{/if}}
+    </div>
+
+    <div class="notes-editor border">
+        <h1>{{localize "PLANET.NOTES"}}</h1>
+        {{> "rt/rich-text" name="system.notes" value=source.system.notes html=notesHTML editable=editable}}
+    </div>
+</section>

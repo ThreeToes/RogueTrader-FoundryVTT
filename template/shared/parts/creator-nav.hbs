@@ -1,0 +1,23 @@
+{{!-- Shared creator-wizard navigation bar (consolidation, owner ask):
+    back on the left, forward on the right, one partial for every creator.
+    Params (all hash):
+      backLabel / backHidden (skip the back button entirely, e.g. step 0)
+        / backDisabled (render the button but inert)
+      forwardAction (data-action, default "next") / forwardLabel
+        / forwardPrimary (highlight the create/finish action)
+        / forwardDisabled (disabled when truthy — e.g. the character
+          creator's !canCreate gate, via ifThen)
+--}}
+<div class="rt-creator-nav">
+    <div class="nav-side nav-left">
+        {{#unless backHidden}}
+        <button type="button" class="rt-button rt-creator-nav-back" data-action="{{backAction}}"
+            {{#if backDisabled}}disabled{{/if}}>{{backLabel}}</button>
+        {{/unless}}
+    </div>
+    <div class="nav-side nav-right">
+        <button type="button" class="rt-button rt-creator-nav-forward{{#if forwardPrimary}} create{{/if}}"
+            data-action="{{forwardAction}}"
+            {{#if forwardDisabled}}disabled{{/if}}>{{forwardLabel}}</button>
+    </div>
+</div>

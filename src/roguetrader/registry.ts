@@ -290,6 +290,15 @@ const PSYCHIC_DISCIPLINES = {
 	telepathy: "PSYCHIC_DISCIPLINE.TELEPATHY",
 	telekinesis: "PSYCHIC_DISCIPLINE.TELEKINESIS",
 	divination: "PSYCHIC_DISCIPLINE.DIVINATION",
+	// Navis Primer Ch IV / Into the Storm Ch VI disciplines (bead hkc5).
+	// Theosophamy (ITS p197) is the warp-sealing/banishing discipline;
+	// Voidfrost (NP p92) and Soul Ward (NP p96) are the two established
+	// Astropath disciplines of the Koronus Expanse.
+	theosophamy: "PSYCHIC_DISCIPLINE.THEOSOPHAMY",
+	voidfrost: "PSYCHIC_DISCIPLINE.VOIDFROST",
+	"soul-ward": "PSYCHIC_DISCIPLINE.SOUL_WARD",
+	// Weirdboy Waaagh! Discipline (NP p104) — Ork psykers.
+	waaagh: "PSYCHIC_DISCIPLINE.WAAAGH",
 } as const;
 
 export const psychicDisciplines = new EntryRegistry(PSYCHIC_DISCIPLINES);

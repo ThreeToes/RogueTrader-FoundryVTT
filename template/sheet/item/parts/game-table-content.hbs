@@ -1,0 +1,47 @@
+<section class="game-table-content">
+    <div class="stats border">
+        <h1>{{localize "TYPES.Item.game-table"}}</h1>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "GAME_TABLE.KIND"}}</label>
+                {{#if editable}}
+                <input name="system.kind" type="text" value="{{source.system.kind}}" />
+                {{else}}
+                <p class="static-value">{{source.system.kind}}</p>
+                {{/if}}
+            </div>
+        </div>
+        {{#if columns.length}}
+        <div class="stats-row">
+            {{#each columns as |c|}}
+            <div class="stat">
+                <label>{{c.label}}</label>
+                {{#if ../editable}}
+                <input name="system.{{c.key}}" type="text" value="{{c.value}}" />
+                {{else}}
+                <p class="static-value">{{c.value}}</p>
+                {{/if}}
+            </div>
+            {{/each}}
+        </div>
+        {{/if}}
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "GAME_TABLE.RESULT"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.description"
+                    value="{{source.system.description}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{descriptionHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

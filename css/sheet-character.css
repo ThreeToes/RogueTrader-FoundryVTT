@@ -1196,3 +1196,28 @@
 .rogue-trader.sheet.character .chip-sep {
     color: var(--rt-muted);
 }
+
+/* Shared creator-wizard navigation (consolidation, owner ask): back on the
+   left, forward on the right — template/shared/parts/creator-nav.hbs. */
+.rogue-trader .rt-creator-nav {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.rogue-trader .rt-creator-nav .nav-side {
+	display: flex;
+	gap: 8px;
+}
+
+.rogue-trader .rt-creator-nav .rt-creator-nav-back {
+	min-width: 5rem;
+}
+
+.rogue-trader .rt-creator-nav .rt-creator-nav-forward {
+	min-width: 7rem;
+}
+
+.rogue-trader .rt-creator-nav .rt-creator-nav-forward.create {
+	font-weight: bold;
+}

@@ -140,13 +140,11 @@
     {{/if}}
 
     <div class="creator-actions">
-        {{#if (gt step 0)}}
-        <button type="button" class="rt-button" data-action="prev">{{localize "SHIP_CREATOR.PREV"}}</button>
-        {{/if}}
-        {{#if (lt step 2)}}
-        <button type="button" class="rt-button" data-action="next">{{localize "SHIP_CREATOR.NEXT"}}</button>
-        {{else}}
-        <button type="button" class="rt-button" data-action="finish">{{localize "SHIP_CREATOR.FINISH"}}</button>
-        {{/if}}
+        {{> "rt/creator-nav"
+            backLabel=(localize "SHIP_CREATOR.PREV")
+            backHidden=(eq step 0)
+            forwardAction=(ifThen (lt step 2) "next" "finish")
+            forwardLabel=(ifThen (lt step 2) (localize "SHIP_CREATOR.NEXT") (localize "SHIP_CREATOR.FINISH"))
+        }}
     </div>
 </div>

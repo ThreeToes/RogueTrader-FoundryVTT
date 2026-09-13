@@ -1,0 +1,45 @@
+<section class="ship-complication-content">
+    <div class="stats border">
+        <h1>{{localize "TYPES.Item.ship-complication"}}</h1>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "SHIP_COMPLICATION.KIND"}}</label>
+                {{#if editable}}
+                <select name="system.kind">
+                    {{#each kindChoices as |c|}}
+                    <option value="{{c.value}}" {{#if (eq c.value ../source.system.kind)}}selected{{/if}}>{{c.label}}</option>
+                    {{/each}}
+                </select>
+                {{else}}
+                <p class="static-value">{{kindLabel}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.ROLL"}}</label>
+                {{#if editable}}
+                <input name="system.roll" type="number" min="1" max="10" value="{{source.system.roll}}" />
+                {{else}}
+                <p class="static-value">{{source.system.roll}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "SHIP_COMPLICATION.EFFECT"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.effect"
+                    value="{{source.system.effect}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{effectHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{effectHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

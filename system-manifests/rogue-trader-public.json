@@ -101,6 +101,11 @@
                     "description"
                 ]
             },
+            "armour-modification": {
+                "htmlFields": [
+                    "description"
+                ]
+            },
             "tool": {
                 "htmlFields": [
                     "description"
@@ -121,7 +126,30 @@
                     "description"
                 ]
             },
-            "trait": {}
+            "trait": {},
+            "ship-component": {
+                "htmlFields": [
+                    "description",
+                    "special"
+                ]
+            },
+            "ship-weapon-component": {
+                "htmlFields": [
+                    "description",
+                    "special"
+                ]
+            },
+            "ship": {
+                "htmlFields": [
+                    "description",
+                    "specialRules"
+                ]
+            },
+            "ship-complication": {
+                "htmlFields": [
+                    "effect"
+                ]
+            }
         }
     },
     "gridDistance": 1,

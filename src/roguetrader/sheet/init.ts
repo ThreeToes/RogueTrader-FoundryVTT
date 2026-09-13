@@ -20,6 +20,7 @@ import {
 	ShipComponent,
 	ShipWeaponComponent,
 } from "../data/item/ship-component";
+import { ArmourModification } from "../data/item/armour-modification";
 import { WeaponModification } from "../data/item/weapon-modification";
 import { attachRegistriesToConfig } from "../registry";
 import { migrateLegacyActors } from "../migrations";
@@ -60,6 +61,9 @@ import { NpcSheet } from "./actor/npc-sheet";
 import { registerConfigHelper } from "./handlebars";
 import { ArmourSheet } from "./item/armour-sheet";
 import { GearSheet } from "./item/gear-sheet";
+import { ShipComponentSheet } from "./item/ship-component-sheet";
+import { ShipComplicationSheet } from "./item/ship-complication-sheet";
+import { ShipHullSheet } from "./item/ship-hull-sheet";
 import { PsychicPowerSheet } from "./item/psychic-power-sheet";
 import { NavigatorPowerSheet } from "./item/navigator-power-sheet";
 import { SkillSheet } from "./item/skill-sheet";
@@ -338,12 +342,17 @@ export function sheetInit() {
 				skill: { model: Skill, sheet: SkillSheet, label: "ROGUE_TRADER.SKILL.SHEET" },
 				talent: { model: Talent, sheet: TalentSheet, label: "ROGUE_TRADER.TALENT.SHEET" },
 				career: { model: Career, sheet: CareerSheet, label: "TYPES.Item.career" },
-				// Starship hulls + complications (bead sl31, Chapter VIII):
-				// data-model-only types, no sheets yet.
-				ship: { model: Starship },
-				"ship-complication": { model: ShipComplication },
-				"ship-component": { model: ShipComponent },
-				"ship-weapon-component": { model: ShipWeaponComponent },
+				// Starship hulls (bead 5lbn follow-up): dedicated hull sheet (the
+				// statline + pre-installed component lists; the ship creator
+				// instantiates those by name with loud failures).
+				ship: { model: Starship, sheet: ShipHullSheet, label: "TYPES.Item.ship" },
+				"ship-complication": {
+					model: ShipComplication,
+					sheet: ShipComplicationSheet,
+					label: "TYPES.Item.ship-complication",
+				},
+				"ship-component": { model: ShipComponent, sheet: ShipComponentSheet, label: "TYPES.Item.ship-component" },
+				"ship-weapon-component": { model: ShipWeaponComponent, sheet: ShipComponentSheet, label: "TYPES.Item.ship-weapon-component" },
 				// Compendium-sourced aptitudes are description-only items; reuse
 				// the Gear model (all fields have initials) and its generic sheet
 				// (bead r7w).
@@ -373,6 +382,13 @@ export function sheetInit() {
 				"force-field": { model: ForceField, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				"weapon-modification": {
 					model: WeaponModification,
+					sheet: GearSheet,
+					label: "ROGUE_TRADER.GEAR.SHEET",
+				},
+				// Armour upgrades (bead dfb8, Hostile Acquisitions Table 2-17):
+				// mirrors weapon-modification — Gear model + `upgrades` string.
+				"armour-modification": {
+					model: ArmourModification,
 					sheet: GearSheet,
 					label: "ROGUE_TRADER.GEAR.SHEET",
 				},

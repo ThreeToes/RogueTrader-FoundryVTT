@@ -1,0 +1,187 @@
+<section class="ship-component-content">
+    <div class="stats border">
+        <h1>{{localize "STARSHIP.COMPONENTS"}}</h1>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "STARSHIP.COMPONENTS"}}</label>
+                {{#if editable}}
+                <select name="system.componentType">
+                    {{#each componentTypeChoices as |c|}}
+                    <option value="{{c.value}}" {{#if (eq c.value ../source.system.componentType)}}selected{{/if}}>{{c.label}}</option>
+                    {{/each}}
+                </select>
+                {{else}}
+                <p class="static-value">{{typeLabel}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "SHIP_COMPONENT.CATEGORY"}}</label>
+                {{#if editable}}
+                <select name="system.category">
+                    {{#each categoryChoices as |c|}}
+                    <option value="{{c.value}}" {{#if (eq c.value ../source.system.category)}}selected{{/if}}>{{c.label}}</option>
+                    {{/each}}
+                </select>
+                {{else}}
+                <p class="static-value">{{categoryLabel}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "STARSHIP.COMPONENTS_HULL_TYPES"}}</label>
+                {{#if editable}}
+                <input name="system.hullTypes" type="text" value="{{source.system.hullTypes}}" />
+                {{else}}
+                <p class="static-value">{{source.system.hullTypes}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "STARSHIP.POWER"}}</label>
+                {{#if editable}}
+                <input name="system.power" type="text" value="{{source.system.power}}" />
+                {{else}}
+                <p class="static-value">{{source.system.power}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.SPACE"}}</label>
+                {{#if editable}}
+                <input name="system.space" type="number" min="0" value="{{source.system.space}}" />
+                {{else}}
+                <p class="static-value">{{source.system.space}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "DYNASTY.SHIP_POINTS"}}</label>
+                {{#if editable}}
+                <input name="system.sp" type="text" value="{{source.system.sp}}" />
+                {{else}}
+                <p class="static-value">{{source.system.sp}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "GEAR.AVAILABILITY"}}</label>
+                {{#if editable}}
+                <input name="system.availability" type="text" value="{{source.system.availability}}" />
+                {{else}}
+                <p class="static-value">{{source.system.availability}}</p>
+                {{/if}}
+            </div>
+        </div>
+        {{#if isWeapon}}
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "SHIP_COMPONENT.STRENGTH"}}</label>
+                {{#if editable}}
+                <input name="system.strength" type="number" min="0" value="{{source.system.strength}}" />
+                {{else}}
+                <p class="static-value">{{source.system.strength}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "SHIP_COMPONENT.DAMAGE"}}</label>
+                {{#if editable}}
+                <input name="system.damage" type="text" value="{{source.system.damage}}" />
+                {{else}}
+                <p class="static-value">{{source.system.damage}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "SHIP_COMPONENT.CRIT_RATING"}}</label>
+                {{#if editable}}
+                <input name="system.critRating" type="number" min="0" value="{{source.system.critRating}}" />
+                {{else}}
+                <p class="static-value">{{source.system.critRating}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "SHIP_COMPONENT.RANGE"}}</label>
+                {{#if editable}}
+                <input name="system.range" type="number" min="0" value="{{source.system.range}}" />
+                {{else}}
+                <p class="static-value">{{source.system.range}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.SLOT"}}</label>
+                {{#if editable}}
+                <select name="system.slot">
+                    {{selectOptions (config "ship-weapon-slots") selected=source.system.slot blank="-"}}
+                </select>
+                {{else}}
+                <p class="static-value">{{slotLabel}}</p>
+                {{/if}}
+            </div>
+        </div>
+        {{/if}}
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "SHIP_COMPONENT.STATE"}}</label>
+                {{#if editable}}
+                <select name="system.state">
+                    {{#each stateChoices as |c|}}
+                    <option value="{{c.value}}" {{#if (eq c.value ../source.system.state)}}selected{{/if}}>{{c.label}}</option>
+                    {{/each}}
+                </select>
+                {{else}}
+                <p class="static-value">{{stateLabel}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "SHIP_COMPONENT.DEPRESSURISED"}}</label>
+                {{#if editable}}
+                <input name="system.depressurised" type="checkbox" {{#if source.system.depressurised}}checked{{/if}} />
+                {{else}}
+                <p class="static-value">{{#if source.system.depressurised}}{{localize "SHIP_COMPONENT.YES"}}{{else}}{{localize "SHIP_COMPONENT.NO"}}{{/if}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "SHIP_COMPONENT.UNIQUE"}}</label>
+                {{#if editable}}
+                <input name="system.unique" type="checkbox" value="{{source.system.unique}}" {{#if source.system.unique}}checked{{/if}} />
+                {{else}}
+                <p class="static-value">{{#if source.system.unique}}{{localize "SHIP_COMPONENT.YES"}}{{else}}{{localize "SHIP_COMPONENT.NO"}}{{/if}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "SHIP_CREATOR.SPECIAL_RULES"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.special"
+                    value="{{source.system.special}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{specialHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{specialHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "TITLE.DESCRIPTION"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.description"
+                    value="{{source.system.description}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{descriptionHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

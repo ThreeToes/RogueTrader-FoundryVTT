@@ -472,6 +472,81 @@ describe("compendium folder groupings (bead nsqt)", () => {
 				resolveEntryGroup({ name: "X", group: 42 }, "weapons"),
 			).toThrow(/must be a non-empty string/);
 		});
+
+		test("ship components group by the componentType taxonomy (bead 5lbn)", () => {
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Jovian Pattern Class 1 Drive",
+						type: "ship-component",
+						system: { componentType: "plasma-drive" },
+					},
+					"ships",
+				),
+			).toBe("Plasma Drives");
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Sunhammer Lance Weapon",
+						type: "ship-weapon-component",
+						system: { componentType: "lance" },
+					},
+					"ships",
+				),
+			).toBe("Lances");
+		});
+
+		test("ship hulls group by hullClass, npc vessels to their own folder (bead 5lbn)", () => {
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Avenger-class Grand Cruiser",
+						type: "ship",
+						system: { hullClass: "grand-cruiser" },
+					},
+					"ships",
+				),
+			).toBe("Grand Cruisers");
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Ork Kroozer",
+						type: "ship",
+						system: { hullClass: "cruiser", npc: true },
+					},
+					"ships",
+				),
+			).toBe("NPC Vessels");
+		});
+
+		test("starships actor pack groups by faction with Actor folder type (bead 5lbn)", () => {
+			const entries = [
+				{ name: "Ork Kroozer", type: "starship", group: "Ork", system: {} },
+				{ name: "Eldar Hellebore", type: "starship", group: "Eldar", system: {} },
+				{ name: "The Sirius", type: "starship", group: "Imperium", system: {} },
+			];
+			const { folders, byLabel } = buildPackFolders("starships", entries, "Actor");
+			expect(folders.map((f) => f.name).sort()).toEqual([
+				"Eldar",
+				"Imperium",
+				"Ork",
+			]);
+			expect(folders.every((f) => f.type === "Actor")).toBe(true);
+			expect(byLabel.get("Ork")).toBe(String(folders.find((f) => f.name === "Ork")._id));
+		});
+
+		test("unmapped ship componentType fails loudly (bead 5lbn)", () => {
+			expect(() =>
+				resolveEntryGroup(
+					{
+						name: "Odd Component",
+						type: "ship-component",
+						system: { componentType: "mystery" },
+					},
+					"ships",
+				),
+			).toThrow(/no folder label for componentType/);
+		});
 	});
 
 	describe("buildPackFolders", () => {

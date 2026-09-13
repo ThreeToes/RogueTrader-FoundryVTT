@@ -167,6 +167,14 @@ export function parseSpecialMechanics(special: string[] | undefined): RollMechan
 			if (blast) {
 				const rating = Number(blast[1] ?? blast[2] ?? 0);
 				out.blast = Number.isFinite(rating) ? rating : 0;
+			} else if (key.startsWith("blast")) {
+				// Loud failure (bead dfb8): variable ratings the book prints as
+				// dice (e.g. Ork Bomb Squig "Blast (1d5)", ITS Table 3-17) cannot
+				// resolve to a static radius. Ignoring them silently would hide a
+				// modifier; warn so the data gets fixed or the engine extended.
+				console.warn(
+					`rogue-trader: unparseable blast quality "${entry}" — no static blast radius applied.`,
+				);
 			}
 		}
 	}

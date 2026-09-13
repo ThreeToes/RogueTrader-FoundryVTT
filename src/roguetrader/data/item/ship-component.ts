@@ -81,6 +81,11 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 					"augur-array",
 					"macrobattery",
 					"lance",
+					// BFK/ITS additions (bead 5lbn): the book's own weapon
+					// component families beyond batteries and lances.
+					"nova-cannon",
+					"torpedo-tube",
+					"landing-bay",
 					"supplemental",
 					"archeotech",
 					"xenotech",

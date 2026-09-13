@@ -1,0 +1,195 @@
+<section class="ship-hull-content">
+    <div class="stats border">
+        <h1>{{localize "STARSHIP.HEADER"}}</h1>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "STARSHIP.HULL_CLASS"}}</label>
+                {{#if editable}}
+                <input name="system.hullClass" type="text" value="{{source.system.hullClass}}" />
+                {{else}}
+                <p class="static-value">{{source.system.hullClass}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "DYNASTY.SHIP_POINTS"}}</label>
+                {{#if editable}}
+                <input name="system.sp" type="number" min="0" value="{{source.system.sp}}" />
+                {{else}}
+                <p class="static-value">{{source.system.sp}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.SPACE"}}</label>
+                {{#if editable}}
+                <input name="system.space" type="number" min="0" value="{{source.system.space}}" />
+                {{else}}
+                <p class="static-value">{{source.system.space}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.WEAPON_CAPACITY"}}</label>
+                {{#if editable}}
+                <input name="system.weaponCapacity" type="text" value="{{source.system.weaponCapacity}}" />
+                {{else}}
+                <p class="static-value">{{source.system.weaponCapacity}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "STARSHIP.SPEED"}}</label>
+                {{#if editable}}
+                <input name="system.speed" type="number" min="0" value="{{source.system.speed}}" />
+                {{else}}
+                <p class="static-value">{{source.system.speed}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.MANOEUVRAABILITY"}}</label>
+                {{#if editable}}
+                <input name="system.manoeuvrability" type="number" value="{{source.system.manoeuvrability}}" />
+                {{else}}
+                <p class="static-value">{{source.system.manoeuvrability}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.DETECTION"}}</label>
+                {{#if editable}}
+                <input name="system.detection" type="number" value="{{source.system.detection}}" />
+                {{else}}
+                <p class="static-value">{{source.system.detection}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.HULL_INTEGRITY"}}</label>
+                {{#if editable}}
+                <input name="system.hullIntegrity" type="number" min="0" value="{{source.system.hullIntegrity}}" />
+                {{else}}
+                <p class="static-value">{{source.system.hullIntegrity}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "STARSHIP.ARMOUR"}}</label>
+                {{#if editable}}
+                <input name="system.armour" type="number" min="0" value="{{source.system.armour}}" />
+                {{else}}
+                <p class="static-value">{{source.system.armour}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.TURRET_RATING"}}</label>
+                {{#if editable}}
+                <input name="system.turretRating" type="number" min="0" value="{{source.system.turretRating}}" />
+                {{else}}
+                <p class="static-value">{{source.system.turretRating}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.DIMENSIONS"}}</label>
+                {{#if editable}}
+                <input name="system.dimensions" type="text" value="{{source.system.dimensions}}" />
+                {{else}}
+                <p class="static-value">{{source.system.dimensions}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "STARSHIP.MASS"}}</label>
+                {{#if editable}}
+                <input name="system.mass" type="text" value="{{source.system.mass}}" />
+                {{else}}
+                <p class="static-value">{{source.system.mass}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.CREW_DETAIL"}}</label>
+                {{#if editable}}
+                <input name="system.crew" type="text" value="{{source.system.crew}}" />
+                {{else}}
+                <p class="static-value">{{source.system.crew}}</p>
+                {{/if}}
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.ACCEL"}}</label>
+                {{#if editable}}
+                <input name="system.accel" type="text" value="{{source.system.accel}}" />
+                {{else}}
+                <p class="static-value">{{source.system.accel}}</p>
+                {{/if}}
+            </div>
+        </div>
+        {{#if isNpc}}
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "STARSHIP.COMPONENTS_ESSENTIAL"}}</label>
+                <ul class="static-effects">
+                    {{#each essentialComponents as |name|}}
+                    <li>{{name}}</li>
+                    {{/each}}
+                </ul>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "STARSHIP.COMPONENTS_SUPPLEMENTAL"}}</label>
+                <ul class="static-effects">
+                    {{#each supplementalComponents as |name|}}
+                    <li>{{name}}</li>
+                    {{/each}}
+                </ul>
+            </div>
+        </div>
+        {{#if complications.length}}
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "STARSHIP.HISTORY"}}</label>
+                <ul class="static-effects">
+                    {{#each complications as |name|}}
+                    <li>{{name}}</li>
+                    {{/each}}
+                </ul>
+            </div>
+        </div>
+        {{/if}}
+        {{/if}}
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "SHIP_CREATOR.SPECIAL_RULES"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.specialRules"
+                    value="{{source.system.specialRules}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{specialRulesHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{specialRulesHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "TITLE.DESCRIPTION"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.description"
+                    value="{{source.system.description}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{descriptionHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

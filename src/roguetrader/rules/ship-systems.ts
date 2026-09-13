@@ -92,6 +92,12 @@ export const HULL_CLASS_TOKENS: Readonly<Record<string, string>> = {
 	"light cruiser": "light cruisers",
 	cruiser: "cruisers",
 	"space station": "space stations",
+	// BFK Ch II (bead 5lbn): grand cruisers and battlecruisers are the
+	// book's two new hull classes; "cruiser only" Components are usable
+	// on both (BFK p20/21 "can use cruiser only Components"), so they
+	// map to the cruiser token family.
+	"grand-cruiser": "cruisers",
+	battlecruiser: "cruisers",
 };
 
 /** Power a component GENERATES: "35 Generated" -> 35 (Table 8-3, book p201). */

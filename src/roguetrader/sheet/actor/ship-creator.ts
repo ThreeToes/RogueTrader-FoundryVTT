@@ -98,6 +98,11 @@ interface PackOption {
 const SUPPLEMENTAL_TYPE_LABELS: Readonly<Record<string, string>> = {
 	macrobattery: "SHIP_COMBAT.MACROBATTERY",
 	lance: "SHIP_COMBAT.LANCE",
+	// BFK/ITS weapon families (bead 5lbn): Nova Cannons, Torpedo Tubes,
+	// and Landing Bays are the book's own supplemental weapon groups.
+	"nova-cannon": "STARSHIP.COMPONENTS_NOVA_CANNON",
+	"torpedo-tube": "STARSHIP.COMPONENTS_TORPEDO_TUBES",
+	"landing-bay": "STARSHIP.COMPONENTS_LANDING_BAYS",
 	supplemental: "STARSHIP.COMPONENTS_SUPPLEMENTAL",
 	archeotech: "STARSHIP.COMPONENTS_ARCHEOTECH",
 	xenotech: "STARSHIP.COMPONENTS_XENOTECH",

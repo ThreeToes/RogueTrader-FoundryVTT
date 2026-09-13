@@ -72,6 +72,8 @@ const QUALITIES = {
 	corrosive: "QUALITY.CORROSIVE",
 	defensive: "QUALITY.DEFENSIVE",
 	flexible: "QUALITY.FLEXIBLE",
+	force: "QUALITY.FORCE",
+	gyroStabilised: "QUALITY.GYRO_STABILISED",
 	flame: "QUALITY.FLAME",
 	inaccurate: "QUALITY.INACCURATE",
 	overheats: "QUALITY.OVERHEATS",
@@ -86,6 +88,13 @@ const QUALITIES = {
 	smoke: "QUALITY.SMOKE",
 	snare: "QUALITY.SNARE",
 	stun: "QUALITY.STUN",
+	// Soul Reaver Ch IV new qualities (bead dfb8, printed p108). Crippling,
+	// Felling and Proven are parameterised in book notation — author them as
+	// "crippling-1d5", "felling-1", "proven-3" etc. in the special list.
+	crippling: "QUALITY.CRIPPLING",
+	felling: "QUALITY.FELLING",
+	proven: "QUALITY.PROVEN",
+	razorSharp: "QUALITY.RAZOR_SHARP",
 	storm: "QUALITY.STORM",
 	tearing: "QUALITY.TEARING",
 	toxic: "QUALITY.TOXIC",

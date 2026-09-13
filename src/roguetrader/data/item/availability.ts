@@ -10,6 +10,10 @@ export enum Availability {
 	ExtremelyRate = "extremely-rare",
 	NearUnique = "near-unique",
 	Unique = "unique",
+	/** Book prints "Special" for availability that depends on another item
+	 *  (e.g. Hostile Acquisitions Counterfeit Xenos Weapon, Gas Rounds —
+	 *  "the same Availability as the grenades whose effects they replicate"). */
+	Special = "special",
 }
 
 /**

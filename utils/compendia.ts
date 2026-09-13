@@ -160,6 +160,59 @@ const ARMOUR_GROUPS: Record<string, string> = {
 	"Vaporian Mirror Armour": "Exotic Armour",
 	"Engine Armour": "Exotic Armour",
 	"Sabbat-pattern Helm": "Exotic Armour",
+	// Hostile Acquisitions Table 2-16 (bead dfb8, printed pp61-62). The
+	// Footfall voidsuit is a voidsuit, not a rt_core section match.
+	"Augmetic Engine-Plate": "Exotic Armour",
+	"Mesh-Weave Clothing": "Exotic Armour",
+	"Pressure Carapace": "Exotic Armour",
+	"Voidsuit (Footfall)": "Exotic Armour",
+	"Xenos Chitin Armour": "Exotic Armour",
+	// Hostile Acquisitions Table 2-17 armour upgrades (bead dfb8, printed
+	// pp63-64) — their own section in the book.
+	"Advanced Materials (Armour Upgrade)": "Armour Upgrades",
+	"Concealed Weapon (Armour Upgrade)": "Armour Upgrades",
+	"Deflective Construction (Armour Upgrade)": "Armour Upgrades",
+	"Impact Gel Cells (Armour Upgrade)": "Armour Upgrades",
+	"Lathe-wrought (Armour Upgrade)": "Armour Upgrades",
+	"Lumen-heraldry (Armour Upgrade)": "Armour Upgrades",
+	"Nightshroud Layer (Armour Upgrade)": "Armour Upgrades",
+	"Power Assisted (Armour Upgrade)": "Armour Upgrades",
+	"Reflec Coating (Armour Upgrade)": "Armour Upgrades",
+	"Servo-manipulators (Armour Upgrade)": "Armour Upgrades",
+	"Tool Mount (Armour Upgrade)": "Armour Upgrades",
+	// Into the Storm Table 3-9 Fields (bead dfb8, printed pp130-131) — force
+	// fields live in the armour pack (they occupy the armour "slot"); the
+	// book groups them as their own "Fields" section.
+	"Archeotech Shield": "Fields",
+	"Conversion Field (Locke-pattern)": "Fields",
+	"Displacer Field (Mars-pattern)": "Fields",
+	"Eldar Forceshield": "Fields",
+	"Power Field (Ryza-pattern)": "Fields",
+	"Refractor Field": "Fields",
+	"Salvation Shield": "Fields",
+	// Into the Storm Table 3-20 Ork Armour (bead dfb8, printed p145) — the
+	// book's "Ork Armour" section; Table 3-22 Kroot Leathers (p146).
+	"'Ard Hat": "Ork & Kroot Armour",
+	"Boss Pole": "Ork & Kroot Armour",
+	"'Eavy Armor": "Ork & Kroot Armour",
+	"Iron Gob": "Ork & Kroot Armour",
+	"Squighide Coat and Leggins": "Ork & Kroot Armour",
+	"Kroot Leathers": "Ork & Kroot Armour",
+	// Soul Reaver Table 4-5 Dark Eldar Armour and Fields (bead dfb8, printed
+	// pp114-115) — the book's own "Armour and Force Fields" section.
+	"Xenohide Tunic": "Dark Eldar Armour & Fields",
+	"Xenohide Cloak": "Dark Eldar Armour & Fields",
+	"Kabalite Armour": "Dark Eldar Armour & Fields",
+	"Ghostplate Armour": "Dark Eldar Armour & Fields",
+	"Wychsuit": "Dark Eldar Armour & Fields",
+	"Shadow Field": "Dark Eldar Armour & Fields",
+	"Clone Field": "Dark Eldar Armour & Fields",
+	// Faith and Coin relic (bead dfb8, printed p104) — a force field.
+	"The Halo of the Devoted": "Fields",
+	// Into the Storm Table 3-8 (bead dfb8, printed p129).
+	"Flexsteel Suit": "Exotic Armour",
+	"Delphis Mark II \"Ironclad\" Heavy Power Armour": "Power Armour",
+	'"Frost" Thermal Armour': "Exotic Armour",
 };
 
 /**
@@ -177,6 +230,19 @@ const GEAR_PAGE_GROUPS: Array<{
 	{ book: "rt_core", min: 133, max: 134, label: "Weapon Upgrades" },
 	{ book: "rt_core", min: 139, max: 140, label: "Gear" },
 	{ book: "faith_and_coin", min: 94, max: 101, label: "Gear" },
+	// FC relics Table 3-14 (bead dfb8, printed pp104-107).
+	{ book: "faith_and_coin", min: 102, max: 107, label: "Relics" },
+	// Hostile Acquisitions Ch II (bead dfb8): weapon upgrades Table 2-14
+	// (printed p57), unusual ammunition Table 2-15 (p59), gear and tools
+	// Table 2-18 (p65). Bands cover the table pages their entries cite.
+	{ book: "hostile_acquisitions", min: 57, max: 58, label: "Weapon Upgrades" },
+	{ book: "hostile_acquisitions", min: 59, max: 61, label: "Unusual Ammunition" },
+	{ book: "hostile_acquisitions", min: 64, max: 66, label: "Gear" },
+	// Into the Storm Ch III (bead dfb8): weapon upgrades Table 3-6 (printed
+	// p127), clothing Table 3-11 (printed pp132-133), Kroot gear Table 3-22
+	// (printed p146).
+	{ book: "into_the_storm", min: 127, max: 128, label: "Weapon Upgrades" },
+	{ book: "into_the_storm", min: 132, max: 146, label: "Gear" },
 ];
 
 /** Packs the grouper covers; every other pack stays ungrouped. */
@@ -185,7 +251,76 @@ const GROUPED_PACKS: ReadonlySet<string> = new Set([
 	"armour",
 	"gear",
 	"tools",
+	"ships",
 ]);
+
+/**
+ * Ship pack grouping (bead 5lbn owner ask): ships.yaml by hullClass for
+ * ship docs, npc:true vessels in their own "NPC Vessels" folder; the
+ * components pack by the componentType taxonomy (essential categories,
+ * weapon families, then the supplemental/archeotech/xenotech groupings).
+ * Unmapped values fail loudly per conventions.
+ */
+const SHIP_COMPONENT_GROUP_LABELS: Readonly<Record<string, string>> = {
+	"plasma-drive": "Plasma Drives",
+	"warp-engine": "Warp Engines",
+	"geller-field": "Gellar Fields",
+	"void-shield": "Void Shields",
+	bridge: "Bridges",
+	"life-sustainer": "Life Sustainers",
+	"crew-quarters": "Crew Quarters",
+	"augur-array": "Augur Arrays",
+	macrobattery: "Macrobatteries",
+	lance: "Lances",
+	"nova-cannon": "Nova Cannons",
+	"torpedo-tube": "Torpedo Tubes",
+	"landing-bay": "Landing Bays",
+	supplemental: "Supplemental Components",
+	archeotech: "Archeotech Components",
+	xenotech: "Xeno-tech Components",
+};
+
+const SHIP_HULL_CLASS_LABELS: Readonly<Record<string, string>> = {
+	transport: "Transports",
+	raider: "Raiders",
+	frigate: "Frigates",
+	"light cruiser": "Light Cruisers",
+	cruiser: "Cruisers",
+	battlecruiser: "Battlecruisers",
+	"grand-cruiser": "Grand Cruisers",
+	"heavy cruiser": "Heavy Cruisers",
+	battleship: "Battleships",
+	"space station": "Space Stations",
+};
+
+function shipGroupLabel(entry: Record<string, unknown>): string | null {
+	const type = String(entry.type ?? "");
+	const system = (entry.system ?? {}) as Record<string, unknown>;
+	if (type === "ship-complication") return "Ship Complications";
+	if (type === "ship") {
+		if (system.npc === true) return "NPC Vessels";
+		const hullClass = String(system.hullClass ?? "").toLowerCase();
+		if (!hullClass) return null;
+		const label = SHIP_HULL_CLASS_LABELS[hullClass];
+		if (!label) {
+			throw new Error(
+				`grouping: ships/${String(entry.name)}: no folder label for hullClass "${hullClass}" — extend SHIP_HULL_CLASS_ORDER (loud failure)`,
+			);
+		}
+		return label;
+	}
+	if (type === "ship-component" || type === "ship-weapon-component") {
+		const componentType = String(system.componentType ?? "");
+		const label = SHIP_COMPONENT_GROUP_LABELS[componentType];
+		if (!label) {
+			throw new Error(
+				`grouping: ships/${String(entry.name)}: no folder label for componentType "${componentType}" — extend SHIP_COMPONENT_GROUP_LABELS (loud failure)`,
+			);
+		}
+		return label;
+	}
+	return null;
+}
 
 /**
  * Derive an item's compendium folder label (or null for root). Authoring
@@ -251,6 +386,7 @@ export function resolveEntryGroup(
 		);
 	}
 	if (pack === "tools") return "Tools";
+	if (pack === "ships") return shipGroupLabel(entry);
 	return null;
 }
 
@@ -270,11 +406,12 @@ export function toFolderSourceDocument(
 	label: string,
 	parent: string | null,
 	sort: number,
+	folderType = "Item",
 ): Record<string, unknown> {
 	return {
 		_id: folderId(pack, label),
 		name: label.split("/").pop() ?? label,
-		type: "Item",
+		type: folderType,
 		description: "",
 		folder: parent,
 		sorting: "a",
@@ -293,6 +430,7 @@ export function toFolderSourceDocument(
 export function buildPackFolders(
 	pack: string,
 	entries: Array<Record<string, unknown>>,
+	folderType = "Item",
 ): { folders: Array<Record<string, unknown>>; byLabel: Map<string, string> } {
 	const labels = new Set<string>();
 	for (const entry of entries) {
@@ -316,7 +454,7 @@ export function buildPackFolders(
 				`grouping: ${pack}: group "${label}" has no parent folder — add a "${parts.slice(0, -1).join("/")}" group (loud failure)`,
 			);
 		}
-		const doc = toFolderSourceDocument(pack, label, parentKey ?? null, sort);
+		const doc = toFolderSourceDocument(pack, label, parentKey ?? null, sort, folderType);
 		byLabel.set(label, String(doc._id));
 		folders.push(doc);
 		sort += 10;
@@ -347,7 +485,11 @@ export const TABLE_PACKS: ReadonlySet<string> = new Set([
  * (deleteOrphanDocuments), so every item record must belong to a stored
  * actor.
  */
-export const ACTOR_PACKS: ReadonlySet<string> = new Set(["npcs", "vehicles"]);
+export const ACTOR_PACKS: ReadonlySet<string> = new Set([
+	"npcs",
+	"vehicles",
+	"starships",
+]);
 
 export function actorKey(actorId: string): string {
 	return `!actors!${actorId}`;
@@ -839,6 +981,7 @@ export function toJournalSourceDocument(
 export function toActorSourceDocument(
 	entry: Record<string, unknown>,
 	index: ItemSourceIndex,
+	folderId: string | null = null,
 ): { actor: Record<string, unknown>; embedded: Array<Record<string, unknown>> } {
 	const name = String(entry.name ?? "unnamed");
 	const seenIds = new Set<string>();
@@ -857,7 +1000,7 @@ export function toActorSourceDocument(
 		// Embedded collections are stored as ids; records live in sublevels.
 		items: embedded.map((d) => String(d._id)),
 		effects: [],
-		folder: null,
+		folder: folderId,
 		sort: 0,
 		_stats: entry._stats ?? { coreVersion: 14 },
 		flags: entry.flags ?? {},
@@ -925,6 +1068,23 @@ async function buildPack(
 		count += packFolders.length;
 	}
 
+	// Folder emission for actor packs (bead 5lbn): same folder idiom as
+	// Item packs, but Folder.type is the pack's PRIMARY document type
+	// ("Actor"). Authoring `group:` on the yaml entries drives the labels.
+	let actorFolderStamps = new Map<string, string>();
+	if (isActorPack) {
+		const { folders: packFolders, byLabel } = buildPackFolders(
+			folder,
+			[...fileEntries.values()].flat(),
+			"Actor",
+		);
+		for (const f of packFolders) {
+			batch.put(`!folders!${String(f._id)}`, f as unknown as string);
+		}
+		actorFolderStamps = byLabel;
+		count += packFolders.length;
+	}
+
 	for (const entries of fileEntries.values()) {
 		for (const source of entries) {
 			if (isActorPack) {
@@ -932,7 +1092,12 @@ async function buildPack(
 				// embedded items split into `!actors.items!<actorId>.<itemId>`
 				// records; the actor doc carries only the id array (et3x, core
 				// _getSublevelNames + deleteOrphanDocuments verified).
-				const { actor, embedded } = toActorSourceDocument(source, itemIndex);
+				const group = resolveEntryGroup(source, folder);
+				const { actor, embedded } = toActorSourceDocument(
+					source,
+					itemIndex,
+					group ? (actorFolderStamps.get(group) ?? null) : null,
+				);
 				const actorId = String(actor._id);
 				batch.put(actorKey(actorId), actor as unknown as string);
 				for (const item of embedded) {

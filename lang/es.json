@@ -1211,5 +1211,7 @@
   "TYPES.Item.ship-weapon-component": "Componente de arma de nave",
   "SHIP_COMPONENT.SLOT": "Espacio de arma",
   "SHIP_COMPLICATION.KIND": "Tipo",
-  "SHIP_COMPLICATION.EFFECT": "Efecto"
+  "SHIP_COMPLICATION.EFFECT": "Efecto",
+  "QUALITY.WARP_WEAPON": "Arma del Warp",
+  "CHAT.QUALITY_WARP_WEAPON": "Arma del Warp: el daño se duplica contra objetivos con Valor de Psi, el Rasgo Daemónico o cualquier conexión directa con el Warp."
 }

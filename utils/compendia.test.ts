@@ -535,6 +535,63 @@ describe("compendium folder groupings (bead nsqt)", () => {
 			expect(byLabel.get("Ork")).toBe(String(folders.find((f) => f.name === "Ork")._id));
 		});
 
+		test("gametables group by the kind→chapter map (bead 5lbn)", () => {
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Planet Body — Rocky 1 Low-Mass",
+						system: { kind: "soi-planet-body" },
+					},
+					"gametables",
+				),
+			).toBe("SOI I — World Generator");
+			expect(
+				resolveEntryGroup(
+					{
+						name: "Planetside Complication — 1 The Passing Storm",
+						system: { kind: "soi-complication" },
+					},
+					"gametables",
+				),
+			).toBe("SOI II — Planetside Adventures");
+			expect(
+				resolveEntryGroup(
+					{ name: "Warp Encounter — X", system: { kind: "warp-encounter" } },
+					"gametables",
+				),
+			).toBe("Navis Primer — Warp Travel");
+		});
+
+		test("npcs group by loose faction/type (bead g0vv)", () => {
+			expect(
+				resolveEntryGroup({ name: "Eldar Corsair", type: "npc" }, "npcs"),
+			).toBe("Eldar");
+			expect(
+				resolveEntryGroup(
+					{ name: "T'Zar the Broker (Herald of Tzeentch)", type: "npc" },
+					"npcs",
+				),
+			).toBe("Chaos & Daemons");
+			expect(
+				resolveEntryGroup({ name: "Scum", type: "npc" }, "npcs"),
+			).toBe("Criminals & Underworld");
+		});
+
+		test("unmapped npc name fails loudly (bead g0vv)", () => {
+			expect(() =>
+				resolveEntryGroup({ name: "Mystery NPC", type: "npc" }, "npcs"),
+			).toThrow(/no folder label/);
+		});
+
+		test("unmapped gametables kind fails loudly (bead 5lbn)", () => {
+			expect(() =>
+				resolveEntryGroup(
+					{ name: "Mystery Table", system: { kind: "unknown-kind" } },
+					"gametables",
+				),
+			).toThrow(/no folder label for kind/);
+		});
+
 		test("unmapped ship componentType fails loudly (bead 5lbn)", () => {
 			expect(() =>
 				resolveEntryGroup(
@@ -585,10 +642,17 @@ describe("compendium folder groupings (bead nsqt)", () => {
 			expect(pistols?.sort).toBeLessThan(las?.sort ?? 0);
 		});
 
-		test("missing nested parent fails loudly", () => {
-			expect(() =>
-				buildPackFolders("weapons", [{ name: "A", group: "Pistols/Las" }]),
-			).toThrow(/has no parent folder/);
+		test("nested groups auto-create their implied parent (bead g0vv)", () => {
+			// "Pistols/Las" implies "Pistols" — the parent folder is created
+			// even when no entry maps to it directly.
+			const { folders, byLabel } = buildPackFolders("weapons", [
+				{ name: "A", group: "Pistols/Las" },
+			]);
+			const parent = folders.find((f) => f.name === "Pistols");
+			expect(parent).toBeDefined();
+			expect(byLabel.get("Pistols")).toBe(String(parent._id));
+			const child = folders.find((f) => f.name === "Las");
+			expect(child?.folder).toBe(String(parent._id));
 		});
 	});
 });

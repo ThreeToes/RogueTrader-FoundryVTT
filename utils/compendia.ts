@@ -252,6 +252,8 @@ const GROUPED_PACKS: ReadonlySet<string> = new Set([
 	"gear",
 	"tools",
 	"ships",
+	"gametables",
+	"npcs",
 ]);
 
 /**
@@ -292,6 +294,220 @@ const SHIP_HULL_CLASS_LABELS: Readonly<Record<string, string>> = {
 	battleship: "Battleships",
 	"space station": "Space Stations",
 };
+
+/**
+ * Game-tables pack grouping (bead 5lbn owner ask: "group the game tables
+ * sensibly"): by the source books' own chapter structures — 96 kinds is
+ * un-navigable in one flat list. kind -> folder label; unmapped fails
+ * loudly.
+ */
+const GAME_TABLE_GROUPS: Readonly<Record<string, string>> = {
+	// Stars of Inequity Ch I: World Generator (Tables 1-1..1-27)
+	"soi-star": "SOI I — World Generator",
+	"soi-system-feature": "SOI I — World Generator",
+	"soi-system-element": "SOI I — World Generator",
+	"soi-derelict-origin": "SOI I — World Generator",
+	"soi-graveyard-origin": "SOI I — World Generator",
+	"soi-body": "SOI I — World Generator",
+	"soi-planet-body": "SOI I — World Generator",
+	"soi-gravity": "SOI I — World Generator",
+	"soi-orbital": "SOI I — World Generator",
+	"soi-atmosphere": "SOI I — World Generator",
+	"soi-atmo-comp": "SOI I — World Generator",
+	"soi-climate": "SOI I — World Generator",
+	"soi-habitability": "SOI I — World Generator",
+	"soi-territories-count": "SOI I — World Generator",
+	"soi-base-terrain": "SOI I — World Generator",
+	"soi-territory-trait": "SOI I — World Generator",
+	"soi-resource-presence": "SOI I — World Generator",
+	"soi-resource-abundance": "SOI I — World Generator",
+	"soi-resource-depletion": "SOI I — World Generator",
+	"soi-mineral": "SOI I — World Generator",
+	"soi-organic": "SOI I — World Generator",
+	"soi-additional-resource": "SOI I — World Generator",
+	"soi-xenos-ruins": "SOI I — World Generator",
+	"soi-landmark": "SOI I — World Generator",
+	"soi-inhabitants": "SOI I — World Generator",
+	"soi-development": "SOI I — World Generator",
+	"soi-bestial-archetype": "SOI I — World Generator",
+	"soi-bestial-nature": "SOI I — World Generator",
+	// Stars of Inequity Ch II: Planetside Adventures (Tables 2-1..2-37)
+	"soi-call-to-adventure": "SOI II — Planetside Adventures",
+	"soi-profit-motive": "SOI II — Planetside Adventures",
+	"soi-encounter-site": "SOI II — Planetside Adventures",
+	"soi-danger": "SOI II — Planetside Adventures",
+	"soi-hazard": "SOI II — Planetside Adventures",
+	"soi-complication": "SOI II — Planetside Adventures",
+	"soi-treasure-type": "SOI II — Planetside Adventures",
+	"soi-treasure-base": "SOI II — Planetside Adventures",
+	"soi-treasure-trait": "SOI II — Planetside Adventures",
+	"soi-craftsmanship": "SOI II — Planetside Adventures",
+	"soi-exp-armour": "SOI II — Planetside Adventures",
+	"soi-exp-gear": "SOI II — Planetside Adventures",
+	"soi-fortuitous": "SOI II — Planetside Adventures",
+	"soi-artefact-origin": "SOI II — Planetside Adventures",
+	// Stars of Inequity Ch III: Populating the Expanse (Tables 3-1..3-12)
+	"soi-colony-cost": "SOI III — Colonial Endeavours",
+	"soi-colony-size": "SOI III — Colonial Endeavours",
+	"soi-colony-growth": "SOI III — Colonial Endeavours",
+	"soi-colony-leader": "SOI III — Colonial Endeavours",
+	"soi-quirk": "SOI III — Colonial Endeavours",
+	"soi-infra-req": "SOI III — Colonial Endeavours",
+	"soi-hireling-quality": "SOI III — Colonial Endeavours",
+	"soi-outsource-time": "SOI III — Colonial Endeavours",
+	"soi-nepotism": "SOI III — Colonial Endeavours",
+	"soi-rep-personality": "SOI III — Colonial Endeavours",
+	"soi-calamity": "SOI III — Colonial Endeavours",
+	"soi-severity": "SOI III — Colonial Endeavours",
+	// Navis Primer: the five-stage warp travel sequence
+	"warp-voyage-duration": "Navis Primer — Warp Travel",
+	"warp-duration-gm": "Navis Primer — Warp Travel",
+	"warp-estimate-navigator": "Navis Primer — Warp Travel",
+	"warp-route-stability": "Navis Primer — Warp Travel",
+	"warp-encounter": "Navis Primer — Warp Travel",
+	"warp-hallucination": "Navis Primer — Warp Travel",
+	"warp-incursion": "Navis Primer — Warp Travel",
+	"warp-reentry": "Navis Primer — Warp Travel",
+	"warp-trial": "Navis Primer — Warp Travel",
+	// Navis Primer: astropathic choirs
+	"astropathic-signal": "Navis Primer — Astropaths",
+	"astropath-coherency": "Navis Primer — Astropaths",
+	"astropath-decipher": "Navis Primer — Astropaths",
+	"astropath-interception": "Navis Primer — Astropaths",
+	"astropath-responder": "Navis Primer — Astropaths",
+	"astropath-warp-effect": "Navis Primer — Astropaths",
+	// Navis Primer: familiars, orks, psychic phenomena
+	"familiar-availability": "Navis Primer — Familiars & Orks",
+	"familiar-temperament": "Navis Primer — Familiars & Orks",
+	"familiar-feature": "Navis Primer — Familiars & Orks",
+	"familiar-psychic-feature": "Navis Primer — Familiars & Orks",
+	"familiar-quest": "Navis Primer — Familiars & Orks",
+	"ork-characteristic": "Navis Primer — Familiars & Orks",
+	"powa-burst": "Navis Primer — Familiars & Orks",
+	"weird-fing": "Navis Primer — Familiars & Orks",
+	// Core Rulebook reference tables (Ch IX: Playing the Game, etc.)
+	"test-difficulty": "Core Rulebook — Reference",
+	"skill-tests": "Core Rulebook — Reference",
+	"characteristic-tests": "Core Rulebook — Reference",
+	"movement": "Core Rulebook — Reference",
+	"size": "Core Rulebook — Reference",
+	"encounter-difficulty": "Core Rulebook — Reference",
+	"dispositions": "Core Rulebook — Reference",
+	"exploration-challenge": "Core Rulebook — Reference",
+	"investigation-benchmark": "Core Rulebook — Reference",
+	"investigation-reliability": "Core Rulebook — Reference",
+	"availability-population": "Core Rulebook — Reference",
+	"availability-time": "Core Rulebook — Reference",
+	// Into the Storm Ch V: vehicles
+	"vehicle-critical": "Into the Storm — Vehicles",
+	terrain: "Into the Storm — Vehicles",
+	// Battlefleet Koronus Ch III: Ork ships
+	"ork-ship-upgrade": "Battlefleet Koronus — Ork Ships",
+	// GM Kit: Svard system vessels
+	"npc-vessel-hull": "GM Kit — Svard Vessels",
+	"npc-vessel-essential": "GM Kit — Svard Vessels",
+	"npc-vessel-weapon": "GM Kit — Svard Vessels",
+	"npc-vessel-additional": "GM Kit — Svard Vessels",
+};
+
+/**
+ * npcs pack grouping (bead g0vv owner ask): loose faction/type folders —
+ * "Chaos & Daemons", "Human/Criminal" etc. Name → folder label; unmapped names
+ * fail loudly (same convention as the other packs).
+ */
+const NPC_GROUPS: Readonly<Record<string, string>> = {
+	// Imperial civilians & soldiery
+	Bloodskinner: "Imperial Civilians",
+	Colonist: "Imperial Civilians",
+	Adept: "Imperial Civilians",
+	Entertainer: "Imperial Civilians",
+	Voidfarer: "Imperial Civilians",
+	"Hired Gun": "Criminals & Underworld",
+	Scum: "Criminals & Underworld",
+	Renegade: "Criminals & Underworld",
+	"Mutant Abomination": "Mutant",
+	"Mutant Outcast": "Mutant",
+	"Free Trader Captain": "Imperial Civilians",
+	"Navy Officer": "Imperial Navy",
+	"Void Pirate Captain": "Criminals & Underworld",
+	"Oathsworn Bodyguard": "Criminals & Underworld",
+	// Warp predators & daemons
+	"Warp Predator (Ebon Geist)": "Chaos & Daemons",
+	"T'Zar the Broker (Herald of Tzeentch)": "Chaos & Daemons",
+	"The Luminary (Herald of Slaanesh)": "Chaos & Daemons",
+	"The Carrier (Daemon Vessel of Nurgle)": "Chaos & Daemons",
+	// Psykers
+	"Warp Witch": "Psykers & Wyrds",
+	"Wyrd Gunslinger": "Psykers & Wyrds",
+	"Warp Guide": "Psykers & Wyrds",
+	// Servitors & machines
+	"Battle Servitor (Charron-Pattern)": "Servitor & Machine",
+	"Grapplehawk (Falax-Pattern)": "Servitor & Machine",
+	"Servitor Drone": "Servitor & Machine",
+	"Servo Skull": "Servitor & Machine",
+	// Eldar
+	"Eldar Corsair": "Eldar",
+	"Eldar Warlock": "Eldar",
+	"Eldar Farseer": "Eldar",
+	"Eldar Corsair Void Dreamer": "Eldar",
+	"Baharrudor (Eldar Outcast)": "Eldar",
+	// Orks & Greenskin-adjacent
+	"Ork Freebooter": "Ork",
+	"Morgaash (Ork Warlord)": "Ork",
+	// Kroot
+	"Kroot Mercenary": "Kroot",
+	// Rak'Gol
+	"Rak'Gol Techno-Shaman": "Rak'Gol",
+	"Rak'Gol Marauder (warrior caste)": "Rak'Gol",
+	"Stryxis Merchant": "Stryxis",
+	"Stryxis Vat-brute": "Stryxis",
+	"Saynay Sorcerer": "Chaos & Daemons",
+	"Clawed Fiend": "Dark Eldar Arena Beasts",
+	Khymera: "Dark Eldar Arena Beasts",
+	Razorwing: "Dark Eldar Arena Beasts",
+	// Genestealer cult
+	Genestealer: "Genestealer Cult",
+	Broodlord: "Genestealer Cult",
+	// SOI bestial creatures
+	"Apex Predator (SOI bestial archetype)": "Creatures & Beasts",
+	"Behemoth (SOI bestial archetype)": "Creatures & Beasts",
+	"Ptera-beast (SOI bestial archetype)": "Creatures & Beasts",
+	"Shadowed Stalker (SOI bestial archetype)": "Creatures & Beasts",
+	"Venomous Terror (SOI bestial archetype)": "Creatures & Beasts",
+	// Named NPCs — grouped by the adventure/faction they appear in
+	// (the lore/intothemaw journals [[link]] these by name).
+	"Hadarak Fel": "Named NPCs/Into the Maw (rt_core Ch XV)",
+	"Lady Ash": "Named NPCs/Into the Maw (rt_core Ch XV)",
+	Pyrexia: "Named NPCs/Into the Maw (rt_core Ch XV)",
+	"Magos-Commodore Gnothis Trannarch":
+		"Named NPCs/Explorator Fleet KX-557.V (SOI)",
+	"Tech-Priest Ulmir Arvein": "Named NPCs/Explorator Fleet KX-557.V (SOI)",
+	"Corsair-Captain Jalthas Mettiere":
+		"Named NPCs/Corsair-Captain Mettiere (SOI)",
+	"Ilistaneth Anturien (Crow Spirits Craftmaster)":
+		"Named NPCs/Crow Spirits (EA)",
+	"Yanveb Drallat": "Named NPCs/Corsair-Captain Mettiere (SOI)",
+	Cymian: "Named NPCs/Corsair-Captain Mettiere (SOI)",
+	Kanrak: "Named NPCs/Corsair-Captain Mettiere (SOI)",
+	"Kaptin Skelkap Graffletz": "Named NPCs/Kaptin Graffletz (SOI)",
+	Skabgob: "Named NPCs/Kaptin Graffletz (SOI)",
+	"Master Shaper Te'Logk": "Named NPCs/The Forsaken Kindred (SOI)",
+	"Stalker Hrrithck": "Named NPCs/The Forsaken Kindred (SOI)",
+	"Master Shaper Ashak Kor (Misthound Kindred)":
+		"Named NPCs/The Forsaken Kindred (SOI)",
+	"Culexus Assassin": "Imperium — Agents of the Throne",
+};
+
+function npcGroupLabel(entry: Record<string, unknown>): string | null {
+	const name = String(entry.name ?? "");
+	const label = NPC_GROUPS[name];
+	if (!label) {
+		throw new Error(
+			`grouping: npcs/${name}: no folder label — extend NPC_GROUPS (loud failure)`,
+		);
+	}
+	return label;
+}
 
 function shipGroupLabel(entry: Record<string, unknown>): string | null {
 	const type = String(entry.type ?? "");
@@ -387,6 +603,17 @@ export function resolveEntryGroup(
 	}
 	if (pack === "tools") return "Tools";
 	if (pack === "ships") return shipGroupLabel(entry);
+	if (pack === "npcs") return npcGroupLabel(entry);
+	if (pack === "gametables") {
+		const kind = String((entry.system ?? {}).kind ?? "");
+		const label = GAME_TABLE_GROUPS[kind];
+		if (!label) {
+			throw new Error(
+				`grouping: gametables/${String(entry.name)}: no folder label for kind "${kind}" — extend GAME_TABLE_GROUPS (loud failure)`,
+			);
+		}
+		return label;
+	}
 	return null;
 }
 
@@ -438,6 +665,16 @@ export function buildPackFolders(
 		if (group) labels.add(group);
 	}
 	// Create parents before children so "/"-nested labels get their parents.
+	// Parent labels are IMPLIED by child labels ("A/B" implies "A") — expand
+	// the label set to include every parent prefix, so a nested group whose
+	// parent no entry maps to directly still gets its folder (bead g0vv:
+	// named-NPC adventure folders under "Named NPCs").
+	for (const label of [...labels]) {
+		const parts = label.split("/");
+		for (let i = 1; i < parts.length; i++) {
+			labels.add(parts.slice(0, i).join("/"));
+		}
+	}
 	const ordered = [...labels].sort((a, b) => {
 		const depth = a.split("/").length - b.split("/").length;
 		return depth !== 0 ? depth : a.localeCompare(b);

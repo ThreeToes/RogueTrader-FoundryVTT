@@ -103,6 +103,10 @@ const QUALITIES = {
 	unstable: "QUALITY.UNSTABLE",
 	unwieldy: "QUALITY.UNWIELDY",
 	volatile: "QUALITY.VOLATILE",
+	// Navis Primer Ch V (bead g0vv): Culexus Animus Speculum and daemon
+	// weapons carry the Warp Weapon quality — damage doubles vs psykers,
+	// Daemons, and psychically active creatures.
+	warpWeapon: "QUALITY.WARP_WEAPON",
 } as const;
 
 const PROTECTION_TYPES = {

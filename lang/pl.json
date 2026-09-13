@@ -1210,5 +1210,7 @@
   "TYPES.Item.ship-weapon-component": "Komponent broni statku",
   "SHIP_COMPONENT.SLOT": "Miejsce broni",
   "SHIP_COMPLICATION.KIND": "Rodzaj",
-  "SHIP_COMPLICATION.EFFECT": "Efekt"
+  "SHIP_COMPLICATION.EFFECT": "Efekt",
+  "QUALITY.WARP_WEAPON": "Broń Waptu",
+  "CHAT.QUALITY_WARP_WEAPON": "Broń Waptu: obrażenia podwajają się przeciwko celom z Poziomem Psi, Cechą Demonu lub bezpośrednim połączeniem z Waptem."
 }

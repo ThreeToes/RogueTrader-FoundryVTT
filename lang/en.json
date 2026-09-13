@@ -1208,5 +1208,7 @@
   "TYPES.Item.ship-weapon-component": "Ship Weapon Component",
   "SHIP_COMPONENT.SLOT": "Weapon capacity slot",
   "SHIP_COMPLICATION.KIND": "Kind",
-  "SHIP_COMPLICATION.EFFECT": "Effect"
+  "SHIP_COMPLICATION.EFFECT": "Effect",
+  "QUALITY.WARP_WEAPON": "Warp Weapon",
+  "CHAT.QUALITY_WARP_WEAPON": "Warp Weapon: damage doubles against targets with a Psy Rating, the Daemonic Trait, or any direct connection to the Warp."
 }

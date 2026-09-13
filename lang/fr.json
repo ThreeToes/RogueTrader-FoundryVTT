@@ -1210,5 +1210,7 @@
   "TYPES.Item.ship-weapon-component": "Composant d'arme de vaisseau",
   "SHIP_COMPONENT.SLOT": "Emplacement d'arme",
   "SHIP_COMPLICATION.KIND": "Type",
-  "SHIP_COMPLICATION.EFFECT": "Effet"
+  "SHIP_COMPLICATION.EFFECT": "Effet",
+  "QUALITY.WARP_WEAPON": "Arme du Warp",
+  "CHAT.QUALITY_WARP_WEAPON": "Arme du Warp : les dégâts doublent contre les cibles avec un Niveau de Psy, le Trait Démoniaque ou toute connexion directe au Warp."
 }

@@ -9,6 +9,11 @@ import {
 	traitModifierId,
 	type OriginTraitDef,
 } from "./origin-traits";
+import {
+	resolveAfflictionModifiers,
+	type AfflictionDef,
+	type AfflictionEntryLike,
+} from "./afflictions";
 
 /**
  * Modifier funnel: the single collection point between the system's data and
@@ -389,4 +394,30 @@ testContributors.register("item-effects", (actor, context) => {
 		}
 	}
 	return mods;
+});
+
+// ---------------------------------------------------------------------------
+// Built-in contributor: affliction ledger (bead jy4o). Acquired disorders,
+// malignancies and mutations live on Character.system.afflictions (kind/name/
+// text); their test-modifier effects are authored on the source pack entries
+// (madness + mutations) and cached at ready (CONFIG.ROGUE_TRADER.afflictions
+// .getDefs). Resolved by (kind, name) so unknown entries never contribute and
+// never crash. Pure resolution lives in rules/afflictions.ts.
+// ---------------------------------------------------------------------------
+testContributors.register("afflictions", (actor, context) => {
+	const getDefs =
+		typeof CONFIG !== "undefined"
+			? (
+					CONFIG as unknown as {
+						ROGUE_TRADER?: {
+							afflictions?: { getDefs?: () => AfflictionDef[] };
+						};
+					}
+				).ROGUE_TRADER?.afflictions?.getDefs
+			: undefined;
+	const defs = getDefs?.() ?? [];
+	const ledger = (
+		actor as { system?: { afflictions?: AfflictionEntryLike[] } }
+	).system?.afflictions;
+	return resolveAfflictionModifiers(ledger, defs, context);
 });

@@ -62,6 +62,8 @@ const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
 	// Origin Path (epic 1gb7): chart entries + the trait rows they resolve to.
 	origins: "origin",
 	"origin-traits": "origintrait",
+	// Heirloom grant templates (Table 1-2, epic 1gb7 follow-up).
+	heirlooms: "heirloom",
 };
 
 /** Work out the real item type for an authored entry. */
@@ -776,15 +778,33 @@ export type LinkIndex = Map<string, LinkTarget[]>;
 
 /**
  * Resolve `[[name]]` / `[[name|label]]` authoring links in journal page
- * text to Foundry @UUID links (Compendium.rogue-trader.<pack>.<id>).
- * Unresolvable names stay literal with a loud warning — never silent.
+ * text to Foundry @UUID links (Compendium.rogue-trader.<pack>.<id>). A name
+ * that exists in more than one pack can be qualified `[[pack:Name]]` (e.g.
+ * `[[madness:Tainted]]`); the prefix is only treated as a pack when it names
+ * a real pack, so names containing colons keep working. Unresolvable names
+ * stay literal with a loud warning — never silent.
  */
 export function resolveLinks(text: string, index: LinkIndex): string {
-	return text.replace(/\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g, (_m, name, label) => {
-		const targets = index.get(String(name).trim()) ?? [];
+	const packs = new Set<string>();
+	for (const targets of index.values()) {
+		for (const target of targets) packs.add(target.pack);
+	}
+	return text.replace(/\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g, (_m, rawName, label) => {
+		let name = String(rawName).trim();
+		let qualifier: string | null = null;
+		const colon = name.indexOf(":");
+		if (colon > 0) {
+			const prefix = name.slice(0, colon).trim();
+			if (packs.has(prefix)) {
+				qualifier = prefix;
+				name = name.slice(colon + 1).trim();
+			}
+		}
+		let targets = index.get(name) ?? [];
+		if (qualifier) targets = targets.filter((t) => t.pack === qualifier);
 		if (targets.length === 0) {
 			console.warn(
-				`compendia: journal link "[[${name}]]" matches no compendium document — left as plain text (loud failure, bead rb5g/lore)`,
+				`compendia: journal link "[[${rawName}]]" matches no compendium document — left as plain text (loud failure, bead rb5g/lore)`,
 			);
 			return label ? `[${name}]` : name;
 		}

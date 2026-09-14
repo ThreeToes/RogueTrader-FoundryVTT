@@ -54,6 +54,8 @@ export class Character extends foundry.abstract.TypeDataModel<
 		name: string;
 		severity?: string;
 		text?: string;
+		/** Characteristic changes resolved at acquisition (dice rolled once). */
+		characteristics?: Array<{ key: string; value: number }>;
 	}>;
 	declare threatLevel: string;
 	/** NPC-only identity fields (bead lib6, k4z0 GAP 1): declared so the
@@ -233,6 +235,22 @@ export class Character extends foundry.abstract.TypeDataModel<
 					name: new foundry.data.fields.StringField({ initial: "" }),
 					severity: new foundry.data.fields.StringField({ initial: "" }),
 					text: new foundry.data.fields.StringField({ initial: "" }),
+					/**
+					 * Characteristic changes from the affliction, resolved when it was
+					 * acquired (dice rolled once, per the book) — the funnel's
+					 * "afflictions" contributor emits these as modifiers keyed to the
+					 * characteristic, so every test using it shows the affliction.
+					 */
+					characteristics: new foundry.data.fields.ArrayField(
+						new foundry.data.fields.SchemaField({
+							key: new foundry.data.fields.StringField({ initial: "" }),
+							value: new foundry.data.fields.NumberField({
+								integer: true,
+								initial: 0,
+							}),
+						}),
+						{ initial: () => [] },
+					),
 				}),
 				{ initial: () => [] },
 			),

@@ -38,6 +38,8 @@ import {
 	dueDisorders,
 	type AfflictionLedgerEntry,
 } from "../../rules/madness";
+import { resolveCharacteristicChanges } from "../../rules/afflictions";
+import type { EffectData } from "../../data/item/effects";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { deriveCapacity, resolveEncumbrance, carriedWeight } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
@@ -1135,6 +1137,14 @@ async function dropAffliction(
 		const due = dueDisorders(system.insanity ?? 0, ledger);
 		severity = due[0]?.severity ?? "";
 	}
+	const characteristics = await resolveCharacteristicChanges(
+		(source.system as unknown as { effects?: EffectData[] }).effects,
+		async (notation) => {
+			const die = new foundry.dice.Roll(notation);
+			await die.evaluate();
+			return die.total ?? 0;
+		},
+	);
 	const entry = addAffliction(ledger, {
 		kind,
 		name: source.name ?? "",
@@ -1142,6 +1152,11 @@ async function dropAffliction(
 		text:
 			(source.system as unknown as { description?: string }).description ??
 			"",
+		// Characteristic changes (flat + dice) resolved NOW: dice are rolled
+		// once here, per the book, and persisted so every later test sees a
+		// stable number (bead xu83). The funnel's "afflictions" contributor
+		// emits them as modifiers keyed to the affected characteristic.
+		...(characteristics.length > 0 ? { characteristics } : {}),
 	});
 	if (entry === ledger) return null; // already suffered
 	await actor.update({

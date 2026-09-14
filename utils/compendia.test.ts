@@ -10,6 +10,7 @@ import {
 	MANIFEST_PACKS_YAML,
 	resolveEntryGroup,
 	resolveEntryType,
+	resolveLinks,
 	toTableSourceDocument,
 	type ItemSourceIndex,
 	toActorSourceDocument,
@@ -697,5 +698,42 @@ describe("readManifestPacks (manifest-packs.yaml fragment)", () => {
 		expect(MANIFEST_PACKS_YAML).toBe(
 			"./src/packs/rogue_trader/manifest-packs.yaml",
 		);
+	});
+});
+
+describe("resolveLinks (journal authoring links)", () => {
+	const index = new Map<string, Array<{ pack: string; id: string }>>([
+		[
+			"Tainted",
+			[
+				{ pack: "madness", id: "mad1" },
+				{ pack: "origins", id: "ori1" },
+			],
+		],
+		["Soiled", [{ pack: "madness", id: "mad2" }]],
+	]);
+
+	test("unqualified links resolve to the first pack", () => {
+		expect(resolveLinks("[[Soiled]]", index)).toBe(
+			"@UUID[Compendium.rogue-trader.madness.mad2]{Soiled}",
+		);
+	});
+
+	test("pack: qualifier selects the pack and drops the ambiguity", () => {
+		expect(resolveLinks("[[madness:Tainted]]", index)).toBe(
+			"@UUID[Compendium.rogue-trader.madness.mad1]{Tainted}",
+		);
+		expect(resolveLinks("[[origins:Tainted|Tainted Lure]]", index)).toBe(
+			"@UUID[Compendium.rogue-trader.origins.ori1]{Tainted Lure}",
+		);
+	});
+
+	test("a colon prefix that is not a pack stays part of the name", () => {
+		// "Unknown" is not a pack, so the colon is not treated as a qualifier.
+		expect(resolveLinks("[[Unknown:Tainted]]", index)).toBe("Unknown:Tainted");
+	});
+
+	test("unresolvable names stay literal", () => {
+		expect(resolveLinks("[[Nope]]", index)).toBe("Nope");
 	});
 });

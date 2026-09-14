@@ -132,16 +132,10 @@ export function getOriginEntries(): OriginEntry[] {
 	return originPool;
 }
 
-export const SUGGESTED_HOME_WORLDS: Record<string, string[]> = {
-	"arch-militant": ["death-world", "forge-world", "hive-world", "void-born"],
-	"astropath-transcendent": ["hive-world", "imperial-world", "void-born"],
-	explorator: ["forge-world", "hive-world", "imperial-world", "void-born"],
-	missionary: ["death-world", "hive-world", "imperial-world", "noble-born"],
-	navigator: ["hive-world", "imperial-world", "noble-born", "void-born"],
-	"rogue-trader": ["hive-world", "imperial-world", "noble-born", "void-born"],
-	seneschal: ["hive-world", "imperial-world", "noble-born", "void-born"],
-	"void-master": ["forge-world", "hive-world", "void-born"],
-};
+// Suggested Home Worlds (Core Rulebook Table 1-1, p24) moved onto the Career
+// item model (`system.suggestedHomeWorlds`, epic 1gb7 follow-up) — the creator
+// reads them from the `careers` pack, so careers and their origin suggestions
+// stay one document.
 
 // ---------------------------------------------------------------- Pure helpers
 
@@ -344,102 +338,61 @@ export function resolveOrigins(
 }
 
 // ---------------------------------------------------------------------------
-// Table 1-2: Heirloom Items (Core Rulebook p31, layout pp30-31; bead rboc).
-// Rolled by the creator's stage 3.5 when the Pride motivation's "Heirloom
-// Item" alternative is taken. 1d100 ranges are the book's own (five wide
-// ranges, not 100 distinct rows). Prose is verbatim from the book; grant
-// payloads map each row onto existing pack data — curation decisions:
-//   * Angevin Era Chainsword: the book grants a generic Best-Craftsmanship
-//     chainsword; the weapons pack's chainsword is the Hecate pattern, used
-//     as the clone base and renamed (owner-verify).
-//   * Saint-blessed Carapace Armour: the book grants a full Best-Craftsmanship
-//     carapace set; the armour pack models it as the Storm Trooper Carapace
-//     full set, used as the clone base and renamed (owner-verify).
+// Table 1-2: Heirloom Items (Core Rulebook p31; epic 1gb7 follow-up). The
+// per-heirloom content (key, 1d100 range, grant payload) now lives in the
+// private `heirlooms` compendium pack; the verbatim prose stays in the
+// `creationtables` RollTable "Table 1-2: Heirloom Items", whose result flags
+// carry the matching `key`. This module keeps the shared types, the runtime
+// pool (warmed from the pack at ready), and the 1d100 lookup.
+//
+// Curation (owner-verify, carried from bead rboc): the book grants a generic
+// Best-Craftsmanship chainsword / carapace set; the packs model them as the
+// Hecate chainsword and Storm Trooper Carapace full set, cloned + renamed.
 // ---------------------------------------------------------------------------
-export type HeirloomGrant =
-	| {
-			kind: "pack-item";
-			pack: string;
-			item: string;
-			craftsmanship?: string;
-			rename?: string;
-	  }
-	| { kind: "note-item"; system: Record<string, unknown> };
+export type HeirloomGrantKind = "pack-item" | "note-item";
+
+export interface HeirloomGrant {
+	kind: HeirloomGrantKind;
+	/** pack-item: compendium pack id to clone from. */
+	pack?: string;
+	/** pack-item: source item name in that pack. */
+	item?: string;
+	/** pack-item: craftsmanship override (e.g. "best"). */
+	craftsmanship?: string;
+	/** pack-item: rename the clone (the book's own item name). */
+	rename?: string;
+	/** note-item: description for the granted special-ability item. */
+	noteText?: string;
+}
 
 export interface HeirloomEntry {
+	/** Stable slug; matches the source RollTable result's item flag. */
+	key: string;
 	name: string;
+	/** 1d100 range of the source table row. */
 	range: [number, number];
-	/** Verbatim book prose. */
-	text: string;
+	/** Source RollTable ("creationtables/Table 1-2: Heirloom Items"). */
+	table?: string;
 	grant: HeirloomGrant;
 }
 
-export const heirloomItems: HeirloomEntry[] = [
-	{
-		name: "Archeotech Laspistol",
-		range: [1, 20],
-		text: "Archeotech Laspistol: A weapon of unknown origin and great antiquity. You gain one best-Craftsmanship archeotech laspistol.",
-		grant: {
-			kind: "pack-item",
-			pack: "rogue-trader.weapons",
-			item: "Archeotech Laspistol",
-			craftsmanship: "best",
-		},
-	},
-	{
-		name: "Angevin Era Chainsword",
-		range: [21, 40],
-		text: "Angevin Era Chainsword: An ancient blade bearing Crusade purity seals and kill-marks, supposedly used against dire xenos in the cleansing of the Drusus Marches. You gain one Best-Craftsmanship chainsword.",
-		grant: {
-			kind: "pack-item",
-			pack: "rogue-trader.weapons",
-			item: "Chainsword (Hecate)",
-			craftsmanship: "best",
-			rename: "Angevin Era Chainsword",
-		},
-	},
-	{
-		name: "Ancestral Seal",
-		range: [41, 60],
-		text: "Ancestral Seal: A potent and respected mark of power once held, passed down through a family even after their scions have long departed the vaults of Imperial rulership. You gain a +10% bonus to all Interaction Skill Tests when displaying the seal and dealing with Imperial citizens or organisations.",
-		grant: {
-			kind: "note-item",
-			system: {
-				description:
-					"A potent and respected mark of power once held, passed down through a family even after their scions have long departed the vaults of Imperial rulership. You gain a +10% bonus to all Interaction Skill Tests when displaying the seal and dealing with Imperial citizens or organisations. (Core Rulebook Table 1-2, p31; conditional bonus — apply manually.)",
-			},
-		},
-	},
-	{
-		name: "Saint-blessed Carapace Armour",
-		range: [61, 80],
-		text: "Saint-blessed Carapace Armour: A set of armour that once belonged to a saint's honour-guard. Anointed and inscribed with the saint's teachings, it is a sign to stir the faithful of the Imperial Creed. You gain one best-Craftsmanship set of carapace armour.",
-		grant: {
-			kind: "pack-item",
-			pack: "rogue-trader.armour",
-			item: "Storm Trooper Carapace",
-			craftsmanship: "best",
-			rename: "Saint-blessed Carapace Armour",
-		},
-	},
-	{
-		name: "Reliquary of Saint Drusus",
-		range: [81, 100],
-		text: "Reliquary of Saint Drusus: An inscribed void-steel canister containing a true relic of the saint, attested to in Ecclesiarchy data-vaults. Such an artefact opens many doors in the Ministorum. You gain a +20% bonus to all Interaction Skill Tests when displaying the reliquary and dealing with any member of the Ministorum.",
-		grant: {
-			kind: "note-item",
-			system: {
-				description:
-					"An inscribed void-steel canister containing a true relic of the saint, attested to in Ecclesiarchy data-vaults. Such an artefact opens many doors in the Ministorum. You gain a +20% bonus to all Interaction Skill Tests when displaying the reliquary and dealing with any member of the Ministorum. (Core Rulebook Table 1-2, p31; conditional bonus — apply manually.)",
-			},
-		},
-	},
-];
+/** Runtime heirloom pool (warmed from the `heirlooms` pack at ready). */
+let heirloomPool: HeirloomEntry[] = [];
+
+/** Replace the runtime heirloom pool (pack loader / tests). */
+export function setHeirloomEntries(entries: HeirloomEntry[]): void {
+	heirloomPool = entries;
+}
+
+/** The current runtime heirloom pool. */
+export function getHeirloomEntries(): HeirloomEntry[] {
+	return heirloomPool;
+}
 
 /** The heirloom entry for a 1d100 result; loud failure outside 1-100. */
 export function heirloomForRoll(roll: number): HeirloomEntry {
 	const n = Math.floor(roll);
-	const entry = heirloomItems.find((e) => n >= e.range[0] && n <= e.range[1]);
+	const entry = heirloomPool.find((e) => n >= e.range[0] && n <= e.range[1]);
 	if (!entry) throw new Error(`Heirloom roll ${n} outside Table 1-2 (1-100)`);
 	return entry;
 }

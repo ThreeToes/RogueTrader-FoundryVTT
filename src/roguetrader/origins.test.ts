@@ -13,7 +13,6 @@ import {
 	originsInRow,
 	resolveOrigins,
 	setOriginEntries,
-	SUGGESTED_HOME_WORLDS,
 	type CharMod,
 	type OriginEntry,
 	type OriginMechanics,
@@ -149,16 +148,6 @@ describe("origin mechanics", () => {
 					expect(m.fateTable[m.fateTable.length - 1].max).toBe(10);
 				}
 			}
-		}
-	});
-
-	test("Table 1-1 suggested home worlds reference real keys", () => {
-		for (const [career, worlds] of Object.entries(SUGGESTED_HOME_WORLDS)) {
-			for (const world of worlds) {
-				const entry = originByKey(world);
-				expect(entry?.row).toBe("home-world");
-			}
-			expect(career.length).toBeGreaterThan(0);
 		}
 	});
 });

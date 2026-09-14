@@ -241,6 +241,8 @@ export interface AfflictionLedgerEntry {
 	severity?: string;
 	/** Verbatim book text. */
 	text: string;
+	/** Characteristic changes, resolved when acquired (dice rolled once). */
+	characteristics?: Array<{ key: string; value: number }>;
 }
 
 export interface AfflictionsLike {

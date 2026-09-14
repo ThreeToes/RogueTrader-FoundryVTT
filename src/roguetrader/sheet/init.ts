@@ -9,6 +9,7 @@ import { PsychicPower } from "../data/item/psychic-power";
 import { NavigatorPower } from "../data/item/navigator-power";
 import { OriginTrait } from "../data/item/origin-trait";
 import { Origin } from "../data/item/origin";
+import { Heirloom } from "../data/item/heirloom";
 import { Mutation } from "../data/item/mutation";
 import { MadnessEntry } from "../data/item/madness";
 import { RangedWeapon } from "../data/item/ranged-weapon";
@@ -49,8 +50,12 @@ import {
 	parseHomebrewProfile,
 } from "../rules/homebrew";
 import type { OriginTraitDef } from "../rules/origin-traits";
+import type { AfflictionDef } from "../rules/afflictions";
 import {
 	setOriginEntries,
+	setHeirloomEntries,
+	type HeirloomEntry,
+	type HeirloomGrantKind,
 	type OriginEntry,
 	type OriginMechanics,
 	type OriginRow,
@@ -265,6 +270,7 @@ export function sheetInit() {
 				homebrew?: { getProfile?: () => unknown };
 				originTraits?: { getDefs?: () => unknown };
 				madness?: { getRows?: () => unknown };
+				afflictions?: { getDefs?: () => unknown };
 			};
 		};
 		rtc.ROGUE_TRADER ??= {};
@@ -342,6 +348,103 @@ export function sheetInit() {
 			});
 		});
 
+		// Heirloom grant templates (Table 1-2, epic 1gb7 follow-up): the
+		// per-heirloom grant payloads live in the `heirlooms` pack; warm the
+		// pure module's pool at ready.
+		Hooks.once("ready", () => {
+			getPackDocuments("rogue-trader.heirlooms").then((rawDocs) => {
+				const docs = rawDocs as Array<foundry.documents.Item>;
+				setHeirloomEntries(
+					docs.map((doc) => {
+						const s = doc.system as unknown as Record<string, unknown>;
+						const range = (s.range ?? {}) as { low?: number; high?: number };
+						const grant = (s.grant ?? {}) as Record<string, unknown>;
+						return {
+							key: String(s.key ?? ""),
+							name: doc.name ?? "",
+							range: [Number(range.low ?? 0), Number(range.high ?? 0)],
+							table: s.table ? String(s.table) : undefined,
+							grant: {
+								kind: String(grant.kind ?? "pack-item") as HeirloomGrantKind,
+								pack: grant.pack ? String(grant.pack) : undefined,
+								item: grant.item ? String(grant.item) : undefined,
+								craftsmanship: grant.craftsmanship
+									? String(grant.craftsmanship)
+									: undefined,
+								rename: grant.rename ? String(grant.rename) : undefined,
+								noteText: grant.noteText
+									? String(grant.noteText)
+									: undefined,
+							},
+						} satisfies HeirloomEntry;
+					}),
+				);
+			});
+		});
+
+		// Madness track rows + affliction effect defs (bead jy4o, follow-up to
+		// 1g2t): the sheet's trauma/malignancy tests read the track rows and the
+		// funnel's "afflictions" contributor reads the test-modifier effects
+		// authored on the disorder/malignancy/mutation pack entries. One pack
+		// read warms both.
+		let madnessRows: Array<{
+			kind: string;
+			rollMin: number;
+			rollMax: number;
+			degree: string;
+			modifier: number;
+		}> = [];
+		let afflictionDefs: AfflictionDef[] = [];
+		Hooks.once("ready", () => {
+			Promise.all([
+				getPackDocuments("rogue-trader.madness"),
+				getPackDocuments("rogue-trader.mutations"),
+			]).then(([madnessRaw, mutationsRaw]) => {
+				const madnessDocs = madnessRaw as Array<foundry.documents.Item>;
+				const mutationDocs = mutationsRaw as Array<foundry.documents.Item>;
+				madnessRows = madnessDocs.map((doc) => {
+					const s = doc.system as unknown as Record<string, unknown>;
+					return {
+						kind: String(s.kind ?? ""),
+						rollMin: Number(s.rollMin ?? 0),
+						rollMax: Number(s.rollMax ?? 999),
+						degree: String(s.degree ?? ""),
+						modifier: Number(s.modifier ?? 0),
+					};
+				});
+				const toDef = (
+					kind: AfflictionDef["kind"],
+					doc: foundry.documents.Item,
+				): AfflictionDef => {
+					const s = doc.system as unknown as Record<string, unknown>;
+					return {
+						kind,
+						name: doc.name ?? "",
+						effects: Array.isArray(s.effects)
+							? (s.effects as AfflictionDef["effects"])
+							: [],
+						text: String(s.description ?? s.shortDescription ?? ""),
+					};
+				};
+				afflictionDefs = [
+					...madnessDocs
+						.filter((doc) => {
+							const k = (doc.system as unknown as { kind?: string }).kind;
+							return k === "disorder" || k === "malignancy";
+						})
+						.map((doc) =>
+							toDef(
+								(doc.system as unknown as { kind: AfflictionDef["kind"] }).kind,
+								doc,
+							),
+						),
+					...mutationDocs.map((doc) => toDef("mutation", doc)),
+				];
+			});
+		});
+		rtc.ROGUE_TRADER.madness = { getRows: () => madnessRows };
+		rtc.ROGUE_TRADER.afflictions = { getDefs: () => afflictionDefs };
+
 		// Data-driven document registration (bead 6a1x): one entry per document
 		// type = { model, sheet, label }. The data-model loop feeds
 		// CONFIG.*.dataModels; the sheet loop registers each sheet as
@@ -417,6 +520,8 @@ export function sheetInit() {
 				origintrait: { model: OriginTrait, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				// Origin Path chart entries (epic 1gb7; moved out of rules/origins.ts).
 				origin: { model: Origin, sheet: GearSheet, label: "TYPES.Item.origin" },
+				// Heirloom grant templates (Table 1-2, epic 1gb7 follow-up).
+				heirloom: { model: Heirloom, sheet: GearSheet, label: "TYPES.Item.heirloom" },
 				mutation: { model: Mutation, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				madnessentry: { model: MadnessEntry, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				// Rulebook traits (bead 25ii): innate creature features. Always

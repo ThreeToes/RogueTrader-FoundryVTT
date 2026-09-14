@@ -1,7 +1,48 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
-import { heirloomForRoll, heirloomItems } from "./origins";
+import { parse } from "yaml";
+import {
+	getHeirloomEntries,
+	heirloomForRoll,
+	setHeirloomEntries,
+	type HeirloomEntry,
+	type HeirloomGrantKind,
+} from "./origins";
 
-// Bead rboc: Table 1-2: Heirloom Items (Core Rulebook p31, layout pp30-31).
+// Epic 1gb7 follow-up: the heirloom content (key, range, grant payload) lives
+// in the `heirlooms` compendium pack; load it into the pure module's pool so
+// these logic tests run against the real data. Table 1-2 in the
+// creationtables RollTable remains the prose/range source and is cross-checked
+// by the pack test (src/packs/rogue_trader/heirlooms/heirlooms.test.ts).
+const docs = parse(
+	readFileSync("src/packs/rogue_trader/heirlooms/heirlooms.yaml", "utf8"),
+) as Array<{ name?: string; system?: Record<string, unknown> }>;
+setHeirloomEntries(
+	docs.map((doc) => {
+		const s = doc.system ?? {};
+		const range = (s.range ?? {}) as { low?: number; high?: number };
+		const grant = (s.grant ?? {}) as Record<string, unknown>;
+		return {
+			key: String(s.key ?? ""),
+			name: doc.name ?? "",
+			range: [Number(range.low ?? 0), Number(range.high ?? 0)],
+			table: s.table ? String(s.table) : undefined,
+			grant: {
+				kind: String(grant.kind ?? "pack-item") as HeirloomGrantKind,
+				pack: grant.pack ? String(grant.pack) : undefined,
+				item: grant.item ? String(grant.item) : undefined,
+				craftsmanship: grant.craftsmanship
+					? String(grant.craftsmanship)
+					: undefined,
+				rename: grant.rename ? String(grant.rename) : undefined,
+				noteText: grant.noteText ? String(grant.noteText) : undefined,
+			},
+		} satisfies HeirloomEntry;
+	}),
+);
+const heirloomItems = getHeirloomEntries();
+
+// Bead rboc: Table 1-2: Heirloom Items (Core Rulebook p31).
 // Five 1d100 ranges rolled by the creator's stage 3.5.
 
 describe("heirloom table (Core Rulebook Table 1-2)", () => {
@@ -36,7 +77,7 @@ describe("heirloom table (Core Rulebook Table 1-2)", () => {
 
 	test("item rows grant pack-item clones with best craftsmanship", () => {
 		const pistol = heirloomForRoll(5);
-		expect(pistol.grant).toEqual({
+		expect(pistol.grant).toMatchObject({
 			kind: "pack-item",
 			pack: "rogue-trader.weapons",
 			item: "Archeotech Laspistol",
@@ -46,8 +87,19 @@ describe("heirloom table (Core Rulebook Table 1-2)", () => {
 		expect(armour.grant).toMatchObject({ kind: "pack-item", craftsmanship: "best" });
 	});
 
-	test("conditional-bonus rows grant note items", () => {
-		expect(heirloomForRoll(50).grant.kind).toBe("note-item");
-		expect(heirloomForRoll(90).grant.kind).toBe("note-item");
+	test("conditional-bonus rows grant note items with verbatim text", () => {
+		const seal = heirloomForRoll(50).grant;
+		expect(seal.kind).toBe("note-item");
+		expect(seal.noteText).toContain("+10% bonus to all Interaction Skill Tests");
+		const reliquary = heirloomForRoll(90).grant;
+		expect(reliquary.kind).toBe("note-item");
+		expect(reliquary.noteText).toContain("+20% bonus to all Interaction Skill Tests");
+	});
+
+	test("each entry links to the source Table 1-2", () => {
+		for (const entry of heirloomItems) {
+			expect(entry.key.length).toBeGreaterThan(0);
+			expect(entry.table).toBe("creationtables/Table 1-2: Heirloom Items");
+		}
 	});
 });

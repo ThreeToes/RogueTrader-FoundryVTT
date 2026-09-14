@@ -22,6 +22,10 @@ export class Career extends foundry.abstract.TypeDataModel<
 	declare key: string;
 	declare shortDescription: string;
 	declare description: string;
+	/** Suggested Origin Path Home Worlds (Core Rulebook Table 1-1 / career
+	 *  sections): the `home-world` origin keys this career pairs well with.
+	 *  Moved out of rules/origins.ts (epic 1gb7 follow-up). */
+	declare suggestedHomeWorlds: string[];
 	declare source: { book: string; page: number };
 	declare characteristicAdvances: Record<
 		string,
@@ -53,6 +57,15 @@ declare startingSkills: string[];
 			}),
 			/** Long prose description (career section, HTML for prose-mirror). */
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
+			/**
+			 * Suggested Home Worlds (Core Rulebook Table 1-1, p24; epic 1gb7
+			 * follow-up): the `home-world` origin keys this career pairs well
+			 * with. The creator highlights the matching career chips.
+			 */
+			suggestedHomeWorlds: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.StringField({ initial: "" }),
+				{ initial: () => [] },
+			),
 			/** Citation: which book/page this career (or alt-rank set) came from.
 			 * Bead zzlq: unified on the shared sourceField — book is the
 			 * books.yaml SLUG (display resolves via books.yaml titles). */

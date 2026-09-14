@@ -3,8 +3,8 @@ import {
 	allowedColumns,
 	type CharMod,
 	fateFromTable,
+	getHeirloomEntries,
 	heirloomForRoll,
-	heirloomItems,
 	ORIGIN_ROW_LABEL_KEYS,
 	ORIGIN_ROWS,
 	type OriginPick,
@@ -13,7 +13,6 @@ import {
 	originsInRow,
 	type ResolvedOrigin,
 	resolveOrigins,
-	SUGGESTED_HOME_WORLDS,
 } from "../../origins";
 import { careers } from "../../registry";
 import {
@@ -55,6 +54,9 @@ async function resolveParameterisedTalent(
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
+
+/** Career-doc suggestion cache (system.suggestedHomeWorlds), per session. */
+let careerSuggestionCache: Map<string, string[]> | null = null;
 
 const CHARACTERISTIC_ORDER: CharacteristicKey[] = [
 	"ws",
@@ -240,6 +242,30 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 
 	get #resolved(): ResolvedOrigin {
 		return resolveOrigins(this.creatorState.picks);
+	}
+
+	/**
+	 * careerKey -> suggested home-world origin keys (Core Rulebook Table 1-1,
+	 * p24), read from the careers pack's `system.suggestedHomeWorlds` (epic
+	 * 1gb7 follow-up). Cached across re-renders; empty until the pack loads.
+	 */
+	async #suggestedHomeWorlds(): Promise<Map<string, string[]>> {
+		if (!careerSuggestionCache) {
+			const docs = (await getPackDocuments(
+				"rogue-trader.careers",
+			)) as unknown as Array<{
+				system?: { key?: string; suggestedHomeWorlds?: string[] };
+			}>;
+			careerSuggestionCache = new Map(
+				docs
+					.filter((doc) => doc.system?.key)
+					.map((doc) => [
+						String(doc.system?.key),
+						(doc.system?.suggestedHomeWorlds ?? []).map(String),
+					]),
+			);
+		}
+		return careerSuggestionCache;
 	}
 
 	/** The name field lives on step 0; keep it in state across re-renders. */
@@ -435,15 +461,17 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			fateRoll: state.rolledDice.fateD10,
 		};
 
-		// Career chips (free choice, p24) with Table 1-1 suggestions.
+		// Career chips (free choice, p24) with Table 1-1 suggestions. The
+		// suggestion list now lives on each career doc (system.suggestedHomeWorlds).
+		const suggestions = await this.#suggestedHomeWorlds();
 		const homeWorld = state.picks["home-world"]?.key;
 		const suggested = homeWorld
 			? new Set(
-					Object.entries(SUGGESTED_HOME_WORLDS)
+					[...suggestions.entries()]
 						.filter(([, worlds]) => worlds.includes(homeWorld))
 						.map(([career]) => career),
 				)
-			: new Set(Object.keys(SUGGESTED_HOME_WORLDS));
+			: new Set(suggestions.keys());
 		context.careers = careers.entries().map(([key, labelKey]) => ({
 			key,
 			label: game.i18n!.localize(labelKey) ?? labelKey,
@@ -495,7 +523,10 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			});
 		// The forward button must be enabled on every step before the last;
 		// `canCreate` is step-3 only, so it cannot gate Next directly.
-		context.canNext = creatorCanAdvance(state.step, context.canCreate);
+		context.canNext = creatorCanAdvance(
+			state.step,
+			Boolean(context.canCreate),
+		);
 		return context;
 	}
 
@@ -1023,7 +1054,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		// live item (pack-item clone with craftsmanship override, or a
 		// note-item for the conditional-interaction rows), creator provenance.
 		if (state.heirloom) {
-			const entry = heirloomItems.find((e) => e.name === state.heirloom?.name);
+			const entry = getHeirloomEntries().find(
+				(e) => e.name === state.heirloom?.name,
+			);
 			if (!entry) {
 				console.error(
 					`rogue-trader | unknown heirloom "${state.heirloom.name}"`,
@@ -1071,7 +1104,10 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				grants.push({
 					name: entry.name,
 					type: "special-ability",
-					system: { ...entry.grant.system, grantedBy: GRANTED_BY_CREATOR },
+					system: {
+						description: entry.grant.noteText ?? "",
+						grantedBy: GRANTED_BY_CREATOR,
+					},
 				});
 			}
 			if (grants.length > 0) {

@@ -1221,3 +1221,78 @@
 .rogue-trader .rt-creator-nav .rt-creator-nav-forward.create {
 	font-weight: bold;
 }
+
+/* Planet sheet (owner bug report: truncated one-row profile, raw kind
+   headings). Profile fields wrap instead of ellipsizing; attached rows use
+   the inv-row rhythm with muted roll ranges. */
+.rogue-trader .planet-profile-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 6px 24px;
+}
+
+.rogue-trader .planet-profile-grid .planet-profile-value {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.rogue-trader .attached-tables {
+	list-style: none;
+	margin: 4px 0 8px;
+	padding: 0;
+}
+
+.rogue-trader .attached-table {
+	border-bottom: var(--rt-border-dim) 1px solid;
+	padding: 4px 0;
+}
+
+.rogue-trader .attached-table .attached-head {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+
+.rogue-trader .attached-table .attached-roll {
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+	min-width: 4.5em;
+	flex-shrink: 0;
+}
+
+.rogue-trader .attached-table .attached-name {
+	flex: 1;
+	font-weight: bold;
+}
+
+.rogue-trader .attached-table .attached-remove {
+	color: var(--rt-danger);
+}
+
+.rogue-trader .attached-table .attached-summary {
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+	margin: 2px 0 0;
+}
+
+/* Planet creator: running draw summary (owner bug report: the chip strip
+   was an unreadable text wall with duplicated roll expressions). */
+.rogue-trader.planet-creator .planet-summary {
+	border: var(--rt-border-strong) 1px solid;
+	background: rgba(0, 0, 0, 0.2);
+	border-radius: var(--rt-radius);
+	padding: 6px 10px;
+	margin-bottom: 8px;
+}
+
+.rogue-trader.planet-creator .planet-summary-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 2px 24px;
+}
+
+.rogue-trader.planet-creator .planet-summary-grid .summary-value {
+	color: var(--rt-gold-soft);
+	font-size: var(--rt-fs-md);
+	overflow-wrap: anywhere;
+}

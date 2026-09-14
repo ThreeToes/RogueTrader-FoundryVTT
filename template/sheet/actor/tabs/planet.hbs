@@ -1,35 +1,43 @@
 <section class="planet-content">
     <div class="stats border">
         <h1>{{localize "PLANET.PROFILE"}}</h1>
-        <div class="stats-row">
+        {{#if profile.length}}
+        <div class="stat-grid planet-profile-grid">
             {{#each profile as |f|}}
             <div class="stat">
                 <label>{{f.label}}</label>
                 {{#if ../editable}}
                 <input name="{{f.name}}" type="text" value="{{f.value}}" />
                 {{else}}
-                <p class="static-value">{{f.value}}</p>
+                <p class="static-value planet-profile-value">{{f.value}}</p>
                 {{/if}}
             </div>
             {{/each}}
         </div>
+        {{else}}
+        <p class="method-hint">{{localize "PLANET.NO_PROFILE"}}</p>
+        {{/if}}
     </div>
 
     <div class="stats border">
         <h1>{{localize "PLANET.TABLES"}}</h1>
-        <p class="hint">{{localize "PLANET.TABLES_HINT"}}</p>
+        <p class="method-hint">{{localize "PLANET.TABLES_HINT"}}</p>
         {{#if attachedGroups.length}}
         {{#each attachedGroups as |group|}}
-        <h2>{{group.label}}</h2>
+        <h2 class="inv-group-label">{{group.label}}</h2>
         <ul class="attached-tables">
             {{#each group.tables as |t|}}
             <li class="attached-table" data-item-uuid="{{t.uuid}}">
-                <span class="attached-roll">{{t.roll}}</span>
-                <span class="attached-name">{{t.name}}</span>
+                <div class="attached-head">
+                    <span class="attached-roll">{{t.roll}}</span>
+                    <span class="attached-name">{{t.name}}</span>
+                    {{#if ../editable}}
+                    <a class="attached-remove" data-action="removeTable" data-item-uuid="{{t.uuid}}"
+                        title="{{localize 'PLANET.REMOVE_TABLE'}}"><i class="fas fa-trash"></i></a>
+                    {{/if}}
+                </div>
+                {{#if t.summary}}
                 <p class="attached-summary">{{t.summary}}</p>
-                {{#if ../editable}}
-                <a class="attached-remove" data-action="removeTable" data-item-uuid="{{t.uuid}}"
-                    title="{{localize 'PLANET.REMOVE_TABLE'}}"><i class="fas fa-trash"></i></a>
                 {{/if}}
             </li>
             {{/each}}
@@ -42,6 +50,7 @@
 
     <div class="notes-editor border">
         <h1>{{localize "PLANET.NOTES"}}</h1>
+        <p class="method-hint">{{localize "PLANET.NOTES_HINT"}}</p>
         {{> "rt/rich-text" name="system.notes" value=source.system.notes html=notesHTML editable=editable}}
     </div>
 </section>

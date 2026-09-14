@@ -3,11 +3,19 @@
         <input type="text" name="planet-name" value="{{name}}" placeholder="{{localize "PLANET_CREATOR.NAME_PLACEHOLDER"}}" />
     </div>
 
-    <div class="starship-status">
-        {{#each drawn as |d|}}
-        <span class="chip origin-mod">{{d.label}}: {{d.name}} ({{d.roll}})</span>
-        {{/each}}
+    {{#if drawn.length}}
+    <div class="planet-summary border">
+        <h2 class="inv-group-label">{{localize "PLANET_CREATOR.SUMMARY"}}</h2>
+        <div class="planet-summary-grid">
+            {{#each drawn as |d|}}
+            <div class="stat">
+                <label>{{d.label}}</label>
+                <span class="summary-value">{{d.name}}</span>
+            </div>
+            {{/each}}
+        </div>
     </div>
+    {{/if}}
 
     <h2>{{stage.label}} <span class="step-counter">{{stage.number}}/{{stage.total}}</span></h2>
     <p class="method-hint">{{stage.hint}}</p>

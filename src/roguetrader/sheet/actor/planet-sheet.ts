@@ -1,6 +1,30 @@
 import { PlanetActor } from "../../data/actor/planet-actor";
 import { RtActorSheet } from "../context";
 
+/**
+ * Book table names for the planet-generation kinds (owner bug report: raw
+ * kind keys like "Territories-Count" made terrible headings).
+ */
+const KIND_LABELS: Readonly<Record<string, string>> = {
+	"soi-planet-body": "PLANET.TABLE_BODY",
+	"soi-gravity": "PLANET.TABLE_GRAVITY",
+	"soi-orbital": "PLANET.TABLE_ORBITAL",
+	"soi-atmosphere": "PLANET.TABLE_ATMOSPHERE",
+	"soi-atmo-comp": "PLANET.TABLE_COMPOSITION",
+	"soi-climate": "PLANET.TABLE_CLIMATE",
+	"soi-habitability": "PLANET.TABLE_HABITABILITY",
+	"soi-territories-count": "PLANET.TABLE_TERRITORIES",
+	"soi-inhabitants": "PLANET.TABLE_INHABITANTS",
+	"soi-development": "PLANET.TABLE_DEVELOPMENT",
+	"soi-base-terrain": "PLANET.TABLE_TERRAIN",
+	"soi-territory-trait": "PLANET.TABLE_TERRITORY_TRAITS",
+	"soi-resource-presence": "PLANET.TABLE_RESOURCES",
+	"soi-mineral": "PLANET.TABLE_MINERALS",
+	"soi-organic": "PLANET.TABLE_ORGANICS",
+	"soi-landmark": "PLANET.TABLE_LANDMARKS",
+	"soi-xenos-ruins": "PLANET.TABLE_XENOS_RUINS",
+};
+
 /** Attached game-table row rendered on the planet sheet. */
 interface AttachedTable {
 	uuid: string;
@@ -64,8 +88,9 @@ export class PlanetSheet extends RtActorSheet {
 				label: game.i18n.localize(labelKey),
 				value: String(system[key] ?? ""),
 			}))
-			// Only render profile rows the GM has actually filled in.
-			.filter((f) => f.value !== "" || this.document.isOwner);
+			// Only render profile fields the creator/GM has filled (owner bug
+			// report: empty boxes read as broken).
+			.filter((f) => f.value.trim() !== "");
 		context.profile = profile;
 		// Attached tables (game-table items), grouped by kind.
 		const attached: AttachedTable[] = [];
@@ -131,16 +156,15 @@ export class PlanetSheet extends RtActorSheet {
 		return created[0];
 	}
 
-	/** Prettify a table kind key ("soi-body" → "Soi Body") for grouping. */
+	/** Book table name for an attached-table kind heading. */
 	static #kindLabel(kind: string): string {
 		if (!kind) return game.i18n.localize("GAME_TABLE.KIND_OTHER");
-		const key = `GAME_TABLE_KIND.${kind}`;
-		const localized = game.i18n.has(key)
-			? game.i18n.localize(key)
-			: kind
-					.replace(/^soi-/, "")
-					.replace(/(^|[\s-])\S/g, (c) => c.toUpperCase());
-		return localized;
+		const known = KIND_LABELS[kind];
+		if (known) return game.i18n.localize(known);
+		// Non-planet kinds dragged in manually: prettify the key.
+		return kind
+			.replace(/^soi-/, "")
+			.replace(/(^|[\s-])\S/g, (c) => c.toUpperCase());
 	}
 
 	/** Detach an attached table (owner ask: attach AND remove). */

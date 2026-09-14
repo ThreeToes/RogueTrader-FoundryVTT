@@ -58,5 +58,9 @@ describe("PsychicPower data model", () => {
 		// Blank = legacy/un-grouped entry (the existing pack predates the
 		// field); hkc5 fills the values + registers the NP disciplines.
 		expect(discipline.opts.initial).toBe("");
+		// `choices` flips StringField's `blank` default to false — without this
+		// the empty discipline value fails validation and the power fails to
+		// load (regression class found 2026-09-14).
+		expect(discipline.opts.blank).toBe(true);
 	});
 });

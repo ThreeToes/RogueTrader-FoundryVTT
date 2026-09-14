@@ -16,6 +16,13 @@ export const psychicPowerSubtypes = [
 export const psychicPowerClasses = ["bound", "unbound"] as const;
 
 /**
+ * How an owned copy of a power is cast (epic 0hap): blank inherits the
+ * actor's mode, "psychic" forces the psyker rules, "sorcery" the Sorcery
+ * rules (Edge of the Abyss pp85-87).
+ */
+export const psychicPowerCastAs = ["psychic", "sorcery"] as const;
+
+/**
  * Psychic powers as Items (mirrors Talent): actors own `psychicpower` Items;
  * the catalog lives in compendium packs. Mechanical use in the attack/test
  * flow comes later; for now this is the content schema the pack needs.
@@ -36,6 +43,10 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 	declare sustained: boolean;
 	declare shortDescription: string;
 	declare effects: EffectData[];
+	/** How the owned copy is cast (epic 0hap): "" inherits the actor's mode. */
+	declare castAs: string;
+	/** Restricted technique (epic 0hap): elite-advance/GM use only. */
+	declare restricted: boolean;
 
 	static override defineSchema() {
 		return {
@@ -66,6 +77,10 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 			discipline: new foundry.data.fields.StringField({
 				choices: psychicDisciplines.choices,
 				initial: "",
+				// Blank for legacy/un-grouped entries: `choices` otherwise flips
+				// the StringField `blank` default to false and the empty value
+				// fails validation (psykana-malifica + renegade powers).
+				blank: true,
 			}),
 			/** Psy rating multiplier or flat rating captured raw. */
 			rating: new foundry.data.fields.NumberField({
@@ -91,6 +106,21 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 			sustained: new foundry.data.fields.BooleanField({
 				initial: false,
 			}),
+			/**
+			 * How the OWNED copy is cast (epic 0hap): "" inherits the actor's
+			 * casting mode; "psychic" forces the psyker rules; "sorcery" applies
+			 * the Sorcery rules (Intelligence Focus Power Test, Int-Bonus Psy
+			 * Rating). Set to "sorcery" when a Sorcery talent grants the
+			 * technique, so psyker/sorcerer hybrids cast each power correctly.
+			 */
+			castAs: new foundry.data.fields.StringField({ initial: "" }),
+			/**
+			 * Restricted technique (epic 0hap): the Psykana Malifica powers
+			 * (Edge of the Abyss p82) "cannot be taken by Astropaths as part of
+			 * their standard advance scheme" — the picker marks them for
+			 * elite-advance/GM use rather than silently hiding them.
+			 */
+			restricted: new foundry.data.fields.BooleanField({ initial: false }),
 			/** Short free-text description shown in pickers. */
 			shortDescription: new foundry.data.fields.StringField({
 				initial: "",

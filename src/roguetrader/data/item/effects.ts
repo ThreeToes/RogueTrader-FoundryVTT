@@ -19,6 +19,8 @@ export interface EffectData {
 	kind?: string;
 	testKey?: string | null;
 	value?: number;
+	/** Dice expression for effects the book prints as dice (e.g. "1d10+4"). */
+	dice?: string;
 	label?: string;
 	/** Guard: only applies when the matching context flag is set. */
 	condition?: string;
@@ -40,6 +42,12 @@ export function effectsField() {
 			value: new foundry.data.fields.NumberField({
 				integer: true,
 				initial: 0,
+			}),
+			/** Dice expression (epic 0hap): used by dice-valued kinds like
+			 * "corruption" where the book prints "1d10+4" rather than a flat
+			 * number. Empty = fall back to `value`. */
+			dice: new foundry.data.fields.StringField({
+				initial: "",
 			}),
 			label: new foundry.data.fields.StringField({
 				initial: "",
@@ -86,6 +94,27 @@ export function effectsAreLive(
 }
 
 /**
+ * Dice expressions contributed by "corruption" effect rows (epic 0hap): the
+ * Summon Daemon power prints "1d10+4 Corruption Points" (EA p83). Pure: the
+ * adapter rolls the expressions and adds the total to the actor. `dice` wins;
+ * an integer `value` is used as a flat fallback.
+ */
+export function corruptionExpressions(
+	effects: EffectData[] | undefined,
+): string[] {
+	const out: string[] = [];
+	for (const effect of effects ?? []) {
+		if (effect.kind !== "corruption") continue;
+		const dice = (effect.dice ?? "").trim();
+		if (dice) out.push(dice);
+		else if (typeof effect.value === "number" && effect.value !== 0) {
+			out.push(String(effect.value));
+		}
+	}
+	return out;
+}
+
+/**
  * Blank effect row for the sheets' add-effect control; values mirror the
  * schema defaults (test-modifier, unkeyed, zero).
  */
@@ -94,6 +123,7 @@ export function blankEffect(): Required<EffectData> {
 		kind: "test-modifier",
 		testKey: "",
 		value: 0,
+		dice: "",
 		label: "",
 		condition: "",
 	};
@@ -102,7 +132,7 @@ export function blankEffect(): Required<EffectData> {
 /** Effects list with a blank row appended (pure; sheet add-effect action). */
 export function withAddedEffect(
 	effects: EffectData[] | undefined,
-): Required<EffectData>[] {
+): EffectData[] {
 	return [...(effects ?? []), blankEffect()];
 }
 

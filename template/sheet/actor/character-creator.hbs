@@ -241,7 +241,7 @@
             forwardAction=(ifThen (eq step 3) "create" "next")
             forwardLabel=(ifThen (eq step 3) (localize "CREATOR.CREATE") (localize "CREATOR.NEXT"))
             forwardPrimary=(eq step 3)
-            forwardDisabled=(ifThen canCreate false true)
+            forwardDisabled=(ifThen canNext false true)
         }}
     </footer>
 </div>

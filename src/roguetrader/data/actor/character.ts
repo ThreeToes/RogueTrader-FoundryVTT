@@ -8,7 +8,7 @@
  * effective bonus = bonus x unnatural multiplier).
  */
 
-import { careers } from "../../registry";
+import { careers, sorceryRanks } from "../../registry";
 
 export const CHARACTERISTIC_KEYS = [
 	"ws",
@@ -39,6 +39,15 @@ export class Character extends foundry.abstract.TypeDataModel<
 	/** Psyker marker (bead m4me): Navigators count (Core Rulebook p182) even at rating 0. */
 	declare psyker: boolean;
 	declare psyRating: number;
+	/**
+	 * Sorcery rank (epic 0hap, Edge of the Abyss pp85-86): "sorcerer" or
+	 * "master-sorcerer" when the character holds a Sorcery Talent; blank
+	 * otherwise. The Sorcerer talents derive this once extracted — the field
+	 * stays hand-editable for GM/homebrew sorcerers.
+	 */
+	declare sorceryRank: string;
+	/** Table 6-1 row: sanctioned psykers push +3, renegades/sorcerers push +4. */
+	declare sanctioned: boolean;
 	declare sustainedPowers: Array<{ itemUuid: string; name: string }>;
 	declare afflictions: Array<{
 		kind: string;
@@ -167,6 +176,28 @@ export class Character extends foundry.abstract.TypeDataModel<
 				integer: true,
 				initial: 0,
 			}),
+			/**
+			 * Sorcery rank (epic 0hap, Edge of the Abyss pp85-86): a character with
+			 * the Sorcerer/Master Sorcerer talent casts sorcerous powers with a Psy
+			 * Rating from their Intelligence Bonus. Blank = not a sorcerer. The
+			 * Sorcery talents set this once extracted; manual/GM editing stays
+			 * possible like the psyker flag.
+			 */
+			sorceryRank: new foundry.data.fields.StringField({
+				choices: sorceryRanks.choices,
+				initial: "",
+				// Blank = not a sorcerer. Without this, `choices` flips the
+				// StringField `blank` default to false and the empty initial
+				// fails validation, bricking every character (same rule as
+				// careerKey above).
+				blank: true,
+			}),
+			/**
+			 * Table 6-1 row (epic 0hap, Core Rulebook p157): sanctioned psykers
+			 * may Push +3, renegade psykers and sorcerers +4. Default sanctioned;
+			 * sorcerers are non-sanctioned by casting mode regardless.
+			 */
+			sanctioned: new foundry.data.fields.BooleanField({ initial: true }),
 			/**
 			 * Powers currently sustained (bead sa6, Core Rulebook p157): -1 effective
 			 * Psy Rating per sustained power and +10 to all Phenomena rolls

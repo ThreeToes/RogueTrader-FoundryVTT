@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	collectSorceryRank,
 	collectTalentDamageEffects,
 	talentEffectHandlers,
 } from "./talent-effects";
@@ -410,5 +411,37 @@ describe("collectTargetTraitDamageEffects (bead zyv1)", () => {
 			tbMultiplier: null,
 			reduction: [],
 		});
+	});
+});
+
+describe("collectSorceryRank (epic 0hap)", () => {
+	test("reads the highest sorcery-rank talent effect", () => {
+		expect(collectSorceryRank({})).toBe(0);
+		expect(
+			collectSorceryRank({
+				items: [
+					{ type: "talent", system: { effects: [{ kind: "sorcery-rank", value: 1 }] } },
+				],
+			}),
+		).toBe(1);
+		expect(
+			collectSorceryRank({
+				items: [
+					{ type: "talent", system: { effects: [{ kind: "sorcery-rank", value: 1 }] } },
+					{ type: "talent", system: { effects: [{ kind: "sorcery-rank", value: 2 }] } },
+				],
+			}),
+		).toBe(2);
+	});
+
+	test("ignores non-talent items and unrelated kinds", () => {
+		expect(
+			collectSorceryRank({
+				items: [
+					{ type: "psychicpower", system: { effects: [{ kind: "sorcery-rank", value: 2 }] } },
+					{ type: "talent", system: { effects: [{ kind: "wounds-max", value: 1 }] } },
+				],
+			}),
+		).toBe(0);
 	});
 });

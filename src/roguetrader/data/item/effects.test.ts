@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	blankEffect,
+	corruptionExpressions,
 	withAddedEffect,
 	withoutEffectAt,
 	type EffectData,
@@ -8,10 +9,11 @@ import {
 
 describe("effect list helpers (sheets' add/remove controls)", () => {
 	test("blankEffect mirrors the schema defaults", () => {
-		expect(blankEffect()).toEqual({
+			expect(blankEffect()).toEqual({
 			kind: "test-modifier",
 			testKey: "",
 			value: 0,
+			dice: "",
 			label: "",
 			condition: "",
 		});
@@ -40,5 +42,24 @@ describe("effect list helpers (sheets' add/remove controls)", () => {
 		expect(withoutEffectAt(list, 1).map((e) => e.label)).toEqual(["a", "c"]);
 		// Out-of-range indices leave the list untouched.
 		expect(withoutEffectAt(list, 99)).toHaveLength(3);
+	});
+
+	describe("corruptionExpressions (epic 0hap)", () => {
+		test("collects dice expressions from corruption rows", () => {
+			expect(
+				corruptionExpressions([
+					{ kind: "corruption", dice: "1d10+4" },
+					{ kind: "test-modifier", dice: "1d5" },
+					{ kind: "corruption", value: 2 },
+				]),
+			).toEqual(["1d10+4", "2"]);
+		});
+
+		test("ignores blanks and absent effects", () => {
+			expect(corruptionExpressions(undefined)).toEqual([]);
+			expect(
+				corruptionExpressions([{ kind: "corruption", dice: "  " }]),
+			).toEqual([]);
+		});
 	});
 });

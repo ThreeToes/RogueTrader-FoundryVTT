@@ -8,6 +8,7 @@ import { MeleeWeapon } from "../data/item/melee-weapon";
 import { PsychicPower } from "../data/item/psychic-power";
 import { NavigatorPower } from "../data/item/navigator-power";
 import { OriginTrait } from "../data/item/origin-trait";
+import { Origin } from "../data/item/origin";
 import { Mutation } from "../data/item/mutation";
 import { MadnessEntry } from "../data/item/madness";
 import { RangedWeapon } from "../data/item/ranged-weapon";
@@ -48,6 +49,13 @@ import {
 	parseHomebrewProfile,
 } from "../rules/homebrew";
 import type { OriginTraitDef } from "../rules/origin-traits";
+import {
+	setOriginEntries,
+	type OriginEntry,
+	type OriginMechanics,
+	type OriginRow,
+	type OriginVariant,
+} from "../origins";
 import { talentEffectHandlers } from "../rules/talent-effects";
 import { CharacterSheet } from "./actor/character-sheet";
 import { CharacterCreator } from "./actor/character-creator";
@@ -308,6 +316,32 @@ export function sheetInit() {
 			getDefs: () => originTraitDefs,
 		};
 
+		// Origin Path chart cache (epic 1gb7): the chart content lives in the
+		// `origins` pack; warm the pure module's pool at ready so the creator
+		// and sheet resolve entries synchronously.
+		Hooks.once("ready", () => {
+			getPackDocuments("rogue-trader.origins").then((rawDocs) => {
+				const docs = rawDocs as Array<foundry.documents.Item>;
+				setOriginEntries(
+					docs.map((doc) => {
+						const s = doc.system as unknown as Record<string, unknown>;
+						return {
+							key: String(s.key ?? ""),
+							row: String(s.row ?? "home-world") as OriginRow,
+							col: Number(s.col ?? 0),
+							name: doc.name ?? "",
+							description: String(s.description ?? ""),
+							effect: s.effect ? String(s.effect) : undefined,
+							mechanics: (s.mechanics ?? {}) as OriginMechanics,
+							variants: Array.isArray(s.variants)
+								? (s.variants as OriginVariant[])
+								: undefined,
+						} as OriginEntry;
+					}),
+				);
+			});
+		});
+
 		// Data-driven document registration (bead 6a1x): one entry per document
 		// type = { model, sheet, label }. The data-model loop feeds
 		// CONFIG.*.dataModels; the sheet loop registers each sheet as
@@ -381,6 +415,8 @@ export function sheetInit() {
 				// Origin traits, mutations, madness, ammunition, force fields and
 				// weapon modifications reuse the Gear model + generic sheet.
 				origintrait: { model: OriginTrait, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
+				// Origin Path chart entries (epic 1gb7; moved out of rules/origins.ts).
+				origin: { model: Origin, sheet: GearSheet, label: "TYPES.Item.origin" },
 				mutation: { model: Mutation, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				madnessentry: { model: MadnessEntry, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				// Rulebook traits (bead 25ii): innate creature features. Always
@@ -635,10 +671,19 @@ export function sheetInit() {
 						entryEl?.dataset.entryId ??
 						entryEl?.dataset.documentId ??
 						element?.dataset?.documentId;
-					const actor = resolvedId
+					const candidate = resolvedId
 						? ((game.actors as unknown as {
 								get: (id: string) => unknown;
 							}).get(resolvedId) as foundry.documents.Actor | undefined)
+						: undefined;
+					// Only character-carrying actors pre-fill; right-clicking a
+					// vehicle/ship/planet/dynasty entry (the menu is offered on every
+					// actor entry) creates a fresh explorer instead of handing a
+					// characterless actor to the creator.
+					const actor = (
+						candidate?.system as { characteristics?: unknown } | undefined
+					)?.characteristics
+						? candidate
 						: undefined;
 					if (!actor && !canCreateActors) {
 						ui.notifications?.warn(

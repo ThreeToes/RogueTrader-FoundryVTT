@@ -12,15 +12,29 @@
  * Full Auto +20 — the owner's motivating example for tuning).
  */
 
+import { pushCap } from "./psychic";
+
 /** Homebrew overrides. Every field optional; absent = core rule applies. */
 export interface HomebrewProfile {
 	id: string;
 	/** Fire-mode to-hit bonuses on attack tests (core: burst +10, full +20). */
 	fireModeBonus?: { burst: number; full: number };
+	/**
+	 * Psychic Strength Push caps (epic 0hap; core Table 6-1 p157: sanctioned
+	 * +3, renegades/sorcerers +4). Data-driven so a group can tune the cap
+	 * without touching core rules.
+	 */
+	pushCap?: { sanctioned: number; other: number };
 }
 
 /** Core book values (Core Rulebook p237, verified in the attack-context contributor). */
 export const CORE_FIRE_MODE_BONUS = { burst: 10, full: 20 } as const;
+
+/** Core Push caps (Table 6-1, Core Rulebook p157): sanctioned +3, others +4. */
+export const CORE_PUSH_CAP = {
+	sanctioned: pushCap(true),
+	other: pushCap(false),
+} as const;
 
 /** No homebrew active. */
 export const NO_HOMEBREW: HomebrewProfile = { id: "rt-core" };
@@ -40,6 +54,22 @@ export function resolveFireModeBonus(
 			: profile.fireModeBonus.full;
 	}
 	return mode === "burst" ? CORE_FIRE_MODE_BONUS.burst : CORE_FIRE_MODE_BONUS.full;
+}
+
+/**
+ * Effective Push cap (epic 0hap). Pure: the profile override wins when it
+ * carries a finite value, otherwise the core Table 6-1 cap (sanctioned +3,
+ * renegade/sorcerer +4). Never below 1 (Push must grant at least +1).
+ */
+export function resolvePushCap(
+	profile: HomebrewProfile | null | undefined,
+	sanctioned: boolean,
+): number {
+	const core = sanctioned ? CORE_PUSH_CAP.sanctioned : CORE_PUSH_CAP.other;
+	const override = profile?.pushCap;
+	if (!override) return core;
+	const value = sanctioned ? override.sanctioned : override.other;
+	return Number.isFinite(value) ? Math.max(1, Math.floor(value)) : core;
 }
 
 /** Default settings key storing the JSON-serialized profile. */

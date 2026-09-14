@@ -5,6 +5,9 @@
         {{#each powers as |power|}}
         <div class="catalog-row {{#if power.owned}}owned{{/if}}">
             <span class="name">{{power.name}} <em>({{localize power.subtypeLabel}})</em></span>
+            {{#if power.restricted}}
+            <span class="restricted-marker" data-tooltip="{{localize "PSYCHIC_POWER.RESTRICTED_TOOLTIP"}}">{{localize "PSYCHIC_POWER.RESTRICTED"}}</span>
+            {{/if}}
             {{#if power.owned}}
             <span class="owned-marker">{{localize "SKILL.OWNED"}}</span>
             {{else}}

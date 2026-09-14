@@ -46,6 +46,9 @@ import {
 	type StrengthLevel,
 } from "./psychic";
 import { resolvePower } from "./power-resolution";
+import { resolveCasting, sorceryLearnable, effectiveSorceryRank } from "./casting";
+import { collectSorceryRank } from "./talent-effects";
+import { resolvePushCap, type HomebrewProfile } from "./homebrew";
 import { collectTestModifiers, mergeModifiers, type TestKind } from "./funnel";
 import {
 	carriedConditions,
@@ -64,6 +67,7 @@ import {
 	shockOutcome,
 } from "./fear";
 import { isWeaponType, equipStateOf } from "../data/accessors";
+import { corruptionExpressions, type EffectData } from "../data/item/effects";
 import { postCard, type RtMessageFlags } from "./chat-flags";
 import { TestDialog } from "./test-dialog";
 
@@ -610,43 +614,84 @@ export const psychicHandler: RollHandler<"psychic"> = {
 			powerClass?: string;
 			subtype?: string;
 			focusTest?: string;
+			focusTime?: string;
 			damage?: string;
 			name?: string;
+			castAs?: string;
 		};
-		const psyRating = system.psyRating ?? 0;
-		if (psyRating < 1 && system.psyker !== true) {
+		// Casting mode (epic 0hap): the owned power's castAs override, else the
+		// actor's default (a non-psyker sorcerer casts as a sorcerer). Book-side
+		// notation stays in the pack data; the substitution happens here.
+		const casting = resolveCasting(power, {
+			psyker: system.psyker,
+			psyRating: system.psyRating,
+			// Owned Sorcerer/Master Sorcerer talents win; the manual field is
+			// the GM/homebrew fallback (epic 0hap).
+			sorceryRank: effectiveSorceryRank(
+				collectSorceryRank(actor),
+				system.sorceryRank,
+			),
+			sanctioned: system.sanctioned,
+			corruption: system.corruption,
+			// EA p85: unmodified Intelligence Bonus (no Unnatural multiplier).
+			intelligenceBonus: Math.floor((system.characteristics.int?.value ?? 0) / 10),
+		});
+		if (
+			casting.mode === "psychic" &&
+			(system.psyRating ?? 0) < 1 &&
+			system.psyker !== true
+		) {
 			ui.notifications?.warn(game.i18n.localize("PSYCHIC_POWER.NOT_PSYKER"));
+			return null;
+		}
+		// EA p86: Free Action powers cannot be learned through Sorcery — a
+		// sorcerous activation always requires a ritual gesture.
+		if (casting.mode === "sorcery" && !sorceryLearnable(power.focusTime)) {
+			ui.notifications?.warn(
+				game.i18n.localize("PSYCHIC_POWER.SORCERY_FREE_ACTION"),
+			);
 			return null;
 		}
 
 		// Strength selection (Table 6-1): Fettered (half PR, no phenomena),
-		// Unfettered (full PR, doubles trigger phenomena), Push (+1..+3 PR,
-		// automatic phenomena at +5/+1). Push cap is +3/+4 per the book; the
-		// sanctioned flag is not tracked on the actor yet — +3 is used and
-		// the cap is homebrew-profile material later (UNVERIFIED IN WORLD:
-		// renegade sorcerers need the +4 cap).
+		// Unfettered (full PR, doubles trigger phenomena), Push (+1..cap,
+		// automatic phenomena). Push cap: sanctioned +3, renegades/sorcerers
+		// +4 (book p157), overridable by the homebrew profile.
+		const homebrew =
+			typeof CONFIG !== "undefined"
+				? ((
+						CONFIG as unknown as {
+							ROGUE_TRADER?: {
+								homebrew?: { getProfile?: () => HomebrewProfile | null };
+							};
+						}
+					).ROGUE_TRADER?.homebrew?.getProfile?.() ?? null)
+				: null;
+		const cap = resolvePushCap(homebrew, casting.sanctioned);
 		const strength = request.skipDialog
 			? "unfettered"
-			: await promptStrength();
+			: await promptStrength(cap);
 		if (!strength) return null;
 		// Push level is encoded in the prompt choice ("push:2"); default +1.
 		const [strengthLevel, pushLevelsRaw] = strength.split(":");
 		const pushLevels =
-			strengthLevel === "push" ? Number(pushLevelsRaw ?? "1") || 1 : 0;
+			strengthLevel === "push"
+				? Math.min(cap, Math.max(1, Number(pushLevelsRaw ?? "1") || 1))
+				: 0;
 
 		const sustainedCount = system.sustainedPowers?.length ?? 0;
 		const effPr = effectivePsyRating({
-			psyRating,
+			psyRating: casting.rating,
 			strength: strengthLevel as "fettered" | "unfettered" | "push",
 			pushLevels,
 			sustainedCount,
 		});
 		const psyBonus = psyRatingBonus(effPr);
 
-		// Focus Power Test characteristic: the power's focusTest field names
-		// it (usually Willpower, sometimes Psyniscience as a skill); default
-		// wp.
-		const testKey = focusTestKey(power.focusTest);
+		// Focus Power Test characteristic: sorcery always uses Intelligence
+		// (EA p85); otherwise the power's own focusTest (usually Willpower,
+		// sometimes Psyniscience as a skill).
+		const testKey = casting.testKeyOverride || focusTestKey(power.focusTest);
 		const characteristic = system.characteristics[testKey];
 		if (!characteristic) {
 			ui.notifications?.warn(
@@ -675,9 +720,15 @@ export const psychicHandler: RollHandler<"psychic"> = {
 			// Bead sa6: Focus Power Tests auto-fail on rolls of 91+ (book
 			// p157). Profile data, not an if/else.
 			autoFailRoll: focusPowerAutoFailFloor(),
-			// after() needs the rolled strength for the phenomena trigger and
-			// the push modifier (book p157).
-			kindData: { strength: strengthLevel, pushLevels, sustainedCount },
+			// after() needs the rolled strength for the phenomena trigger, and
+			// the push + corruption modifiers (book p157; EA p86).
+			kindData: {
+				strength: strengthLevel,
+				pushLevels,
+				sustainedCount,
+				corruption: casting.phenomenaFlat,
+				mode: casting.mode,
+			},
 		};
 	},
 	async after(request, prepared, outcome, _messageId) {
@@ -691,6 +742,8 @@ export const psychicHandler: RollHandler<"psychic"> = {
 			await rollPhenomena(request.actor, {
 				pushLevels: (prepared.kindData?.pushLevels as number) ?? 0,
 				sustainedCount: (prepared.kindData?.sustainedCount as number) ?? 0,
+				// Sorcerer Corruption total, added FIRST (EA p86).
+				corruption: (prepared.kindData?.corruption as number) ?? 0,
 			});
 		}
 		// Success handling via the resolution registry (design mso6 addendum).
@@ -699,6 +752,11 @@ export const psychicHandler: RollHandler<"psychic"> = {
 			if (resolution.damage && power.damage) {
 				await postPowerDamage(request.actor, power.name ?? "", power.damage);
 			}
+		}
+		// Corruption-on-manifest (epic 0hap): Summon Daemon grants 1d10+4 CP
+		// (EA p83). Applied after a successful manifestation, mirroring damage.
+		if (outcome.success && item) {
+			await applyPowerCorruption(request.actor, item);
 		}
 	},
 };
@@ -1673,7 +1731,16 @@ export async function rollShipRepair(
  * +1..+3. Push levels are separate buttons; each callback encodes the level
  * in the returned value ("push:2").
  */
-export async function promptStrength(): Promise<string | null> {
+export async function promptStrength(pushCapLimit = 3): Promise<string | null> {
+	const cap = Math.max(1, Math.floor(pushCapLimit));
+	const pushButtons = Array.from({ length: cap }, (_, index) => {
+		const level = index + 1;
+		return {
+			action: `push${level}`,
+			label: `${game.i18n.localize("PSYCHIC_POWER.STRENGTH_PUSH")} +${level}`,
+			callback: () => `push:${level}`,
+		};
+	});
 	return (await foundry.applications.api.DialogV2.wait({
 		window: {
 			title: game.i18n.localize("PSYCHIC_POWER.STRENGTH_TITLE"),
@@ -1690,21 +1757,7 @@ export async function promptStrength(): Promise<string | null> {
 				label: game.i18n.localize("PSYCHIC_POWER.STRENGTH_UNFETTERED"),
 				callback: () => "unfettered",
 			},
-			{
-				action: "push1",
-				label: `${game.i18n.localize("PSYCHIC_POWER.STRENGTH_PUSH")} +1`,
-				callback: () => "push:1",
-			},
-			{
-				action: "push2",
-				label: `${game.i18n.localize("PSYCHIC_POWER.STRENGTH_PUSH")} +2`,
-				callback: () => "push:2",
-			},
-			{
-				action: "push3",
-				label: `${game.i18n.localize("PSYCHIC_POWER.STRENGTH_PUSH")} +3`,
-				callback: () => "push:3",
-			},
+			...pushButtons,
 		],
 	})) as string | null;
 }
@@ -1717,7 +1770,12 @@ export async function promptStrength(): Promise<string | null> {
  */
 export async function rollPhenomena(
 	actor: Actor,
-	source: { pushLevels?: number; sustainedCount?: number },
+	source: {
+		pushLevels?: number;
+		sustainedCount?: number;
+		/** Sorcerer Corruption total (EA p86); added before the other modifiers. */
+		corruption?: number;
+	},
 ): Promise<void> {
 	const modifier = phenomenaRollModifier(source);
 	const die = new foundry.dice.Roll("1d100");
@@ -1767,6 +1825,41 @@ export async function postPowerDamage(
 	const content = `<div class="rogue-trader power-damage"><h3>${label}</h3><p>${damage}: <strong>${roll.total}</strong></p></div>`;
 	await foundry.documents.ChatMessage.create({
 		speaker: foundry.documents.ChatMessage.getSpeaker({ actor }),
+		content,
+	});
+}
+
+/**
+ * Apply a power's "corruption" effects after a successful Focus Power Test
+ * (epic 0hap): Summon Daemon grants 1d10+4 Corruption Points (EA p83). The
+ * actor's Corruption total is added to its Phenomena rolls (EA p86) via the
+ * casting resolver. Malignancy/mutation thresholds are tracked elsewhere
+ * (rules/madness.ts + the afflictions ledger).
+ */
+async function applyPowerCorruption(
+	actor: Actor,
+	item: { name?: string; system?: unknown },
+): Promise<void> {
+	const effects = (item.system as { effects?: EffectData[] } | undefined)?.effects;
+	const expressions = corruptionExpressions(effects);
+	if (expressions.length === 0) return;
+	let gained = 0;
+	for (const expression of expressions) {
+		const roll = new foundry.dice.Roll(expression);
+		await roll.evaluate();
+		gained += roll.total ?? 0;
+	}
+	if (gained === 0) return;
+	const system = systemOf(actor) as unknown as { corruption?: number };
+	await actor.update({
+		"system.corruption": Math.max(0, (system.corruption ?? 0) + gained),
+	} as never);
+	const label = game.i18n.format("PSYCHIC_POWER.CORRUPTION_GAIN", {
+		power: item.name ?? "",
+	});
+	const content = `<div class="rogue-trader power-corruption"><p>${label}: <strong>${gained}</strong></p></div>`;
+	await foundry.documents.ChatMessage.create({
+		speaker: foundry.documents.ChatMessage.getSpeaker({ actor: actor as never }),
 		content,
 	});
 }

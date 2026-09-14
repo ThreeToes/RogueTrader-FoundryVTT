@@ -15,6 +15,18 @@
                 <input name="system.psyker" type="checkbox" {{checked source.system.psyker}} />
                 {{localize "CHARACTER.PSYKER"}}
             </label>
+            <label class="sanctioned-flag"
+                data-tooltip="{{localize "CHARACTER.SANCTIONED_TOOLTIP"}}">
+                <input name="system.sanctioned" type="checkbox" {{checked source.system.sanctioned}} />
+                {{localize "CHARACTER.SANCTIONED"}}
+            </label>
+            <label class="sorcery-rank"
+                data-tooltip="{{localize "CHARACTER.SORCERY_TOOLTIP"}}">
+                {{localize "CHARACTER.SORCERY_RANK"}}
+                <select name="system.sorceryRank">
+                    {{selectOptions sorceryRankChoices selected=source.system.sorceryRank localize=true}}
+                </select>
+            </label>
             <button type="button" class="psychic-add" data-action="openPsychicPicker">
                 <i class="fas fa-plus"></i> {{localize "PSYCHIC_POWER.ADD"}}
             </button>
@@ -28,6 +40,7 @@
                 <span class="psychic-tags">
                     <span class="chip">{{localize power.classLabel}}</span>
                     <span class="chip">{{localize power.subtypeLabel}}</span>
+                    {{#if power.sorcerous}}<span class="chip">{{localize "PSYCHIC_POWER.CAST_AS_SORCERY"}}</span>{{/if}}
                     {{#if power.rating}}<span class="chip">{{localize "PSYCHIC_POWER.RATING"}} {{power.rating}}</span>{{/if}}
                     {{#if power.sustained}}<span class="chip claimed" data-tooltip="{{localize "PSYCHIC_POWER.SUSTAINED_TOOLTIP"}}"><i class="fa-solid fa-check"></i> {{localize "PSYCHIC_POWER.SUSTAINED"}}</span>{{/if}}
                 </span>

@@ -50,6 +50,12 @@ export class PsychicPowerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		const context = await super._prepareContext(options);
 		context.powerClassChoices = labeled(psychicPowerClasses);
 		context.subtypeChoices = labeled(psychicPowerSubtypes);
+		// Epic 0hap: how the owned copy is cast (blank inherits the actor).
+		context.castAsChoices = {
+			"": "",
+			psychic: "PSYCHIC_POWER.CAST_AS_PSYCHIC",
+			sorcery: "PSYCHIC_POWER.CAST_AS_SORCERY",
+		};
 		context.damageTypeChoices = Object.fromEntries(
 			Object.values(DamageType).map((value) => [value, value]),
 		);

@@ -55,6 +55,18 @@ export function validatePointBuy(
 }
 
 /**
+ * Whether the creator's forward button can advance (fix 2026-09-14). Every
+ * step before the last advances freely; the final Create action needs the full
+ * validation. The shared `rt/creator-nav` partial disables the button when
+ * `forwardDisabled` is truthy, so the character creator passing raw
+ * `canCreate` (which is `step === 3 && ...`) disabled Next on every earlier
+ * step. Pure + testable.
+ */
+export function creatorCanAdvance(step: number, canCreate: boolean): boolean {
+	return step !== 3 || canCreate;
+}
+
+/**
  * Final characteristics: base (or rolled values) plus origin deltas,
  * clamped to the schema range 0-100.
  */

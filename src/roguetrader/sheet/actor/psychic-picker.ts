@@ -42,7 +42,7 @@ export class PsychicPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 		)) as unknown as Array<{
 			uuid?: string;
 			name?: string;
-			system: { powerClass?: string; subtype?: string };
+			system: { powerClass?: string; subtype?: string; restricted?: boolean };
 		}>;
 		const powers: Array<{
 			uuid: string;
@@ -51,6 +51,8 @@ export class PsychicPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 			subtype: string;
 			subtypeLabel: string;
 			owned: boolean;
+			/** Epic 0hap: Psykana Malifica powers are elite-advance/GM use. */
+			restricted: boolean;
 		}> = [];
 		if (documents.length > 0) {
 			const owned = new Set(
@@ -68,6 +70,7 @@ export class PsychicPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 					subtype,
 					subtypeLabel: `PSYCHIC_POWER.${subtype.toUpperCase()}`,
 					owned: owned.has(doc.name),
+					restricted: doc.system.restricted === true,
 				});
 			}
 			powers.sort((a, b) => a.name.localeCompare(b.name));

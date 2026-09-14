@@ -73,9 +73,20 @@ describe("psyker mechanics (bead sa6, Core Rulebook Table 6-1 book p157)", () =>
 		expect(phenomenaRollModifier({})).toBe(0);
 		expect(phenomenaRollModifier({ pushLevels: 2 })).toBe(10);
 		expect(phenomenaRollModifier({ sustainedCount: 1 })).toBe(10);
-		expect(
+			expect(
 			phenomenaRollModifier({ pushLevels: 3, sustainedCount: 2 }),
 		).toBe(35);
+	});
+
+	test("phenomena roll modifier: Corruption added first (epic 0hap, EA p86)", () => {
+		expect(phenomenaRollModifier({ corruption: 12 })).toBe(12);
+		expect(
+			phenomenaRollModifier({
+				corruption: 10,
+				pushLevels: 2,
+				sustainedCount: 1,
+			}),
+		).toBe(30);
 	});
 
 	test("phenomena triggers: never fettered, doubles unfettered, always push", () => {

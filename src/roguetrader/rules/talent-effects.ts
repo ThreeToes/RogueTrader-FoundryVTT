@@ -22,6 +22,7 @@ interface ItemLike {
 			kind?: string;
 			testKey?: string;
 			value?: number;
+			dice?: string;
 			label?: string;
 			condition?: string;
 		}>;
@@ -32,6 +33,8 @@ export interface TalentEffectLike {
 	kind?: string;
 	testKey?: string | null;
 	value?: number;
+	/** Dice expression for dice-valued kinds (e.g. "corruption"). */
+	dice?: string;
 	label?: string;
 	/** Guard from the talentConditions registry; empty = unconditional. */
 	condition?: string;
@@ -146,6 +149,52 @@ talentEffectHandlers.register("damage-reduction", (_actor, _talent, effect) => {
 	const value = Number(effect.value ?? 0);
 	return Number.isFinite(value) && value !== 0 ? value : null;
 });
+
+// Corruption-on-manifest kind (epic 0hap): the Summon Daemon power prints
+// "1d10+4 Corruption Points" (Edge of the Abyss p83). The adapter rolls the
+// `dice` expression after a successful Focus Power Test; this reference
+// registration makes the kind discoverable to the effect editor.
+talentEffectHandlers.register("corruption", (_actor, _talent, effect) => {
+	const dice = effect.dice?.trim();
+	if (dice) return dice;
+	const value = Number(effect.value ?? 0);
+	return Number.isFinite(value) && value !== 0 ? value : null;
+});
+
+// Sorcery kinds (epic 0hap, Edge of the Abyss pp85-86).
+//   sorcery-rank    - the Sorcerer (1) / Master Sorcerer (2) talents; sets the
+//                     Intelligence-Bonus Psy Rating the caster uses.
+//   grants-technique - the Sorcerer / Sorcerous Power talents grant one
+//                     psychic technique; the interactive pick + castAs flag is
+//                     the psychic picker's job (the reference handler here
+//                     makes the intent expressible and discoverable).
+talentEffectHandlers.register("sorcery-rank", (_actor, _talent, effect) => {
+	const value = Number(effect.value ?? 0);
+	return Number.isFinite(value) && value > 0 ? value : null;
+});
+talentEffectHandlers.register("grants-technique", (_actor, _talent, effect) => {
+	const value = Number(effect.value ?? 1);
+	return Number.isFinite(value) && value > 0 ? value : 1;
+});
+
+/**
+ * Highest sorcery rank the actor's talents grant (epic 0hap): 0 = none,
+ * 1 = Sorcerer (half Int-Bonus Psy Rating), 2 = Master Sorcerer (full).
+ * `casting.ts` combines this with the manual actor field. Pure.
+ */
+export function collectSorceryRank(actor: unknown): number {
+	let rank = 0;
+	const items = (actor as { items?: ItemLike[] }).items ?? [];
+	for (const item of items) {
+		if (item.type !== "talent") continue;
+		for (const effect of item.system?.effects ?? []) {
+			if (effect.kind !== "sorcery-rank") continue;
+			const value = Number(effect.value ?? 0);
+			if (Number.isFinite(value)) rank = Math.max(rank, value);
+		}
+	}
+	return rank;
+}
 
 /** Parsed roll-mechanic inputs for one attack (bead gci0). */
 export interface RollMechanics {

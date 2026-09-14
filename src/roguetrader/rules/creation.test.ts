@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	creatorCanAdvance,
 	finalCharacteristics,
 	isUnresolvedChoice,
 	matchOriginSkills,
@@ -138,5 +139,20 @@ describe("isUnresolvedChoice", () => {
 		expect(isUnresolvedChoice("Forbidden Lore (choose one)")).toBe(true);
 		expect(isUnresolvedChoice("Hatred (choose one)")).toBe(true);
 		expect(isUnresolvedChoice("Peer (Underworld)")).toBe(false);
+	});
+});
+
+describe("creatorCanAdvance (character-creator Next gate, fix 2026-09-14)", () => {
+	test("every step before the last always advances", () => {
+		// Regression: the creator passed raw canCreate (step === 3 && ...) as the
+		// nav partial's forwardDisabled, which disabled Next on steps 0-2.
+		expect(creatorCanAdvance(0, false)).toBe(true);
+		expect(creatorCanAdvance(1, false)).toBe(true);
+		expect(creatorCanAdvance(2, false)).toBe(true);
+	});
+
+	test("the final Create step needs the full validation", () => {
+		expect(creatorCanAdvance(3, false)).toBe(false);
+		expect(creatorCanAdvance(3, true)).toBe(true);
 	});
 });

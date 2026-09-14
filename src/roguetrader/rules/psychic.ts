@@ -66,12 +66,18 @@ export function psyRatingBonus(effectiveRating: number): number {
 
 /** Total modifier to the Psychic Phenomena table roll (p157). */
 export function phenomenaRollModifier(input: {
+	/**
+	 * Sorcerer Corruption total (epic 0hap, Edge of the Abyss p86): a
+	 * sorcerer adds his CP total to the roll BEFORE other modifiers.
+	 */
+	corruption?: number;
 	pushLevels?: number;
 	sustainedCount?: number;
 }): number {
+	const corruption = Math.max(0, Math.floor(input.corruption ?? 0));
 	const push = Math.max(0, Math.floor(input.pushLevels ?? 0));
 	const sustained = Math.max(0, Math.floor(input.sustainedCount ?? 0));
-	return 5 * push + 10 * sustained;
+	return corruption + 5 * push + 10 * sustained;
 }
 
 /**

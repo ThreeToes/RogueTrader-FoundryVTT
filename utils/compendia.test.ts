@@ -26,6 +26,11 @@ describe("resolveEntryType", () => {
 	test("maps legacy generic Item type via folder defaults", () => {
 		expect(resolveEntryType({ type: "Item" }, "skills")).toBe("skill");
 		expect(resolveEntryType({ type: "Item" }, "talents")).toBe("talent");
+		// Origin Path (epic 1gb7): chart entries + their trait rows.
+		expect(resolveEntryType({ type: "Item" }, "origins")).toBe("origin");
+		expect(resolveEntryType({ type: "Item" }, "origin-traits")).toBe(
+			"origintrait",
+		);
 		expect(resolveEntryType({ type: "Item" }, "unknown")).toBe("gear");
 	});
 

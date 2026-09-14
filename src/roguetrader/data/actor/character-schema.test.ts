@@ -48,3 +48,32 @@ describe("Character schema: psyker fields (bead 1ooe)", () => {
 		expect(gate(false, 2)).toBe(true); // Astropath: rating without manual flag
 	});
 });
+
+/**
+ * Blank-safety guard (regression, 2026-09-14): a Foundry `StringField` with
+ * `choices` flips its `blank` default to false, so a blank value is a
+ * validation error unless `blank: true` is set. A field with `choices` +
+ * `initial: ""` without `blank: true` bricks the whole document — the
+ * sorceryRank regression that broke every character. This scans the schema so
+ * the pattern cannot recur silently.
+ */
+describe("Character schema: blank-safe choice fields", () => {
+	const schema = Character.defineSchema() as unknown as Record<string, any>;
+
+	test("every choices field whose initial is empty sets blank: true", () => {
+		for (const [name, field] of Object.entries(schema)) {
+			const opts = field?.opts as Record<string, unknown> | undefined;
+			if (!opts?.choices) continue;
+			if (opts.initial !== "") continue;
+			expect(opts.blank, `${name} has choices + blank initial, needs blank: true`).toBe(
+				true,
+			);
+		}
+	});
+
+	test("sorcery fields (epic 0hap): blank rank + sanctioned default", () => {
+		expect(schema.sorceryRank.opts.initial).toBe("");
+		expect(schema.sorceryRank.opts.blank).toBe(true);
+		expect(schema.sanctioned.opts.initial).toBe(true);
+	});
+});

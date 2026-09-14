@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
 	CORE_FIRE_MODE_BONUS,
+	CORE_PUSH_CAP,
 	parseHomebrewProfile,
 	resolveFireModeBonus,
+	resolvePushCap,
 } from "./homebrew";
 
 describe("resolveFireModeBonus (bead 9if pilot)", () => {
@@ -53,5 +55,25 @@ describe("parseHomebrewProfile", () => {
 	test("malformed data falls back to core with a warning", () => {
 		expect(parseHomebrewProfile("not json")).toEqual({ id: "rt-core" });
 		expect(parseHomebrewProfile("{}")).toEqual({ id: "rt-core" });
+	});
+});
+
+describe("resolvePushCap (epic 0hap)", () => {
+	test("core caps: sanctioned +3, renegades/sorcerers +4 (Table 6-1 p157)", () => {
+		expect(CORE_PUSH_CAP).toEqual({ sanctioned: 3, other: 4 });
+		expect(resolvePushCap(null, true)).toBe(3);
+		expect(resolvePushCap(null, false)).toBe(4);
+	});
+
+	test("the homebrew override wins when present", () => {
+		const profile = { id: "house", pushCap: { sanctioned: 2, other: 5 } };
+		expect(resolvePushCap(profile, true)).toBe(2);
+		expect(resolvePushCap(profile, false)).toBe(5);
+	});
+
+	test("a malformed cap falls back to core, never below 1", () => {
+		const profile = { id: "house", pushCap: { sanctioned: 0, other: Number.NaN } };
+		expect(resolvePushCap(profile, true)).toBe(1);
+		expect(resolvePushCap(profile, false)).toBe(4);
 	});
 });

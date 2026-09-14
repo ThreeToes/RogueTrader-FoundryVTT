@@ -26,6 +26,7 @@ import {
 import {
 	type CatalogSkill,
 	CHARACTERISTIC_BASE,
+	creatorCanAdvance,
 	finalCharacteristics,
 	isUnresolvedChoice,
 	matchOriginSkills,
@@ -204,7 +205,16 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 
 	constructor(options: { actor?: foundry.documents.Actor } & object = {}) {
 		super(options as never);
-		this.targetActor = options.actor ?? null;
+		// Only character-carrying actors can prefill/update-in-place. Right-
+		// clicking a vehicle, ship, planet or dynasty entry (the creator menu is
+		// offered on every actor entry) must start a fresh explorer, not crash
+		// reading a missing `characteristics` block.
+		const candidate = options.actor ?? null;
+		const hasCharacteristics = Boolean(
+			(candidate?.system as { characteristics?: unknown } | undefined)
+				?.characteristics,
+		);
+		this.targetActor = candidate && hasCharacteristics ? candidate : null;
 		if (this.targetActor) {
 			const system = this.targetActor.system as unknown as {
 				characteristics: Record<CharacteristicKey, { value: number }>;
@@ -483,6 +493,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				if (!detail?.hasCorrIns) return true;
 				return Boolean(state.corrOrInsTrack[row]);
 			});
+		// The forward button must be enabled on every step before the last;
+		// `canCreate` is step-3 only, so it cannot gate Next directly.
+		context.canNext = creatorCanAdvance(state.step, context.canCreate);
 		return context;
 	}
 

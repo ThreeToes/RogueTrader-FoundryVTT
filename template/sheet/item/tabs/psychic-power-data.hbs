@@ -25,6 +25,18 @@
         </div>
         <div class="stats-row">
             <div class="stat">
+                <label>{{localize "PSYCHIC_POWER.CAST_AS"}}</label>
+                {{#if editable}}
+                <select name="system.castAs">
+                    {{selectOptions castAsChoices selected=source.system.castAs localize=true}}
+                </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup castAsChoices source.system.castAs)}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
                 <label>{{localize "PSYCHIC_POWER.PREREQUISITE"}}</label>
                 {{#if editable}}
                 <input name="system.prerequisite" type="text" value="{{source.system.prerequisite}}" />

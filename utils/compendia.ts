@@ -59,6 +59,9 @@ const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
 	talents: "talent",
 	aptitudes: "aptitude",
 	careers: "career",
+	// Origin Path (epic 1gb7): chart entries + the trait rows they resolve to.
+	origins: "origin",
+	"origin-traits": "origintrait",
 };
 
 /** Work out the real item type for an authored entry. */

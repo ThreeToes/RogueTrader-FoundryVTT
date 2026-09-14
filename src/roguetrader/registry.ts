@@ -303,6 +303,19 @@ const PSYCHIC_DISCIPLINES = {
 
 export const psychicDisciplines = new EntryRegistry(PSYCHIC_DISCIPLINES);
 
+/**
+ * Sorcery ranks (epic 0hap, Edge of the Abyss pp85-86): the Sorcerer talents a
+ * character can hold. Content-as-data like careers/disciplines. The rank sets
+ * the Intelligence-Bonus Psy Rating factor (Sorcerer half, Master full) and
+ * the Table 6-1 "Sorcerers" row (non-sanctioned, push +4).
+ */
+const SORCERY_RANKS = {
+	sorcerer: "SORCERY_RANK.SORCERER",
+	"master-sorcerer": "SORCERY_RANK.MASTER_SORCERER",
+} as const;
+
+export const sorceryRanks = new EntryRegistry(SORCERY_RANKS);
+
 type RogueTraderRegistries = {
 	bodyLocations: EntryRegistry;
 	qualities: EntryRegistry;
@@ -317,6 +330,7 @@ type RogueTraderRegistries = {
 	careers: EntryRegistry;
 	weaponFamilies: EntryRegistry;
 	psychicDisciplines: EntryRegistry;
+	sorceryRanks: EntryRegistry;
 };
 
 /**
@@ -346,4 +360,5 @@ export function attachRegistriesToConfig() {
 	rt.careers = careers;
 	rt.weaponFamilies = weaponFamilies;
 	rt.psychicDisciplines = psychicDisciplines;
+	rt.sorceryRanks = sorceryRanks;
 }

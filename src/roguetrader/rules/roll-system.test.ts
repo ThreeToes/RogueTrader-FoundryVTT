@@ -106,6 +106,7 @@ function fixtureActor(items: unknown[] = []) {
 				ag: { value: 35, unnatural: 1 },
 				per: { value: 30, unnatural: 1 },
 				fel: { value: 30, unnatural: 1 },
+				int: { value: 55, unnatural: 1 },
 				t: { value: 40, unnatural: 1 },
 			},
 			wounds: { value: 0, max: 14 },
@@ -479,6 +480,58 @@ describe("psychic handler wiring", () => {
 			strength: "unfettered",
 			pushLevels: 0,
 		});
+	});
+
+	it("casts as a sorcerer: Intelligence test, Int-Bonus Psy Rating, Corruption carries", async () => {
+		resetSpies();
+		const item = {
+			id: "p1",
+			type: "psychicpower",
+			name: "Warpfire",
+			system: { focusTest: "Willpower", focusTime: "Half Action", subtype: "focus" },
+		};
+		const actor = fixtureActor([item]) as unknown as {
+			system: Record<string, unknown>;
+		};
+		actor.system.psyker = false;
+		actor.system.psyRating = 0;
+		actor.system.sorceryRank = "sorcerer";
+		actor.system.corruption = 42;
+		const prepared = await psychicHandler.prepare({
+			kind: "psychic",
+			actor: actor as never,
+			itemId: "p1",
+			skipDialog: true,
+		});
+		expect(prepared?.testKey).toBe("int");
+		expect(prepared?.kindData).toMatchObject({ mode: "sorcery", corruption: 42 });
+		// Int 55 -> bonus 5 -> Sorcerer half = ceil(2.5) = 3; Focus Power +5/PR.
+		const psy = (
+			(prepared?.initialModifiers as Array<{ id: string; value: number }>) ?? []
+		).find((mod) => mod.id === "psy-rating");
+		expect(psy?.value).toBe(15);
+	});
+
+	it("refuses a Free Action power cast through Sorcery (EA p86)", async () => {
+		resetSpies();
+		const item = {
+			id: "p1",
+			type: "psychicpower",
+			name: "Foreshadow",
+			system: { focusTest: "Willpower", focusTime: "Free Action", subtype: "focus" },
+		};
+		const actor = fixtureActor([item]) as unknown as {
+			system: Record<string, unknown>;
+		};
+		actor.system.sorceryRank = "sorcerer";
+		const prepared = await psychicHandler.prepare({
+			kind: "psychic",
+			actor: actor as never,
+			itemId: "p1",
+			skipDialog: true,
+		});
+		expect(prepared).toBeNull();
+		expect(warnings).toContain("PSYCHIC_POWER.SORCERY_FREE_ACTION");
 	});
 });
 

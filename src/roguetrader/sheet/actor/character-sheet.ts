@@ -10,7 +10,9 @@ import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { postCard } from "../../rules/chat-flags";
 import { derivedRank, totalSpent } from "../../rules/advancement";
-import { careers, equipStates } from "../../registry";
+import { careers, equipStates, sorceryRanks } from "../../registry";
+import { collectSorceryRank } from "../../rules/talent-effects";
+import { effectiveSorceryRank } from "../../rules/casting";
 import { effectiveMechanics, originByKey } from "../../origins";
 import {
 	resolveOriginTraits,
@@ -565,6 +567,8 @@ export class CharacterSheet extends RtActorSheet {
 			!(
 				system.psyker === true ||
 				(system.psyRating ?? 0) >= 1 ||
+				(system.sorceryRank ?? "") !== "" ||
+				collectSorceryRank(this.actor) > 0 ||
 				hasPowers
 			)
 		) {
@@ -741,6 +745,16 @@ export class CharacterSheet extends RtActorSheet {
 		context.isPsyker =
 			system.psyker === true || (system.psyRating ?? 0) >= 1;
 		context.psyRating = system.psyRating ?? 0;
+		// Sorcery (epic 0hap): the rank select + the Table 6-1 sanctioned
+		// toggle. Owned Sorcery talents win; the field is the manual fallback.
+		const sorceryRank = effectiveSorceryRank(
+			collectSorceryRank(this.actor),
+			system.sorceryRank,
+		);
+		context.sorceryRank = sorceryRank;
+		context.hasSorcery = sorceryRank !== "";
+		context.sanctioned = system.sanctioned !== false;
+		context.sorceryRankChoices = { "": "", ...sorceryRanks.choices };
 		const sustained = new Set(
 			(system.sustainedPowers ?? []).map((p) => p.itemUuid),
 		);
@@ -752,6 +766,7 @@ export class CharacterSheet extends RtActorSheet {
 					powerClass?: string;
 					subtype?: string;
 					rating?: number;
+					castAs?: string;
 				};
 				return {
 					id: item.id,
@@ -762,6 +777,9 @@ export class CharacterSheet extends RtActorSheet {
 					subtype: sys.subtype ?? "focus",
 					subtypeLabel: `PSYCHIC_POWER.${(sys.subtype ?? "focus").toUpperCase()}`,
 					rating: sys.rating ?? 0,
+					// Epic 0hap: sorcerous copies (Intelligence test, Int-Bonus PR)
+					// carry a chip so hybrid casters can see the mode at a glance.
+					sorcerous: sys.castAs === "sorcery",
 					// Bead sa6: sustained-powers affordance (book p157 — the
 					// sustain modifiers flow through rules/psychic.ts).
 					sustained: sustained.has(item.uuid),

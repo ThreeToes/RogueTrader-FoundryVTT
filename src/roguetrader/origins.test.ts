@@ -1,18 +1,50 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
+import { parse } from "yaml";
 import {
 	allowedColumns,
 	characteristicDeltas,
 	effectiveMechanics,
 	evaluateOriginDice,
 	fateFromTable,
-	ORIGIN_ENTRIES,
+	getOriginEntries,
 	ORIGIN_ROWS,
 	originByKey,
 	originsInRow,
 	resolveOrigins,
+	setOriginEntries,
 	SUGGESTED_HOME_WORLDS,
 	type CharMod,
+	type OriginEntry,
+	type OriginMechanics,
+	type OriginRow,
+	type OriginVariant,
 } from "./origins";
+
+// Epic 1gb7: the chart content lives in the `origins` compendium pack; load it
+// into the pure module's pool so these logic tests run against the real
+// content (rather than a hand fixture that could drift from the pack).
+const packDocs = parse(
+	readFileSync("src/packs/rogue_trader/origins/origins.yaml", "utf8"),
+) as Array<{ name?: string; system?: Record<string, unknown> }>;
+setOriginEntries(
+	packDocs.map((doc) => {
+		const s = doc.system ?? {};
+		return {
+			key: String(s.key ?? ""),
+			row: String(s.row ?? "home-world") as OriginRow,
+			col: Number(s.col ?? 0),
+			name: doc.name ?? "",
+			description: String(s.description ?? ""),
+			effect: s.effect ? String(s.effect) : undefined,
+			mechanics: (s.mechanics ?? {}) as OriginMechanics,
+			variants: Array.isArray(s.variants)
+				? (s.variants as OriginVariant[])
+				: undefined,
+		} satisfies OriginEntry;
+	}),
+);
+const ORIGIN_ENTRIES = getOriginEntries();
 
 describe("origin path chart (Core Rulebook p16)", () => {
 	test("every row is present with six contiguous columns", () => {

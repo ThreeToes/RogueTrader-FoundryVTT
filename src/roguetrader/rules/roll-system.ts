@@ -1834,7 +1834,7 @@ export async function postPowerDamage(
  * (epic 0hap): Summon Daemon grants 1d10+4 Corruption Points (EA p83). The
  * actor's Corruption total is added to its Phenomena rolls (EA p86) via the
  * casting resolver. Malignancy/mutation thresholds are tracked elsewhere
- * (rules/madness.ts + the afflictions ledger).
+ * (rules/madness.ts over the owned affliction Items).
  */
 async function applyPowerCorruption(
 	actor: Actor,

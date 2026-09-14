@@ -1,183 +1,77 @@
 import { describe, expect, test } from "bun:test";
-import {
-	afflictionKey,
-	indexAfflictionDefs,
-	resolveAfflictionModifiers,
-	resolveCharacteristicChanges,
-	type AfflictionDef,
-} from "./afflictions";
+import { resolveAfflictionGrants, resolveEffectValues } from "./afflictions";
 
-const defs: AfflictionDef[] = [
-	{
-		kind: "malignancy",
-		name: "Skin Afflictions",
-		text: "",
-		effects: [
-			{
-				kind: "test-modifier",
-				testKey: "skill:charm",
-				value: -20,
-				label: "Skin Afflictions",
-			},
-		],
-	},
-	{
-		kind: "mutation",
-		name: "Nightsider",
-		text: "",
-		effects: [
-			{ kind: "test-modifier", value: -10, condition: "brightlight" },
-		],
-	},
-	{
-		// Damage kinds must NOT leak into the test funnel.
-		kind: "mutation",
-		name: "Venomous",
-		text: "",
-		effects: [{ kind: "toxic", value: 1 }],
-	},
-];
-const ledger = [
-	{ kind: "malignancy", name: "Skin Afflictions" },
-	{ kind: "mutation", name: "Nightsider" },
-	{ kind: "mutation", name: "Venomous" },
-];
-
-describe("resolveAfflictionModifiers (bead jy4o)", () => {
-	test("skill-keyed effects match only the named skill test", () => {
-		const hit = resolveAfflictionModifiers(ledger, defs, {
-			kind: "skill",
-			key: "fel",
-			skillName: "Charm",
-		});
-		expect(hit.map((m) => [m.label, m.value])).toEqual([
-			["Skin Afflictions", -20],
-		]);
-		const miss = resolveAfflictionModifiers(ledger, defs, {
-			kind: "skill",
-			key: "fel",
-			skillName: "Intimidate",
-		});
-		expect(miss).toHaveLength(0);
-	});
-
-	test("guarded effects only apply when the context flag is set", () => {
-		const off = resolveAfflictionModifiers(ledger, defs, {
-			kind: "characteristic",
-			key: "ws",
-		});
-		expect(off).toHaveLength(0);
-		const on = resolveAfflictionModifiers(ledger, defs, {
-			kind: "characteristic",
-			key: "ws",
-			flags: { brightlight: true },
-		});
-		expect(on.map((m) => m.value)).toEqual([-10]);
-	});
-
-	test("non-test effect kinds never reach the funnel", () => {
-		const mods = resolveAfflictionModifiers(ledger, defs, {
-			kind: "characteristic",
-			key: "t",
-		});
-		expect(mods).toHaveLength(0);
-	});
-
-	test("unknown ledger entries contribute nothing", () => {
-		expect(
-			resolveAfflictionModifiers([{ kind: "disorder", name: "Phobia" }], defs, {
-				kind: "characteristic",
-				key: "wp",
-			}),
-		).toHaveLength(0);
-	});
-
-	test("ids are sourced by affliction so equal values stay additive", () => {
-		const two: AfflictionDef[] = [
-			{
-				kind: "mutation",
-				name: "A",
-				text: "",
-				effects: [{ kind: "test-modifier", testKey: "s", value: 10 }],
-			},
-			{
-				kind: "mutation",
-				name: "B",
-				text: "",
-				effects: [{ kind: "test-modifier", testKey: "s", value: 10 }],
-			},
-		];
-		const mods = resolveAfflictionModifiers(
+describe("resolveEffectValues (epic nt8k)", () => {
+	test("rolls characteristic-modifier dice once into value", async () => {
+		const resolved = await resolveEffectValues(
 			[
-				{ kind: "mutation", name: "A" },
-				{ kind: "mutation", name: "B" },
+				{ kind: "test-modifier", testKey: "skill:charm", value: -20 },
+				{ kind: "characteristic-modifier", testKey: "ag", dice: "-2d10" },
 			],
-			two,
-			{ kind: "characteristic", key: "s" },
+			async (notation) => (notation === "-2d10" ? -13 : 0),
 		);
-		expect(mods).toHaveLength(2);
-		expect(new Set(mods.map((m) => m.id)).size).toBe(2);
+		expect(resolved).toEqual([
+			{ kind: "test-modifier", testKey: "skill:charm", value: -20 },
+			// dice kept for display; value is the settled (signed) roll.
+			{ kind: "characteristic-modifier", testKey: "ag", dice: "-2d10", value: -13 },
+		]);
 	});
 
-	test("indexAfflictionDefs keys by kind:name", () => {
-		expect(
-			indexAfflictionDefs(defs).get(
-				afflictionKey("malignancy", "Skin Afflictions"),
-			),
-		).toBeDefined();
-	});
-
-	test("stored characteristic changes emit keyed to the characteristic", () => {
-		// Rolled at acquisition and persisted; the funnel only reports them for
-		// tests on the affected characteristic. Works even with no defs (the
-		// value already lives on the ledger).
-		const withDelta = [
-			{
-				kind: "malignancy",
-				name: "Palsy",
-				characteristics: [{ key: "ag", value: -6 }],
-			},
+	test("a row that already carries a value is left untouched", async () => {
+		const rows = [
+			{ kind: "characteristic-modifier", testKey: "s", dice: "-1d10", value: -4 },
 		];
-		expect(
-			resolveAfflictionModifiers(withDelta, [], {
-				kind: "characteristic",
-				key: "ws",
-			}),
-		).toHaveLength(0);
-		const ag = resolveAfflictionModifiers(withDelta, [], {
-			kind: "skill",
-			key: "ag",
-			skillName: "Dodge",
-		});
-		expect(ag.map((m) => [m.label, m.value])).toEqual([["Palsy", -6]]);
+		expect(await resolveEffectValues(rows, async () => -99)).toEqual(rows);
+	});
+
+	test("non-characteristic kinds and plain values are untouched", async () => {
+		const rows = [
+			{ kind: "test-modifier", testKey: "t", value: 10 },
+			{ kind: "characteristic-modifier", testKey: "s", value: 10 },
+			{ kind: "wounds-max", value: 5 },
+		];
+		expect(await resolveEffectValues(rows, async () => 0)).toEqual(rows);
+	});
+
+	test("empty / undefined effect lists are safe", async () => {
+		expect(await resolveEffectValues(undefined, async () => 5)).toEqual([]);
+		expect(await resolveEffectValues([], async () => 5)).toEqual([]);
 	});
 });
 
-describe("resolveCharacteristicChanges (bead xu83)", () => {
-	test("flat values pass through; dice are rolled once via the roller", async () => {
-		const changes = await resolveCharacteristicChanges(
-			[
-				{ kind: "characteristic-modifier", testKey: "s", value: 10 },
-				{ kind: "characteristic-modifier", testKey: "ag", dice: "2d10" },
-				{ kind: "test-modifier", testKey: "skill:charm", value: -20 },
+describe("resolveAfflictionGrants (epic nt8k)", () => {
+	const fear = {
+		name: "Vile Deformity",
+		type: "mutation",
+		system: {
+			effects: [
+				{ kind: "grants-item", testKey: "traits:Fear", label: "1" },
+				{ kind: "wounds-max", value: 5 },
 			],
-			async (notation) => (notation === "2d10" ? 7 : 0),
-		);
-		expect(changes).toEqual([
-			{ key: "s", value: 10 },
-			{ key: "ag", value: 7 },
+		},
+	};
+
+	test("reads pack-qualified grants off owned afflictions", () => {
+		expect(resolveAfflictionGrants([fear])).toEqual([
+			{ pack: "traits", name: "Fear", benefit: "1", source: "Vile Deformity" },
 		]);
 	});
 
-	test("zero/blank changes are dropped", async () => {
+	test("ignores non-affliction items and non-grant kinds", () => {
 		expect(
-			await resolveCharacteristicChanges(
-				[
-					{ kind: "characteristic-modifier", testKey: "", value: 5 },
-					{ kind: "characteristic-modifier", testKey: "t", value: 0 },
-				],
-				async () => 0,
-			),
+			resolveAfflictionGrants([
+				{ name: "Tough Hide", type: "gear", system: fear.system },
+				{ name: "Brute", type: "mutation", system: { effects: [{ kind: "wounds-max", value: 5 }] } },
+			]),
 		).toEqual([]);
+	});
+
+	test("collapses duplicate grants, keeps distinct benefits", () => {
+		const grants = resolveAfflictionGrants([
+			fear,
+			{ ...fear, name: "Nightmarish", system: { effects: [{ kind: "grants-item", testKey: "traits:Fear", label: "3" }] } },
+			{ ...fear, name: "Copy" },
+		]);
+		expect(grants.map((g) => g.benefit)).toEqual(["1", "3"]);
 	});
 });

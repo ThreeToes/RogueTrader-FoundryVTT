@@ -8,7 +8,6 @@ import { RtActorSheet } from "../context";
 import { getPackDocuments } from "../pack-resolve";
 import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
-import { postCard } from "../../rules/chat-flags";
 import { derivedRank, totalSpent } from "../../rules/advancement";
 import { careers, equipStates, sorceryRanks } from "../../registry";
 import { collectSorceryRank } from "../../rules/talent-effects";
@@ -16,13 +15,14 @@ import { effectiveSorceryRank } from "../../rules/casting";
 import { effectiveMechanics, originByKey } from "../../origins";
 import {
 	resolveOriginTraits,
-	traitDefKey,
 } from "../../rules/origin-traits";
 import {
 	corruptionTrack,
+	dueDisorders,
 	insanityTrack,
 	madnessSheetContext,
 	type MadnessPoints,
+	type OwnedAfflictionLike,
 } from "../../rules/madness";
 import type { Modifier } from "../../rules-engine/src/modifier";
 import {
@@ -33,12 +33,9 @@ import {
 } from "../../rules/adapter";
 import { missingSkillGrants } from "../../rules/default-skills";
 import {
-	addAffliction,
-	afflictionLedgerKind,
-	dueDisorders,
-	type AfflictionLedgerEntry,
-} from "../../rules/madness";
-import { resolveCharacteristicChanges } from "../../rules/afflictions";
+	resolveAfflictionGrants,
+	resolveEffectValues,
+} from "../../rules/afflictions";
 import type { EffectData } from "../../data/item/effects";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { deriveCapacity, resolveEncumbrance, carriedWeight } from "../../rules/encumbrance";
@@ -88,6 +85,7 @@ export class CharacterSheet extends RtActorSheet {
 			rollNavigatorPower: CharacterSheet.#onRollNavigatorPower,
 			openCareerSheet: CharacterSheet.#onOpenCareerSheet,
 			claimGrant: CharacterSheet.#onClaimGrant,
+			grantTrait: CharacterSheet.#onGrantTrait,
 			rollTraumaTest: CharacterSheet.#onRollTraumaTest,
 			rollMalignancyTest: CharacterSheet.#onRollMalignancyTest,
 			snapOut: CharacterSheet.#onSnapOut,
@@ -293,6 +291,56 @@ export class CharacterSheet extends RtActorSheet {
 			await new SkillPicker({ actor: this.actor }).render({ force: true });
 		}
 		this.render({ force: true } as never);
+	}
+
+	/**
+	 * Add a trait/talent granted by an owned affliction (epic nt8k): the
+	 * "grants-item" effect names a pack-qualified item ("traits:Fear",
+	 * "talents:Iron Jaw"); the click copies that pack entry onto the actor and
+	 * writes the verbatim benefit/rating into the trait's `benefit` field. The
+	 * pack lookup is the only reason this is async. No-op when that exact
+	 * trait+benefit is already owned.
+	 */
+	static async #onGrantTrait(
+		this: {
+			actor: foundry.documents.Actor;
+			render?: (options?: unknown) => void;
+		},
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const pack = target.dataset.pack;
+		const name = target.dataset.name;
+		if (!pack || !name) return;
+		const benefit = target.dataset.benefit ?? "";
+		const benefitOf = (item: foundry.documents.Item) =>
+			(item.system as unknown as { benefit?: string }).benefit ?? "";
+		if (
+			this.actor.items.some(
+				(item) =>
+					item.type === "trait" &&
+					item.name === name &&
+					benefitOf(item) === benefit,
+			)
+		) {
+			return;
+		}
+		const docs = (await getPackDocuments(
+			`rogue-trader.${pack}`,
+		)) as foundry.documents.Item[];
+		const doc = docs.find((item) => item.name === name);
+		if (!doc) {
+			ui.notifications?.warn(
+				game.i18n!.format("AFFLICTION.GRANT_MISSING", { name }),
+			);
+			return;
+		}
+		const object = doc.toObject() as unknown as {
+			system?: { benefit?: string };
+		};
+		if (benefit && object.system) object.system.benefit = benefit;
+		await this.actor.createEmbeddedDocuments("Item", [object as never]);
+		this.render?.({ force: true });
 	}
 
 	/** Cached madness-pack rows (CONFIG registry, epic 1g2t). */
@@ -597,7 +645,9 @@ export class CharacterSheet extends RtActorSheet {
 	/**
 	 * Drop an external Item onto the inventory to copy it into the actor.
 	 * Drops of uuids already owned are no-ops (reordering comes later).
-	 * Affliction pack items (bead rdh1) become LEDGER entries, not copies.
+	 * Afflictions (disorders/malignancies/mutations) are ordinary owned Items
+	 * (epic nt8k): acquisition-time dice are settled on the copy itself, not on
+	 * a separate ledger.
 	 */
 	protected async _onDrop(event: DragEvent): Promise<unknown> {
 		const data = foundry.applications.ux.TextEditor.getDragEventData(event) as {
@@ -607,14 +657,10 @@ export class CharacterSheet extends RtActorSheet {
 		if (data.type !== "Item" || !data.uuid) return;
 		const source = await foundry.utils.fromUuid(data.uuid);
 		if (!(source instanceof foundry.documents.Item)) return;
-		const afflictionKind = afflictionLedgerKind(
-			source.system as unknown as { kind?: string; tableKey?: string },
-		);
-		if (afflictionKind) {
-			return dropAffliction(this.actor, afflictionKind, source);
-		}
 		if (this.actor.items.find((item) => item.uuid === source.uuid)) return;
-		return this.actor.createEmbeddedDocuments("Item", [source.toObject()]);
+		return this.actor.createEmbeddedDocuments("Item", [
+			(await prepareDroppedItem(this.actor, source)) as never,
+		]);
 	}
 
 	/**
@@ -1044,6 +1090,19 @@ export class CharacterSheet extends RtActorSheet {
 				traitResolution.grants.length +
 				traitResolution.notes.length >
 			0;
+		// Affliction grants (epic nt8k): traits/talents named by owned
+		// disorders/malignancies/mutations ("traits:Fear", "talents:Iron Jaw").
+		// The chip copies the pack item on click; nothing is auto-granted.
+		context.afflictionGrants = resolveAfflictionGrants(
+			this.actor.items.map((item) => ({
+				name: item.name ?? "",
+				type: item.type,
+				system: item.system as never,
+			})),
+		).map((grant) => ({
+			...grant,
+			label: grant.benefit ? `${grant.name} ${grant.benefit}` : grant.name,
+		}));
 
 		// Career link: the compendium career item behind the actor's careerKey,
 		// opened via openCareerSheet for the full crunch tables. Diagnostic log
@@ -1097,6 +1156,11 @@ export class CharacterSheet extends RtActorSheet {
 			madnessSheetContext(
 				CharacterSheet.#madnessRows() as never,
 				system as unknown as MadnessPoints,
+				this.actor.items.map((item) => ({
+					name: item.name ?? "",
+					type: item.type,
+					system: item.system as unknown as OwnedAfflictionLike["system"],
+				})),
 				this.actor as unknown as never,
 			),
 		);
@@ -1116,55 +1180,57 @@ export class CharacterSheet extends RtActorSheet {
 }
 
 /**
- * Convert a dropped affliction pack item into a ledger entry (bead rdh1).
- * Module-level to keep it off the class body. Disorder severity: the first
- * due threshold (40 Minor / 60 Severe / 80 Acute) when one is owed, else
- * blank for the GM to set; the pack's severity field lists eligible
- * severities, not the gained one.
+ * Clone a dropped Item for embedding, settling acquisition-time state on the
+ * copy (epic nt8k). Two affliction-specific steps:
+ * - characteristic changes are rolled ONCE here and written onto the effect
+ *   row, so later tests see a stable number (dice are signed: "-1d10" reduces);
+ * - an acquired Disorder records the severity it was gained at, which is what
+ *   `dueDisorders` reads to stop re-prompting that threshold.
+ * Module-level to keep it off the class body.
  */
-async function dropAffliction(
+async function prepareDroppedItem(
 	actor: foundry.documents.Actor,
-	kind: "disorder" | "malignancy" | "mutation",
 	source: foundry.documents.Item,
-): Promise<unknown> {
-	const system = actor.system as unknown as {
-		afflictions?: AfflictionLedgerEntry[];
-		insanity?: number;
+): Promise<Record<string, unknown>> {
+	const object = source.toObject() as unknown as {
+		system?: {
+			kind?: string;
+			effects?: EffectData[];
+			acquiredSeverity?: string;
+		};
 	};
-	const ledger = system.afflictions ?? [];
-	let severity = "";
-	if (kind === "disorder") {
-		const due = dueDisorders(system.insanity ?? 0, ledger);
-		severity = due[0]?.severity ?? "";
+	const system = object.system;
+	if (!system) return object as unknown as Record<string, unknown>;
+	if (
+		system.effects?.some(
+			(effect) =>
+				effect.kind === "characteristic-modifier" && effect.dice && !effect.value,
+		)
+	) {
+		system.effects = await resolveEffectValues(
+			system.effects,
+			async (notation) => {
+				const die = new foundry.dice.Roll(notation);
+				await die.evaluate();
+				return die.total ?? 0;
+			},
+		);
 	}
-	const characteristics = await resolveCharacteristicChanges(
-		(source.system as unknown as { effects?: EffectData[] }).effects,
-		async (notation) => {
-			const die = new foundry.dice.Roll(notation);
-			await die.evaluate();
-			return die.total ?? 0;
-		},
-	);
-	const entry = addAffliction(ledger, {
-		kind,
-		name: source.name ?? "",
-		severity,
-		text:
-			(source.system as unknown as { description?: string }).description ??
-			"",
-		// Characteristic changes (flat + dice) resolved NOW: dice are rolled
-		// once here, per the book, and persisted so every later test sees a
-		// stable number (bead xu83). The funnel's "afflictions" contributor
-		// emits them as modifiers keyed to the affected characteristic.
-		...(characteristics.length > 0 ? { characteristics } : {}),
-	});
-	if (entry === ledger) return null; // already suffered
-	await actor.update({
-		"system.afflictions": entry,
-	} as unknown as never);
-	await postCard(actor, "systems/rogue-trader/template/chat/fear-shock.hbs", {
-		title: source.name ?? "",
-		shockText: game.i18n!.localize("AFFLICTION.ADDED"),
-	});
-	return null;
+	if (source.type === "madnessentry" && system.kind === "disorder") {
+		const character = actor.system as unknown as { insanity?: number };
+		const held = actor.items
+			.filter(
+				(item) =>
+					item.type === "madnessentry" &&
+					(item.system as unknown as { kind?: string }).kind === "disorder",
+			)
+			.map((item) => ({
+				severity:
+					(item.system as unknown as { acquiredSeverity?: string })
+						.acquiredSeverity ?? "",
+			}));
+		system.acquiredSeverity =
+			dueDisorders(character.insanity ?? 0, held)[0]?.severity ?? "";
+	}
+	return object as unknown as Record<string, unknown>;
 }

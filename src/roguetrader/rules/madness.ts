@@ -11,8 +11,10 @@
  *   band; Malignancy Test (p299) every +10 CP; mutation test (two different
  *   characteristics) every +30 CP.
  *
- * Acquired afflictions (disorders/malignancies/mutations) persist on the
- * actor ledger (audit trail like the g7k advances).
+ * Acquired afflictions (disorders/malignancies/mutations) are OWNED ITEMS
+ * (epic nt8k): their effects feed the item-effects funnel and the derived
+ * handlers directly, and the Background tab groups them by kind. `dueDisorders`
+ * reads the owned disorder items' gained severity, not a separate ledger.
  */
 
 export interface TrackRowLike {
@@ -69,22 +71,26 @@ export const DISORDER_THRESHOLDS = [
 	{ at: 80, severity: "Acute" },
 ] as const;
 
+/** A disorder already held at a severity (from an owned disorder Item). */
+export interface HeldDisorderLike {
+	severity?: string;
+}
+
 /**
- * Disorder grants due at a given insanity total, NOT yet in the ledger.
- * A character must hold the preceding severity for a disorder to worsen
- * ("The Flesh is Weak" has no Minor version — GM adjudication, noted).
+ * Disorder grants due at a given insanity total, NOT yet held. Each acquired
+ * disorder stores the severity it was gained at (MadnessEntry.acquiredSeverity),
+ * so a Minor/Severe/Acute disorder suppresses its own threshold. A character
+ * must hold the preceding severity for a disorder to worsen ("The Flesh is
+ * Weak" has no Minor version — GM adjudication, noted).
  */
 export function dueDisorders(
 	insanityPoints: number,
-	ledger: AfflictionLedgerEntry[],
+	held: HeldDisorderLike[] = [],
 ): Array<{ at: number; severity: string }> {
 	return DISORDER_THRESHOLDS.filter(
 		(band) =>
 			insanityPoints >= band.at &&
-			!ledger.some(
-				(entry) =>
-					entry.kind === "disorder" && entry.name.startsWith(band.severity),
-			),
+			!held.some((entry) => entry.severity === band.severity),
 	).map((band) => ({ ...band }));
 }
 
@@ -127,35 +133,32 @@ import {
 	snapOutReady,
 } from "./conditions";
 
-/**
- * Which ledger kind a dropped pack item maps to (bead rdh1), or null when
- * the drop is an ordinary item copy: madness-pack disorders/malignancies
- * carry system.kind; mutation-pack rows carry tableKey "mutations".
- */
-export function afflictionLedgerKind(source: {
-	kind?: string;
-	tableKey?: string;
-}): AfflictionKind | null {
-	if (source.kind === "disorder" || source.kind === "malignancy") {
-		return source.kind;
-	}
-	if (source.tableKey === "mutations" || source.kind === "mutation") {
-		return "mutation";
-	}
-	return null;
+export type AfflictionKind = "disorder" | "malignancy" | "mutation";
+
+/** Minimal shape of an owned affliction Item (mutation / madnessentry). */
+export interface OwnedAfflictionLike {
+	name?: string;
+	type?: string;
+	system?: {
+		kind?: string;
+		description?: string;
+		shortDescription?: string;
+		/** Severity an acquired disorder was gained at (drop-time resolution). */
+		acquiredSeverity?: string;
+	};
 }
 
-// ---------------------------------------------------------------- Ledger
+// ---------------------------------------------------------------- Sheet
 
 /**
  * Sheet context for the madness tracks + carried conditions (beads 1g2t +
- * q1ql): shared by the background and combat tabs. PURE — takes the cached
- * pack rows and a structural actor; the sheet just spreads the result.
+ * q1ql, epic nt8k): shared by the background and combat tabs. PURE — takes
+ * the cached pack rows, the track totals, the OWNED affliction Items, and a
+ * structural actor; the sheet just spreads the result.
  */
 export interface MadnessPoints {
 	insanity?: number;
 	corruption?: number;
-	afflictions?: unknown;
 }
 
 interface ConditionsActorLike {
@@ -170,6 +173,7 @@ interface ConditionsActorLike {
 export function madnessSheetContext(
 	rows: TrackRowLike[],
 	system: MadnessPoints,
+	afflictions: OwnedAfflictionLike[],
 	actor: ConditionsActorLike,
 ): {
 	madness: {
@@ -182,7 +186,6 @@ export function madnessSheetContext(
 		nextDisorder: number | null;
 		nextMutation: number | null;
 		dueDisorders: Array<{ at: number; severity: string }>;
-		afflictions: AfflictionLedgerEntry[];
 		afflictionGroups: Array<{
 			label: string;
 			entries: Array<{ name: string; severity: string; text: string }>;
@@ -192,17 +195,21 @@ export function madnessSheetContext(
 } {
 	const insanity = insanityTrack(rows, system.insanity ?? 0);
 	const corr = corruptionTrack(rows, system.corruption ?? 0);
-	const ledger = (system.afflictions ?? []) as AfflictionLedgerEntry[];
-	const byKind = (kind: AfflictionKind, label: string) => ({
+	const owned = afflictions ?? [];
+	const ofType = (type: string, kind?: string) =>
+		owned.filter(
+			(item) =>
+				item.type === type && (kind === undefined || item.system?.kind === kind),
+		);
+	const groupOf = (label: string, items: OwnedAfflictionLike[]) => ({
 		label,
-		entries: ledger
-			.filter((entry) => entry.kind === kind)
-			.map((entry) => ({
-				name: entry.name,
-				severity: entry.severity ?? "",
-				text: entry.text,
-			})),
+		entries: items.map((item) => ({
+			name: item.name ?? "",
+			severity: item.system?.acquiredSeverity ?? "",
+			text: item.system?.description ?? item.system?.shortDescription ?? "",
+		})),
 	});
+	const disorders = ofType("madnessentry", "disorder");
 	return {
 		madness: {
 			insanityPoints: system.insanity ?? 0,
@@ -213,12 +220,16 @@ export function madnessSheetContext(
 			corruptionModifier: corr.modifier,
 			nextDisorder: nextDisorderThreshold(system.insanity ?? 0),
 			nextMutation: nextMutationThreshold(system.corruption ?? 0),
-			dueDisorders: dueDisorders(system.insanity ?? 0, ledger),
-			afflictions: ledger,
+			dueDisorders: dueDisorders(
+				system.insanity ?? 0,
+				disorders.map((item) => ({
+					severity: item.system?.acquiredSeverity ?? "",
+				})),
+			),
 			afflictionGroups: [
-				byKind("disorder", "AFFLICTION.DISORDER"),
-				byKind("malignancy", "AFFLICTION.MALIGNANCY"),
-				byKind("mutation", "AFFLICTION.MUTATION"),
+				groupOf("AFFLICTION.DISORDER", disorders),
+				groupOf("AFFLICTION.MALIGNANCY", ofType("madnessentry", "malignancy")),
+				groupOf("AFFLICTION.MUTATION", ofType("mutation")),
 			],
 		},
 		// Transient conditions (bead q1ql): the combat tab shows the snap-out
@@ -228,36 +239,4 @@ export function madnessSheetContext(
 			carried: carriedConditions(actor).map((c) => c.name),
 		},
 	};
-}
-
-export type AfflictionKind = "disorder" | "malignancy" | "mutation";
-
-/** One acquired affliction (actor ledger, g7k audit-trail pattern). */
-export interface AfflictionLedgerEntry {
-	kind: AfflictionKind;
-	/** Row name ("Palsy", "Minor Disorder (Phobia)"...). */
-	name: string;
-	/** Severity when relevant (disorders). */
-	severity?: string;
-	/** Verbatim book text. */
-	text: string;
-	/** Characteristic changes, resolved when acquired (dice rolled once). */
-	characteristics?: Array<{ key: string; value: number }>;
-}
-
-export interface AfflictionsLike {
-	afflictions?: AfflictionLedgerEntry[];
-}
-
-/** Append without duplication (same kind + name = already suffered). */
-export function addAffliction(
-	existing: AfflictionLedgerEntry[],
-	entry: AfflictionLedgerEntry,
-): AfflictionLedgerEntry[] {
-	if (
-		existing.some((e) => e.kind === entry.kind && e.name === entry.name)
-	) {
-		return existing;
-	}
-	return [...existing, entry];
 }

@@ -15,6 +15,8 @@ export class MadnessEntry extends Gear {
 	declare degree: string;
 	declare modifier: number;
 	declare severity: string;
+	/** Severity a GAINED disorder was acquired at (resolved at drop; epic nt8k). */
+	declare acquiredSeverity: string;
 
 	static override defineSchema() {
 		return {
@@ -43,6 +45,12 @@ export class MadnessEntry extends Gear {
 			}),
 			/** Disorder severity (minor | severe | acute | severe-acute). */
 			severity: new foundry.data.fields.StringField({ initial: "" }),
+			/**
+			 * Severity this copy was GAINED at (Minor/Severe/Acute), resolved from
+			 * the insanity track when the disorder was added (epic nt8k). Blank on
+			 * the pack templates, whose `severity` lists the eligible severities.
+			 */
+			acquiredSeverity: new foundry.data.fields.StringField({ initial: "" }),
 		};
 	}
 }

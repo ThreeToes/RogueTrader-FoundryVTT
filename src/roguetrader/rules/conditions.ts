@@ -9,7 +9,7 @@
  *   markers) carried as ActiveEffects with `statuses: [id]` and a
  *   `system.testModifier` change so the EXISTING funnel "effect"
  *   contributor applies the test penalty with a visible breakdown;
- * - permanent afflictions = owned items (bead rdh1);
+ * - permanent afflictions = owned items (disorders/malignancies/mutations, epic nt8k);
  * - derived ranks = render-time computation (bead 4lhz).
  *
  * Book cites (verbatim rows in lang FEAR.SHOCK_*):

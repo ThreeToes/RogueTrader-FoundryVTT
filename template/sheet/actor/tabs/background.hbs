@@ -105,6 +105,17 @@
                 {{/each}}
                 {{/if}}
                 {{/each}}
+                {{!-- Trait/talent grants from owned afflictions (epic nt8k):
+                     click to copy the named pack item onto the character. --}}
+                {{#if afflictionGrants.length}}
+                <span class="origin-label" data-tooltip="{{localize "AFFLICTION.GRANT_HINT"}}">
+                    {{localize "AFFLICTION.GRANTS"}}:</span>
+                {{#each afflictionGrants as |g|}}
+                <a class="chip origin-note grant-ack" data-action="grantTrait" data-pack="{{g.pack}}"
+                    data-name="{{g.name}}" data-benefit="{{g.benefit}}"
+                    data-tooltip="{{localize "AFFLICTION.GRANT_ADD"}} {{g.label}}">{{g.label}}</a>
+                {{/each}}
+                {{/if}}
                 <span class="origin-label" data-tooltip="{{localize "AFFLICTION.IMPORT_HINT"}}">
                     {{localize "AFFLICTION.IMPORT"}}</span>
             </div>

@@ -74,6 +74,9 @@ const EFFECT_KIND_LABEL_KEYS: Record<string, string> = {
 	"critical-damage": "EFFECT_KIND.CRITICAL_DAMAGE",
 	"tb-multiplier": "EFFECT_KIND.TB_MULTIPLIER",
 	"damage-reduction": "EFFECT_KIND.DAMAGE_REDUCTION",
+	// Affliction kinds (epic nt8k): characteristic deltas + item grants.
+	"characteristic-modifier": "EFFECT_KIND.CHARACTERISTIC_MODIFIER",
+	"grants-item": "EFFECT_KIND.GRANTS_ITEM",
 };
 
 /**
@@ -86,7 +89,14 @@ export function effectEditorChoices(localize: (key: string) => string): {
 	testKeyChoices: Record<string, string>;
 } {
 	const kindChoices: Record<string, string> = {};
-	for (const kind of ["test-modifier", ...talentEffectHandlers.kinds()]) {
+	// Offer every kind a handler or a label knows about (a label-key-only kind,
+	// e.g. characteristic-modifier / grants-item, is editable too).
+	const knownKinds = [
+		"test-modifier",
+		...talentEffectHandlers.kinds(),
+		...Object.keys(EFFECT_KIND_LABEL_KEYS),
+	];
+	for (const kind of [...new Set(knownKinds)]) {
 		const labelKey = EFFECT_KIND_LABEL_KEYS[kind];
 		kindChoices[kind] = labelKey ? localize(labelKey) : kind;
 	}

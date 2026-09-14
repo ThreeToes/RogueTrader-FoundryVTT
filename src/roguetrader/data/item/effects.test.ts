@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	blankEffect,
 	corruptionExpressions,
+	effectsAreLive,
 	withAddedEffect,
 	withoutEffectAt,
 	type EffectData,
@@ -61,5 +62,18 @@ describe("effect list helpers (sheets' add/remove controls)", () => {
 				corruptionExpressions([{ kind: "corruption", dice: "  " }]),
 			).toEqual([]);
 		});
+	});
+});
+
+describe("effectsAreLive (epic nt8k)", () => {
+	test("afflictions are innate: owned means live, no equip state", () => {
+		expect(effectsAreLive("mutation", undefined)).toBe(true);
+		expect(effectsAreLive("madnessentry", undefined)).toBe(true);
+		expect(effectsAreLive("madnessentry", "stowed")).toBe(true);
+	});
+
+	test("physical items still require their equip state", () => {
+		expect(effectsAreLive("gear", "stowed")).toBe(false);
+		expect(effectsAreLive("gear", "carried")).toBe(true);
 	});
 });

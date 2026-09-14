@@ -83,10 +83,14 @@ export function effectsAreLive(
 	// is per-technique, but owned power effects are always "known").
 	// Rulebook traits (bead 25ii) are likewise INNATE — no equip state, the
 	// actor always has them; their effect rows feed the funnel (bead zyv1).
+	// Afflictions (bead nt8k) are permanent innate conditions carried as
+	// owned Items, so their effects are live the moment they are owned.
 	if (
 		itemType === "talent" ||
 		itemType === "psychicpower" ||
-		itemType === "trait"
+		itemType === "trait" ||
+		itemType === "mutation" ||
+		itemType === "madnessentry"
 	)
 		return true;
 	const states = itemType ? EQUIP_STATES_FOR_EFFECTS[itemType] : undefined;

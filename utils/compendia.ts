@@ -64,6 +64,11 @@ const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
 	"origin-traits": "origintrait",
 	// Heirloom grant templates (Table 1-2, epic 1gb7 follow-up).
 	heirlooms: "heirloom",
+	// Insanity/corruption content (epic 1g2t) + the mutations tables: typed
+	// rows with kind/tableKey/roll fields. Without these the builder falls back
+	// to "gear" and Foundry's TypeDataModel silently drops those fields.
+	madness: "madnessentry",
+	mutations: "mutation",
 };
 
 /** Work out the real item type for an authored entry. */

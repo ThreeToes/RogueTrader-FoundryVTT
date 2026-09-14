@@ -1,160 +1,96 @@
 /**
- * Affliction mechanical effects (bead jy4o) — pure, Foundry-free.
+ * Affliction helpers (epic nt8k) — pure, Foundry-free.
  *
- * Acquired afflictions live on the actor LEDGER (system.afflictions:
- * kind/name/severity/text — the audit trail). Their mechanical payload lives
- * on the SOURCE pack entry (madness disorders/malignancies + the mutations
- * table, epic 1g2t) as `effects` rows. This module resolves a ledger entry to
- * its pack def by (kind, name) and turns the def's test-modifier effects into
- * funnel `Modifier`s, so content stays in the packs and no name->modifier
- * table lives in code.
+ * Afflictions (disorders, malignancies, mutations) are OWNED ITEMS, so their
+ * `effects` rows reach the normal item-effects funnel (rules/funnel.ts) and
+ * the derived/talent-effect handlers (wounds-max, ...) directly. There is no
+ * separate ledger or ledger-to-funnel resolver any more.
  *
- * Characteristic-CHANGE effects (e.g. "-1d10 Agility") and trait/gear grants
- * are NOT test modifiers — they need their own machinery (follow-up bead);
- * their verbatim text stays on the ledger entry, so nothing is silent.
+ * The one acquisition-time step left is characteristic CHANGES: the book
+ * prints them as dice ("reduce its Agility by 1d10"), rolled ONCE when the
+ * affliction is acquired and never again. The caller rolls (Foundry) and this
+ * pure helper folds the result back into the item's effect row as a settled
+ * `value`, so every later test sees a stable number rather than a new roll.
  *
- * The mapping mirrors the funnel's "item-effects" contributor: kind
- * "test-modifier" (or "attack-modifier" on attack tests), testKey "" =
- * wildcard / "skill:<name>" = a named skill test / a characteristic key, and
- * an optional `condition` gate on a context flag. Pure; the funnel
- * contributor passes the cached defs (CONFIG.ROGUE_TRADER.afflictions).
+ * Dice expressions are SIGNED: a reduction is authored "-1d10" so the rolled
+ * total is already negative. (The first pass of this effect authored a plain
+ * "1d10" and therefore ADDED, the opposite of the book — do not regress.)
  */
 
-import type { Modifier } from "../../rules-engine/src/modifier";
 import type { EffectData } from "../data/item/effects";
 
-export type AfflictionKind = "disorder" | "malignancy" | "mutation";
-
-/** One pack-authored affliction; the ledger matches it by (kind, name). */
-export interface AfflictionDef {
-	kind: AfflictionKind;
-	name: string;
-	/** Effect rows authored on the pack entry. */
-	effects: EffectData[];
-	/** Verbatim book text (sheet/audit; never dropped). */
-	text: string;
-}
-
-/** Minimal ledger shapes (Character.system.afflictions entries). */
-export interface AfflictionEntryLike {
-	kind?: string;
+/** Minimal shape of an owned affliction Item (for grant resolution). */
+export interface GrantSourceLike {
 	name?: string;
-	/** Characteristic changes resolved at acquisition (dice already rolled). */
-	characteristics?: Array<{ key?: string; value?: number }>;
+	type?: string;
+	system?: { effects?: EffectData[] };
 }
 
-/** Minimal test context the funnel passes contributors. */
-export interface AfflictionTestContext {
-	kind: string;
-	key: string;
-	skillName?: string;
-	flags?: Record<string, boolean>;
-}
-
-/** Lookup key for a def/ledger entry. */
-export function afflictionKey(kind: string, name: string): string {
-	return `${kind}:${name}`;
-}
-
-/** Index defs by `${kind}:${name}` for O(1) ledger resolution. */
-export function indexAfflictionDefs(
-	defs: AfflictionDef[],
-): Map<string, AfflictionDef> {
-	return new Map(defs.map((def) => [afflictionKey(def.kind, def.name), def]));
-}
-
-/** Whether a test-modifier effect applies to the context's test. */
-function effectApplies(
-	effect: EffectData,
-	context: AfflictionTestContext,
-): boolean {
-	const kind = effect.kind;
-	const isTestModifier =
-		kind === undefined || kind === "" || kind === "test-modifier";
-	const isAttackModifier = kind === "attack-modifier" && context.kind === "attack";
-	if (!isTestModifier && !isAttackModifier) return false;
-	const key = effect.testKey;
-	if (key?.startsWith("skill:")) {
-		return (
-			context.skillName?.toLowerCase() ===
-			key.slice("skill:".length).toLowerCase()
-		);
-	}
-	if (key !== "" && key !== undefined && key !== context.key) return false;
-	if (effect.condition && !context.flags?.[effect.condition]) return false;
-	return true;
+/** One trait/talent/skill grant carried by an owned affliction. */
+export interface ResolvedGrant {
+	/** Target compendium pack: "traits" | "talents" | "skills". */
+	pack: string;
+	/** Item name within that pack. */
+	name: string;
+	/** Verbatim benefit/rating for a trait ("1", "S×2", "ABx2"); may be "". */
+	benefit: string;
+	/** Owning affliction's name (chip prefix / tooltip). */
+	source: string;
 }
 
 /**
- * Resolve an affliction's `characteristic-modifier` effects into concrete
- * deltas for a ledger entry. Dice (`1d10`, `2d10`, `1d5`) are rolled ONCE here
- * (at acquisition, per the book) via the caller's roller, then persisted on the
- * ledger — later tests must see a stable number, never a fresh roll. Async so
- * the Foundry roller can be awaited; pure (no Foundry import).
+ * Item grants carried by owned afflictions (epic nt8k): effects with kind
+ * "grants-item" name a target in `testKey` as "<pack>:<item name>" — mirroring
+ * the funnel's "skill:<name>" convention — with the verbatim benefit/rating in
+ * `label`. Pure; the sheet renders one chip per grant and the click handler
+ * resolves the named pack. Duplicates (same pack+name+benefit) collapse so a
+ * trait granted by two mutations does not double-chip.
  */
-export async function resolveCharacteristicChanges(
-	effects: EffectData[] | undefined,
-	roll: (notation: string) => Promise<number>,
-): Promise<Array<{ key: string; value: number }>> {
-	const out: Array<{ key: string; value: number }> = [];
-	for (const effect of effects ?? []) {
-		if (effect.kind !== "characteristic-modifier") continue;
-		const key = (effect.testKey ?? "").trim();
-		if (!key) continue;
-		const value = effect.dice ? await roll(effect.dice) : Number(effect.value ?? 0);
-		if (!Number.isFinite(value) || value === 0) continue;
-		out.push({ key, value });
+export function resolveAfflictionGrants(
+	items: GrantSourceLike[] | undefined,
+): ResolvedGrant[] {
+	const seen = new Set<string>();
+	const out: ResolvedGrant[] = [];
+	for (const item of items ?? []) {
+		if (item.type !== "mutation" && item.type !== "madnessentry") continue;
+		for (const effect of item.system?.effects ?? []) {
+			if (effect.kind !== "grants-item") continue;
+			const target = (effect.testKey ?? "").trim();
+			const [pack, ...rest] = target.split(":");
+			const name = rest.join(":").trim();
+			if (!pack || !name) continue;
+			const benefit = (effect.label ?? "").trim();
+			const key = `${pack}:${name}:${benefit}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			out.push({ pack, name, benefit, source: item.name ?? "" });
+		}
 	}
 	return out;
 }
 
 /**
- * Test modifiers contributed by the actor's affliction ledger:
- * - `test-modifier` / `attack-modifier` effects authored on the pack entry
- *   (resolved by (kind, name));
- * - resolved CHARACTERISTIC changes stored on the ledger entry, emitted when
- *   the test's characteristic key matches, so a -10 Weapon Skill shows in
- *   every WS test/skill/attack breakdown.
- * Ids are stable and sourced by affliction, so two afflictions contributing
- * the same value stay additive (the item-effects dedupe lesson). Unknown
- * ledger entries contribute nothing.
+ * Effects with `characteristic-modifier` dice resolved into `value`. Pure: the
+ * roller is injected. Rows that already carry a value are left untouched, and
+ * the `dice` expression is kept for display ("Agility -1d10"); `value` shows
+ * the settled roll. Order is preserved.
  */
-export function resolveAfflictionModifiers(
-	ledger: AfflictionEntryLike[] | undefined,
-	defs: AfflictionDef[],
-	context: AfflictionTestContext,
-): Modifier[] {
-	if (!ledger || ledger.length === 0) return [];
-	const byKey = indexAfflictionDefs(defs);
-	const mods: Modifier[] = [];
-	for (const entry of ledger) {
-		if (entry.kind && entry.name) {
-			const def = byKey.get(afflictionKey(entry.kind, entry.name));
-			for (const effect of def?.effects ?? []) {
-				if (!effectApplies(effect, context)) continue;
-				const value = Number(effect.value);
-				if (!Number.isFinite(value) || value === 0) continue;
-				mods.push({
-					id: `affliction:${def?.kind}:${def?.name}:${effect.testKey || "any"}:${effect.label ?? ""}:${effect.condition || "any"}`,
-					source: { type: "item", label: "SOURCE.FROM_AFFLICTIONS" },
-					label: effect.label || def?.name || "",
-					value,
-					...(effect.condition ? { condition: effect.condition } : {}),
-				});
-			}
+export async function resolveEffectValues(
+	effects: EffectData[] | undefined,
+	roll: (notation: string) => Promise<number>,
+): Promise<EffectData[]> {
+	const out: EffectData[] = [];
+	for (const effect of effects ?? []) {
+		if (
+			effect.kind !== "characteristic-modifier" ||
+			!effect.dice ||
+			effect.value
+		) {
+			out.push(effect);
+			continue;
 		}
-		for (const delta of entry.characteristics ?? []) {
-			const key = delta.key ?? "";
-			const value = Number(delta.value ?? 0);
-			if (!key || !Number.isFinite(value) || value === 0) continue;
-			if (key !== context.key) continue;
-			mods.push({
-				id: `affliction:characteristic:${entry.kind ?? ""}:${entry.name ?? ""}:${key}`,
-				source: { type: "item", label: "SOURCE.FROM_AFFLICTIONS" },
-				label: entry.name ?? "",
-				value,
-			});
-		}
+		const rolled = await roll(effect.dice);
+		out.push(Number.isFinite(rolled) ? { ...effect, value: rolled } : effect);
 	}
-	return mods;
+	return out;
 }

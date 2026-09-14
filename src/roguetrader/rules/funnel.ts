@@ -9,11 +9,6 @@ import {
 	traitModifierId,
 	type OriginTraitDef,
 } from "./origin-traits";
-import {
-	resolveAfflictionModifiers,
-	type AfflictionDef,
-	type AfflictionEntryLike,
-} from "./afflictions";
 
 /**
  * Modifier funnel: the single collection point between the system's data and
@@ -326,6 +321,10 @@ const SOURCE_LABELS: Record<string, string> = {
 	// Rulebook traits (Ch XIV) are innate items; their test-side effect rows
 	// flow through the same contributor (bead zyv1).
 	trait: "SOURCE.FROM_TRAITS",
+	// Afflictions as owned Items (epic nt8k): mutations and the madness-pack
+	// disorders/malignancies are innate, so their rows feed the funnel here.
+	mutation: "SOURCE.FROM_MUTATIONS",
+	madnessentry: "SOURCE.FROM_AFFLICTIONS",
 	armour: "SOURCE.FROM_ARMOUR",
 	gear: "SOURCE.FROM_GEAR",
 	"melee-weapon": "SOURCE.FROM_WEAPONS",
@@ -344,16 +343,26 @@ testContributors.register("item-effects", (actor, context) => {
 			// the damage pipeline (collectTalentDamageEffects) and other kinds
 			// to their registered handlers (rules/talent-effects.ts).
 			const kind = (effect as { kind?: string }).kind;
-			const isTestModifier = kind === undefined || kind === "" || kind === "test-modifier";
+			const isTestModifier =
+				kind === undefined || kind === "" || kind === "test-modifier";
 			const isAttackModifier =
 				kind === "attack-modifier" && context.kind === "attack";
-			if (!isTestModifier && !isAttackModifier) continue;
+			// Characteristic changes (bead nt8k): a delta to a characteristic
+			// applies to every test on it (characteristic, skill, or attack). The
+			// value is a settled number — dice were rolled once at acquisition
+			// and persisted on the item (see rules/afflictions).
+			const isCharacteristicModifier = kind === "characteristic-modifier";
+			if (!isTestModifier && !isAttackModifier && !isCharacteristicModifier) {
+				continue;
+			}
 			const key = effect.testKey;
-			// "skill:<name>" test keys (bead r1k) match the SKILL test's item
-			// name (lowercased), not the characteristic — gear/drug/tool
-			// bonuses like "Medikit: +20 Medicae Tests" must not hit every
-			// Int-characteristic test.
-			if (key?.startsWith("skill:")) {
+			if (isCharacteristicModifier) {
+				if (!key || key !== context.key) continue;
+			} else if (key?.startsWith("skill:")) {
+				// "skill:<name>" test keys (bead r1k) match the SKILL test's item
+				// name (lowercased), not the characteristic — gear/drug/tool
+				// bonuses like "Medikit: +20 Medicae Tests" must not hit every
+				// Int-characteristic test.
 				if (
 					context.skillName?.toLowerCase() !==
 					key.slice("skill:".length).toLowerCase()
@@ -379,8 +388,13 @@ testContributors.register("item-effects", (actor, context) => {
 			// triples and every one of them is additive (bug report: only the
 			// first showed). Dedupe must only collapse the SAME source's
 			// re-collected rows across the dialog round-trip.
+			const keyPart = isAttackModifier
+				? "attack"
+				: isCharacteristicModifier
+					? `char:${key}`
+					: key || "any";
 			mods.push({
-				id: `${idPrefix}:${item.name ?? ""}:${kind === "attack-modifier" ? "attack" : key || "any"}:${effect.label ?? ""}:${condition || "any"}`,
+				id: `${idPrefix}:${item.name ?? ""}:${keyPart}:${effect.label ?? ""}:${condition || "any"}`,
 				source: {
 					type: isTalent ? "talent" : "item",
 					label: SOURCE_LABELS[type] ?? "SOURCE.FROM_GEAR",
@@ -396,28 +410,8 @@ testContributors.register("item-effects", (actor, context) => {
 	return mods;
 });
 
-// ---------------------------------------------------------------------------
-// Built-in contributor: affliction ledger (bead jy4o). Acquired disorders,
-// malignancies and mutations live on Character.system.afflictions (kind/name/
-// text); their test-modifier effects are authored on the source pack entries
-// (madness + mutations) and cached at ready (CONFIG.ROGUE_TRADER.afflictions
-// .getDefs). Resolved by (kind, name) so unknown entries never contribute and
-// never crash. Pure resolution lives in rules/afflictions.ts.
-// ---------------------------------------------------------------------------
-testContributors.register("afflictions", (actor, context) => {
-	const getDefs =
-		typeof CONFIG !== "undefined"
-			? (
-					CONFIG as unknown as {
-						ROGUE_TRADER?: {
-							afflictions?: { getDefs?: () => AfflictionDef[] };
-						};
-					}
-				).ROGUE_TRADER?.afflictions?.getDefs
-			: undefined;
-	const defs = getDefs?.() ?? [];
-	const ledger = (
-		actor as { system?: { afflictions?: AfflictionEntryLike[] } }
-	).system?.afflictions;
-	return resolveAfflictionModifiers(ledger, defs, context);
-});
+/*
+ * Afflictions (epic nt8k) are owned Items (mutation / madnessentry), so their
+ * rows are handled by the "item-effects" contributor above — there is no
+ * separate ledger contributor.
+ */

@@ -1,7 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-	addAffliction,
-	afflictionLedgerKind,
 	corruptionTrack,
 	dueDisorders,
 	insanityTrack,
@@ -89,9 +87,11 @@ describe("dueDisorders (p296: 40/60/80 IP)", () => {
 		]);
 	});
 
-	test("ledger entries suppress already-gained severities", () => {
-		const ledger = [{ kind: "disorder" as const, name: "Minor (Phobia)", text: "" }];
-		expect(dueDisorders(40, ledger)).toHaveLength(0);
+	test("held severities suppress their own threshold", () => {
+		expect(dueDisorders(40, [{ severity: "Minor" }])).toHaveLength(0);
+		expect(dueDisorders(65, [{ severity: "Minor" }])).toEqual([
+			{ at: 60, severity: "Severe" },
+		]);
 	});
 });
 
@@ -114,31 +114,5 @@ describe("malignancy and mutation tests (p299)", () => {
 		expect(mutationTestsDue(29)).toBe(0);
 		expect(mutationTestsDue(30)).toBe(1);
 		expect(mutationTestsDue(60)).toBe(2);
-	});
-});
-
-describe("affliction ledger", () => {
-	test("append without duplication", () => {
-		const base = [{ kind: "malignancy" as const, name: "Palsy", text: "" }];
-		expect(addAffliction(base, { kind: "malignancy", name: "Palsy", text: "" })).toBe(base);
-		const grown = addAffliction(base, { kind: "malignancy", name: "Hatred", text: "" });
-		expect(grown).toHaveLength(2);
-	});
-});
-describe("afflictionLedgerKind (drop classifier, bead rdh1)", () => {
-	test("madness-pack kinds map to ledger kinds", () => {
-		expect(afflictionLedgerKind({ kind: "disorder" })).toBe("disorder");
-		expect(afflictionLedgerKind({ kind: "malignancy" })).toBe("malignancy");
-	});
-
-	test("mutation-pack rows map via tableKey", () => {
-		expect(afflictionLedgerKind({ tableKey: "mutations" })).toBe("mutation");
-		expect(afflictionLedgerKind({ kind: "mutation" })).toBe("mutation");
-	});
-
-	test("everything else is an ordinary item drop", () => {
-		expect(afflictionLedgerKind({})).toBeNull();
-		expect(afflictionLedgerKind({ kind: "shock-table" })).toBeNull();
-		expect(afflictionLedgerKind({ tableKey: "criticals" })).toBeNull();
 	});
 });

@@ -50,7 +50,6 @@ import {
 	parseHomebrewProfile,
 } from "../rules/homebrew";
 import type { OriginTraitDef } from "../rules/origin-traits";
-import type { AfflictionDef } from "../rules/afflictions";
 import {
 	setOriginEntries,
 	setHeirloomEntries,
@@ -270,7 +269,6 @@ export function sheetInit() {
 				homebrew?: { getProfile?: () => unknown };
 				originTraits?: { getDefs?: () => unknown };
 				madness?: { getRows?: () => unknown };
-				afflictions?: { getDefs?: () => unknown };
 			};
 		};
 		rtc.ROGUE_TRADER ??= {};
@@ -382,11 +380,10 @@ export function sheetInit() {
 			});
 		});
 
-		// Madness track rows + affliction effect defs (bead jy4o, follow-up to
-		// 1g2t): the sheet's trauma/malignancy tests read the track rows and the
-		// funnel's "afflictions" contributor reads the test-modifier effects
-		// authored on the disorder/malignancy/mutation pack entries. One pack
-		// read warms both.
+		// Madness track rows (epic 1g2t): the sheet's trauma/malignancy tests
+		// read the track rows. Afflictions are owned Items (epic nt8k) whose
+		// effects feed the item-effects funnel directly, so no def cache is
+		// needed here any more.
 		let madnessRows: Array<{
 			kind: string;
 			rollMin: number;
@@ -394,14 +391,9 @@ export function sheetInit() {
 			degree: string;
 			modifier: number;
 		}> = [];
-		let afflictionDefs: AfflictionDef[] = [];
 		Hooks.once("ready", () => {
-			Promise.all([
-				getPackDocuments("rogue-trader.madness"),
-				getPackDocuments("rogue-trader.mutations"),
-			]).then(([madnessRaw, mutationsRaw]) => {
+			getPackDocuments("rogue-trader.madness").then((madnessRaw) => {
 				const madnessDocs = madnessRaw as Array<foundry.documents.Item>;
-				const mutationDocs = mutationsRaw as Array<foundry.documents.Item>;
 				madnessRows = madnessDocs.map((doc) => {
 					const s = doc.system as unknown as Record<string, unknown>;
 					return {
@@ -412,38 +404,9 @@ export function sheetInit() {
 						modifier: Number(s.modifier ?? 0),
 					};
 				});
-				const toDef = (
-					kind: AfflictionDef["kind"],
-					doc: foundry.documents.Item,
-				): AfflictionDef => {
-					const s = doc.system as unknown as Record<string, unknown>;
-					return {
-						kind,
-						name: doc.name ?? "",
-						effects: Array.isArray(s.effects)
-							? (s.effects as AfflictionDef["effects"])
-							: [],
-						text: String(s.description ?? s.shortDescription ?? ""),
-					};
-				};
-				afflictionDefs = [
-					...madnessDocs
-						.filter((doc) => {
-							const k = (doc.system as unknown as { kind?: string }).kind;
-							return k === "disorder" || k === "malignancy";
-						})
-						.map((doc) =>
-							toDef(
-								(doc.system as unknown as { kind: AfflictionDef["kind"] }).kind,
-								doc,
-							),
-						),
-					...mutationDocs.map((doc) => toDef("mutation", doc)),
-				];
 			});
 		});
 		rtc.ROGUE_TRADER.madness = { getRows: () => madnessRows };
-		rtc.ROGUE_TRADER.afflictions = { getDefs: () => afflictionDefs };
 
 		// Data-driven document registration (bead 6a1x): one entry per document
 		// type = { model, sheet, label }. The data-model loop feeds

@@ -440,6 +440,107 @@ describe("talent contributor", () => {
 		});
 	});
 
+	// Afflictions are owned Items (epic nt8k): their rows flow through the same
+	// item-effects contributor, including characteristic deltas.
+	describe("affliction item effects (epic nt8k)", () => {
+		const mutation = (effects: unknown[]) => ({
+			name: "Misshapen",
+			type: "mutation",
+			system: { effects },
+		});
+		const withLabel = (mods: { label: string }[], label: string) =>
+			mods.filter((m) => m.label === label);
+
+		test("characteristic-modifier applies to tests on that characteristic", () => {
+			const items = [
+				mutation([
+					{
+						kind: "characteristic-modifier",
+						testKey: "ag",
+						value: -13,
+						label: "Misshapen",
+					},
+				]),
+			];
+			const hit = withLabel(
+				collectTestModifiers({ items }, { kind: "skill", key: "ag", skillName: "Dodge" }),
+				"Misshapen",
+			);
+			expect(hit).toHaveLength(1);
+			expect(hit[0].value).toBe(-13);
+			expect(hit[0].source).toEqual({
+				type: "item",
+				label: "SOURCE.FROM_MUTATIONS",
+			});
+
+			const miss = withLabel(
+				collectTestModifiers({ items }, { kind: "characteristic", key: "ws" }),
+				"Misshapen",
+			);
+			expect(miss).toHaveLength(0);
+		});
+
+		test("a madnessentry disorder labels its source as an affliction", () => {
+			const disorder = {
+				name: "Palsy",
+				type: "madnessentry",
+				system: {
+					effects: [
+						{
+							kind: "characteristic-modifier",
+							testKey: "ag",
+							value: -6,
+							label: "Palsy",
+						},
+					],
+				},
+			};
+			const mods = withLabel(
+				collectTestModifiers({ items: [disorder] }, { kind: "characteristic", key: "ag" }),
+				"Palsy",
+			);
+			expect(mods).toHaveLength(1);
+			expect(mods[0].source).toEqual({
+				type: "item",
+				label: "SOURCE.FROM_AFFLICTIONS",
+			});
+		});
+
+		test("characteristic-modifier applies on attack tests too (WS/BS)", () => {
+			const items = [
+				mutation([
+					{
+						kind: "characteristic-modifier",
+						testKey: "ws",
+						value: -10,
+						label: "Malformed Hands",
+					},
+				]),
+			];
+			expect(
+				withLabel(collectTestModifiers({ items }, { kind: "attack", key: "ws" }), "Malformed Hands"),
+			).toHaveLength(1);
+			expect(
+				withLabel(collectTestModifiers({ items }, { kind: "attack", key: "bs" }), "Malformed Hands"),
+			).toHaveLength(0);
+		});
+
+		test("grant and wound kinds never contribute test modifiers", () => {
+			const mods = collectTestModifiers(
+				{
+					items: [
+						mutation([
+							{ kind: "grants-item", testKey: "traits:Fear", label: "1" },
+							{ kind: "wounds-max", value: 5, label: "Misshapen" },
+						]),
+					],
+				},
+				{ kind: "characteristic", key: "ag" },
+			).filter((m) => m.id.startsWith("item:mutation"));
+			expect(mods).toHaveLength(0);
+		});
+	});
+
 	test("guarded fear effects apply on Fear Tests only (bead jpbm)", () => {
 		const resistanceActor = {
 			items: [

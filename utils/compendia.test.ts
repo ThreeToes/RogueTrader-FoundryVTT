@@ -32,6 +32,12 @@ describe("resolveEntryType", () => {
 		expect(resolveEntryType({ type: "Item" }, "origin-traits")).toBe(
 			"origintrait",
 		);
+		// Insanity/corruption + mutation content (epic nt8k): typed rows whose
+		// kind/tableKey fields vanish if the folder falls back to gear.
+		expect(resolveEntryType({ type: "Item" }, "madness")).toBe(
+			"madnessentry",
+		);
+		expect(resolveEntryType({ type: "Item" }, "mutations")).toBe("mutation");
 		expect(resolveEntryType({ type: "Item" }, "unknown")).toBe("gear");
 	});
 

@@ -277,6 +277,9 @@ const TALENT_CONDITIONS = {
 const AFFLICTION_PROCEDURES = {
 	"degenerate-mind": "PROCEDURE.DEGENERATE_MIND",
 	"mental-regressive": "PROCEDURE.MENTAL_REGRESSIVE",
+	// Ravaged Body (Core Rulebook p369) rolls 1d5 further mutations instead of
+	// settling rows on itself, so its handler returns grant names (kam1).
+	"ravaged-body": "PROCEDURE.RAVAGED_BODY",
 } as const;
 
 export const talentCategories = new EntryRegistry(TALENT_CATEGORIES);

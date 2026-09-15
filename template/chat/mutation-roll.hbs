@@ -1,0 +1,17 @@
+<div class="rogue-trader chat roll">
+    <div class="background border">
+        <h1>{{title}}</h1>
+        <div class="roll-summary">
+            <div class="roll-target">
+                <span class="label">{{countLabel}}</span>
+            </div>
+            {{#each results}}
+            <div class="roll-result">
+                <span class="label">{{localize "CHAT.MUTATION_ROLL_DIE"}}</span>
+                <span class="value">{{this.roll}}</span>
+                <span class="value">{{this.name}}</span>
+            </div>
+            {{/each}}
+        </div>
+    </div>
+</div>

@@ -18,6 +18,7 @@
  */
 
 import type { EffectData } from "../data/item/effects";
+import { type MutationRow, rollRavagedBody } from "../data/item/mutation-roll";
 
 /** Minimal shape of an owned affliction Item (for grant resolution). */
 export interface GrantSourceLike {
@@ -79,6 +80,40 @@ export interface ProcedureContext {
 	roll: (notation: string) => Promise<number>;
 	/** Current base value of a characteristic (for halve / set-to-5 outcomes). */
 	characteristic: (key: string) => number;
+	/**
+	 * Mutation table rows, read lazily from the compendium. Only the
+	 * table-rolling procedures need these (Ravaged Body), so the hook is
+	 * optional; a procedure that requires it and is not given it THROWS
+	 * rather than rolling nothing.
+	 */
+	mutationRows?: () => Promise<MutationRow[]>;
+}
+
+/**
+ * An Item a procedure rolled up (bead kam1). The `roll` is kept so the chat
+ * card can show the dice, not just the outcome.
+ */
+export interface ProcedureGrant {
+	/** Item name within the mutation pack. */
+	name: string;
+	/** The d100 that selected this row, when the grant came from a table roll. */
+	roll?: number;
+}
+
+/**
+ * What an acquisition-time procedure produced (bead kam1). A procedure can
+ * settle effect rows onto the affliction itself AND/OR name further Items it
+ * rolled up from a table; the caller owns resolving and creating those.
+ */
+export interface ProcedureOutcome {
+	/** Settled effect rows for this affliction. */
+	effects: EffectData[];
+	/**
+	 * Further mutations the procedure rolled (Ravaged Body's 1d5 additional
+	 * mutations), in roll order. Resolved against the mutation pack by the
+	 * caller.
+	 */
+	grants: ProcedureGrant[];
 }
 
 /** Degenerate Mind (Core p369): the 1d10 sub-roll picks the granted item. */
@@ -91,7 +126,9 @@ const DEGENERATE_MIND_TABLE: Array<{ max: number; effect: EffectData }> = [
 /** Mental Regressive (Core p369) rolls independently for each of these. */
 const MENTAL_REGRESSIVE_CHARACTERISTICS = ["int", "per", "wp", "fel"];
 
-async function degenerateMind(context: ProcedureContext): Promise<EffectData[]> {
+async function degenerateMind(
+	context: ProcedureContext,
+): Promise<ProcedureOutcome> {
 	const rolled = await context.roll("1d10");
 	const band = DEGENERATE_MIND_TABLE.find((b) => rolled >= 1 && rolled <= b.max);
 	if (!band) {
@@ -99,12 +136,36 @@ async function degenerateMind(context: ProcedureContext): Promise<EffectData[]> 
 			`Degenerate Mind sub-roll out of range (1d10 returned ${rolled})`,
 		);
 	}
-	return [{ ...band.effect }];
+	return { effects: [{ ...band.effect }], grants: [] };
+}
+
+/**
+ * Ravaged Body (Core Rulebook p369): "Roll 1d5 times on this table." Unlike
+ * the other procedures this one produces further MUTATIONS rather than effect
+ * rows, so the rolls come back as grant names for the caller to create.
+ */
+async function ravagedBody(
+	context: ProcedureContext,
+): Promise<ProcedureOutcome> {
+	if (!context.mutationRows) {
+		throw new Error(
+			"Ravaged Body needs the mutation table rows (context.mutationRows)",
+		);
+	}
+	const results = await rollRavagedBody(
+		await context.mutationRows(),
+		context.roll,
+		"mutations",
+	);
+	return {
+		effects: [],
+		grants: results.map((r) => ({ name: r.name, roll: r.roll })),
+	};
 }
 
 async function mentalRegressive(
 	context: ProcedureContext,
-): Promise<EffectData[]> {
+): Promise<ProcedureOutcome> {
 	const out: EffectData[] = [];
 	for (const key of MENTAL_REGRESSIVE_CHARACTERISTICS) {
 		const rolled = await context.roll("1d10");
@@ -131,15 +192,16 @@ async function mentalRegressive(
 			});
 		}
 	}
-	return out;
+	return { effects: out, grants: [] };
 }
 
 const AFFLICTION_PROCEDURE_HANDLERS: Record<
 	string,
-	(context: ProcedureContext) => Promise<EffectData[]>
+	(context: ProcedureContext) => Promise<ProcedureOutcome>
 > = {
 	"degenerate-mind": degenerateMind,
 	"mental-regressive": mentalRegressive,
+	"ravaged-body": ravagedBody,
 };
 
 /** Procedure keys with an implementation (test hook). */
@@ -157,9 +219,9 @@ export function afflictionProcedureNames(): string[] {
 export async function applyAfflictionProcedure(
 	procedure: string | undefined,
 	context: ProcedureContext,
-): Promise<EffectData[]> {
+): Promise<ProcedureOutcome> {
 	const key = (procedure ?? "").trim();
-	if (!key) return [];
+	if (!key) return { effects: [], grants: [] };
 	const handler = AFFLICTION_PROCEDURE_HANDLERS[key];
 	if (!handler) {
 		throw new Error(`Unknown affliction procedure "${key}"`);

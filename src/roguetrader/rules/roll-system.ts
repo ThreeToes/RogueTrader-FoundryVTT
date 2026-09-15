@@ -71,7 +71,8 @@ import {
 	fearSeverityModifier,
 	shockOutcome,
 } from "./fear";
-import { isWeaponType, equipStateOf } from "../data/accessors";
+import { equipStateOf } from "../data/accessors";
+import { attackProfileOf } from "./attack-profile";
 import { corruptionExpressions, type EffectData } from "../data/item/effects";
 import { postCard, type RtMessageFlags } from "./chat-flags";
 import { TestDialog } from "./test-dialog";
@@ -488,36 +489,37 @@ export const weaponHandler: RollHandler<"weapon"> = {
 	async prepare(request) {
 		const actor = request.actor;
 		const item = actor.items.get(request.itemId);
-		const type = item?.type as string | undefined;
-		if (!item || !isWeaponType(type)) {
+		// Bead kam1: a mutation carrying a printed attack block (Corrosive Bile,
+		// Core p369) attacks exactly like a weapon, from the same profile.
+		const profile = attackProfileOf(item as never);
+		if (!item || !profile) {
 			ui.notifications?.warn(game.i18n.localize("ROLL.UNKNOWN_SKILL"));
 			return null;
 		}
 		// Equip-state gate: attacks require the weapon to be carried (the
-		// ready state for weapons; armour is worn and cannot attack).
-		if (equipStateOf(item) !== "carried") {
+		// ready state for weapons; armour is worn and cannot attack). Innate
+		// attacks belong to the body, so a mutation is never "carried".
+		if (!profile.innate && equipStateOf(item) !== "carried") {
 			ui.notifications?.warn(
 				game.i18n.format("ROLL.NOT_CARRIED", { weapon: item.name }),
 			);
 			return null;
 		}
 		const system = systemOf(actor);
-		const key = type === "melee-weapon" ? "ws" : "bs";
-		const characteristic = system.characteristics[key];
+		const characteristic = system.characteristics[profile.characteristic];
 		if (!characteristic) return null;
-		const special = (
-			(item.system as unknown as { special?: string[] }).special ?? []
-		).map(String);
 		return {
 			title: `${actor.name} — ${item.name}`,
 			baseTarget: characteristic.value,
 			testKind: "attack",
-			testKey: key,
+			testKey: profile.characteristic,
 			initialModifiers: [...(request.modifiers ?? [])],
-			weapon: { type: String(type), special },
+			weapon: { type: profile.attackType, special: profile.qualities },
 			context: {},
 			// The melee Charge checkbox sets the "charging" guard itself.
-			...(type === "melee-weapon" ? { handledConditionFlags: ["charging"] } : {}),
+			...(profile.attackType === "melee-weapon"
+				? { handledConditionFlags: ["charging"] }
+				: {}),
 			// Damage flow (b02/1h2, owner redesign): the to-hit card carries a
 			// "Roll Damage" button; damage rolls on click, not automatically.
 			templateVars: { showDamageButton: true },

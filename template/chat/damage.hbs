@@ -7,6 +7,8 @@
                 <strong>{{localize "WEAPON.DAMAGE_FULL"}}</strong>
                 <span class="location-label">{{localize locationLabelKey}}</span>
                 <span class="damage-type">({{localize damageTypeLabelKey}})</span>
+                {{#if damageTypeAlternatives}}<span class="damage-type-alternatives"
+                    data-tooltip="{{localize "CHAT.DAMAGE_TYPE_ALTERNATIVES_HINT"}}">{{damageTypeAlternatives}}</span>{{/if}}
             </p>
             <p><strong>{{localize "CHAT.DAMAGE"}}:</strong>
                 <span class="damage-total">{{damage.rawRoll}}</span>

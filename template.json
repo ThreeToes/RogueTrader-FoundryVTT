@@ -1254,162 +1254,31 @@
             "ammunition",
             "aptitude",
             "armour",
-            "criticalInjury",
-            "cybernetic",
+            "armour-modification",
+            "career",
             "drug",
-            "forceField",
+            "force-field",
+            "game-table",
             "gear",
-            "malignancy",
-            "mentalDisorder",
+            "heirloom",
+            "madnessentry",
+            "melee-weapon",
             "mutation",
-            "specialAbility",
-            "talent",
-            "tool",
-            "trait",
-            "weapon",
-            "weaponModification",
+            "navigatorpower",
+            "origin",
+            "origintrait",
             "psychicpower",
+            "ranged-weapon",
             "ship",
             "ship-complication",
             "ship-component",
             "ship-weapon-component",
             "skill",
-            "career",
-            "melee-weapon",
-            "ranged-weapon",
-            "origintrait",
-            "madness",
-            "force-field"
-        ],
-        "templates": {
-            "equipment": {
-                "craftsmanship": "common",
-                "description": "",
-                "availability": "common",
-                "weight": 0
-            },
-            "itemDescription": {
-                "description": "",
-                "source": ""
-            }
-        },
-        "ammunition": {},
-        "armour": {
-            "templates": [
-                "equipment"
-            ],
-            "type": "basic",
-            "isAdditive": false,
-            "part": {
-                "head": 0,
-                "leftArm": 0,
-                "rightArm": 0,
-                "body": 0,
-                "leftLeg": 0,
-                "rightLeg": 0
-            },
-            "maxAgility": 0
-        },
-        "criticalInjury": {
-            "templates": [
-                "itemDescription"
-            ],
-            "type": "impact",
-            "part": "body"
-        },
-        "cybernetic": {
-            "templates": [
-                "equipment"
-            ],
-            "installed": false
-        },
-        "drug": {
-            "templates": [
-                "equipment"
-            ],
-            "shortDescription": ""
-        },
-        "forceField": {
-            "templates": [
-                "equipment"
-            ],
-            "protectionRating": 0,
-            "overloadChance": 0
-        },
-        "gear": {
-            "templates": [
-                "equipment"
-            ],
-            "shortDescription": ""
-        },
-        "malignancy": {
-            "templates": [
-                "itemDescription"
-            ]
-        },
-        "mentalDisorder": {
-            "templates": [
-                "itemDescription"
-            ]
-        },
-        "mutation": {
-            "templates": [
-                "itemDescription"
-            ]
-        },
-        "specialAbility": {
-            "templates": [
-                "itemDescription"
-            ],
-            "benefit": ""
-        },
-        "talent": {
-            "templates": [
-                "itemDescription"
-            ],
-            "prerequisites": "",
-            "aptitudes": "",
-            "benefit": "",
-            "tier": 0,
-            "starter": false,
-            "cost": 0
-        },
-        "tool": {
-            "templates": [
-                "equipment"
-            ],
-            "shortDescription": ""
-        },
-        "trait": {
-            "benefit": "",
-            "shortDescription": "",
-            "description": "",
-            "effects": []
-        },
-        "weapon": {},
-        "weaponModification": {
-            "templates": [
-                "equipment"
-            ],
-            "upgrades": "",
-            "installed": false
-        },
-        "aptitude": {
-            "templates": [
-                "itemDescription"
-            ]
-        },
-        "psychicpower": {},
-        "ship": {},
-        "ship-complication": {},
-        "ship-component": {},
-        "ship-weapon-component": {},
-        "skill": {},
-        "career": {},
-        "melee-weapon": {},
-        "ranged-weapon": {},
-        "origintrait": {},
-        "madness": {},
-        "force-field": {}
+            "special-ability",
+            "talent",
+            "tool",
+            "trait",
+            "weapon-modification"
+        ]
     }
 }

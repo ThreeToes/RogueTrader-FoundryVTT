@@ -47,19 +47,45 @@
   ],
   "documentTypes": {
     "Actor": {
-      "npc": {
+      "dynasty": {
         "htmlFields": [
+          "notes"
+        ]
+      },
+      "explorer": {
+        "htmlFields": [
+          "life.motivation",
+          "notes",
           "description"
         ]
       },
-      "vehicle": {
+      "npc": {
         "htmlFields": [
+          "life.motivation",
+          "notes",
+          "description"
+        ]
+      },
+      "pc": {
+        "htmlFields": [
+          "life.motivation",
+          "notes",
           "description"
         ]
       },
       "planet": {
         "htmlFields": [
           "notes"
+        ]
+      },
+      "starship": {
+        "htmlFields": [
+          "notes"
+        ]
+      },
+      "vehicle": {
+        "htmlFields": [
+          "description"
         ]
       }
     },
@@ -85,7 +111,11 @@
         ]
       },
       "skill": {},
-      "talent": {},
+      "talent": {
+        "htmlFields": [
+          "description"
+        ]
+      },
       "psychicpower": {
         "htmlFields": [
           "description"
@@ -131,17 +161,19 @@
           "description"
         ]
       },
-      "trait": {},
+      "trait": {
+        "htmlFields": [
+          "description"
+        ]
+      },
       "ship-component": {
         "htmlFields": [
-          "description",
-          "special"
+          "description"
         ]
       },
       "ship-weapon-component": {
         "htmlFields": [
-          "description",
-          "special"
+          "description"
         ]
       },
       "ship": {
@@ -156,6 +188,44 @@
         ]
       },
       "game-table": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "career": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "heirloom": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "madnessentry": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "mutation": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "navigatorpower": {
+        "htmlFields": [
+          "levels.novice",
+          "levels.adept",
+          "levels.master",
+          "description"
+        ]
+      },
+      "origin": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "origintrait": {
         "htmlFields": [
           "description"
         ]

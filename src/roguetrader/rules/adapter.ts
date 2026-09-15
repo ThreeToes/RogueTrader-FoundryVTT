@@ -16,7 +16,7 @@ import {
 	targetToughnessMultiplier,
 } from "./talent-effects";
 import type { DamageRollFlag } from "./chat-flags";
-import { isWeaponType } from "../data/accessors";
+import { type AttackProfile, attackProfileOf } from "./attack-profile";
 
 /**
  * Thin Foundry adapter: the ONLY runtime Foundry-coupled rolling code.
@@ -63,15 +63,18 @@ export async function rollWeaponDamage(
 	weaponId: string,
 ): Promise<void> {
 	const item = actor.items.get(weaponId);
-	const type = item?.type as string | undefined;
-	if (!item || !isWeaponType(type)) {
+	// Bead kam1: a MUTATION with a printed attack block (Corrosive Bile) is an
+	// attack too, so it resolves through the same profile as a weapon.
+	const profile = attackProfileOf(item as never);
+	if (!profile) {
 		ui.notifications?.warn(game.i18n.localize("ROLL.UNKNOWN_SKILL"));
 		return;
 	}
-	// Carry gating matches the to-hit attack gate.
-	if (equipStateOf(item) !== "carried") {
+	// Carry gating matches the to-hit attack gate; innate attacks (mutations)
+	// are part of the body and are never equipped.
+	if (!profile.innate && equipStateOf(item) !== "carried") {
 		ui.notifications?.warn(
-			game.i18n.format("ROLL.NOT_CARRIED", { weapon: item.name }),
+			game.i18n.format("ROLL.NOT_CARRIED", { weapon: item?.name }),
 		);
 		return;
 	}
@@ -89,7 +92,7 @@ export async function rollWeaponDamage(
 	await postWeaponDamage(
 		actor,
 		(target ?? actor) as Actor,
-		item as foundry.documents.Item,
+		profile,
 		locationRoll.total ?? 0,
 	);
 }
@@ -111,14 +114,15 @@ export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
 				data.weaponUuid,
 			) as unknown as foundry.documents.Item | null)
 		: null;
-	if (!attacker || !weapon) return;
+	const profile = attackProfileOf(weapon as never);
+	if (!attacker || !profile) return;
 	const target = data.targetUuid
 		? (foundry.utils.fromUuidSync(data.targetUuid) as unknown as Actor | null)
 		: null;
 	await postWeaponDamage(
 		attacker,
 		(target ?? attacker) as Actor,
-		weapon,
+		profile,
 		data.hitRoll ?? 0,
 		data.critical === true,
 	);
@@ -137,24 +141,29 @@ export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
 async function postWeaponDamage(
 	attacker: Actor,
 	target: Actor,
-	weapon: foundry.documents.Item,
+	profile: AttackProfile,
 	hitRoll = 0,
 	isCritical = false,
 ): Promise<void> {
-	const weaponSys = weapon.system as unknown as {
-		damage?: string;
-		damageType?: string;
-		penetration?: number;
-	};
 	// RT notation allows a trailing damage-type suffix ("1d10+4 E") which
 	// Foundry's Roll parser rejects - strip it first (bead 6tr); the parsed
-	// type also backfills weapons that never had the schema field set.
-	const parsed = parseDamageFormula(weaponSys.damage || "1d5");
+	// type also backfills profiles that never had a type set. A mutation attack
+	// may print ALTERNATIVES ("1d10+2 R (or E)", Corrosive Bile p369): the
+	// first is the default and the rest are surfaced on the card.
+	const parsed = parseDamageFormula(profile.damage || "1d5");
 	const damageType =
-		normaliseDamageType(weaponSys.damageType) ??
+		normaliseDamageType(profile.damageTypes[0]) ??
 		parsed.type ??
 		DamageType.Impact;
 	const damageTypeLabelKey = `DAMAGE_TYPE.${damageType.toUpperCase()}_SHORT`;
+	// A mutation attack can print damage-type ALTERNATIVES (Corrosive Bile,
+	// Core p369: "1d10+2 R (or E)"). The card resolves against the first, so
+	// the remaining choices are shown beside it rather than dropped silently.
+	const damageAlternatives = profile.damageTypes.slice(1).filter(Boolean);
+	const damageTypeAlternatives =
+		damageAlternatives.length > 0
+			? `${game.i18n?.localize("CHAT.DAMAGE_TYPE_OR") ?? "or"} ${damageAlternatives.join(" / ")}`
+			: "";
 	const { formula } = parsed;
 	const damageRoll = new foundry.dice.Roll(formula);
 	await damageRoll.evaluate();
@@ -184,8 +193,11 @@ async function postWeaponDamage(
 	// damage die (lowest result discarded — book wording, NOT roll-twice);
 	// Toxic/Blast are post-resolution prompts shown on the card.
 	const mechanics = collectRollMechanicEffects(attacker, {
-		weaponId: weapon.id ?? undefined,
-		attackType: (weapon.type as string) === "melee-weapon" ? "melee-weapon" : "ranged-weapon",
+		weaponId: profile.id ?? undefined,
+		attackType: profile.attackType,
+		// The attacking profile's own qualities: a mutation attack carries
+		// Tearing in its `attack.qualities`, not in a weapon system.special.
+		special: profile.qualities,
 	});
 	const qualityNotes: string[] = [];
 	if (mechanics.tearing) {
@@ -214,6 +226,16 @@ async function postWeaponDamage(
 			game.i18n!.format("CHAT.QUALITY_BLAST", { rating: mechanics.blast }),
 		);
 	}
+	// Printed attack restrictions (bead kam1). Neither is enforced by the
+	// pipeline (the target's reaction stays a manual decision), so they must
+	// be VISIBLE here or the rule would be silently lost: Corrosive Bile
+	// "can be dodged, but not parried" and "Using it is a full action".
+	if (!profile.parryable) {
+		qualityNotes.push(game.i18n!.localize("CHAT.ATTACK_UNPARRYABLE"));
+	}
+	if (profile.action === "full") {
+		qualityNotes.push(game.i18n!.localize("CHAT.ATTACK_FULL_ACTION"));
+	}
 	// Toxic is conditional on the hit actually wounding (book: "anyone that
 	// takes Damage from a Toxic weapon, after reduction for Armour and
 	// Toughness Bonus"); the note is added after resolveDamage below.
@@ -234,13 +256,9 @@ async function postWeaponDamage(
 		};
 		return sys.protectionType === "primitive" && sys.armourAt(location) > 0;
 	});
-	const weaponSys2 = weapon.system as unknown as {
-		primitive?: boolean;
-		special?: string[];
-	};
 	const weaponPrimitive =
-		weaponSys2.primitive === true ||
-		(weaponSys2.special ?? []).includes("primitive");
+		profile.primitive ||
+		profile.qualities.some((q) => q.toLowerCase() === "primitive");
 	const armourValue = Math.max(
 		0,
 		...wornArmour.map((i) =>
@@ -265,13 +283,12 @@ async function postWeaponDamage(
 	// Talent damage effects (bead fjw): damage-flat joins the roll before
 	// soak; critical-damage applies only when the to-hit was critical.
 	// Both are item-sourced talent effects, condition-guarded via flags.
-	const attackType =
-		(weapon.type as string) === "melee-weapon" ? "melee-weapon" : "ranged-weapon";
+	const attackType = profile.attackType;
 	const talentDamage = collectTalentDamageEffects(attacker, {
 		attackType,
 		// Bead 2k5: the attacking weapon's own damage effects apply; note
-		// the weapon item id is needed for per-item matching.
-		weaponId: weapon.id ?? undefined,
+		// the item id is needed for per-item matching.
+		weaponId: profile.id ?? undefined,
 	});
 	// Card breakdown: flat damage always; critical-damage rows only on a
 	// critical hit (they are gated in the kernel by isCritical); trait
@@ -284,7 +301,7 @@ async function postWeaponDamage(
 
 	const damage = resolveDamage({
 		roll: damageTotal,
-		penetration: weaponSys.penetration ?? 0,
+		penetration: profile.penetration,
 		// Bead xof: wire the primitive-armour rule through at runtime.
 		weaponPrimitive,
 		armourPrimitive,
@@ -317,10 +334,11 @@ async function postWeaponDamage(
 	const content = await foundry.applications.handlebars.renderTemplate(
 		"systems/rogue-trader/template/chat/damage.hbs",
 		{
-			title: `${attacker.name} → ${target.name} — ${weapon.name}`,
+			title: `${attacker.name} → ${target.name} — ${profile.name}`,
 			hitSuccess: true,
 			locationLabelKey,
 			damageTypeLabelKey,
+			damageTypeAlternatives,
 			damage,
 			// Bead atx: talent damage contributors shown as breakdown rows.
 			damageContributors,

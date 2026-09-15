@@ -17,6 +17,13 @@ export class StubSchemaField extends StubField {
 		this.fields = types(fields);
 	}
 }
+/**
+ * HTMLField marker. A distinct class so tests can tell an HTMLField from a
+ * StringField (the stub otherwise collapses every primitive to StubField).
+ * Subclasses StubField, so existing `toBeInstanceOf(StubField)` assertions
+ * keep working.
+ */
+export class StubHtmlField extends StubField {}
 export class StubArrayField extends StubField {
 	readonly of: unknown;
 	constructor(of: unknown, opts?: Record<string, unknown>) {
@@ -41,7 +48,7 @@ globalRef.foundry ??= {
 			NumberField: StubField,
 			StringField: StubField,
 			BooleanField: StubField,
-			HTMLField: StubField,
+			HTMLField: StubHtmlField,
 		},
 	},
 };

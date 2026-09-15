@@ -137,6 +137,8 @@ export type AfflictionKind = "disorder" | "malignancy" | "mutation";
 
 /** Minimal shape of an owned affliction Item (mutation / madnessentry). */
 export interface OwnedAfflictionLike {
+	/** Item id, so an attack chip can target the owned item (bead kam1). */
+	id?: string;
 	name?: string;
 	type?: string;
 	system?: {
@@ -145,6 +147,11 @@ export interface OwnedAfflictionLike {
 		shortDescription?: string;
 		/** Severity an acquired disorder was gained at (drop-time resolution). */
 		acquiredSeverity?: string;
+		/**
+		 * Printed attack block (bead kam1). Present on mutations that ARE an
+		 * attack (Corrosive Bile's BS test at 1d10+2 R (or E) Tearing).
+		 */
+		attack?: { damage?: string };
 	};
 }
 
@@ -188,7 +195,14 @@ export function madnessSheetContext(
 		dueDisorders: Array<{ at: number; severity: string }>;
 		afflictionGroups: Array<{
 			label: string;
-			entries: Array<{ name: string; severity: string; text: string }>;
+			entries: Array<{
+				id: string;
+				name: string;
+				severity: string;
+				text: string;
+				/** Owned mutation that is itself an attack (bead kam1). */
+				canAttack: boolean;
+			}>;
 		}>;
 	};
 	conditions: { snapOutReady: boolean; carried: string[] };
@@ -204,9 +218,15 @@ export function madnessSheetContext(
 	const groupOf = (label: string, items: OwnedAfflictionLike[]) => ({
 		label,
 		entries: items.map((item) => ({
+			id: item.id ?? "",
 			name: item.name ?? "",
 			severity: item.system?.acquiredSeverity ?? "",
 			text: item.system?.description ?? item.system?.shortDescription ?? "",
+			// A mutation whose printed attack block resolved to a profile
+			// (bead kam1) gets a roll chip on its affliction row. `damage` is
+			// the discriminator: an all-blank block means "no attack", so
+			// prose that merely mentions combat does not become a button.
+			canAttack: item.type === "mutation" && Boolean(item.system?.attack?.damage),
 		})),
 	});
 	const disorders = ofType("madnessentry", "disorder");

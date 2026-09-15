@@ -101,7 +101,17 @@
                 {{#if group.entries.length}}
                 <span class="origin-label">{{localize group.label}}:</span>
                 {{#each group.entries as |a|}}
+                {{!-- A mutation that IS an attack (bead kam1: Corrosive Bile's
+                     BS test, Core p369) gets a roll chip. Mutations are not
+                     equipped kit, so the attack never depends on equip state
+                     and the chip carries no unequipped styling. --}}
+                {{#if a.canAttack}}
+                <a class="chip origin-note mutation-attack" data-action="rollWeapon"
+                    data-item-id="{{a.id}}" data-tooltip="{{localize "WEAPON.ATTACK"}}">
+                    <i class="fa-solid fa-dice-d10"></i> {{a.name}}{{#if a.severity}} ({{a.severity}}){{/if}}</a>
+                {{else}}
                 <a class="chip origin-note" data-tooltip="{{a.text}}">{{a.name}}{{#if a.severity}} ({{a.severity}}){{/if}}</a>
+                {{/if}}
                 {{/each}}
                 {{/if}}
                 {{/each}}

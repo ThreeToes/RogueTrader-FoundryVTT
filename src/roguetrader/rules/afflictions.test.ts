@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { MutationRow } from "../data/item/mutation-roll";
 import { afflictionProcedures } from "../registry";
 import {
 	afflictionProcedureNames,
@@ -82,32 +83,39 @@ describe("resolveAfflictionGrants (epic nt8k)", () => {
 	});
 });
 
-// Acquisition-time procedures (bead xu83): mutations whose printed rule is a
-// one-off sub-roll rather than static effect rows. Pure + roller-injected.
-describe("applyAfflictionProcedure (bead xu83)", () => {
+// Acquisition-time procedures (beads xu83/kam1): mutations whose printed rule
+// is a one-off sub-roll rather than static effect rows. Pure +
+// roller-injected; the outcome carries settled effect rows AND any further
+// mutations the procedure rolled up.
+describe("applyAfflictionProcedure (beads xu83/kam1)", () => {
 	const ctx = (
 		rolls: number[],
 		characteristics: Record<string, number> = {},
+		mutationRows: MutationRow[] = [],
 	) => {
 		let i = 0;
 		return {
 			roll: async () => rolls[i++] ?? 0,
 			characteristic: (key: string) => characteristics[key] ?? 0,
+			mutationRows: async () => mutationRows,
 		};
 	};
 
 	test("degenerate-mind: 1-3 grants Frenzy", async () => {
-		expect(await applyAfflictionProcedure("degenerate-mind", ctx([3]))).toEqual([
-			{ kind: "grants-item", testKey: "talents:Frenzy" },
-		]);
+		expect(await applyAfflictionProcedure("degenerate-mind", ctx([3]))).toEqual({
+			effects: [{ kind: "grants-item", testKey: "talents:Frenzy" }],
+			grants: [],
+		});
 	});
 
 	test("degenerate-mind: 4-7 Fearless, 8-10 From Beyond", async () => {
 		expect(
-			(await applyAfflictionProcedure("degenerate-mind", ctx([7])))[0]?.testKey,
+			(await applyAfflictionProcedure("degenerate-mind", ctx([7]))).effects[0]
+				?.testKey,
 		).toBe("talents:Fearless");
 		expect(
-			(await applyAfflictionProcedure("degenerate-mind", ctx([10])))[0]?.testKey,
+			(await applyAfflictionProcedure("degenerate-mind", ctx([10]))).effects[0]
+			?.testKey,
 		).toBe("traits:From Beyond");
 	});
 
@@ -123,9 +131,12 @@ describe("applyAfflictionProcedure (bead xu83)", () => {
 			"mental-regressive",
 			ctx([3, 8, 9, 9, 9]),
 		);
-		expect(out).toEqual([
-			{ kind: "characteristic-modifier", testKey: "int", value: -8, label: "Mental Regressive" },
-		]);
+		expect(out).toEqual({
+			effects: [
+				{ kind: "characteristic-modifier", testKey: "int", value: -8, label: "Mental Regressive" },
+			],
+			grants: [],
+		});
 	});
 
 	test("mental-regressive: 6-7 stores the delta that halves the value", async () => {
@@ -134,9 +145,12 @@ describe("applyAfflictionProcedure (bead xu83)", () => {
 			"mental-regressive",
 			ctx([6, 9, 9, 9], { int: 35 }),
 		);
-		expect(out).toEqual([
-			{ kind: "characteristic-modifier", testKey: "int", value: -18, label: "Mental Regressive" },
-		]);
+		expect(out).toEqual({
+			effects: [
+				{ kind: "characteristic-modifier", testKey: "int", value: -18, label: "Mental Regressive" },
+			],
+			grants: [],
+		});
 	});
 
 	test("mental-regressive: 10 stores the delta that lands on 5", async () => {
@@ -144,14 +158,82 @@ describe("applyAfflictionProcedure (bead xu83)", () => {
 			"mental-regressive",
 			ctx([10, 9, 9, 9], { int: 40 }),
 		);
-		expect(out).toEqual([
-			{ kind: "characteristic-modifier", testKey: "int", value: -35, label: "Mental Regressive" },
-		]);
+		expect(out).toEqual({
+			effects: [
+				{ kind: "characteristic-modifier", testKey: "int", value: -35, label: "Mental Regressive" },
+			],
+			grants: [],
+		});
 	});
 
-	test("a blank procedure yields no rows", async () => {
-		expect(await applyAfflictionProcedure("", ctx([]))).toEqual([]);
-		expect(await applyAfflictionProcedure(undefined, ctx([]))).toEqual([]);
+	// Ravaged Body (Core Rulebook p369): "Roll 1d5 times on this table." It
+	// grants further MUTATIONS rather than effect rows on itself.
+	describe("ravaged-body (bead kam1)", () => {
+		const rows: MutationRow[] = [
+			{ tableKey: "mutations", rollMin: 1, rollMax: 25, name: "Grotesque" },
+			{ tableKey: "mutations", rollMin: 26, rollMax: 50, name: "Tough Hide" },
+			{ tableKey: "mutations", rollMin: 68, rollMax: 71, name: "Ravaged Body" },
+			{ tableKey: "mutations", rollMin: 100, rollMax: 100, name: "Hellspawn" },
+		];
+
+		test("1d5 count, then a d100 per additional mutation, in order", async () => {
+			// 1d5=3 -> 1d100 5 Grotesque, 100 Hellspawn, 30 Tough Hide.
+			const out = await applyAfflictionProcedure(
+				"ravaged-body",
+				ctx([3, 5, 100, 30], {}, rows),
+			);
+			expect(out).toEqual({
+				effects: [],
+				grants: [
+					{ name: "Grotesque", roll: 5 },
+					{ name: "Hellspawn", roll: 100 },
+					{ name: "Tough Hide", roll: 30 },
+				],
+			});
+		});
+
+		test("duplicates are kept (the book says roll N times, not re-roll)", async () => {
+			const out = await applyAfflictionProcedure(
+				"ravaged-body",
+				ctx([2, 10, 10], {}, rows),
+			);
+			expect(out.grants).toEqual([
+				{ name: "Grotesque", roll: 10 },
+				{ name: "Grotesque", roll: 10 },
+			]);
+		});
+
+		test("a count out of range throws (never silently roll nothing)", async () => {
+			await expect(
+				applyAfflictionProcedure("ravaged-body", ctx([0], {}, rows)),
+			).rejects.toThrow(/out of range/);
+		});
+
+		test("a d100 with no covering row throws", async () => {
+			await expect(
+				applyAfflictionProcedure("ravaged-body", ctx([1, 60], {}, rows)),
+			).rejects.toThrow(/no covering row/);
+		});
+
+		test("missing table rows throw rather than granting nothing", async () => {
+			await expect(
+				applyAfflictionProcedure("ravaged-body", {
+					roll: async () => 1,
+					characteristic: () => 0,
+				}),
+			).rejects.toThrow(/needs the mutation table rows/);
+		});
+	});
+
+	test("a blank procedure yields no rows and no grants", async () => {
+		expect(await applyAfflictionProcedure("", ctx([]))).toEqual({
+			effects: [],
+			grants: [],
+		});
+		expect(await applyAfflictionProcedure(undefined, ctx([]))).toEqual({
+			effects: [],
+			grants: [],
+		});
 	});
 
 	test("an unknown procedure throws", async () => {

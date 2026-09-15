@@ -238,9 +238,25 @@ export function parseSpecialMechanics(special: string[] | undefined): RollMechan
  */
 export function collectRollMechanicEffects(
 	actor: unknown,
-	opts: { weaponId?: string; attackType: "melee-weapon" | "ranged-weapon" },
+	opts: {
+		weaponId?: string;
+		attackType: "melee-weapon" | "ranged-weapon";
+		/**
+		 * The attacking profile's own qualities (bead kam1). A mutation's printed
+		 * attack block carries its qualities in `attack.qualities` rather than on
+		 * a weapon Item's `system.special`, so the caller passes them in; weapon
+		 * attacks keep resolving through their own item and leave this unset.
+		 */
+		special?: string[];
+	},
 ): RollMechanics {
 	const out: RollMechanics = { tearing: false, toxic: false, blast: null };
+	if (opts.special?.length) {
+		const parsed = parseSpecialMechanics(opts.special);
+		out.tearing ||= parsed.tearing;
+		out.toxic ||= parsed.toxic;
+		if (parsed.blast !== null) out.blast = Math.max(out.blast ?? 0, parsed.blast);
+	}
 	const items = (actor as { items?: ItemLike[] }).items ?? [];
 	for (const item of items) {
 		const isTalent = item.type === "talent";

@@ -137,8 +137,9 @@ describe("NPC identity fields (bead lib6)", () => {
 		)) as unknown as {
 			Actor: { types: string[]; npc: Record<string, unknown> };
 		};
-		// Still listed: Foundry builds the create dialog from Actor.types
-		// (dh2j), so dropping npc here would make the type uncreatable.
+		// Still listed: template.json's `types` is the legacy declaration list
+		// (the Create Actor dialog reads game.documentTypes — bead vnz3), kept
+		// aligned with the registry so the file stays truthful.
 		expect(template.Actor.types).toContain("npc");
 		const npc = template.Actor.npc as Record<string, unknown>;
 		// Bead fi3o: the npc block used to mirror the schema's identity fields.

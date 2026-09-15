@@ -79,8 +79,9 @@ describe("Vehicle data model", () => {
 		)) as unknown as {
 			Actor: { types: string[]; vehicle: Record<string, unknown> };
 		};
-		// dh2j: without the type entry Foundry cannot create Vehicle actors
-		// through the UI and the registered sheet is unreachable dead code.
+		// template.json's `types` list is a legacy declaration — the Create Actor
+		// dialog is built from game.documentTypes (bead vnz3) — so this asserts
+		// the file stays aligned with the registry, not that it gates creation.
 		expect(template.Actor.types).toContain("vehicle");
 		const vehicle = template.Actor.vehicle as Record<string, unknown>;
 		// Bead fi3o: the vehicle block used to mirror the whole schema

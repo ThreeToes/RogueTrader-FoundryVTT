@@ -76,6 +76,20 @@ describe("Career data model", () => {
 		expect(species.fields.fateFormula.opts.initial).toBe("");
 	});
 
+	test("advance type choices include trait (bead o3ju)", () => {
+		// Xenos careers print Trait advances (Kroot "Brutal Charge" / "Unnatural
+		// Perception (x3)", Glimpse From Beyond "From Beyond").
+		const schema = Career.defineSchema() as unknown as Record<
+			string,
+			StubField
+		>;
+		const rankSlot = schema.ranks.of as { fields: Record<string, StubField> };
+		const advSlot = (rankSlot.fields.advances as unknown as { of: unknown })
+			.of as { fields: Record<string, StubField> };
+		const choices = advSlot.fields.type.opts.choices as Record<string, string>;
+		expect(Object.keys(choices).sort()).toEqual(["skill", "talent", "trait"]);
+	});
+
 	test("ranks array carries rank/xpLevel/advances with advance subfields", () => {
 		const schema = Career.defineSchema() as unknown as Record<
 			string,

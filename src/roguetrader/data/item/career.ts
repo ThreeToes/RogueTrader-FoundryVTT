@@ -187,7 +187,12 @@ declare startingSkills: string[];
 							/** Verbatim name fallback ("Performer (Choose One)"). */
 							name: new foundry.data.fields.StringField({ initial: "" }),
 							type: new foundry.data.fields.StringField({
-								choices: { skill: "CAREER.TYPE_SKILL", talent: "CAREER.TYPE_TALENT" },
+								choices: {
+									skill: "CAREER.TYPE_SKILL",
+									talent: "CAREER.TYPE_TALENT",
+									// Xenos careers print Trait advances (bead o3ju).
+									trait: "CAREER.TYPE_TRAIT",
+								},
 								initial: "skill",
 								required: true,
 								nullable: false,

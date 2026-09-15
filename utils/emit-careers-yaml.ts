@@ -26,6 +26,7 @@ const PARSED = "src/packs/.extraction-src/careers-parsed.json";
 const ALT_PARSED = "src/packs/.extraction-src/alt-careers-parsed.json";
 const SKILLS_YAML = "src/packs/rogue_trader/skills/skills.yaml";
 const TALENTS_YAML = "src/packs/rogue_trader/talents/talents.yaml";
+const TRAITS_YAML = "src/packs/rogue_trader/traits/traits.yaml";
 const OUT = "src/packs/rogue_trader/careers/careers.yaml";
 
 if (!existsSync(PARSED)) {
@@ -33,27 +34,14 @@ if (!existsSync(PARSED)) {
 }
 
 const parsed = yaml.parse(readFileSync(PARSED, "utf8")) as CareerParsed[];
-/**
- * Glimpse From Beyond (ITS p105) is EXCLUDED: its advance table uses the
- * second ITS font subset (DGUMVN), whose cipher is unmapped (bead 4s4f
- * follow-up), so its Forbidden Lore specialization cell cannot be read
- * verbatim. Emitting a corrupted name would violate the no-guessing rule;
- * the row is tracked in a follow-up bead instead.
- */
-const EXCLUDED_ALT = new Set(["Glimpse From Beyond"]);
 const altParsed = (
 	existsSync(ALT_PARSED)
 		? (yaml.parse(readFileSync(ALT_PARSED, "utf8")) as AltCareerParsed[])
 		: []
-).filter((entry) => {
-	if (!EXCLUDED_ALT.has(entry.name)) return true;
-	console.warn(
-		`[careers] EXCLUDED ${entry.name} (unmapped ITS cipher subset — follow-up bead)`,
-	);
-	return false;
-});
+);
 const skillNames = namesFrom(SKILLS_YAML);
 const talentNames = namesFrom(TALENTS_YAML);
+const traitNames = namesFrom(TRAITS_YAML);
 
 function namesFrom(path: string): Set<string> {
 	const docs = yaml.parse(readFileSync(path, "utf8")) as Array<{ name: string }>;
@@ -301,6 +289,16 @@ function keyAdvance(
 			if (base.startsWith(typo) || clean.startsWith(typo)) {
 				return { key, name: "", multiplier };
 			}
+		}
+	} else if (type === "trait") {
+		// Xenos careers print Trait advances (Kroot "Brutal Charge", "Unnatural
+		// Perception (x3)", Glimpse From Beyond "From Beyond").
+		const match = matchesPack(clean, traitNames);
+		if (match) return { key: slugify(match), name: "", multiplier };
+		const generic = clean.replace(/\s*\([^)]*\)\s*$/, "").trim();
+		if (generic !== clean) {
+			const baseMatch = matchesPack(generic, traitNames);
+			if (baseMatch) return { key: slugify(baseMatch), name: "", multiplier };
 		}
 	} else {
 		const match = matchesPack(clean, talentNames);

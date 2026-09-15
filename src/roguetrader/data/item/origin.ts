@@ -30,6 +30,13 @@ export class Origin extends Gear {
 	 * appending a column would corrupt every pick. Blank = an ordinary entry.
 	 */
 	declare replaces: string;
+	/**
+	 * Species this path entry belongs to (bead ghmn); blank = human. Xenos have
+	 * their own path (Into the Storm p48: the Kroot "do not use the Origin
+	 * Path"), so the creator gives a species only the rows its own entries
+	 * declare — a Kroot sees Kindred, never a human Home World.
+	 */
+	declare species: string;
 	declare effect: string;
 	declare mechanics: Record<string, unknown>;
 	declare variants: Array<Record<string, unknown>>;
@@ -110,6 +117,8 @@ export class Origin extends Gear {
 			 * because the chart's reachability is column adjacency.
 			 */
 			replaces: new fields.StringField({ initial: "" }),
+			/** Species path binding (bead ghmn); blank = the human Origin Path. */
+			species: new fields.StringField({ initial: "" }),
 			/** Verbatim effect text for options without variants. */
 			effect: new fields.StringField({ initial: "" }),
 			/** Machine-applicable mechanics (see rules/origins.ts OriginMechanics). */

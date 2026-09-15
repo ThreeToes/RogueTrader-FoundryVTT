@@ -6,10 +6,11 @@ import {
 	getHeirloomEntries,
 	heirloomForRoll,
 	ORIGIN_ROW_LABEL_KEYS,
-	ORIGIN_ROWS,
 	type OriginPick,
 	type OriginRow,
+	isOriginRow,
 	originByKey,
+	originRowsForSpecies,
 	originsInRow,
 	type ResolvedOrigin,
 	resolveOrigins,
@@ -114,6 +115,13 @@ interface CreatorState {
 	base: Record<CharacteristicKey, number>;
 	/** Chosen species key ("" = human) + its pack label/formulas for display. */
 	speciesKey: string;
+	/**
+	 * Whether the GM has permitted a xeno character (bead ghmn). Into the Storm
+	 * p48: "In order to create a Kroot character, you must first obtain your
+	 * Game Master's permission." Xeno species stay unselectable until this is
+	 * set, so the creator cannot silently produce an unpermitted xeno.
+	 */
+	gmPermission: boolean;
 	speciesLabel: string;
 	speciesFate: number;
 	speciesFateFormula: string;
@@ -172,6 +180,7 @@ function emptyState(): CreatorState {
 		allocated: {},
 		rolled: {},
 		speciesKey: HUMAN_SPECIES_KEY,
+		gmPermission: false,
 		speciesLabel: "",
 		speciesFate: 0,
 		speciesFateFormula: "",
@@ -236,6 +245,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			chooseCorrIns: CharacterCreator.#onChooseCorrIns,
 			chooseCareer: CharacterCreator.#onChooseCareer,
 			chooseSpecies: CharacterCreator.#onChooseSpecies,
+			toggleGmPermission: CharacterCreator.#onToggleGmPermission,
 			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
 			toggleAcqGroup: CharacterCreator.#onToggleAcqGroup,
 			rollHeirloom: CharacterCreator.#onRollHeirloom,
@@ -298,6 +308,17 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 	 * xeno species the pack defines. Empty pack (still loading) yields human
 	 * only, so the step is always safe to render.
 	 */
+	/**
+	 * The Origin rows for the chosen species (bead ghmn), DERIVED FROM THE
+	 * PACK: human uses the five core rows, and a xeno species uses whatever
+	 * rows its own entries declare (Kroot -> a single Kindred row; Into the
+	 * Storm p48 is explicit that they do not use the Origin Path). Every Origin
+	 * step check below goes through this, so nothing assumes the human five.
+	 */
+	#originRows(): OriginRow[] {
+		return originRowsForSpecies(this.creatorState.speciesKey);
+	}
+
 	async #speciesOptions(): Promise<SpeciesOption[]> {
 		const docs = await careerDocs();
 		return speciesOptions(docs.map((doc) => doc.system?.species));
@@ -382,7 +403,8 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 
 		// Origin path rows with adjacency-enforced options.
 		let prevCol: number | null = null;
-		context.originRows = ORIGIN_ROWS.map((row) => {
+		const originRows = this.#originRows();
+		context.originRows = originRows.map((row) => {
 			const pick = state.picks[row];
 			const pickEntry = pick ? originByKey(pick.key) : undefined;
 			const allowed = allowedColumns(row, prevCol);
@@ -560,10 +582,14 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				? option.label || option.key
 				: game.i18n!.localize("CREATOR.SPECIES_HUMAN"),
 			selected: state.speciesKey === option.key,
+			// Into the Storm p48: a xeno species needs the GM's permission first.
+			// The handler enforces this too; this only shows the player why.
+			selectable: option.key === HUMAN_SPECIES_KEY || state.gmPermission,
 		}));
 		context.speciesOptions = speciesChoices;
 		context.speciesLabel =
 			speciesChoices.find((option) => option.selected)?.label ?? "";
+		context.gmPermission = state.gmPermission;
 		context.speciesFateFormula = state.speciesFateFormula;
 		context.speciesWoundsFormula = state.speciesWoundsFormula;
 		context.speciesFate = state.speciesFate;
@@ -590,13 +616,13 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 
 		context.canCreate =
 			state.step === CREATOR_LAST_STEP &&
-			ORIGIN_ROWS.every((row) => Boolean(state.picks[row])) &&
+			originRows.every((row) => Boolean(state.picks[row])) &&
 			Boolean(state.careerKey) &&
 			(state.method === "roll" ? true : pointBuy.valid) &&
 			// Every origin whose mechanics offer the corruption-or-insanity
 			// track must have the track chosen (book rule); otherwise the
 			// rolled dice would be silently dropped.
-			ORIGIN_ROWS.every((row) => {
+			originRows.every((row) => {
 				const pick = state.picks[row];
 				if (!pick) return true;
 				const detail = (
@@ -858,7 +884,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 	): Promise<void> {
 		const row = target.dataset.row as OriginRow;
 		const key = target.dataset.key ?? "";
-		if (!row || !ORIGIN_ROWS.includes(row)) return;
+		if (!row || !isOriginRow(row)) return;
 		if (!key) {
 			delete this.creatorState.picks[row];
 		} else {
@@ -915,6 +941,37 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 	 * species therefore invalidates rolled values and any career that is no
 	 * longer legal, so both are cleared rather than left stale.
 	 */
+	/**
+	 * GM permission for xeno characters (bead ghmn). Into the Storm p48 requires
+	 * it before a Kroot may be created, so it gates the species chips. Withdrawing
+	 * it while a xeno is chosen falls back to human rather than leaving an
+	 * unpermitted xeno selected.
+	 */
+	static async #onToggleGmPermission(
+		this: CharacterCreator,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const state = this.creatorState;
+		state.gmPermission = target.dataset.checked === "true";
+		if (!state.gmPermission && state.speciesKey !== HUMAN_SPECIES_KEY) {
+			const human = (await this.#speciesOptions()).find(
+				(o) => o.key === HUMAN_SPECIES_KEY,
+			);
+			if (human) {
+				state.speciesKey = human.key;
+				state.speciesLabel = human.label;
+				state.base = { ...human.base };
+				state.speciesFate = human.startingFate;
+				state.speciesFateFormula = human.fateFormula;
+				state.speciesWoundsFormula = human.woundsFormula;
+				state.rolled = {};
+				state.rerollUsed = false;
+			}
+		}
+		this.render({ force: true });
+	}
+
 	static async #onChooseSpecies(
 		this: CharacterCreator,
 		_event: unknown,
@@ -924,6 +981,8 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		const option = (await this.#speciesOptions()).find((o) => o.key === key);
 		if (!option) return;
 		const state = this.creatorState;
+		// Into the Storm p48: a xeno character needs the GM's permission first.
+		if (option.key !== HUMAN_SPECIES_KEY && !state.gmPermission) return;
 		if (state.speciesKey === option.key) return;
 		state.speciesKey = option.key;
 		state.speciesLabel = option.label;
@@ -934,6 +993,16 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		// The bases changed, so any roll taken at the old base is meaningless.
 		state.rolled = {};
 		state.rerollUsed = false;
+		// Species paths differ (bead ghmn): drop picks whose row the new species
+		// does not have, or a Kroot would carry human Home World/Birthright picks
+		// into a path that has no such rows.
+		const rows = new Set(originRowsForSpecies(option.key));
+		for (const row of Object.keys(state.picks) as OriginRow[]) {
+			if (!rows.has(row)) {
+				delete state.picks[row];
+				delete state.corrOrInsTrack[row];
+			}
+		}
 		// Drop a career the new species cannot take.
 		const docs = await careerDocs();
 		const legal = careersForSpecies(
@@ -1293,7 +1362,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				// Bead h7wl: stored keys are camelCase (homeWorld); map them to
 				// the kebab-case OriginRow keys before validating.
 				const row = originRowFromStoredKey(storedKey);
-				if (!value || !row || !ORIGIN_ROWS.includes(row as OriginRow)) continue;
+				if (!value || !row || !isOriginRow(row)) continue;
 				const [base, variant] = value.split("|");
 				oldPicks[row as OriginRow] = {
 					key: base,
@@ -1390,7 +1459,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		}
 
 		// Summary card: choices + everything needing manual application.
-		const rows = ORIGIN_ROWS.map((rowKey) => {
+		const rows = this.#originRows().map((rowKey) => {
 			const pick = state.picks[rowKey];
 			const entry = pick ? originByKey(pick.key) : undefined;
 			const variant = pick?.variantKey

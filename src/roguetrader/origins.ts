@@ -28,7 +28,16 @@ export type OriginRow =
 	| "birthright"
 	| "lure"
 	| "trials"
-	| "motivation";
+	| "motivation"
+	// Non-human path rows (bead ghmn). Xenos do NOT use the Origin Path: Into
+	// the Storm p48 says "Kroot characters do not use the Origin Path (except at
+	// the GM's discretion)", and p49 replaces it with a single Kindred choice.
+	// So a species' path is whatever rows ITS OWN entries declare.
+	| "kindred"
+	// Ork path (Into the Storm p61-62, "ORK ORIGINS"): Da Klan and Orky
+	// Know-Wotz, one choice from each.
+	| "klan"
+	| "know-wotz";
 
 /** Characteristic modifier: signed delta applied to the base roll. */
 export interface CharMod {
@@ -87,6 +96,17 @@ export interface OriginEntry {
 	row: OriginRow;
 	/** Column index (0-based) on the p16 chart; adjacency uses this. */
 	col: number;
+	/**
+	 * Species this entry belongs to (bead ghmn); blank = human. The creator's
+	 * Origin step shows a species ONLY its own rows, so a Kroot is never offered
+	 * a human Home World.
+	 */
+	species?: string;
+	/**
+	 * Core origin key this entry may be taken INSTEAD of (bead b03f). Splatbook
+	 * alternates reuse a core column rather than widening the chart.
+	 */
+	replaces?: string;
 	name: string;
 	/** Flavour prose (verbatim, trimmed). */
 	description: string;
@@ -105,12 +125,25 @@ export const ORIGIN_ROWS: OriginRow[] = [
 	"motivation",
 ];
 
+/**
+ * Rows that belong to a non-human path (bead ghmn). Kept separate from
+ * ORIGIN_ROWS so the human chart's five rows stay exactly five, and appended to
+ * ROW_ORDER only for ordering purposes.
+ */
+export const XENO_ORIGIN_ROWS: OriginRow[] = ["kindred", "klan", "know-wotz"];
+
+/** Canonical row order across every path (human first, then xeno rows). */
+const ROW_ORDER: OriginRow[] = [...ORIGIN_ROWS, ...XENO_ORIGIN_ROWS];
+
 export const ORIGIN_ROW_LABEL_KEYS: Record<OriginRow, string> = {
 	"home-world": "ORIGIN.ROW_HOME_WORLD",
 	birthright: "ORIGIN.ROW_BIRTHRIGHT",
 	lure: "ORIGIN.ROW_LURE",
 	trials: "ORIGIN.ROW_TRIALS",
 	motivation: "ORIGIN.ROW_MOTIVATION",
+	kindred: "ORIGIN.ROW_KINDRED",
+	klan: "ORIGIN.ROW_KLAN",
+	"know-wotz": "ORIGIN.ROW_KNOW_WOTZ",
 };
 
 // ---------------------------------------------------------------- Runtime pool
@@ -130,6 +163,38 @@ export function setOriginEntries(entries: OriginEntry[]): void {
 /** The current runtime chart pool. */
 export function getOriginEntries(): OriginEntry[] {
 	return originPool;
+}
+
+/** A path entry's species binding: blank = human. */
+export function speciesKeyOfEntry(entry: {
+	species?: string;
+}): string {
+	return (entry?.species ?? "").trim();
+}
+
+/** All known rows across every path (validation helper for stored data). */
+export function isOriginRow(value: string): value is OriginRow {
+	return ROW_ORDER.includes(value as OriginRow);
+}
+
+/**
+ * The Origin rows a species actually uses, DERIVED FROM THE PACK (bead ghmn).
+ * The human path is the five core rows; a xeno species' path is whatever its
+ * own entries declare — Kroot entries declare a single "kindred" row, and
+ * Into the Storm p48 is explicit that they "do not use the Origin Path".
+ *
+ * A species with no entries yet (Orks, Dark Eldar — content not extracted)
+ * yields [], so the creator shows no path rather than wrongly showing the
+ * human chart.
+ */
+export function originRowsForSpecies(speciesKey: string): OriginRow[] {
+	const want = (speciesKey ?? "").trim();
+	const present = new Set<OriginRow>();
+	for (const entry of originPool) {
+		if (speciesKeyOfEntry(entry) !== want) continue;
+		present.add(entry.row);
+	}
+	return ROW_ORDER.filter((row) => present.has(row));
 }
 
 // Suggested Home Worlds (Core Rulebook Table 1-1, p24) moved onto the Career

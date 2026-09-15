@@ -10,6 +10,7 @@ import {
 	getOriginEntries,
 	ORIGIN_ROWS,
 	originByKey,
+	originRowsForSpecies,
 	originsInRow,
 	resolveOrigins,
 	setOriginEntries,
@@ -33,6 +34,8 @@ setOriginEntries(
 			key: String(s.key ?? ""),
 			row: String(s.row ?? "home-world") as OriginRow,
 			col: Number(s.col ?? 0),
+			species: s.species ? String(s.species) : undefined,
+			replaces: s.replaces ? String(s.replaces) : undefined,
 			name: doc.name ?? "",
 			description: String(s.description ?? ""),
 			effect: s.effect ? String(s.effect) : undefined,
@@ -319,6 +322,77 @@ describe("choice coverage", () => {
 				for (const alt of m.alternateChoice ?? []) {
 					expect(alt.label.length).toBeGreaterThan(0);
 				}
+			}
+		}
+	});
+});
+
+// Bead ghmn: a species' Origin path is DERIVED FROM THE PACK. Xenos do not use
+// the human Origin Path (Into the Storm p48: "Kroot characters do not use the
+// Origin Path"), and p49 replaces it with a single Kindred choice.
+describe("species origin paths (bead ghmn)", () => {
+	test("human uses the five core rows", () => {
+		expect(originRowsForSpecies("")).toEqual([
+			"home-world",
+			"birthright",
+			"lure",
+			"trials",
+			"motivation",
+		]);
+	});
+
+	test("kroot uses ONLY the pack's kindred row — never the human chart", () => {
+		const rows = originRowsForSpecies("kroot");
+		expect(rows).toEqual(["kindred"]);
+		// The whole point: no human row leaks in.
+		for (const human of ORIGIN_ROWS) expect(rows).not.toContain(human);
+	});
+
+	test("ork uses BOTH of its own rows (Klan + Orky Know-Wotz)", () => {
+		// Into the Storm p61-62: "Select a single one of the Klan entries below"
+		// AND "Select a single one of the options below" — two rows, one pick
+		// each, neither of them a human row.
+		expect(originRowsForSpecies("ork")).toEqual(["klan", "know-wotz"]);
+		for (const human of ORIGIN_ROWS) {
+			expect(originRowsForSpecies("ork")).not.toContain(human);
+		}
+	});
+
+	test("dark-eldar has NO path, because the book gives it none", () => {
+		// Soul Reaver p97, verbatim: "All Dark Eldar characters possess the
+		// following Traits, Skills, Talents, and abilities" — a COMMON package
+		// with nothing to select, so an empty step is correct here (not missing
+		// data). Do not 'fix' this by handing them the human chart.
+		expect(originRowsForSpecies("dark-eldar")).toEqual([]);
+	});
+
+	test("no species-bound entry sits on a human chart row", () => {
+		// A species row leaking into the human path would offer a Kroot Kindred
+		// to a human character.
+		for (const entry of getOriginEntries()) {
+			if ((entry.species ?? "").trim() === "") continue;
+			expect(ORIGIN_ROWS, entry.name).not.toContain(entry.row);
+		}
+	});
+
+	test("a species with no entries yields NO path, not the human one", () => {
+		// "tau" has no content in any pack. Showing the human chart would be
+		// wrong; showing nothing is honest.
+		expect(originRowsForSpecies("tau")).toEqual([]);
+	});
+
+	test("every species-bound entry is reachable through its own path", () => {
+		const species = new Set(
+			getOriginEntries()
+				.map((e) => (e.species ?? "").trim())
+				.filter(Boolean),
+		);
+		expect(species.size).toBeGreaterThan(0);
+		for (const key of species) {
+			const rows = new Set(originRowsForSpecies(key));
+			for (const entry of getOriginEntries()) {
+				if ((entry.species ?? "").trim() !== key) continue;
+				expect(rows.has(entry.row), `${key}: ${entry.name}`).toBe(true);
 			}
 		}
 	});

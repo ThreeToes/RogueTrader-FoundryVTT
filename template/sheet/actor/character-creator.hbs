@@ -13,16 +13,27 @@
 
     {{!-- Step 0: Species (bead ghmn). Every option is derived from the careers
          compendium's species blocks plus the human default — no content in
-         code. The choice fixes the stage-1 characteristic bases and the
-         printed Fate/Wounds rules, so it comes before everything else. --}}
+         code. The choice fixes the stage-1 characteristic bases, the printed
+         Fate/Wounds rules, and WHICH Origin Path rows the character uses
+         (a xeno species has its own path). Into the Storm p48 requires the
+         GM's permission before a xeno may be created, hence the toggle. --}}
     {{#if (eq step 0)}}
     <section class="creator-section border">
         <h1>{{localize "CREATOR.STEP_SPECIES"}}</h1>
         <p class="method-hint">{{localize "CREATOR.SPECIES_HINT"}}</p>
+        <p class="method-hint">
+            <a class="chip origin-note" data-action="toggleGmPermission"
+                data-checked="{{ifThen gmPermission "true" "false"}}"
+                data-tooltip="{{localize "CREATOR.SPECIES_GM_PERMISSION_HINT"}}">
+                <i class="fa-solid {{ifThen gmPermission "fa-square-check" "fa-square"}}"></i>
+                {{localize "CREATOR.SPECIES_GM_PERMISSION"}}
+            </a>
+        </p>
         <div class="origin-chips">
             {{#each speciesOptions as |species|}}
-            <a class="origin-chip {{#if species.selected}}selected{{/if}}" data-action="chooseSpecies"
-                data-key="{{species.key}}">{{species.label}}</a>
+            <a class="origin-chip {{#if species.selected}}selected{{/if}} {{#unless species.selectable}}unavailable{{/unless}}"
+                data-action="chooseSpecies" data-key="{{species.key}}"
+                {{#unless species.selectable}}data-tooltip="{{localize "CREATOR.SPECIES_GM_PERMISSION_HINT"}}"{{/unless}}>{{species.label}}</a>
             {{/each}}
         </div>
     </section>

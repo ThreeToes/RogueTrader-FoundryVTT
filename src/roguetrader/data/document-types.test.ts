@@ -38,6 +38,18 @@ const MANIFESTS = [
 	"system-manifests/rogue-trader-public.json",
 ];
 
+/**
+ * Registered Actor types that must NOT be declared in documentTypes (bead
+ * vnz3). documentTypes is what Foundry turns into the world's supported-type
+ * registry, which builds the Create Actor dropdown; a type declared here is an
+ * OFFERED type. `pc` is the legacy character type retired by ow8w — its
+ * dataModel must stay registered at boot so pre-migration documents still
+ * parse, but it must never be offered (owner: "explorer should be the only pc
+ * type"). Declaring it here kept it in the dropdown as a raw, unlocalised
+ * "pc" entry.
+ */
+const NOT_OFFERED_ACTOR_TYPES = new Set(["pc"]);
+
 const readManifest = async (
 	relative: string,
 ): Promise<{ documentTypes: Record<string, Record<string, { htmlFields?: string[] }>> }> =>
@@ -63,11 +75,20 @@ describe("shipped documentTypes (bead pwpu)", () => {
 		expect(missing).toEqual([]);
 	});
 
-	test("declares every registered Actor type", () => {
+	test("declares every registered Actor type except the retired ones", () => {
 		const missing = Object.keys(ACTOR_MODELS).filter(
-			(type) => !(type in shipped.documentTypes.Actor),
+			(type) =>
+				!NOT_OFFERED_ACTOR_TYPES.has(type) &&
+				!(type in shipped.documentTypes.Actor),
 		);
 		expect(missing).toEqual([]);
+	});
+
+	test("the retired pc type is NOT offered", () => {
+		// The dataModel stays registered (legacy documents must parse before the
+		// ow8w migration runs) but the type must not appear as a creatable type.
+		expect(shipped.documentTypes.Actor.pc).toBeUndefined();
+		expect("pc" in ACTOR_MODELS).toBe(true);
 	});
 
 	test("declares nothing that is not registered", () => {
@@ -81,11 +102,12 @@ describe("shipped documentTypes (bead pwpu)", () => {
 		expect(extraActors).toEqual([]);
 	});
 
-	test("Item htmlFields match the models exactly", async () => {
+	test("Actor htmlFields match the models exactly (offered types)", async () => {
 		const mismatches: string[] = [];
-		for (const [type, entry] of Object.entries(ITEM_MODELS)) {
+		for (const [type, entry] of Object.entries(ACTOR_MODELS)) {
+			if (NOT_OFFERED_ACTOR_TYPES.has(type)) continue;
 			const expected = htmlFieldPaths(await loadSchema(entry)).sort();
-			const actual = declared(shipped.documentTypes.Item, type);
+			const actual = declared(shipped.documentTypes.Actor, type);
 			if (JSON.stringify(expected) !== JSON.stringify(actual)) {
 				mismatches.push(
 					`${type}: manifest=${JSON.stringify(actual)} model=${JSON.stringify(expected)}`,
@@ -95,11 +117,11 @@ describe("shipped documentTypes (bead pwpu)", () => {
 		expect(mismatches).toEqual([]);
 	});
 
-	test("Actor htmlFields match the models exactly", async () => {
+	test("Item htmlFields match the models exactly", async () => {
 		const mismatches: string[] = [];
-		for (const [type, entry] of Object.entries(ACTOR_MODELS)) {
+		for (const [type, entry] of Object.entries(ITEM_MODELS)) {
 			const expected = htmlFieldPaths(await loadSchema(entry)).sort();
-			const actual = declared(shipped.documentTypes.Actor, type);
+			const actual = declared(shipped.documentTypes.Item, type);
 			if (JSON.stringify(expected) !== JSON.stringify(actual)) {
 				mismatches.push(
 					`${type}: manifest=${JSON.stringify(actual)} model=${JSON.stringify(expected)}`,

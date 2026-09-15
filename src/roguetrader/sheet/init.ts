@@ -25,7 +25,7 @@ import {
 import { ArmourModification } from "../data/item/armour-modification";
 import { WeaponModification } from "../data/item/weapon-modification";
 import { attachRegistriesToConfig } from "../registry";
-import { migrateLegacyActors } from "../migrations";
+import { migrateLegacyActors, withoutLegacyCharacterTypes } from "../migrations";
 import {
 	rollDamageForCard,
 	rollSkill,
@@ -621,21 +621,33 @@ export function sheetInit() {
 						error,
 					))
 				.finally(() => {
-					// The create-actor dropdown lists dataModel keys, so the
-					// legacy "pc" model keeps offering "Player Character". The
-					// model must exist through boot (legacy docs parse before
-					// ready) — drop it once migration has run, from both the
-					// live config and any cached documentTypes list.
+					// The legacy "pc" model must exist through boot (legacy documents
+					// parse before ready) but must NOT keep being offered, so drop it
+					// from the live config once the migration has run.
 					const cfg = CONFIG as unknown as {
 						Actor?: { dataModels?: Record<string, unknown> };
 					};
 					delete cfg.Actor?.dataModels?.pc;
+					// Bead vnz3: deleting the dataModel does NOT rebuild the type
+					// registry the Create Actor dropdown reads, so "pc" kept showing
+					// up as a raw, unlocalised entry. The registry is
+					// game.documentTypes (an ARRAY of names) — NOT
+					// game.system.documentTypes (an object MAP), which is what the
+					// previous code filtered behind an `Array.isArray` guard that
+					// was therefore always false and silently did nothing. Strip the
+					// legacy names from both, so either source is covered.
+					const registry = game.documentTypes as unknown as
+						| Record<string, unknown>
+						| undefined;
+					if (registry) {
+						registry.Actor = withoutLegacyCharacterTypes(registry.Actor);
+					}
 					const system = game.system as unknown as {
-						documentTypes?: Record<string, string[]>;
+						documentTypes?: Record<string, unknown>;
 					};
-					if (Array.isArray(system.documentTypes?.Actor)) {
-						system.documentTypes.Actor = system.documentTypes.Actor.filter(
-							(t) => t !== "pc" && t !== "acolyte",
+					if (system.documentTypes) {
+						system.documentTypes.Actor = withoutLegacyCharacterTypes(
+							system.documentTypes.Actor,
 						);
 					}
 				});

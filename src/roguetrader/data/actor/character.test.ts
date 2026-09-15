@@ -120,7 +120,7 @@ describe("NPC identity fields (bead lib6)", () => {
 			Character: { defineSchema(): Record<string, unknown> };
 		};
 		const schema = Character.defineSchema();
-		for (const key of ["faction", "subfaction", "npcType", "size"]) {
+		for (const key of ["faction", "subfaction", "npcType", "size", "notes"]) {
 			const field = schema[key] as { opts?: { initial?: unknown } } | undefined;
 			expect(field, `schema missing ${key}`).toBeDefined();
 			expect(field?.opts?.initial).toBe("");
@@ -131,25 +131,37 @@ describe("NPC identity fields (bead lib6)", () => {
 		expect(threat?.opts?.initial).toBe("");
 	});
 
-	test("template.json npc block matches the schema (no silent drops)", async () => {
+	test("template.json npc block carries no system keys (the schema owns them)", async () => {
 		const template = (await import(
 			"../../../../template.json"
 		)) as unknown as {
 			Actor: { types: string[]; npc: Record<string, unknown> };
 		};
+		// Still listed: Foundry builds the create dialog from Actor.types
+		// (dh2j), so dropping npc here would make the type uncreatable.
 		expect(template.Actor.types).toContain("npc");
 		const npc = template.Actor.npc as Record<string, unknown>;
-		// k4z0 GAP 2: threatLevel was a number in the template but a string in
-		// the schema — the template must carry the schema's blank initial.
-		expect(npc.threatLevel).toBe("");
-		// Renamed dead "type" key (system.type read like the actor type).
-		expect(npc.npcType).toBe("");
-		expect(npc.type).toBeUndefined();
-		// size is a string label now (the book uses words; 4 was never
-		// schema-backed).
-		expect(npc.size).toBe("");
-		for (const key of ["faction", "subfaction", "notes"]) {
-			expect(npc[key]).toBe("");
+		// Bead fi3o: the npc block used to mirror the schema's identity fields.
+		// They are now declared by the Character model, which owns the defaults
+		// (asserted in the test above), and the test BELOW is what kept lib6's
+		// "no silent drops" guarantee: a template key the schema does not
+		// declare is precisely the k4z0 gap, so the block must carry none of
+		// them.
+		for (const key of [
+			"faction",
+			"subfaction",
+			"npcType",
+			"threatLevel",
+			"size",
+			"notes",
+		]) {
+			expect(npc[key], `npc.${key} must not be in the template`).toBeUndefined();
 		}
+		// The dead v9 "type" key stays dead (system.type read like the actor
+		// type, which is why npcType exists).
+		expect(npc.type).toBeUndefined();
+		// What remains is load-bearing: the DOCUMENT-level token default, which
+		// a TypeDataModel cannot supply.
+		expect(npc.prototypeToken).toEqual({ bar1: { attribute: "wounds" } });
 	});
 });

@@ -73,7 +73,7 @@ describe("Vehicle data model", () => {
 		expect(slot.fields.damaged.opts.initial).toBe(false);
 	});
 
-	test("template.json vehicle block matches the schema (no silent drops)", async () => {
+	test("template.json vehicle block keeps only the load-bearing keys", async () => {
 		const template = (await import(
 			"../../../../template.json"
 		)) as unknown as {
@@ -83,9 +83,33 @@ describe("Vehicle data model", () => {
 		// through the UI and the registered sheet is unreachable dead code.
 		expect(template.Actor.types).toContain("vehicle");
 		const vehicle = template.Actor.vehicle as Record<string, unknown>;
-		const si = vehicle.structuralIntegrity as Record<string, number>;
-		expect(si).toEqual({ value: 0, max: 0 });
-		// Armour facings seeded from the vehicleFacings registry, all 0.
+		// Bead fi3o: the vehicle block used to mirror the whole schema
+		// (structuralIntegrity, handling, speed, vehicleClass, traits, systems,
+		// crew, mountedWeapons, description). Those are declared by the Vehicle
+		// model, which now owns the defaults — assert THAT instead, so the
+		// "no silent drops" guarantee lib6 wanted is kept by the schema.
+		const { Vehicle } = (await import("./vehicle")) as unknown as {
+			Vehicle: { defineSchema(): Record<string, unknown> };
+		};
+		const schema = Vehicle.defineSchema();
+		for (const key of [
+			"structuralIntegrity",
+			"handling",
+			"speed",
+			"vehicleClass",
+			"traits",
+			"systems",
+			"crew",
+			"mountedWeapons",
+			"description",
+		]) {
+			expect(schema[key], `schema missing ${key}`).toBeDefined();
+			expect(vehicle[key], `vehicle.${key} must not be in the template`).toBeUndefined();
+		}
+
+		// The two survivors. armour is a genuine non-default pre-population:
+		// the model is a TypedObjectField whose Foundry default is an EMPTY map,
+		// so without this a fresh vehicle would have no facing keys.
 		expect(vehicle.armour).toEqual({
 			front: 0,
 			left: 0,
@@ -94,15 +118,7 @@ describe("Vehicle data model", () => {
 			top: 0,
 			bottom: 0,
 		});
-		expect(vehicle.handling).toBe(0);
-		expect(vehicle.speed).toBe(0);
-		// vehicleClass carries the schema's registry initial, not a blank.
-		expect(vehicle.vehicleClass).toBe("ground");
-		expect(vehicle.traits).toEqual([]);
-		expect(vehicle.systems).toEqual({});
-		expect(vehicle.crew).toEqual([]);
-		expect(vehicle.mountedWeapons).toEqual([]);
-		expect(vehicle.description).toBe("");
+		// prototypeToken is document-level: a TypeDataModel cannot supply it.
 		const token = vehicle.prototypeToken as Record<string, unknown>;
 		const bar1 = token.bar1 as Record<string, string>;
 		expect(bar1.attribute).toBe("system.structuralIntegrity");

@@ -22,6 +22,33 @@ export function needsTypeMigration(type: string): boolean {
 	return (LEGACY_CHARACTER_TYPES as readonly string[]).includes(type);
 }
 
+/**
+ * Remove the legacy character types from a document-type registry, in place of
+ * the retired name still being OFFERED (bead vnz3). Handles both shapes Foundry
+ * exposes, because they are easy to confuse and the failure is silent:
+ *
+ *   - `game.documentTypes.Actor`          -> string[] of type names. This is
+ *     the registry the client reads ("document types supported by the active
+ *     world"), i.e. what builds the Create Actor dropdown.
+ *   - `game.system.documentTypes.Actor`   -> `{ type: config }` object MAP
+ *     (the raw manifest field, an ObjectField).
+ *
+ * The previous code tested `Array.isArray(game.system.documentTypes?.Actor)`,
+ * which is ALWAYS false for the object map, so it never filtered anything.
+ * Pure and total: anything that is neither shape is returned untouched.
+ */
+export function withoutLegacyCharacterTypes(registry: unknown): unknown {
+	if (Array.isArray(registry)) {
+		return registry.filter((type) => !needsTypeMigration(String(type)));
+	}
+	if (registry && typeof registry === "object") {
+		const out = { ...(registry as Record<string, unknown>) };
+		for (const legacy of LEGACY_CHARACTER_TYPES) delete out[legacy];
+		return out;
+	}
+	return registry;
+}
+
 /** The payload a legacy actor carries over (id included for logging). */
 interface LegacyActorLike {
 	type: string;

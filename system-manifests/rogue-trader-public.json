@@ -66,13 +66,6 @@
           "description"
         ]
       },
-      "pc": {
-        "htmlFields": [
-          "life.motivation",
-          "notes",
-          "description"
-        ]
-      },
       "planet": {
         "htmlFields": [
           "notes"

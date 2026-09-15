@@ -22,6 +22,14 @@ export class Origin extends Gear {
 	declare key: string;
 	declare row: string;
 	declare col: number;
+	/**
+	 * Core origin key this entry SUBSTITUTES for (bead b03f). Splatbook
+	 * alternates are not extra chart columns: the book says "On the Origin Path
+	 * chart, Frontier World may be taken instead of Death World", and the chart
+	 * is a +/-1 column-adjacency graph (rules/origins.ts allowedColumns), so
+	 * appending a column would corrupt every pick. Blank = an ordinary entry.
+	 */
+	declare replaces: string;
 	declare effect: string;
 	declare mechanics: Record<string, unknown>;
 	declare variants: Array<Record<string, unknown>>;
@@ -95,6 +103,13 @@ export class Origin extends Gear {
 			}),
 			/** Column index (0-based) on the p16 chart; adjacency uses this. */
 			col: new fields.NumberField({ min: 0, integer: true, initial: 0 }),
+			/**
+			 * Splatbook alternate: the core origin key it may be taken INSTEAD of
+			 * (bead b03f). Blank on every core entry. The creator offers such an
+			 * entry as an alternative AT that column rather than as a new column,
+			 * because the chart's reachability is column adjacency.
+			 */
+			replaces: new fields.StringField({ initial: "" }),
 			/** Verbatim effect text for options without variants. */
 			effect: new fields.StringField({ initial: "" }),
 			/** Machine-applicable mechanics (see rules/origins.ts OriginMechanics). */

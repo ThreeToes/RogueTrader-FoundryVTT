@@ -155,8 +155,13 @@ export function originsInRow(row: OriginRow): OriginEntry[] {
  * first row is completely open.
  */
 export function allowedColumns(row: OriginRow, prevCol: number | null): number[] {
-	const rowEntries = originsInRow(row);
-	const cols = rowEntries.map((entry) => entry.col);
+	// DISTINCT columns (bead b03f): a splatbook alternate reuses a core column
+	// (it "may be taken instead of" that entry), so counting entries would make
+	// a five-column row look like it had six choices and would corrupt the
+	// +/-1 adjacency below.
+	const cols = [...new Set(originsInRow(row).map((entry) => entry.col))].sort(
+		(a, b) => a - b,
+	);
 	if (prevCol === null) return cols;
 	return cols.filter((col) => Math.abs(col - prevCol) <= 1);
 }

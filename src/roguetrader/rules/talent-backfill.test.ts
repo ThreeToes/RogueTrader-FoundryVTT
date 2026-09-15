@@ -1,3 +1,4 @@
+import { describe, expect, test } from "bun:test";
 import { isBareTalent, talentBackfillPatch } from "./talent-backfill";
 
 describe("bare legacy talent backfill (bead oaaz)", () => {

@@ -52,6 +52,7 @@
 				"noUnreachableSuper": "error",
 				"noUnsafeOptionalChaining": "warn",
 				"noUnusedVariables": "warn",
+				"noUndeclaredVariables": "error",
 				"useIsNan": "warn",
 				"useValidTypeof": "warn"
 			},
@@ -102,6 +103,17 @@
 		}
 	},
 	"javascript": {
+		"globals": [
+			"foundry",
+			"game",
+			"CONFIG",
+			"Hooks",
+			"ui",
+			"canvas",
+			"Bun",
+			"Handlebars",
+			"arguments"
+		],
 		"formatter": {
 			"quoteStyle": "double"
 		}

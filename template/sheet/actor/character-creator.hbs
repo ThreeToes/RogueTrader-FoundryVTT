@@ -1,16 +1,35 @@
 <div class="character-creator">
     <nav class="creator-steps">
-        <span class="step {{#if (eq step 0)}}active{{/if}}">{{localize "CREATOR.STEP_CHARACTERISTICS"}}</span>
+        <span class="step {{#if (eq step 0)}}active{{/if}}">{{localize "CREATOR.STEP_SPECIES"}}</span>
         <span class="step-sep">→</span>
-        <span class="step {{#if (eq step 1)}}active{{/if}}">{{localize "CREATOR.STEP_ORIGIN"}}</span>
+        <span class="step {{#if (eq step 1)}}active{{/if}}">{{localize "CREATOR.STEP_CHARACTERISTICS"}}</span>
         <span class="step-sep">→</span>
-        <span class="step {{#if (eq step 2)}}active{{/if}}">{{localize "CREATOR.STEP_REVIEW"}}</span>
+        <span class="step {{#if (eq step 2)}}active{{/if}}">{{localize "CREATOR.STEP_ORIGIN"}}</span>
         <span class="step-sep">→</span>
-        <span class="step {{#if (eq step 3)}}active{{/if}}">{{localize "CREATOR.STEP_EQUIPMENT"}}</span>
+        <span class="step {{#if (eq step 3)}}active{{/if}}">{{localize "CREATOR.STEP_REVIEW"}}</span>
+        <span class="step-sep">→</span>
+        <span class="step {{#if (eq step 4)}}active{{/if}}">{{localize "CREATOR.STEP_EQUIPMENT"}}</span>
     </nav>
 
-    {{!-- Step 0: Stage 1 — Generate Characteristics (Core Rulebook p14) --}}
+    {{!-- Step 0: Species (bead ghmn). Every option is derived from the careers
+         compendium's species blocks plus the human default — no content in
+         code. The choice fixes the stage-1 characteristic bases and the
+         printed Fate/Wounds rules, so it comes before everything else. --}}
     {{#if (eq step 0)}}
+    <section class="creator-section border">
+        <h1>{{localize "CREATOR.STEP_SPECIES"}}</h1>
+        <p class="method-hint">{{localize "CREATOR.SPECIES_HINT"}}</p>
+        <div class="origin-chips">
+            {{#each speciesOptions as |species|}}
+            <a class="origin-chip {{#if species.selected}}selected{{/if}}" data-action="chooseSpecies"
+                data-key="{{species.key}}">{{species.label}}</a>
+            {{/each}}
+        </div>
+    </section>
+    {{/if}}
+
+    {{!-- Step 1: Stage 1 — Generate Characteristics (Core Rulebook p14) --}}
+    {{#if (eq step 1)}}
     <section class="creator-section border">
         <h1>{{localize "CREATOR.STEP_CHARACTERISTICS"}}</h1>
         <div class="creator-name">
@@ -70,8 +89,8 @@
     </section>
     {{/if}}
 
-    {{!-- Step 1: Stage 2 — The Origin Path (Core Rulebook p16-35) --}}
-    {{#if (eq step 1)}}
+    {{!-- Step 2: Stage 2 — The Origin Path (Core Rulebook p16-35) --}}
+    {{#if (eq step 2)}}
     <section class="creator-section border">
         <h1>{{localize "CREATOR.STEP_ORIGIN"}}</h1>
         <p class="method-hint">{{localize "CREATOR.ORIGIN_HINT"}}</p>
@@ -149,8 +168,8 @@
     </section>
     {{/if}}
 
-    {{!-- Step 2: career + review + create --}}
-    {{#if (eq step 2)}}
+    {{!-- Step 3: career + review + create --}}
+    {{#if (eq step 3)}}
     <section class="creator-section border">
         <h1>{{localize "CREATOR.STEP_REVIEW"}}</h1>
 
@@ -166,6 +185,21 @@
         </div>
 
         <h2>{{localize "CREATOR.REVIEW_CHARACTERISTICS"}}</h2>
+        {{!-- Bead ghmn: for a xeno species the printed Fate/Wounds rules live on
+             the career's species block rather than the human Origin Path tables,
+             and they are prose ("1d5+1 and add twice the starting Toughness
+             Bonus"), so the creator SHOWS the book's rule instead of inventing
+             a parser. A fixed starting Fate is applied directly. --}}
+        {{#if speciesWoundsFormula}}
+        <p class="method-hint species-rules">
+            <strong>{{localize "CREATOR.SPECIES_WOUNDS"}}:</strong> {{speciesWoundsFormula}}
+        </p>
+        {{/if}}
+        {{#if speciesFateFormula}}
+        <p class="method-hint species-rules">
+            <strong>{{localize "CREATOR.SPECIES_FATE"}}:</strong> {{speciesFateFormula}}
+        </p>
+        {{/if}}
         <ol class="review-chars">
             {{#each review.characteristics as |c|}}
             <li>
@@ -195,7 +229,7 @@
     Weapons additionally require the matching Weapon Training Talent. --}}
     {{!-- The group's Profit Factor / Ship Points (Stage 5) are a GM-level --}}
     {{!-- decision on the dynasty document, NOT a creator step. --}}
-    {{#if (eq step 3)}}
+    {{#if (eq step 4)}}
     <section class="creator-section border">
         <h1>{{localize "CREATOR.STEP_EQUIPMENT"}}</h1>
         <p class="method-hint">{{localize "CREATOR.EQUIPMENT_HINT"}}</p>
@@ -238,9 +272,9 @@
         {{> "rt/creator-nav"
             backLabel=(localize "CREATOR.BACK")
             backHidden=(eq step 0)
-            forwardAction=(ifThen (eq step 3) "create" "next")
-            forwardLabel=(ifThen (eq step 3) (localize "CREATOR.CREATE") (localize "CREATOR.NEXT"))
-            forwardPrimary=(eq step 3)
+            forwardAction=(ifThen (eq step 4) "create" "next")
+            forwardLabel=(ifThen (eq step 4) (localize "CREATOR.CREATE") (localize "CREATOR.NEXT"))
+            forwardPrimary=(eq step 4)
             forwardDisabled=(ifThen canNext false true)
         }}
     </footer>

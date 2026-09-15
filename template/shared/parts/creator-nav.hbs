@@ -3,21 +3,27 @@
     Params (all hash):
       backLabel / backHidden (skip the back button entirely, e.g. step 0)
         / backDisabled (render the button but inert)
+        / backAction (data-action, default "prev")
       forwardAction (data-action, default "next") / forwardLabel
         / forwardPrimary (highlight the create/finish action)
         / forwardDisabled (disabled when truthy — e.g. the character
           creator's !canCreate gate, via ifThen)
+    DEFAULTS GO THROUGH ifThen (bead txf2): Handlebars does not default a
+    missing hash key, so a bare {{backAction}} rendered data-action="" and the
+    back button was a DEAD CLICK in all three creators — the action name was
+    never in the documented params, so no caller passed it. Every creator
+    registers its back handler as "prev".
 --}}
 <div class="rt-creator-nav">
     <div class="nav-side nav-left">
         {{#unless backHidden}}
-        <button type="button" class="rt-button rt-creator-nav-back" data-action="{{backAction}}"
+        <button type="button" class="rt-button rt-creator-nav-back" data-action="{{ifThen backAction backAction "prev"}}"
             {{#if backDisabled}}disabled{{/if}}>{{backLabel}}</button>
         {{/unless}}
     </div>
     <div class="nav-side nav-right">
         <button type="button" class="rt-button rt-creator-nav-forward{{#if forwardPrimary}} create{{/if}}"
-            data-action="{{forwardAction}}"
+            data-action="{{ifThen forwardAction forwardAction "next"}}"
             {{#if forwardDisabled}}disabled{{/if}}>{{forwardLabel}}</button>
     </div>
 </div>

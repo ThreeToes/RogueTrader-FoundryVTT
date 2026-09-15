@@ -14,7 +14,6 @@ import {
 	type ResolvedOrigin,
 	resolveOrigins,
 } from "../../origins";
-import { careers } from "../../registry";
 import {
 	availabilityModifier,
 	isTrainedFor,
@@ -23,13 +22,18 @@ import {
 	weaponTrainingCoverage,
 } from "../../rules/acquisition";
 import {
+	careersForSpecies,
 	type CatalogSkill,
-	CHARACTERISTIC_BASE,
+	CREATOR_LAST_STEP,
 	creatorCanAdvance,
 	finalCharacteristics,
+	HUMAN_SPECIES_KEY,
 	isUnresolvedChoice,
 	matchOriginSkills,
 	POINT_BUY_MAX,
+	type SpeciesOption,
+	type SpeciesSource,
+	speciesOptions,
 	validatePointBuy,
 	woundsFromOrigin,
 } from "../../rules/creation";
@@ -58,6 +62,34 @@ const { ApplicationV2 } = foundry.applications.api;
 /** Career-doc suggestion cache (system.suggestedHomeWorlds), per session. */
 let careerSuggestionCache: Map<string, string[]> | null = null;
 
+/**
+ * A careers-pack document, as far as the creator reads it (bead ghmn). The
+ * creator is COMPENDIUM-DRIVEN: the species list, the per-species career list
+ * and every base value come from these docs — nothing is authored in code.
+ */
+interface CareerDocLike {
+	name?: string;
+	system?: {
+		key?: string;
+		suggestedHomeWorlds?: string[];
+		/** Verbatim alternate/elite gate; blank = a starting career. */
+		requiredCareer?: string;
+		species?: SpeciesSource;
+	};
+}
+
+let careerDocsCache: CareerDocLike[] | null = null;
+
+/** The careers pack, read once. */
+async function careerDocs(): Promise<CareerDocLike[]> {
+	if (!careerDocsCache) {
+		careerDocsCache = (await getPackDocuments(
+			"rogue-trader.careers",
+		)) as unknown as CareerDocLike[];
+	}
+	return careerDocsCache;
+}
+
 const CHARACTERISTIC_ORDER: CharacteristicKey[] = [
 	"ws",
 	"bs",
@@ -74,8 +106,18 @@ interface CreatorState {
 	step: number;
 	name: string;
 	method: "roll" | "points";
-	/** Rolled values (method=roll) or base+allocated (method=points). */
+	/**
+	 * The species' per-characteristic 2d10 BASE (bead ghmn), copied from the
+	 * careers compendium when a species is chosen. Human = 25 across, which is
+	 * also the initial value, so an unchosen species behaves exactly as before.
+	 */
 	base: Record<CharacteristicKey, number>;
+	/** Chosen species key ("" = human) + its pack label/formulas for display. */
+	speciesKey: string;
+	speciesLabel: string;
+	speciesFate: number;
+	speciesFateFormula: string;
+	speciesWoundsFormula: string;
 	allocated: Partial<Record<CharacteristicKey, number>>;
 	rolled: Partial<Record<CharacteristicKey, number>>;
 	rerollUsed: boolean;
@@ -129,6 +171,11 @@ function emptyState(): CreatorState {
 		},
 		allocated: {},
 		rolled: {},
+		speciesKey: HUMAN_SPECIES_KEY,
+		speciesLabel: "",
+		speciesFate: 0,
+		speciesFateFormula: "",
+		speciesWoundsFormula: "",
 		rerollUsed: false,
 		picks: {},
 		corrOrInsTrack: {},
@@ -188,6 +235,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			choosePickOption: CharacterCreator.#onChoosePickOption,
 			chooseCorrIns: CharacterCreator.#onChooseCorrIns,
 			chooseCareer: CharacterCreator.#onChooseCareer,
+			chooseSpecies: CharacterCreator.#onChooseSpecies,
 			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
 			toggleAcqGroup: CharacterCreator.#onToggleAcqGroup,
 			rollHeirloom: CharacterCreator.#onRollHeirloom,
@@ -245,17 +293,24 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 	}
 
 	/**
+	 * The species list for the Species step (bead ghmn), derived from the
+	 * careers compendium's species blocks — human first, then each distinct
+	 * xeno species the pack defines. Empty pack (still loading) yields human
+	 * only, so the step is always safe to render.
+	 */
+	async #speciesOptions(): Promise<SpeciesOption[]> {
+		const docs = await careerDocs();
+		return speciesOptions(docs.map((doc) => doc.system?.species));
+	}
+
+	/**
 	 * careerKey -> suggested home-world origin keys (Core Rulebook Table 1-1,
 	 * p24), read from the careers pack's `system.suggestedHomeWorlds` (epic
 	 * 1gb7 follow-up). Cached across re-renders; empty until the pack loads.
 	 */
 	async #suggestedHomeWorlds(): Promise<Map<string, string[]>> {
+		const docs = await careerDocs();
 		if (!careerSuggestionCache) {
-			const docs = (await getPackDocuments(
-				"rogue-trader.careers",
-			)) as unknown as Array<{
-				system?: { key?: string; suggestedHomeWorlds?: string[] };
-			}>;
 			careerSuggestionCache = new Map(
 				docs
 					.filter((doc) => doc.system?.key)
@@ -290,8 +345,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		for (const key of CHARACTERISTIC_ORDER) {
 			base[key] =
 				this.creatorState.method === "roll"
-					? (this.creatorState.rolled[key] ?? CHARACTERISTIC_BASE)
-					: CHARACTERISTIC_BASE + (this.creatorState.allocated[key] ?? 0);
+					? (this.creatorState.rolled[key] ?? this.creatorState.base[key])
+					: this.creatorState.base[key] +
+						(this.creatorState.allocated[key] ?? 0);
 		}
 		return base;
 	}
@@ -317,7 +373,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				base:
 					state.method === "roll"
 						? (rolled ?? null)
-						: CHARACTERISTIC_BASE + alloc,
+						: state.base[key] + alloc,
 			};
 		});
 		const pointBuy = validatePointBuy(state.allocated);
@@ -463,6 +519,10 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 
 		// Career chips (free choice, p24) with Table 1-1 suggestions. The
 		// suggestion list now lives on each career doc (system.suggestedHomeWorlds).
+		// Bead ghmn: the LIST is the careers compendium filtered to the chosen
+		// species and to STARTING careers (blank requiredCareer) — a starting
+		// character cannot hold an alternate/elite rank, since every one of those
+		// gates needs rank 1+ AND 5,000+ XP. No career content lives in code.
 		const suggestions = await this.#suggestedHomeWorlds();
 		const homeWorld = state.picks["home-world"]?.key;
 		const suggested = homeWorld
@@ -472,15 +532,41 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 						.map(([career]) => career),
 				)
 			: new Set(suggestions.keys());
-		context.careers = careers.entries().map(([key, labelKey]) => ({
-			key,
-			label: game.i18n!.localize(labelKey) ?? labelKey,
-			selected: state.careerKey === key,
-			suggested: suggested.has(key),
+		const docs = await careerDocs();
+		const starting = docs.filter(
+			(doc) => (doc.system?.requiredCareer ?? "").trim() === "",
+		);
+		const careerOptions = careersForSpecies(starting, state.speciesKey).map(
+			(doc) => {
+				const key = String(doc.system?.key ?? "");
+				return {
+					key,
+					label: doc.name ?? key,
+					selected: state.careerKey === key,
+					suggested: suggested.has(key),
+				};
+			},
+		);
+		context.careers = careerOptions;
+		context.careerLabel =
+			careerOptions.find((career) => career.selected)?.label ?? "";
+
+		// Species step (bead ghmn): every option comes from the careers pack's
+		// species blocks, plus the human default. The chosen species supplies the
+		// stage-1 characteristic bases and its printed Fate/Wounds rules.
+		const speciesChoices = (await this.#speciesOptions()).map((option) => ({
+			key: option.key,
+			label: option.key
+				? option.label || option.key
+				: game.i18n!.localize("CREATOR.SPECIES_HUMAN"),
+			selected: state.speciesKey === option.key,
 		}));
-		context.careerLabel = state.careerKey
-			? (careers.get(state.careerKey) ?? "")
-			: "";
+		context.speciesOptions = speciesChoices;
+		context.speciesLabel =
+			speciesChoices.find((option) => option.selected)?.label ?? "";
+		context.speciesFateFormula = state.speciesFateFormula;
+		context.speciesWoundsFormula = state.speciesWoundsFormula;
+		context.speciesFate = state.speciesFate;
 
 		// Stage 6 (gjvg): the starting free acquisition — items with a total
 		// modifier of +0 or better need no test (Core Rulebook printed p272,
@@ -503,7 +589,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		};
 
 		context.canCreate =
-			state.step === 3 &&
+			state.step === CREATOR_LAST_STEP &&
 			ORIGIN_ROWS.every((row) => Boolean(state.picks[row])) &&
 			Boolean(state.careerKey) &&
 			(state.method === "roll" ? true : pointBuy.valid) &&
@@ -720,7 +806,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 	): Promise<void> {
 		const key = target.dataset.key as CharacteristicKey;
 		if (!key) return;
-		this.creatorState.rolled[key] = await roll("2d10+25");
+		this.creatorState.rolled[key] = await roll(
+			`2d10+${this.creatorState.base[key]}`,
+		);
 		this.render({ force: true });
 	}
 
@@ -733,14 +821,18 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		if (this.creatorState.rerollUsed) return;
 		const key = target.dataset.key as CharacteristicKey;
 		if (!key || this.creatorState.rolled[key] === undefined) return;
-		this.creatorState.rolled[key] = await roll("2d10+25");
+		this.creatorState.rolled[key] = await roll(
+			`2d10+${this.creatorState.base[key]}`,
+		);
 		this.creatorState.rerollUsed = true;
 		this.render({ force: true });
 	}
 
 	static async #onRollAll(this: CharacterCreator): Promise<void> {
 		for (const key of CHARACTERISTIC_ORDER) {
-			this.creatorState.rolled[key] = await roll("2d10+25");
+			this.creatorState.rolled[key] = await roll(
+				`2d10+${this.creatorState.base[key]}`,
+			);
 		}
 		this.render({ force: true });
 	}
@@ -816,13 +908,51 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		this.render({ force: true });
 	}
 
+	/**
+	 * Species choice (bead ghmn). Everything the step needs comes from the
+	 * chosen pack option: the per-characteristic base used by BOTH stage-1
+	 * methods, and the printed Fate/Wounds rules shown on review. Changing
+	 * species therefore invalidates rolled values and any career that is no
+	 * longer legal, so both are cleared rather than left stale.
+	 */
+	static async #onChooseSpecies(
+		this: CharacterCreator,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const key = (target.dataset.key ?? "").trim();
+		const option = (await this.#speciesOptions()).find((o) => o.key === key);
+		if (!option) return;
+		const state = this.creatorState;
+		if (state.speciesKey === option.key) return;
+		state.speciesKey = option.key;
+		state.speciesLabel = option.label;
+		state.base = { ...option.base };
+		state.speciesFate = option.startingFate;
+		state.speciesFateFormula = option.fateFormula;
+		state.speciesWoundsFormula = option.woundsFormula;
+		// The bases changed, so any roll taken at the old base is meaningless.
+		state.rolled = {};
+		state.rerollUsed = false;
+		// Drop a career the new species cannot take.
+		const docs = await careerDocs();
+		const legal = careersForSpecies(
+			docs.filter((doc) => (doc.system?.requiredCareer ?? "").trim() === ""),
+			option.key,
+		).some((doc) => String(doc.system?.key ?? "") === state.careerKey);
+		if (!legal) state.careerKey = "";
+		this.render({ force: true });
+	}
+
 	static async #onPrev(this: CharacterCreator): Promise<void> {
 		this.creatorState.step = Math.max(0, this.creatorState.step - 1);
 		this.render({ force: true });
 	}
 
 	static async #onNext(this: CharacterCreator): Promise<void> {
-		const next = Math.min(3, this.creatorState.step + 1);
+		const next = Math.min(CREATOR_LAST_STEP, this.creatorState.step + 1);
+		// Step 2 is the Origin Path: its wounds/Fate/insanity dice are rolled on
+		// entry (the dice belong to the origin rows, not the species).
 		if (next === 2) await this.#rollOriginDice();
 		this.creatorState.step = next;
 		this.render({ force: true });

@@ -202,6 +202,41 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		expect(html).toContain('data-action="rollNpcDamage"');
 	});
 
+	// rt/creator-nav is shared by the character, ship and planet creators. All
+	// three register their back handler as "prev", but NO caller passed
+	// backAction and it was missing from the partial's documented params — so
+	// Handlebars resolved it to undefined and every back button rendered
+	// data-action="" (a DEAD CLICK, same class as txf2).
+	it("creator-nav back button defaults to a real action, not data-action=\"\"", () => {
+		const render = compilePartial("template/shared/parts/creator-nav.hbs");
+		const html = render({
+			backLabel: "CREATOR.BACK",
+			forwardAction: "next",
+			forwardLabel: "CREATOR.NEXT",
+		});
+		expect(html).toContain('data-action="prev"');
+		expect(html).not.toContain('data-action=""');
+	});
+
+	it("creator-nav honours explicit back/forward overrides", () => {
+		const render = compilePartial("template/shared/parts/creator-nav.hbs");
+		const html = render({
+			backLabel: "Back",
+			backAction: "stepBack",
+			forwardAction: "create",
+			forwardLabel: "Create",
+		});
+		expect(html).toContain('data-action="stepBack"');
+		expect(html).toContain('data-action="create"');
+	});
+
+	it("creator-nav hides back on the first step but keeps a live forward", () => {
+		const render = compilePartial("template/shared/parts/creator-nav.hbs");
+		const html = render({ backHidden: true, backLabel: "Back", forwardLabel: "Next" });
+		expect(html).not.toContain("rt-creator-nav-back");
+		expect(html).toContain('data-action="next"');
+	});
+
 	it("npc-inventory renders equip toggles + grouped lists (bead 2dvj)", () => {
 		const render = compile("npc-inventory.hbs");
 		const html = render({

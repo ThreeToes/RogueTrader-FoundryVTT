@@ -63,8 +63,15 @@ export function validatePointBuy(
  * step. Pure + testable.
  */
 export function creatorCanAdvance(step: number, canCreate: boolean): boolean {
-	return step !== 3 || canCreate;
+	return step !== CREATOR_LAST_STEP || canCreate;
 }
+
+/**
+ * The creator's final step index (bead ghmn added a Species step at 0, so the
+ * wizard is now 0 species, 1 characteristics, 2 origin, 3 career/review,
+ * 4 equipment). Keep the creator's step bounds and this constant in sync.
+ */
+export const CREATOR_LAST_STEP = 4;
 
 /**
  * Final characteristics: base (or rolled values) plus origin deltas,
@@ -92,6 +99,122 @@ export function woundsFromOrigin(
 	woundBonus: number,
 ): number {
 	return toughnessBonus * 2 + woundsDiceTotals.reduce((a, b) => a + b, 0) + woundBonus;
+}
+
+/**
+ * Species options derived from the CAREERS compendium (bead ghmn).
+ *
+ * Xenos have no separate compendium record: the book prints a xeno's
+ * characteristics, wounds and Fate on its career entry, and the pack stores
+ * that as `Career.system.species` (bead koau). So the creator's species list IS
+ * the set of distinct species blocks across the career pack, plus the human
+ * default (a career with no species block). Nothing is authored here — adding
+ * a xeno career with a species block adds its species automatically.
+ */
+export interface SpeciesSource {
+	key?: string;
+	label?: string;
+	baseCharacteristics?: Record<string, number>;
+	startingFate?: number;
+	fateFormula?: string;
+	woundsFormula?: string;
+}
+
+export interface SpeciesOption {
+	/** "" = human, i.e. the absence of a species block. */
+	key: string;
+	/** Pack-supplied label; blank for human (the template localizes a key). */
+	label: string;
+	/** Per-characteristic 2d10 base, human default where the pack omits one. */
+	base: Record<CharacteristicKey, number>;
+	/** Fixed starting Fate, when the book prints a number. */
+	startingFate: number;
+	/** Verbatim printed Fate roll, when Fate is not a fixed number. */
+	fateFormula: string;
+	/** Verbatim printed Wounds formula. */
+	woundsFormula: string;
+}
+
+/** The human species is the ABSENCE of a species block, never a pack record. */
+export const HUMAN_SPECIES_KEY = "";
+
+function humanBaseMap(humanBase: number): Record<CharacteristicKey, number> {
+	const base = {} as Record<CharacteristicKey, number>;
+	for (const key of CHARACTERISTIC_KEYS) base[key] = humanBase;
+	return base;
+}
+
+/**
+ * Build the species list from career species blocks. Human is always first;
+ * duplicates collapse (two Dark Eldar careers share one species) and a blank
+ * key is ignored. A characteristic the pack omits keeps the human base —
+ * the pack stores the book's "2d10+" adds, so an absent key means "unchanged".
+ */
+export function speciesOptions(
+	sources: Array<SpeciesSource | undefined> | undefined,
+	humanBase = CHARACTERISTIC_BASE,
+): SpeciesOption[] {
+	const human: SpeciesOption = {
+		key: HUMAN_SPECIES_KEY,
+		label: "",
+		base: humanBaseMap(humanBase),
+		startingFate: 0,
+		fateFormula: "",
+		woundsFormula: "",
+	};
+	const byKey = new Map<string, SpeciesOption>([[human.key, human]]);
+	for (const source of sources ?? []) {
+		const key = (source?.key ?? "").trim();
+		if (!key || byKey.has(key)) continue;
+		const base = humanBaseMap(humanBase);
+		for (const [characteristic, value] of Object.entries(
+			source?.baseCharacteristics ?? {},
+		)) {
+			if (characteristic in base && Number.isFinite(value)) {
+				base[characteristic as CharacteristicKey] = value;
+			}
+		}
+		byKey.set(key, {
+			key,
+			label: source?.label ?? "",
+			base,
+			startingFate: source?.startingFate ?? 0,
+			fateFormula: source?.fateFormula ?? "",
+			woundsFormula: source?.woundsFormula ?? "",
+		});
+	}
+	return [...byKey.values()];
+}
+
+/**
+ * A career's species binding: blank = human.
+ *
+ * Accepts BOTH shapes on purpose: the creator builds view models carrying a
+ * top-level `species`, while a raw compendium doc carries it at
+ * `system.species`. Reading only one of them silently classified every pack
+ * career as human (caught by the pack-driven test in careers.test.ts).
+ */
+export function speciesKeyOf(career: {
+	species?: { key?: string };
+	system?: { species?: { key?: string } };
+}): string {
+	return (career?.species?.key ?? career?.system?.species?.key ?? "").trim();
+}
+
+/**
+ * Starting careers legal for a species: an exact species match against the
+ * career's own species block. Alternate/elite ranks carry their own verbatim
+ * gates and are not creation-time choices (every one needs rank 1+ and 5,000+
+ * XP), so they are filtered out by the caller before this runs.
+ */
+export function careersForSpecies<
+	T extends {
+		species?: { key?: string };
+		system?: { species?: { key?: string } };
+	},
+>(careers: T[] | undefined, speciesKey: string): T[] {
+	const want = (speciesKey ?? "").trim();
+	return (careers ?? []).filter((career) => speciesKeyOf(career) === want);
 }
 
 export interface CatalogSkill {

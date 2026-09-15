@@ -1,3 +1,4 @@
+import { describe, expect, test } from "bun:test";
 import { registerPowerResolution, resolvePower } from "./power-resolution";
 
 describe("power-resolution registry (bead sa6)", () => {

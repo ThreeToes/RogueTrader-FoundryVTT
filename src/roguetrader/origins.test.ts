@@ -48,9 +48,25 @@ const ORIGIN_ENTRIES = getOriginEntries();
 describe("origin path chart (Core Rulebook p16)", () => {
 	test("every row is present with six contiguous columns", () => {
 		for (const row of ORIGIN_ROWS) {
-			const entries = originsInRow(row);
-			expect(entries.length).toBe(6);
-			expect(entries.map((e) => e.col)).toEqual([0, 1, 2, 3, 4, 5]);
+			// COLUMNS, not entries: splatbook alternates reuse a core column
+			// (bead b03f), so a row can hold more entries than it has slots.
+			const cols = [...new Set(originsInRow(row).map((e) => e.col))].sort(
+				(a, b) => a - b,
+			);
+			expect(cols, row).toEqual([0, 1, 2, 3, 4, 5]);
+		}
+	});
+
+	test("an alternate shares a column instead of adding one", () => {
+		// Frontier World substitutes for Death World at the same column.
+		const homeWorlds = originsInRow("home-world");
+		const coreCols = new Set(
+			homeWorlds
+				.filter((e) => !e.replaces)
+				.map((e) => e.col),
+		);
+		for (const entry of homeWorlds.filter((e) => e.replaces)) {
+			expect(coreCols.has(entry.col), entry.name).toBe(true);
 		}
 	});
 

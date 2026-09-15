@@ -69,6 +69,11 @@ const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
 	// to "gear" and Foundry's TypeDataModel silently drops those fields.
 	madness: "madnessentry",
 	mutations: "mutation",
+	// Ship threshold/reference tables (bead vkde): the same kind+threshold
+	// lookup idiom as the gametables pack, so the ship tables reuse
+	// `game-table` instead of falling back to plain Gear (which dropped
+	// rating/threshold silently — same bug class as madness/mutations above).
+	shiptables: "game-table",
 };
 
 /** Work out the real item type for an authored entry. */

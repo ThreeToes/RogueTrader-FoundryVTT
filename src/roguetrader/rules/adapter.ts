@@ -250,8 +250,7 @@ async function postWeaponDamage(
 		),
 	);
 	const naturalToughnessBonus = Math.floor(
-		((systemOf(target)).characteristics.t?.value ?? 0) /
-			10,
+		(systemOf(target)).effectiveCharacteristicValue("t") / 10,
 	);
 	// Bead zyv1: target-side trait damage machinery. Unnatural Toughness
 	// (×N) multiplies the TB; Machine is modelled in the pack as armour items

@@ -36,6 +36,7 @@ export class GameTableSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		const columns = (
 			[
 				["roll", "GAME_TABLE.ROLL"],
+				["rating", "GAME_TABLE.RATING"],
 				["difficulty", "GAME_TABLE.DIFFICULTY"],
 				["modifier", "GAME_TABLE.MODIFIER"],
 				["complexity", "GAME_TABLE.COMPLEXITY"],

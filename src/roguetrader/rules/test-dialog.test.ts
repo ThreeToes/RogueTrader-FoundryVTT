@@ -70,4 +70,27 @@ describe("DIFFICULTY_LADDER (bead wqt3)", () => {
 			}
 		}
 	});
+
+	// Bead xu83: the pre-roll condition toggles and the acquisition procedures
+	// must be localized in every shipped language (project i18n rule).
+	it("has condition-toggle + procedure i18n keys in all languages", async () => {
+		const keys = [
+			"ROLL.CONDITIONS",
+			"CONDITION.BRIGHT_LIGHT",
+			"CONDITION.STRANGERS",
+			"CONDITION.NORMALS",
+			"CONDITION.NAUSEATED",
+			"CONDITION.POISON_TESTS",
+			"PROCEDURE.DEGENERATE_MIND",
+			"PROCEDURE.MENTAL_REGRESSIVE",
+		];
+		for (const lang of ["en", "es", "fr", "pl"]) {
+			const strings = (await import(
+				`../../../lang/${lang}.json`
+			)) as unknown as Record<string, string>;
+			for (const key of keys) {
+				expect(strings[key], `${lang} has ${key}`).toBeTruthy();
+			}
+		}
+	});
 });

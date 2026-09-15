@@ -47,6 +47,73 @@ describe("Character derived values (definitional)", () => {
 	});
 });
 
+// Effective characteristic values (bead xu83): permanent owned-item deltas
+// (mutations/malignancies as owned Items) change the value derived badges and
+// sheet display read. Tests still start from the base value and add the same
+// deltas through the funnel, so both stay consistent and nothing doubles.
+describe("effective characteristic values (bead xu83)", () => {
+	const delta = (key: string, value: number) => ({
+		kind: "characteristic-modifier",
+		testKey: key,
+		value,
+	});
+
+	function withItems(
+		c: Character,
+		items: Array<Record<string, unknown>>,
+	): Character {
+		(c as unknown as { parent: { items: unknown[] } }).parent = { items };
+		return c;
+	}
+
+	test("owned-item deltas add to the effective value and its derived bonuses", () => {
+		const c = withItems(charWith({ ag: 40 }), [
+			{ type: "mutation", system: { effects: [delta("ag", -15)] } },
+		]);
+		expect(c.effectiveCharacteristicValue("ag")).toBe(25);
+		expect(c.characteristicBonus("ag")).toBe(2);
+		expect(c.movement().full).toBe(2);
+		expect(c.initiativeBonus()).toBe(2);
+	});
+
+	test("without a parent (raw data-in tests) the base value is returned", () => {
+		expect(charWith({ ag: 40 }).effectiveCharacteristicValue("ag")).toBe(40);
+	});
+
+	test("stowed gear contributes nothing; carried gear does", () => {
+		const effect = delta("s", -20);
+		const stowed = withItems(charWith({ s: 40 }), [
+			{ type: "gear", system: { equipState: "stowed", effects: [effect] } },
+		]);
+		expect(stowed.effectiveCharacteristicValue("s")).toBe(40);
+		const carried = withItems(charWith({ s: 40 }), [
+			{ type: "gear", system: { equipState: "carried", effects: [effect] } },
+		]);
+		expect(carried.effectiveCharacteristicValue("s")).toBe(20);
+	});
+
+	test("only matching characteristics and the live kind contribute", () => {
+		const c = withItems(charWith({ s: 40, t: 40 }), [
+			{
+				type: "mutation",
+				system: {
+					effects: [delta("t", -10), { kind: "wounds-max", value: 5 }],
+				},
+			},
+		]);
+		expect(c.effectiveCharacteristicValue("s")).toBe(40);
+		expect(c.effectiveCharacteristicValue("t")).toBe(30);
+	});
+
+	test("unnatural multiplies the effective bonus", () => {
+		const c = withItems(charWith({ s: 40 }), [
+			{ type: "mutation", system: { effects: [delta("s", -15)] } },
+		]);
+		c.characteristics.s.unnatural = 2;
+		expect(c.effectiveCharacteristicBonus("s")).toBe(4); // floor(25/10)=2, ×2
+	});
+});
+
 describe("NPC identity fields (bead lib6)", () => {
 	test("faction/subfaction/npcType/size declared, blank-initial (PCs never need them)", async () => {
 		const { Character } = (await import("./character")) as unknown as {

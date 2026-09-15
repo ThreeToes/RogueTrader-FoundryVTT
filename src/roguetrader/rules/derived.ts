@@ -26,6 +26,12 @@ export interface CharacterSystemLike {
 	/** Stored maximum wounds (set at character creation per the Home World
 	 *  formula; bead hbu). Undefined in raw test data = no base available. */
 	wounds?: { max?: number };
+	/**
+	 * Effective characteristic bonus (owned-item modifiers applied), when the
+	 * caller passes the live Character model (bead xu83). Raw data-in tests
+	 * omit it and fall back to the stored value.
+	 */
+	characteristicBonus?: (key: string) => number;
 }
 
 /**
@@ -57,9 +63,12 @@ export function woundsMax(
 	return base + levels;
 }
 
-/** Fatigue threshold: the Toughness Bonus. */
+/** Fatigue threshold: the (effective) Toughness Bonus. */
 export function fatigueThreshold(character: CharacterSystemLike): number {
-	return Math.floor((character.characteristics.t?.value ?? 0) / 10);
+	return (
+		character.characteristicBonus?.("t") ??
+		Math.floor((character.characteristics.t?.value ?? 0) / 10)
+	);
 }
 
 /**

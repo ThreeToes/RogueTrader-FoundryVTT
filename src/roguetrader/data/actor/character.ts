@@ -8,6 +8,7 @@
  * effective bonus = bonus x unnatural multiplier).
  */
 
+import { effectsAreLive } from "../item/effects";
 import { careers, sorceryRanks } from "../../registry";
 
 export const CHARACTERISTIC_KEYS = [
@@ -333,9 +334,48 @@ export class Character extends foundry.abstract.TypeDataModel<
 		};
 	}
 
-	/** Characteristic bonus: floor(value / 10), ignoring unnatural multiplier. */
+	/**
+	 * Effective characteristic value: the stored (base) value plus every live
+	 * `characteristic-modifier` owned-item delta (bead xu83). Afflictions are
+	 * permanent, so the effective value is what the sheet shows and what
+	 * derived values (bonuses, movement, initiative, soak, carry capacity)
+	 * read. TESTS still start from the base value and add the same deltas via
+	 * the modifier funnel, so the breakdown stays visible and nothing is
+	 * double-counted.
+	 */
+	effectiveCharacteristicValue(key: string): number {
+		const base = this.characteristics[key]?.value ?? 0;
+		const items = (
+			this.parent as unknown as {
+				items?: Iterable<{
+					type?: string;
+					system?: {
+						equipState?: string;
+						effects?: Array<{ kind?: string; testKey?: string; value?: number }>;
+					};
+				}>;
+			} | null
+		)?.items;
+		if (!items) return base;
+		let delta = 0;
+		for (const item of items) {
+			if (!effectsAreLive(item.type ?? "", item.system?.equipState)) continue;
+			for (const effect of item.system?.effects ?? []) {
+				if (effect.kind !== "characteristic-modifier") continue;
+				if (effect.testKey !== key) continue;
+				const value = Number(effect.value ?? 0);
+				if (Number.isFinite(value)) delta += value;
+			}
+		}
+		return base + delta;
+	}
+
+	/**
+	 * Characteristic bonus from the EFFECTIVE value: floor(effective / 10),
+	 * ignoring the unnatural multiplier.
+	 */
 	characteristicBonus(key: string): number {
-		return Math.floor((this.characteristics[key]?.value ?? 0) / 10);
+		return Math.floor(this.effectiveCharacteristicValue(key) / 10);
 	}
 
 	/** Effective characteristic bonus, including the unnatural multiplier. */
@@ -346,7 +386,10 @@ export class Character extends foundry.abstract.TypeDataModel<
 		);
 	}
 
-	/** Agility Bonus shorthand used by movement + initiative (definitional). */
+	/**
+	 * Agility Bonus shorthand used by movement + initiative (from the effective
+	 * Agility value, so a mutation's Agility change flows into movement).
+	 */
 	agilityBonus(): number {
 		return this.characteristicBonus("ag");
 	}

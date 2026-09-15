@@ -42,6 +42,11 @@ describe("Career data model", () => {
 			// koau schema prerequisite: xenos careers (SR Table 4-1, NP Kroot
 			// p50) generate 2d10+X per characteristic instead of human 25.
 			"species",
+			// koau: alternate-rank gates, verbatim from the splatbook blocks.
+			"requiredCareer",
+			"alternateRank",
+			"requirements",
+			"otherRequirements",
 		]) {
 			expect(schema[field]).toBeDefined();
 		}
@@ -66,6 +71,9 @@ describe("Career data model", () => {
 		expect(species.fields.startingFate.opts.initial).toBe(0);
 		// woundsFormula is verbatim book text, blank for humans.
 		expect(species.fields.woundsFormula.opts.initial).toBe("");
+		// fateFormula carries the printed 1d10 roll when starting Fate is not a
+		// fixed value (Kroot, Orks) — bead koau.
+		expect(species.fields.fateFormula.opts.initial).toBe("");
 	});
 
 	test("ranks array carries rank/xpLevel/advances with advance subfields", () => {

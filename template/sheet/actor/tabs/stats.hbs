@@ -11,6 +11,11 @@
                     <label class="char-label" for="char-{{c.key}}">{{localize c.label}}</label>
                     <input id="char-{{c.key}}" class="char-value" name="system.characteristics.{{c.key}}.value"
                         type="number" min="0" max="100" value="{{c.value}}" data-tooltip="{{c.label}}" />
+                    {{#if c.delta}}
+                    <span class="char-delta {{#if (gt c.delta 0)}}pos{{else}}neg{{/if}}"
+                        data-tooltip="{{c.deltaTooltip}}"
+                    >{{#if (gt c.delta 0)}}+{{/if}}{{c.delta}}</span>
+                    {{/if}}
                     <input class="char-bonus" title="{{c.bonusTooltip}}" disabled type="text"
                         value="+{{c.bonus}}" />
                     <span class="unnatural-pips {{#if (gt c.unnatural 1)}}has-mult{{/if}}">

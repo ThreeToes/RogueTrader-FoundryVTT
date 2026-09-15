@@ -132,12 +132,22 @@ export interface CharacteristicSystemLike {
 	characteristics: Record<string, { value: number; unnatural: number }>;
 	characteristicBonus(key: string): number;
 	effectiveCharacteristicBonus(key: string): number;
+	/**
+	 * Value after permanent owned-item modifiers (bead xu83). Optional so plain
+	 * fixtures without owned items fall back to the stored value.
+	 */
+	effectiveCharacteristicValue?(key: string): number;
 }
 
 export interface CharacteristicView {
 	key: string;
 	label: string;
 	value: number;
+	/** Value after live affliction/mutation modifiers (equals `value` when none). */
+	effectiveValue: number;
+	/** Effective value minus the stored value; 0 when unmodified. */
+	delta: number;
+	deltaTooltip: string;
 	bonus: number;
 	effectiveBonus: number;
 	unnatural: number;
@@ -159,10 +169,18 @@ export function buildCharacteristicViews(
 		([key, data]): CharacteristicView => {
 			const bonus = system.characteristicBonus(key);
 			const effectiveBonus = system.effectiveCharacteristicBonus(key);
+			const effectiveValue =
+				system.effectiveCharacteristicValue?.(key) ?? data.value;
+			const delta = effectiveValue - data.value;
 			return {
 				key,
 				label: `CHARACTERISTIC.${key.toUpperCase()}`,
 				value: data.value,
+				effectiveValue,
+				delta,
+				deltaTooltip: format("CHARACTER.EFFECTIVE_TOOLTIP", {
+					value: effectiveValue,
+				}),
 				unnatural: data.unnatural,
 				bonus,
 				effectiveBonus,

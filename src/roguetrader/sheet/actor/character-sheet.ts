@@ -33,6 +33,7 @@ import {
 } from "../../rules/adapter";
 import { missingSkillGrants } from "../../rules/default-skills";
 import {
+	applyAfflictionProcedure,
 	resolveAfflictionGrants,
 	resolveEffectValues,
 } from "../../rules/afflictions";
@@ -1181,7 +1182,10 @@ export class CharacterSheet extends RtActorSheet {
 
 /**
  * Clone a dropped Item for embedding, settling acquisition-time state on the
- * copy (epic nt8k). Two affliction-specific steps:
+ * copy (epic nt8k). Three affliction-specific steps:
+ * - a printed acquisition procedure (bead xu83) runs once and appends its
+ *   settled effect rows (Degenerate Mind's trait pick, Mental Regressive's
+ *   per-characteristic table), then clears the marker so it cannot re-run;
  * - characteristic changes are rolled ONCE here and written onto the effect
  *   row, so later tests see a stable number (dice are signed: "-1d10" reduces);
  * - an acquired Disorder records the severity it was gained at, which is what
@@ -1197,10 +1201,25 @@ async function prepareDroppedItem(
 			kind?: string;
 			effects?: EffectData[];
 			acquiredSeverity?: string;
+			procedure?: string;
 		};
 	};
 	const system = object.system;
 	if (!system) return object as unknown as Record<string, unknown>;
+	if (system.procedure) {
+		const character = systemOf(actor);
+		const rolled = await applyAfflictionProcedure(system.procedure, {
+			roll: async (notation) => {
+				const die = new foundry.dice.Roll(notation);
+				await die.evaluate();
+				return die.total ?? 0;
+			},
+			characteristic: (key) => character.effectiveCharacteristicValue(key),
+		});
+		system.effects = [...(system.effects ?? []), ...rolled];
+		// Settled: the sub-roll must never run again on this item.
+		system.procedure = "";
+	}
 	if (
 		system.effects?.some(
 			(effect) =>

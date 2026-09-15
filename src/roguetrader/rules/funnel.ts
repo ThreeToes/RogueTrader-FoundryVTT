@@ -301,19 +301,101 @@ testContributors.register("effect", (actor) => {
 // Other kinds (damage-flat, critical-damage, wounds-max, ...) belong to their
 // registered handlers / the damage pipeline (rules/talent-effects.ts).
 // ---------------------------------------------------------------------------
+interface EffectLike {
+	kind?: string;
+	testKey?: string;
+	value?: number;
+	label?: string;
+	condition?: string;
+}
+
 interface ItemLike {
 	name?: string;
 	type?: string;
 	system?: {
-		effects?: Array<{
-			kind?: string;
-			testKey?: string;
-			value?: number;
-			label?: string;
-			condition?: string;
-		}>;
+		effects?: EffectLike[];
 		equipState?: string;
 	};
+}
+
+/** The three funnel-readable effect kinds, or null for handler-owned kinds. */
+type FunnelEffectKind = "test" | "attack" | "characteristic";
+
+function funnelEffectKind(
+	kind: string | undefined,
+	context: TestModifierContext,
+): FunnelEffectKind | null {
+	if (kind === undefined || kind === "" || kind === "test-modifier") {
+		return "test";
+	}
+	if (kind === "attack-modifier" && context.kind === "attack") return "attack";
+	if (kind === "characteristic-modifier") return "characteristic";
+	return null;
+}
+
+/**
+ * Whether an effect's test key targets this test. Characteristic changes
+ * match only their own characteristic; "skill:<name>" keys match the SKILL
+ * test's item name (bead r1k) so "Medikit: +20 Medicae" never hits every Int
+ * test; empty keys are wildcards. Value and condition are not considered, so
+ * this is also the predicate the pre-roll condition toggles use.
+ */
+function effectTargetsContext(
+	effect: EffectLike,
+	context: TestModifierContext,
+	kind: FunnelEffectKind,
+): boolean {
+	const key = effect.testKey;
+	if (kind === "characteristic") return Boolean(key) && key === context.key;
+	if (key?.startsWith("skill:")) {
+		return (
+			context.skillName?.toLowerCase() === key.slice("skill:".length).toLowerCase()
+		);
+	}
+	return key === "" || key === undefined || key === context.key;
+}
+
+/** Every live item effect that targets this test, regardless of its guard. */
+function liveEffectsForTest(
+	actor: unknown,
+	context: TestModifierContext,
+): Array<{ item: ItemLike; effect: EffectLike; kind: FunnelEffectKind }> {
+	const items = (actor as { items?: ItemLike[] } | undefined)?.items;
+	const out: Array<{
+		item: ItemLike;
+		effect: EffectLike;
+		kind: FunnelEffectKind;
+	}> = [];
+	for (const item of items ?? []) {
+		const type = item.type ?? "";
+		if (!effectsAreLive(type, item.system?.equipState)) continue;
+		for (const effect of item.system?.effects ?? []) {
+			const kind = funnelEffectKind(effect.kind, context);
+			if (!kind) continue;
+			if (!effectTargetsContext(effect, context, kind)) continue;
+			out.push({ item, effect, kind });
+		}
+	}
+	return out;
+}
+
+/**
+ * Guarded-effect condition keys that COULD apply to this test (bead xu83).
+ * Offered by the TestDialog as pre-roll toggles: a guarded effect is dropped
+ * by the contributor until its flag is set, so the dialog needs to know which
+ * guards are in play or the player can never turn one on. Ignores whether the
+ * flag is currently set; deduped in first-seen order.
+ */
+export function collectConditionKeys(
+	actor: unknown,
+	context: TestModifierContext,
+): string[] {
+	const keys: string[] = [];
+	for (const { effect } of liveEffectsForTest(actor, context)) {
+		const condition = (effect.condition ?? "").trim();
+		if (condition && !keys.includes(condition)) keys.push(condition);
+	}
+	return keys;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -332,80 +414,45 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 testContributors.register("item-effects", (actor, context) => {
-	const items = (actor as { items?: Array<ItemLike> }).items;
-	if (!items) return [];
 	const mods: Modifier[] = [];
-	for (const item of items) {
+	for (const { item, effect, kind } of liveEffectsForTest(actor, context)) {
 		const type = item.type ?? "";
-		if (!effectsAreLive(type, item.system?.equipState)) continue;
-		for (const effect of item.system?.effects ?? []) {
-			// Only test-modifier kinds feed the funnel; damage kinds belong to
-			// the damage pipeline (collectTalentDamageEffects) and other kinds
-			// to their registered handlers (rules/talent-effects.ts).
-			const kind = (effect as { kind?: string }).kind;
-			const isTestModifier =
-				kind === undefined || kind === "" || kind === "test-modifier";
-			const isAttackModifier =
-				kind === "attack-modifier" && context.kind === "attack";
-			// Characteristic changes (bead nt8k): a delta to a characteristic
-			// applies to every test on it (characteristic, skill, or attack). The
-			// value is a settled number — dice were rolled once at acquisition
-			// and persisted on the item (see rules/afflictions).
-			const isCharacteristicModifier = kind === "characteristic-modifier";
-			if (!isTestModifier && !isAttackModifier && !isCharacteristicModifier) {
-				continue;
-			}
-			const key = effect.testKey;
-			if (isCharacteristicModifier) {
-				if (!key || key !== context.key) continue;
-			} else if (key?.startsWith("skill:")) {
-				// "skill:<name>" test keys (bead r1k) match the SKILL test's item
-				// name (lowercased), not the characteristic — gear/drug/tool
-				// bonuses like "Medikit: +20 Medicae Tests" must not hit every
-				// Int-characteristic test.
-				if (
-					context.skillName?.toLowerCase() !==
-					key.slice("skill:".length).toLowerCase()
-				) {
-					continue;
-				}
-			} else if (key !== "" && key !== undefined && key !== context.key) {
-				continue;
-			}
-			// Guarded effects (bead czx) only apply when the matching context
-			// flag is set; the condition label rides on the Modifier for the
-			// chat/dialog breakdown.
-			const condition = (effect as { condition?: string }).condition;
-			if (condition) {
-				if (!context.flags?.[condition]) continue;
-			}
-			const value = Number(effect.value);
-			if (!Number.isFinite(value) || value === 0) continue;
-			const isTalent = type === "talent";
-			const idPrefix = isTalent ? "talent" : `item:${type}`;
-			// The owning item's name must be part of the id: two different
-			// talents/gear can contribute identical (label, testKey, condition)
-			// triples and every one of them is additive (bug report: only the
-			// first showed). Dedupe must only collapse the SAME source's
-			// re-collected rows across the dialog round-trip.
-			const keyPart = isAttackModifier
-				? "attack"
-				: isCharacteristicModifier
-					? `char:${key}`
-					: key || "any";
-			mods.push({
-				id: `${idPrefix}:${item.name ?? ""}:${keyPart}:${effect.label ?? ""}:${condition || "any"}`,
-				source: {
-					type: isTalent ? "talent" : "item",
-					label: SOURCE_LABELS[type] ?? "SOURCE.FROM_GEAR",
-				},
-				// Unlabelled effects fall back to the owning item's name (the
-				// talent/gear name), never the raw type slug.
-				label: effect.label || item.name || "",
-				value,
-				...(condition ? { condition } : {}),
-			});
+		const isCharacteristicModifier = kind === "characteristic";
+		const isAttackModifier = kind === "attack";
+		const key = effect.testKey;
+		// Guarded effects (bead czx) only apply when the matching context
+		// flag is set; the condition label rides on the Modifier for the
+		// chat/dialog breakdown.
+		const condition = effect.condition;
+		if (condition) {
+			if (!context.flags?.[condition]) continue;
 		}
+		const value = Number(effect.value);
+		if (!Number.isFinite(value) || value === 0) continue;
+		const isTalent = type === "talent";
+		const idPrefix = isTalent ? "talent" : `item:${type}`;
+		// The owning item's name must be part of the id: two different
+		// talents/gear can contribute identical (label, testKey, condition)
+		// triples and every one of them is additive (bug report: only the
+		// first showed). Dedupe must only collapse the SAME source's
+		// re-collected rows across the dialog round-trip.
+		const keyPart = isAttackModifier
+			? "attack"
+			: isCharacteristicModifier
+				? `char:${key}`
+				: key || "any";
+		mods.push({
+			id: `${idPrefix}:${item.name ?? ""}:${keyPart}:${effect.label ?? ""}:${condition || "any"}`,
+			source: {
+				type: isTalent ? "talent" : "item",
+				label: SOURCE_LABELS[type] ?? "SOURCE.FROM_GEAR",
+			},
+			// Unlabelled effects fall back to the owning item's name (the
+			// talent/gear name), never the raw type slug.
+			label: effect.label || item.name || "",
+			value,
+			...(condition ? { condition } : {}),
+		});
 	}
 	return mods;
 });

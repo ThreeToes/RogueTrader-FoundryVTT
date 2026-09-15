@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	breakdown,
+	collectConditionKeys,
 	collectTestModifiers,
 	mergeModifiers,
 	testContributors,
@@ -682,5 +683,93 @@ describe("talent contributor", () => {
 				mods.find((m) => m.id.startsWith("attack:fire-mode")),
 			).toBeUndefined();
 		});
+	});
+});
+
+// Guarded affliction conditions (bead xu83): the dialog offers a pre-roll
+// toggle for every guard that could apply to this test, so a guarded effect
+// (Night Eyes in bright light, Distrustful with strangers, Tox Blood vs
+// poison, ...) is turnable-on rather than permanently silent.
+describe("collectConditionKeys (bead xu83)", () => {
+	const afflicted = {
+		items: [
+			{
+				name: "Night Eyes",
+				type: "madnessentry",
+				system: {
+					effects: [
+						{ kind: "test-modifier", value: -10, condition: "brightlight" },
+					],
+				},
+			},
+			{
+				name: "Distrustful",
+				type: "madnessentry",
+				system: {
+					effects: [
+						{ kind: "test-modifier", testKey: "fel", value: -10, condition: "strangers" },
+					],
+				},
+			},
+			{
+				name: "Tox Blood",
+				type: "mutation",
+				system: {
+					effects: [
+						{ kind: "test-modifier", testKey: "t", value: 20, condition: "poison" },
+					],
+				},
+			},
+			{
+				name: "Unconditional",
+				type: "talent",
+				system: { effects: [{ kind: "test-modifier", value: 5 }] },
+			},
+		],
+	};
+
+	test("offers wildcard-condition guards to any test", () => {
+		expect(
+			collectConditionKeys(afflicted, { kind: "characteristic", key: "wp" }),
+		).toEqual(["brightlight"]);
+	});
+
+	test("offers a condition only when its effect targets the test", () => {
+		// Fellowship test: Distrustful (fel + strangers) applies, Night Eyes
+		// still applies (wildcard), Tox Blood (t) does not.
+		expect(
+			collectConditionKeys(afflicted, { kind: "characteristic", key: "fel" }),
+		).toEqual(["brightlight", "strangers"]);
+		expect(
+			collectConditionKeys(afflicted, { kind: "characteristic", key: "t" }),
+		).toEqual(["brightlight", "poison"]);
+	});
+
+	test("ignores unconditional effects and returns [] when nothing is guarded", () => {
+		const plain = {
+			items: [
+				{
+					type: "talent",
+					system: { effects: [{ kind: "test-modifier", value: 10 }] },
+				},
+			],
+		};
+		expect(
+			collectConditionKeys(plain, { kind: "characteristic", key: "ws" }),
+		).toEqual([]);
+	});
+
+	test("a guarded effect contributes once its flag is set, and not before", () => {
+		const before = collectTestModifiers(afflicted, {
+			kind: "characteristic",
+			key: "wp",
+		});
+		expect(before.find((m) => m.label === "Night Eyes")).toBeUndefined();
+		const after = collectTestModifiers(afflicted, {
+			kind: "characteristic",
+			key: "wp",
+			flags: { brightlight: true },
+		});
+		expect(after.find((m) => m.label === "Night Eyes")?.value).toBe(-10);
 	});
 });

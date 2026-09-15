@@ -254,11 +254,35 @@ const TALENT_CONDITIONS = {
 	// authored effects like Resistance (Fear) +10 gate on it. Distinct i18n
 	// key from the CONDITION.FEAR status-condition label.
 	fear: "CONDITION.FEAR_TESTS",
+	// Affliction conditions (bead xu83): the madness/mutation packs print
+	// situational penalties and bonuses ("in bright light", "with strangers",
+	// "while nauseated", "vs poison", "with 'normals'"). Each key is offered
+	// as a pre-roll toggle in the TestDialog by rules/funnel.ts
+	// collectConditionKeys, so the guard is visible rather than silent.
+	brightlight: "CONDITION.BRIGHT_LIGHT",
+	strangers: "CONDITION.STRANGERS",
+	normals: "CONDITION.NORMALS",
+	nauseated: "CONDITION.NAUSEATED",
+	poison: "CONDITION.POISON_TESTS",
+} as const;
+
+/**
+ * Acquisition-time affliction procedures (bead xu83). Some mutations print a
+ * bespoke one-off procedure that cannot be expressed as a static effect row
+ * (Degenerate Mind's 1d10 trait pick; Mental Regressive's per-characteristic
+ * d10 table). The mutation item names the procedure in `system.procedure`;
+ * rules/afflictions.ts implements it and runs it once when the Item is
+ * acquired. Unknown values throw (never silently ignore a printed rule).
+ */
+const AFFLICTION_PROCEDURES = {
+	"degenerate-mind": "PROCEDURE.DEGENERATE_MIND",
+	"mental-regressive": "PROCEDURE.MENTAL_REGRESSIVE",
 } as const;
 
 export const talentCategories = new EntryRegistry(TALENT_CATEGORIES);
 export const talents = new EntryRegistry(TALENTS);
 export const talentConditions = new EntryRegistry(TALENT_CONDITIONS);
+export const afflictionProcedures = new EntryRegistry(AFFLICTION_PROCEDURES);
 export const equipStates = new EntryRegistry(EQUIP_STATES);
 
 /**

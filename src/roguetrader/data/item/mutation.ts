@@ -4,6 +4,7 @@
  * d100 roll (corruption-track rolls, Tainted birthright). Text is verbatim;
  * mechanical hooks stay in `text` until effect kinds exist for them.
  */
+import { afflictionProcedures } from "../../registry";
 import { Gear } from "./gear";
 
 export class Mutation extends Gear {
@@ -12,6 +13,7 @@ export class Mutation extends Gear {
 	declare tableKey: string;
 	declare rollMin: number;
 	declare rollMax: number;
+	declare procedure: string;
 
 	static override defineSchema() {
 		return {
@@ -30,6 +32,18 @@ export class Mutation extends Gear {
 				max: 100,
 				integer: true,
 				initial: 100,
+			}),
+			/**
+			 * Acquisition-time procedure (bead xu83): a printed, one-off roll this
+			 * mutation requires that no static effect row can express (Degenerate
+			 * Mind's 1d10 trait pick; Mental Regressive's per-characteristic
+			 * table). Blank = the authored effects are the whole rule. Validated
+			 * against the registry so a typo fails loudly (rules/afflictions.ts).
+			 */
+			procedure: new foundry.data.fields.StringField({
+				choices: afflictionProcedures.choices,
+				initial: "",
+				blank: true,
 			}),
 		};
 	}

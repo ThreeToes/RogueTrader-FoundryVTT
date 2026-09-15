@@ -11,8 +11,8 @@ import { sourceField } from "./source";
  * carry just `roll` + prose; difficulty ladders carry `difficulty`/
  * `modifier`; exploration/investigation rows carry `complexity`/`degrees`/
  * `time`; disposition rows carry the skill-name columns (charm/command/...);
- * vehicle-critical rows carry `hullSection`/`zone`. Optional fields default
- * empty/0 and unused ones stay blank.
+ * vehicle-critical rows carry `hullSection`/`zone`; ship-table crew-rating rows
+ * carry `rating`. Optional fields default empty/0 and unused ones stay blank.
  */
 export class GameTable extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,
@@ -22,6 +22,7 @@ export class GameTable extends foundry.abstract.TypeDataModel<
 
 	declare kind: string;
 	declare roll: string;
+	declare rating: number;
 	declare difficulty: string;
 	declare complexity: string;
 	declare time: string;
@@ -47,6 +48,12 @@ export class GameTable extends foundry.abstract.TypeDataModel<
 			kind: new foundry.data.fields.StringField({ initial: "" }),
 			/** Raw roll range as printed, e.g. "2-3 (Rocky)" or "1-5". */
 			roll: new foundry.data.fields.StringField({ initial: "" }),
+			/** NPC crew skill/characteristic rating (ship tables, Table 8-9). */
+			rating: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 0,
+			}),
 			/** Named difficulty for ladder tables, e.g. "Challenging". */
 			difficulty: new foundry.data.fields.StringField({ initial: "" }),
 			/** Named complexity for exploration/investigation tables. */

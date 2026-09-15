@@ -1,5 +1,6 @@
 import { sumModifiers } from "../../rules-engine/src/index";
 import type { Modifier } from "../../rules-engine/src/modifier";
+import { talentConditions } from "../registry";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -39,6 +40,18 @@ export interface TestDialogRequest {
 	contributors?: Modifier[];
 	/** Bead hyv: attack-context selectors (fire mode, aim, charge). */
 	attackContext?: TestDialogAttackContext;
+	/**
+	 * Guarded-effect condition keys in play for this test (bead xu83), e.g.
+	 * ["brightlight", "poison"]. Rendered as pre-roll toggles so a guarded
+	 * affliction/talent modifier is visible and optional rather than silent.
+	 */
+	conditions?: string[];
+	/**
+	 * Re-collect the fixed contributor rows for the current condition flags,
+	 * so the live target preview reflects a toggled guard. Without it the
+	 * toggles still reach the roll via `flags` (roll-system re-collects).
+	 */
+	collectForConditions?: (flags: Record<string, boolean>) => Modifier[];
 }
 
 export interface TestDialogAttackSelection {
@@ -57,6 +70,8 @@ export interface TestDialogResult {
 	modifiers: Modifier[];
 	/** Attack-context selection (bead hyv), when applicable. */
 	attack?: TestDialogAttackSelection;
+	/** Enabled guarded-effect condition flags (bead xu83). */
+	flags?: Record<string, boolean>;
 }
 
 /**
@@ -94,6 +109,13 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	#baseTarget: number;
 	#contributors: Modifier[];
+	#conditions: string[];
+	// Guard-toggle state survives a rerender (add/remove custom modifier),
+	// which recreates the checkboxes from scratch.
+	#conditionState: Record<string, boolean> = {};
+	#collectForConditions:
+		| ((flags: Record<string, boolean>) => Modifier[])
+		| null;
 	#custom: modifiersRow[];
 	// Bead wqt3: selected difficulty modifier (null = no selection).
 	// Kept for rerender persistence; the authoritative value at roll/preview
@@ -113,6 +135,8 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		super({ ...options, window: { title: request.title } });
 		this.#baseTarget = request.baseTarget;
 		this.#attackContext = request.attackContext ?? null;
+		this.#conditions = request.conditions ?? [];
+		this.#collectForConditions = request.collectForConditions ?? null;
 		// Full modifiers kept so ids survive #collectModifiers — postTest's
 		// funnel merge then dedupes these against a fresh collection instead
 		// of double-counting (bead bpd follow-up).
@@ -157,12 +181,38 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		return sumModifiers(this.#collectModifiers());
 	}
 
+	/** Checked guarded-effect condition flags (authoritative at roll time). */
+	#conditionFlags(): Record<string, boolean> {
+		const flags: Record<string, boolean> = {};
+		const boxes = this.element?.querySelectorAll<HTMLInputElement>(
+			"[data-condition]",
+		);
+		for (const box of boxes ?? []) {
+			const key = box.dataset.condition ?? "";
+			if (key && box.checked) flags[key] = true;
+		}
+		return flags;
+	}
+
+	/**
+	 * Fixed rows for the current guard selection: the request's contributors,
+	 * or (when a toggle is on and a re-collector was supplied) a fresh
+	 * collection that includes the now-unguarded effects.
+	 */
+	#fixedContributors(): Modifier[] {
+		const flags = this.#conditionFlags();
+		if (this.#collectForConditions && Object.keys(flags).length > 0) {
+			return this.#collectForConditions(flags);
+		}
+		return this.#contributors;
+	}
+
 	/** Build the Modifier[] payload from fixed + difficulty + custom rows. */
 	#collectModifiers(): Modifier[] {
 		const rows = this.element?.querySelectorAll<HTMLElement>(
 			".modifier-row.custom",
 		);
-		const out: Modifier[] = this.#contributors.map((m) => ({ ...m }));
+		const out: Modifier[] = this.#fixedContributors().map((m) => ({ ...m }));
 		// Bead wqt3: append the difficulty as a labelled, visible contributor
 		// (additive with custom modifiers). Read from the DOM at roll time so
 		// it always reaches the funnel (bug: state-only tracking meant the
@@ -213,10 +263,15 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 			unknown
 		>;
 		context.baseTarget = this.#baseTarget;
-		context.contributors = this.#contributors.map((m) => ({
+		context.contributors = this.#fixedContributors().map((m) => ({
 			label: m.label,
 			value: m.value,
 			sourceLabel: m.source.label,
+		}));
+		context.conditions = this.#conditions.map((key) => ({
+			key,
+			label: game.i18n.localize(talentConditions.get(key) ?? key),
+			checked: this.#conditionState[key] ?? false,
 		}));
 		context.customModifiers = this.#custom;
 		context.attackContext = this.#attackContext;
@@ -236,6 +291,17 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	_onRender() {
 		super._onRender();
 		this.#updatePreview();
+		// Foundry action delegation is unreliable on change events (see the
+		// difficulty select); listen natively so a guard toggle refreshes the
+		// preview immediately. The roll reads the boxes from the DOM anyway.
+		for (const box of this.element?.querySelectorAll<HTMLInputElement>(
+			"[data-condition]",
+		) ?? []) {
+			box.addEventListener("change", () => {
+				this.#conditionState[box.dataset.condition ?? ""] = box.checked;
+				this.#updatePreview();
+			});
+		}
 	}
 
 	static async #onAdd(this: TestDialog): Promise<void> {
@@ -289,6 +355,9 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.#finish({
 			modifiers: this.#collectModifiers(),
 			...(this.#attackContext ? { attack: this.#attack } : {}),
+			...(Object.keys(this.#conditionFlags()).length > 0
+				? { flags: this.#conditionFlags() }
+				: {}),
 		});
 	}
 

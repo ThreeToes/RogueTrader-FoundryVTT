@@ -139,4 +139,30 @@ describe("characteristic views (bead 6l90)", () => {
 		expect(CHAR_SHORTS.ws).toBe("WS");
 		expect(CHAR_SHORTS.fel).toBe("Fel");
 	});
+
+	// Bead xu83: the sheet shows the effective value and the delta so a
+	// permanent affliction/mutation change is visible, while the editable
+	// input above keeps editing the base value.
+	it("reports the effective value and delta when owned items modify it", () => {
+		const withItems = {
+			characteristics: { ag: { value: 40, unnatural: 1 } },
+			characteristicBonus: () => 2,
+			effectiveCharacteristicBonus: () => 2,
+			effectiveCharacteristicValue: () => 25,
+		};
+		const view = buildCharacteristicViews(withItems, format)[0];
+		expect(view).toMatchObject({
+			value: 40,
+			effectiveValue: 25,
+			delta: -15,
+		});
+		expect(view.deltaTooltip).toContain("CHARACTER.EFFECTIVE_TOOLTIP");
+		expect(view.deltaTooltip).toContain("25");
+	});
+
+	it("delta is zero when the system has no owned-item accessor", () => {
+		const view = buildCharacteristicViews(system, format)[0];
+		expect(view.delta).toBe(0);
+		expect(view.effectiveValue).toBe(view.value);
+	});
 });

@@ -70,11 +70,102 @@ export function resolveAfflictionGrants(
 }
 
 /**
- * Effects with `characteristic-modifier` dice resolved into `value`. Pure: the
- * roller is injected. Rows that already carry a value are left untouched, and
- * the `dice` expression is kept for display ("Agility -1d10"); `value` shows
- * the settled roll. Order is preserved.
+ * Injection points for acquisition-time procedures (bead xu83). The helpers
+ * below stay Foundry-free: the caller supplies the roller and the actor's
+ * current characteristic values.
  */
+export interface ProcedureContext {
+	/** Roll a dice expression once and return its total (e.g. "1d10"). */
+	roll: (notation: string) => Promise<number>;
+	/** Current base value of a characteristic (for halve / set-to-5 outcomes). */
+	characteristic: (key: string) => number;
+}
+
+/** Degenerate Mind (Core p369): the 1d10 sub-roll picks the granted item. */
+const DEGENERATE_MIND_TABLE: Array<{ max: number; effect: EffectData }> = [
+	{ max: 3, effect: { kind: "grants-item", testKey: "talents:Frenzy" } },
+	{ max: 7, effect: { kind: "grants-item", testKey: "talents:Fearless" } },
+	{ max: 10, effect: { kind: "grants-item", testKey: "traits:From Beyond" } },
+];
+
+/** Mental Regressive (Core p369) rolls independently for each of these. */
+const MENTAL_REGRESSIVE_CHARACTERISTICS = ["int", "per", "wp", "fel"];
+
+async function degenerateMind(context: ProcedureContext): Promise<EffectData[]> {
+	const rolled = await context.roll("1d10");
+	const band = DEGENERATE_MIND_TABLE.find((b) => rolled >= 1 && rolled <= b.max);
+	if (!band) {
+		throw new Error(
+			`Degenerate Mind sub-roll out of range (1d10 returned ${rolled})`,
+		);
+	}
+	return [{ ...band.effect }];
+}
+
+async function mentalRegressive(
+	context: ProcedureContext,
+): Promise<EffectData[]> {
+	const out: EffectData[] = [];
+	for (const key of MENTAL_REGRESSIVE_CHARACTERISTICS) {
+		const rolled = await context.roll("1d10");
+		if (rolled < 1 || rolled > 10) {
+			throw new Error(
+				`Mental Regressive sub-roll out of range (1d10 returned ${rolled})`,
+			);
+		}
+		const current = context.characteristic(key);
+		// Settle the outcome ONCE against the value at acquisition (the same
+		// rolled-once contract as the characteristic-modifier dice): a halve
+		// stores the delta that reaches the book's halved value, and a 10
+		// stores the delta that lands on 5. 8-9 change nothing.
+		let delta: number | null = null;
+		if (rolled <= 5) delta = -(await context.roll("1d10"));
+		else if (rolled <= 7) delta = Math.floor(current / 2) - current;
+		else if (rolled === 10) delta = 5 - current;
+		if (delta !== null && delta !== 0) {
+			out.push({
+				kind: "characteristic-modifier",
+				testKey: key,
+				value: delta,
+				label: "Mental Regressive",
+			});
+		}
+	}
+	return out;
+}
+
+const AFFLICTION_PROCEDURE_HANDLERS: Record<
+	string,
+	(context: ProcedureContext) => Promise<EffectData[]>
+> = {
+	"degenerate-mind": degenerateMind,
+	"mental-regressive": mentalRegressive,
+};
+
+/** Procedure keys with an implementation (test hook). */
+export function afflictionProcedureNames(): string[] {
+	return Object.keys(AFFLICTION_PROCEDURE_HANDLERS);
+}
+
+/**
+ * Settle a mutation's acquisition-time procedure into concrete effect rows.
+ * Pure (Foundry-free): the roller and characteristic reader are injected.
+ * Blank returns no rows; an unknown key THROWS rather than silently dropping
+ * a printed rule (the items are validated against the registry, so this only
+ * fires for hand-edited data).
+ */
+export async function applyAfflictionProcedure(
+	procedure: string | undefined,
+	context: ProcedureContext,
+): Promise<EffectData[]> {
+	const key = (procedure ?? "").trim();
+	if (!key) return [];
+	const handler = AFFLICTION_PROCEDURE_HANDLERS[key];
+	if (!handler) {
+		throw new Error(`Unknown affliction procedure "${key}"`);
+	}
+	return handler(context);
+}
 export async function resolveEffectValues(
 	effects: EffectData[] | undefined,
 	roll: (notation: string) => Promise<number>,

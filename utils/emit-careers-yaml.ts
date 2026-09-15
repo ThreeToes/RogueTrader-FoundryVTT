@@ -23,6 +23,7 @@ import { readFileSync, existsSync } from "node:fs";
 import yaml from "yaml";
 
 const PARSED = "src/packs/.extraction-src/careers-parsed.json";
+const ALT_PARSED = "src/packs/.extraction-src/alt-careers-parsed.json";
 const SKILLS_YAML = "src/packs/rogue_trader/skills/skills.yaml";
 const TALENTS_YAML = "src/packs/rogue_trader/talents/talents.yaml";
 const OUT = "src/packs/rogue_trader/careers/careers.yaml";
@@ -32,6 +33,25 @@ if (!existsSync(PARSED)) {
 }
 
 const parsed = yaml.parse(readFileSync(PARSED, "utf8")) as CareerParsed[];
+/**
+ * Glimpse From Beyond (ITS p105) is EXCLUDED: its advance table uses the
+ * second ITS font subset (DGUMVN), whose cipher is unmapped (bead 4s4f
+ * follow-up), so its Forbidden Lore specialization cell cannot be read
+ * verbatim. Emitting a corrupted name would violate the no-guessing rule;
+ * the row is tracked in a follow-up bead instead.
+ */
+const EXCLUDED_ALT = new Set(["Glimpse From Beyond"]);
+const altParsed = (
+	existsSync(ALT_PARSED)
+		? (yaml.parse(readFileSync(ALT_PARSED, "utf8")) as AltCareerParsed[])
+		: []
+).filter((entry) => {
+	if (!EXCLUDED_ALT.has(entry.name)) return true;
+	console.warn(
+		`[careers] EXCLUDED ${entry.name} (unmapped ITS cipher subset — follow-up bead)`,
+	);
+	return false;
+});
 const skillNames = namesFrom(SKILLS_YAML);
 const talentNames = namesFrom(TALENTS_YAML);
 
@@ -60,6 +80,127 @@ const RANK_XP: Record<number, number> = {
 	7: 25000,
 	8: 30000,
 };
+
+/**
+ * Suggested Origin Path Home Worlds per core career (Table 1-1 pairings,
+ * epic 1gb7 follow-up / bead 7jyc). Lives here because the pack YAML is
+ * generated: authoring it directly in careers.yaml would be lost on the next
+ * emit (caught while adding the koau splat content).
+ */
+const SUGGESTED_HOME_WORLDS: Record<string, string[]> = {
+	"rogue-trader": ["hive-world", "imperial-world", "noble-born", "void-born"],
+	"arch-militant": ["death-world", "forge-world", "hive-world", "void-born"],
+	"astropath-transcendent": ["hive-world", "imperial-world", "void-born"],
+	explorator: ["forge-world", "hive-world", "imperial-world", "void-born"],
+	missionary: ["death-world", "hive-world", "imperial-world", "noble-born"],
+	navigator: ["hive-world", "imperial-world", "noble-born", "void-born"],
+	seneschal: ["hive-world", "imperial-world", "noble-born", "void-born"],
+	"void-master": ["forge-world", "hive-world", "void-born"],
+};
+
+interface AltCareerParsed {
+	name: string;
+	key: string;
+	book: string;
+	page: number;
+	kind: "alternate" | "elite" | "xenos";
+	requiredCareer?: string;
+	alternateRank?: string;
+	requirements?: string;
+	otherRequirements?: string;
+	description: string;
+	startingSkills?: string[];
+	startingTalents?: string[];
+	startingGear?: string[];
+	characteristicAdvances?: Record<
+		string,
+		{ simple: number; intermediate: number; trained: number; expert: number }
+	> | null;
+	species?: {
+		key: string;
+		label: string;
+		baseCharacteristics: Record<string, number>;
+		startingFate: number;
+		fateFormula: string;
+		woundsFormula: string;
+	} | null;
+	ranks: Array<{
+		rank: number;
+		xpLevel: number;
+		advances: Array<{
+			name: string;
+			cost: number;
+			type: string;
+			prerequisites: string[];
+		}>;
+	}>;
+}
+
+/** Plain paragraph -> <p> HTML (alternate ranks have no curated markers). */
+function paragraphsToHtml(prose: string): string {
+	return prose
+		.split(/\n\n+/)
+		.map((p) => p.trim())
+		.filter(Boolean)
+		.map((p) => `<p>${p}</p>`)
+		.join("\n");
+}
+
+/** Alternate-rank / elite / xenos career documents (bead koau). */
+function altDocuments(entries: AltCareerParsed[]) {
+	return entries.map((entry) => {
+		// Rank tables that could not be read (unmapped ITS cipher subset) are
+		// dropped here and reported, never emitted half-decoded.
+		const ranks = entry.ranks.filter((rank) => {
+			if (rank.advances.length > 0) return true;
+			console.warn(
+				`[careers] DROPPED unreadable rank ${rank.rank} of ${entry.name} (unmapped ITS cipher subset — follow-up bead)`,
+			);
+			return false;
+		});
+		return {
+			name: entry.name,
+			type: "Item",
+			description: paragraphsToHtml(entry.description ?? ""),
+			system: {
+				key: entry.key,
+				shortDescription: "",
+				source: { book: entry.book, page: entry.page },
+				requiredCareer: entry.requiredCareer ?? "",
+				alternateRank: entry.alternateRank ?? "",
+				requirements: entry.requirements ?? "",
+				otherRequirements: entry.otherRequirements ?? "",
+				characteristicAdvances: entry.characteristicAdvances ?? {},
+				startingSkills: entry.startingSkills ?? [],
+				startingTalents: entry.startingTalents ?? [],
+				startingGear: entry.startingGear ?? [],
+				species: entry.species ?? {
+					key: "",
+					label: "",
+					baseCharacteristics: {},
+					startingFate: 0,
+					fateFormula: "",
+					woundsFormula: "",
+				},
+				ranks: ranks.map((rank) => ({
+					rank: rank.rank,
+					xpLevel: rank.xpLevel,
+					advances: rank.advances.map((adv) => {
+						const resolved = keyAdvance(adv.name, adv.type);
+						return {
+							key: resolved.key,
+							name: resolved.name,
+							type: adv.type,
+							cost: adv.cost,
+							multiplier: resolved.multiplier,
+							prerequisites: adv.prerequisites,
+						};
+					}),
+				})),
+			},
+		};
+	});
+}
 
 interface CareerParsed {
 	name: string;
@@ -300,7 +441,8 @@ function toDescriptionHtml(prose: string, careerKey: string): string {
 	return html;
 }
 
-const documents = parsed.map((career) => ({
+const documents = [
+	...parsed.map((career) => ({
 	name: career.name,
 	type: "Item",
 	description: toDescriptionHtml(career.description ?? "", career.key),
@@ -308,6 +450,7 @@ const documents = parsed.map((career) => ({
 		key: career.key,
 		shortDescription: career.shortDescription,
 		source: { book: "Core Rulebook", page: career.page },
+		suggestedHomeWorlds: SUGGESTED_HOME_WORLDS[career.key] ?? [],
 		characteristicAdvances: career.characteristicAdvances,
 		startingSkills: career.startingSkills,
 		startingTalents: career.startingTalents,
@@ -328,15 +471,22 @@ const documents = parsed.map((career) => ({
 			}),
 		})),
 	},
-}));
+})),
+	...altDocuments(altParsed),
+];
 
-const header = `# Careers pack (beads 2n5/rcv): core-8 from Core Rulebook Chapter II
-# (p36-71), emitted by utils/emit-careers-yaml.ts from the parse-careers.mjs
-# JSON. VERBATIM book text (short descriptions from Table 2-1 p37, prose from
-# the career sections, rank tables p41-72). Rank xpLevel stored per-rank
-# (owner option a). Advance "key" fields resolve against the skills/talents
-# packs; rows the packs cannot resolve keep the verbatim name (see unkeyed
-# report).
+const header = `# Careers pack (beads 2n5/rcv + koau): core-8 from Core Rulebook
+# Chapter II (p36-71) plus splatbook Alternate Career Ranks (ITS/HA/FC/DK),
+# the two ITS Elite Advance packages, and the xenos careers (Kroot Mercenary,
+# Ork Freebooter, Kabalite Warrior, Wych). Emitted by
+# utils/emit-careers-yaml.ts from the parse-careers.mjs (core) and
+# parse-alt-careers.mjs (splat) JSON. VERBATIM book text: short descriptions
+# from Table 2-1 p37 (core), prose from the career/alt-rank sections, rank
+# tables from the books' Advance tables. Advance "key" fields resolve against
+# the skills/talents packs; rows the packs cannot resolve keep the verbatim
+# name (see unkeyed report). Alternate ranks carry the book's own
+# requiredCareer/alternateRank/requirements/otherRequirements gates; xenos
+# careers carry the species characteristic block.
 
 `;
 

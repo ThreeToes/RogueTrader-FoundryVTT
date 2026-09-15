@@ -49,6 +49,24 @@
     pointer-events: none;
 }
 
+/* Effective-value delta from owned afflictions/mutations (bead xu83): the
+   stored value above stays the base; this shows how far the live modifiers
+   move it. */
+.rogue-trader.sheet.character .char-delta {
+    font-size: 0.8em;
+    font-weight: bold;
+    pointer-events: none;
+    cursor: help;
+}
+
+.rogue-trader.sheet.character .char-delta.pos {
+    color: var(--rt-success, #3fb950);
+}
+
+.rogue-trader.sheet.character .char-delta.neg {
+    color: var(--rt-danger, #f85149);
+}
+
 .rogue-trader.sheet.character .encumbrance-progress {
     display: flex;
     align-items: center;

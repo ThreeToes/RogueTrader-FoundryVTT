@@ -35,11 +35,20 @@ declare startingSkills: string[];
 	declare startingTalents: string[];
 	declare startingGear: string[];
 	declare ranks: CareerRank[];
+	/** Verbatim "Required Career(s):" gate (alternate ranks / elite advances). */
+	declare requiredCareer: string;
+	/** Verbatim "Alternate Rank:" gate, e.g. "3 (10,000 xp) or higher". */
+	declare alternateRank: string;
+	/** Verbatim "Requirements:" short stat gate. */
+	declare requirements: string;
+	/** Verbatim "Other Requirements:" prose gate. */
+	declare otherRequirements: string;
 	declare species: {
 		key: string;
 		label: string;
 		baseCharacteristics: Record<string, number>;
 		startingFate: number;
+		fateFormula: string;
 		woundsFormula: string;
 	};
 
@@ -121,13 +130,14 @@ declare startingSkills: string[];
 			 */
 			/**
 			 * Species block (bead koau schema prerequisite): xenos careers
-			 * (Dark Eldar Table 4-1, Kroot Characteristics) generate each
+			 * (Dark Eldar Table 4-1, Kroot/Ork Characteristics) generate each
 			 * characteristic as 2d10+X instead of the human flat 2d10+25, with
 			 * species-specific wounds/fate. Blank key = human (creator uses its
-			 * human defaults and the origin fate tables); startingFate 0 = not
-			 * specified on this career (use the origin rules). Characteristic
-			 * keys mirror CHARACTERISTIC_KEYS; values are the book's "2d10+"
-			 * adds. woundsFormula is verbatim (e.g. "1d5+1 and add twice TB").
+			 * human defaults and the origin fate tables); startingFate 0 with a
+			 * blank fateFormula = not specified for this career. Characteristic
+			 * keys mirror CHARACTERISTIC_KEYS; values are the book's "2d10+" adds.
+			 * woundsFormula / fateFormula are verbatim (Kroot and Ork roll 1d10
+			 * for starting Fate, which a single number cannot hold).
 			 */
 			species: new foundry.data.fields.SchemaField({
 				key: new foundry.data.fields.StringField({ initial: "" }),
@@ -144,8 +154,19 @@ declare startingSkills: string[];
 					min: 0,
 					initial: 0,
 				}),
+				/** Verbatim starting-Fate roll, when not a fixed value. */
+				fateFormula: new foundry.data.fields.StringField({ initial: "" }),
 				woundsFormula: new foundry.data.fields.StringField({ initial: "" }),
 			}),
+			/**
+			 * Alternate-rank gates (bead koau): the book's own verbatim
+			 * "Required Career(s):" / "Alternate Rank:" / "Requirements:" /
+			 * "Other Requirements:" lines. Blank on the core-8.
+			 */
+			requiredCareer: new foundry.data.fields.StringField({ initial: "" }),
+			alternateRank: new foundry.data.fields.StringField({ initial: "" }),
+			requirements: new foundry.data.fields.StringField({ initial: "" }),
+			otherRequirements: new foundry.data.fields.StringField({ initial: "" }),
 			ranks: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.SchemaField({
 					rank: new foundry.data.fields.NumberField({

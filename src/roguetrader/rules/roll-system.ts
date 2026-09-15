@@ -49,7 +49,12 @@ import { resolvePower } from "./power-resolution";
 import { resolveCasting, sorceryLearnable, effectiveSorceryRank } from "./casting";
 import { collectSorceryRank } from "./talent-effects";
 import { resolvePushCap, type HomebrewProfile } from "./homebrew";
-import { collectTestModifiers, mergeModifiers, type TestKind } from "./funnel";
+import {
+	collectConditionKeys,
+	collectTestModifiers,
+	mergeModifiers,
+	type TestKind,
+} from "./funnel";
 import {
 	carriedConditions,
 	conditionEffectData,
@@ -207,6 +212,12 @@ export interface PreparedRoll {
 	initialModifiers: Modifier[];
 	/** Weapon shape for funnel effect collection (weapon kind only). */
 	weapon: { type: string; special?: string[] } | null;
+	/**
+	 * Guarded condition flags this handler sets from its own dialog controls
+	 * (bead xu83): the generic pre-roll condition toggles must not duplicate
+	 * them (e.g. the melee Charge checkbox already drives "charging").
+	 */
+	handledConditionFlags?: string[];
 	/** Pre-dialog funnel context (skill name). */
 	context: RollContext;
 	/** Extra roll-card template vars (e.g. showDamageButton). */
@@ -505,6 +516,8 @@ export const weaponHandler: RollHandler<"weapon"> = {
 			initialModifiers: [...(request.modifiers ?? [])],
 			weapon: { type: String(type), special },
 			context: {},
+			// The melee Charge checkbox sets the "charging" guard itself.
+			...(type === "melee-weapon" ? { handledConditionFlags: ["charging"] } : {}),
 			// Damage flow (b02/1h2, owner redesign): the to-hit card carries a
 			// "Roll Damage" button; damage rolls on click, not automatically.
 			templateVars: { showDamageButton: true },
@@ -1276,6 +1289,8 @@ export const fearHandler: RollHandler<"fear"> = {
 			],
 			weapon: null,
 			context: { flags: { fear: true } },
+			// The Fear Test sets the "fear" guard itself (Resistance etc.).
+			handledConditionFlags: ["fear"],
 			templateVars: {
 				immune,
 				situation: request.situation ?? "combat",
@@ -1470,14 +1485,35 @@ export async function rollSnapOut(
 	];
 	const title = `${actor.name} — ${game.i18n.localize("FEAR.SNAP_OUT")}`;
 	let finalModifiers = modifiers;
+	let finalFlags: Record<string, boolean> = { snapOut: true };
 	if (!options.skipDialog) {
+		// Guarded condition toggles (bead xu83): all-test afflictions like
+		// Night Eyes / Irrational Nausea can guard a Willpower test too.
+		const conditionScope = {
+			kind: "characteristic" as const,
+			key: "wp",
+			weapon: null,
+		};
+		const conditions = collectConditionKeys(actor, conditionScope);
 		const result = await TestDialog.show({
 			title,
 			baseTarget: characteristic.value,
 			contributors: dialogContributors(actor, "characteristic", "wp", modifiers, null),
+			...conditions.length > 0
+				? {
+						conditions,
+						collectForConditions: (flags: Record<string, boolean>) =>
+							collectTestModifiers(
+								actor,
+								{ ...conditionScope, flags },
+								modifiers,
+							),
+					}
+				: {},
 		});
 		if (result === null) return;
 		finalModifiers = result.modifiers;
+		if (result.flags) finalFlags = { ...finalFlags, ...result.flags };
 	}
 	const { outcome } = await runTest(
 		actor,
@@ -1488,12 +1524,12 @@ export async function rollSnapOut(
 			testKey: "wp",
 			initialModifiers: finalModifiers,
 			weapon: null,
-			context: { flags: { snapOut: true } },
+			context: { flags: finalFlags },
 			templateVars: {},
 			kindData: {},
 		},
 		finalModifiers,
-		{ flags: { snapOut: true } },
+		{ flags: finalFlags },
 	);
 	if (!outcome.success) {
 		await postCard(actor, "systems/rogue-trader/template/chat/fear-shock.hbs", {
@@ -1530,6 +1566,21 @@ export async function performRoll(request: RollRequest): Promise<void> {
 	let dialog: TestDialogResultLike | null = null;
 	let modifiers = prepared.initialModifiers;
 	if (!request.skipDialog) {
+		// Guarded affliction/talent conditions (bead xu83): offer a pre-roll
+		// toggle for every guard that could apply to this test, and re-collect
+		// the visible rows when one is switched on so the preview matches.
+		const conditionScope = {
+			kind: prepared.testKind,
+			key: prepared.testKey,
+			weapon: prepared.weapon,
+			skillName: prepared.context.skillName,
+		};
+		const conditions = collectConditionKeys(
+			request.actor,
+			conditionScope,
+		).filter(
+			(key) => !(prepared.handledConditionFlags ?? []).includes(key),
+		);
 		const result = await TestDialog.show({
 			title: prepared.title,
 			baseTarget: prepared.baseTarget,
@@ -1542,6 +1593,17 @@ export async function performRoll(request: RollRequest): Promise<void> {
 				prepared.context.skillName,
 			),
 			...handler.dialogConfig?.(request, prepared),
+			...conditions.length > 0
+				? {
+						conditions,
+						collectForConditions: (flags: Record<string, boolean>) =>
+							collectTestModifiers(
+								request.actor,
+								{ ...conditionScope, flags },
+								modifiers,
+							),
+					}
+				: {},
 		});
 		if (result === null) return;
 		dialog = result;
@@ -1555,8 +1617,13 @@ export async function performRoll(request: RollRequest): Promise<void> {
 		}) ?? []),
 	];
 
-	const context = handler.testContext?.(request, prepared, dialog) ??
-		prepared.context;
+	const baseContext =
+		handler.testContext?.(request, prepared, dialog) ?? prepared.context;
+	// Guarded-condition flags chosen in the dialog join the funnel context for
+	// every roll kind (bead xu83), not only weapon attacks.
+	const context = dialog?.flags
+		? { ...baseContext, flags: { ...baseContext.flags, ...dialog.flags } }
+		: baseContext;
 
 	const { outcome, messageId, target } = await runTest(
 		request.actor,

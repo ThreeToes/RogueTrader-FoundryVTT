@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { resolveAfflictionGrants, resolveEffectValues } from "./afflictions";
+import { afflictionProcedures } from "../registry";
+import {
+	afflictionProcedureNames,
+	applyAfflictionProcedure,
+	resolveAfflictionGrants,
+	resolveEffectValues,
+} from "./afflictions";
 
 describe("resolveEffectValues (epic nt8k)", () => {
 	test("rolls characteristic-modifier dice once into value", async () => {
@@ -73,5 +79,90 @@ describe("resolveAfflictionGrants (epic nt8k)", () => {
 			{ ...fear, name: "Copy" },
 		]);
 		expect(grants.map((g) => g.benefit)).toEqual(["1", "3"]);
+	});
+});
+
+// Acquisition-time procedures (bead xu83): mutations whose printed rule is a
+// one-off sub-roll rather than static effect rows. Pure + roller-injected.
+describe("applyAfflictionProcedure (bead xu83)", () => {
+	const ctx = (
+		rolls: number[],
+		characteristics: Record<string, number> = {},
+	) => {
+		let i = 0;
+		return {
+			roll: async () => rolls[i++] ?? 0,
+			characteristic: (key: string) => characteristics[key] ?? 0,
+		};
+	};
+
+	test("degenerate-mind: 1-3 grants Frenzy", async () => {
+		expect(await applyAfflictionProcedure("degenerate-mind", ctx([3]))).toEqual([
+			{ kind: "grants-item", testKey: "talents:Frenzy" },
+		]);
+	});
+
+	test("degenerate-mind: 4-7 Fearless, 8-10 From Beyond", async () => {
+		expect(
+			(await applyAfflictionProcedure("degenerate-mind", ctx([7])))[0]?.testKey,
+		).toBe("talents:Fearless");
+		expect(
+			(await applyAfflictionProcedure("degenerate-mind", ctx([10])))[0]?.testKey,
+		).toBe("traits:From Beyond");
+	});
+
+	test("degenerate-mind: an out-of-range sub-roll throws (never silent)", async () => {
+		await expect(
+			applyAfflictionProcedure("degenerate-mind", ctx([0])),
+		).rejects.toThrow(/out of range/);
+	});
+
+	test("mental-regressive: 1-5 reduces by a rolled 1d10", async () => {
+		// int: d10=3 -> -1d10(8); per/wp/fel: d10=9 -> no change.
+		const out = await applyAfflictionProcedure(
+			"mental-regressive",
+			ctx([3, 8, 9, 9, 9]),
+		);
+		expect(out).toEqual([
+			{ kind: "characteristic-modifier", testKey: "int", value: -8, label: "Mental Regressive" },
+		]);
+	});
+
+	test("mental-regressive: 6-7 stores the delta that halves the value", async () => {
+		// int 35, d10=6 -> floor(35/2) = 17 -> delta -18.
+		const out = await applyAfflictionProcedure(
+			"mental-regressive",
+			ctx([6, 9, 9, 9], { int: 35 }),
+		);
+		expect(out).toEqual([
+			{ kind: "characteristic-modifier", testKey: "int", value: -18, label: "Mental Regressive" },
+		]);
+	});
+
+	test("mental-regressive: 10 stores the delta that lands on 5", async () => {
+		const out = await applyAfflictionProcedure(
+			"mental-regressive",
+			ctx([10, 9, 9, 9], { int: 40 }),
+		);
+		expect(out).toEqual([
+			{ kind: "characteristic-modifier", testKey: "int", value: -35, label: "Mental Regressive" },
+		]);
+	});
+
+	test("a blank procedure yields no rows", async () => {
+		expect(await applyAfflictionProcedure("", ctx([]))).toEqual([]);
+		expect(await applyAfflictionProcedure(undefined, ctx([]))).toEqual([]);
+	});
+
+	test("an unknown procedure throws", async () => {
+		await expect(applyAfflictionProcedure("nope", ctx([]))).rejects.toThrow(
+			/Unknown affliction procedure/,
+		);
+	});
+
+	test("every registered procedure has an implementation (registry drift guard)", () => {
+		expect([...afflictionProcedureNames()].sort()).toEqual(
+			[...afflictionProcedures.keys()].sort(),
+		);
 	});
 });

@@ -39,6 +39,19 @@
     </div>
 
     <div class="modifier-list">
+        {{#if conditions.length}}
+        <h3 class="inv-group-label">{{localize "ROLL.CONDITIONS"}}</h3>
+        <dl class="contributor-list condition-list">
+            {{#each conditions as |c|}}
+            <div class="modifier-row fixed condition-toggle">
+                <label class="attack-check">
+                    <input type="checkbox" data-condition="{{c.key}}" {{#if c.checked}}checked{{/if}} />
+                    <span class="modifier-label">{{c.label}}</span>
+                </label>
+            </div>
+            {{/each}}
+        </dl>
+        {{/if}}
         <h3 class="inv-group-label">{{localize "ROLL.MODIFIERS"}}</h3>
         {{#if contributors.length}}
         <dl class="contributor-list">

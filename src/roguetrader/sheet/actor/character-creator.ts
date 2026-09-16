@@ -2,6 +2,7 @@ import type { CharacteristicKey } from "../../data/actor/character";
 import {
 	allowedColumns,
 	type CharMod,
+	entryColumns,
 	fateFromTable,
 	getHeirloomEntries,
 	heirloomForRoll,
@@ -27,6 +28,9 @@ import {
 	type CatalogSkill,
 	CREATOR_LAST_STEP,
 	creatorCanAdvance,
+	DEFAULT_SPECIES_WOUNDS,
+	type FateBand,
+	fateFromBands,
 	finalCharacteristics,
 	HUMAN_SPECIES_KEY,
 	isUnresolvedChoice,
@@ -34,9 +38,11 @@ import {
 	POINT_BUY_MAX,
 	type SpeciesOption,
 	type SpeciesSource,
+	type SpeciesWoundsSpec,
 	speciesOptions,
 	validatePointBuy,
 	woundsFromOrigin,
+	woundsFromSpecies,
 } from "../../rules/creation";
 import {
 	GRANTED_BY_CREATOR,
@@ -115,17 +121,14 @@ interface CreatorState {
 	base: Record<CharacteristicKey, number>;
 	/** Chosen species key ("" = human) + its pack label/formulas for display. */
 	speciesKey: string;
-	/**
-	 * Whether the GM has permitted a xeno character (bead ghmn). Into the Storm
-	 * p48: "In order to create a Kroot character, you must first obtain your
-	 * Game Master's permission." Xeno species stay unselectable until this is
-	 * set, so the creator cannot silently produce an unpermitted xeno.
-	 */
-	gmPermission: boolean;
 	speciesLabel: string;
 	speciesFate: number;
 	speciesFateFormula: string;
 	speciesWoundsFormula: string;
+	/** Structured species starter-Fate bands (bead g45s); empty = fixed/none. */
+	speciesFateBands: FateBand[];
+	/** Structured species starter-Wounds spec (bead g45s). */
+	speciesWounds: SpeciesWoundsSpec;
 	allocated: Partial<Record<CharacteristicKey, number>>;
 	rolled: Partial<Record<CharacteristicKey, number>>;
 	rerollUsed: boolean;
@@ -137,6 +140,10 @@ interface CreatorState {
 	rolledDice: {
 		wounds: number[];
 		fateD10: number | null;
+		/** Species-block wound dice (bead g45s); empty for the human path. */
+		speciesWounds: number[];
+		/** Species-block starting-Fate d10 (bead g45s). */
+		speciesFateD10: number | null;
 		insanity: number[];
 		corruption: number[];
 		corrOrInsanity: number[];
@@ -180,11 +187,12 @@ function emptyState(): CreatorState {
 		allocated: {},
 		rolled: {},
 		speciesKey: HUMAN_SPECIES_KEY,
-		gmPermission: false,
 		speciesLabel: "",
 		speciesFate: 0,
 		speciesFateFormula: "",
 		speciesWoundsFormula: "",
+		speciesFateBands: [],
+		speciesWounds: { ...DEFAULT_SPECIES_WOUNDS },
 		rerollUsed: false,
 		picks: {},
 		corrOrInsTrack: {},
@@ -192,6 +200,8 @@ function emptyState(): CreatorState {
 		rolledDice: {
 			wounds: [],
 			fateD10: null,
+			speciesWounds: [],
+			speciesFateD10: null,
 			insanity: [],
 			corruption: [],
 			corrOrInsanity: [],
@@ -245,7 +255,6 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			chooseCorrIns: CharacterCreator.#onChooseCorrIns,
 			chooseCareer: CharacterCreator.#onChooseCareer,
 			chooseSpecies: CharacterCreator.#onChooseSpecies,
-			toggleGmPermission: CharacterCreator.#onToggleGmPermission,
 			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
 			toggleAcqGroup: CharacterCreator.#onToggleAcqGroup,
 			rollHeirloom: CharacterCreator.#onRollHeirloom,
@@ -373,6 +382,69 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		return base;
 	}
 
+	/**
+	 * Starting Wounds/Fate for the current character (bead g45s). A chosen
+	 * species uses its structured block (Wounds spec + Fate bands); the human
+	 * path uses the Origin Path tables. Only reads the pre-rolled dice in state,
+	 * so the Review card and the created actor always agree.
+	 */
+	#resolveVitals(
+		chars: Record<CharacteristicKey, number>,
+		resolved: ResolvedOrigin,
+	): {
+		wounds: number;
+		fate: number;
+		woundsBreakdown: string;
+		fateBreakdown: string;
+	} {
+		const state = this.creatorState;
+		const tb = Math.floor(chars.t / 10);
+		if (state.speciesKey !== HUMAN_SPECIES_KEY) {
+			const spec = state.speciesWounds;
+			const wounds = woundsFromSpecies(
+				spec,
+				tb,
+				state.rolledDice.speciesWounds,
+			);
+			const rolled = state.rolledDice.speciesFateD10 ?? 1;
+			const fate =
+				state.speciesFate > 0
+					? state.speciesFate
+					: fateFromBands(state.speciesFateBands, rolled);
+			const woundParts = [`${spec.toughnessMultiplier}×TB`];
+			const dice = state.rolledDice.speciesWounds.join(" + ");
+			if (dice) woundParts.push(dice);
+			if (spec.flat) woundParts.push(String(spec.flat));
+			return {
+				wounds,
+				fate,
+				woundsBreakdown: woundParts.join(" + "),
+				fateBreakdown:
+					state.speciesFate > 0
+						? `fixed ${fate}`
+						: `1d10: ${rolled} → ${fate}`,
+			};
+		}
+		const wounds = woundsFromOrigin(
+			tb,
+			state.rolledDice.wounds,
+			resolved.woundBonus,
+		);
+		const fateBase = resolved.fateTable
+			? fateFromTable(resolved.fateTable, state.rolledDice.fateD10 ?? 1)
+			: 0;
+		const woundParts = ["2×TB", ...state.rolledDice.wounds.map(String)];
+		if (resolved.woundBonus) woundParts.push(String(resolved.woundBonus));
+		return {
+			wounds,
+			fate: Math.max(0, fateBase + resolved.fateDelta),
+			woundsBreakdown: woundParts.join(" + "),
+			fateBreakdown:
+				`d10: ${state.rolledDice.fateD10 ?? "—"}` +
+				(resolved.fateDelta ? `; ${resolved.fateDelta}` : ""),
+		};
+	}
+
 	async _prepareContext(_options: object = {}) {
 		const context = sheetContext(
 			await super._prepareContext(_options as never),
@@ -410,7 +482,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			const allowed = allowedColumns(row, prevCol);
 			const options = originsInRow(row).map((entry) => ({
 				...entry,
-				enabled: allowed.includes(entry.col),
+				// An expanded entry may substitute either of two core slots
+				// (bead b03f), so check every column it may occupy.
+				enabled: entryColumns(entry).some((col) => allowed.includes(col)),
 				selected: pick?.key === entry.key,
 			}));
 			if (pickEntry) prevCol = pickEntry.col;
@@ -494,16 +568,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		const resolved = this.#resolved;
 		const base = this.#baseCharacteristics();
 		const chars = finalCharacteristics(base, resolved.characteristics);
-		const tb = Math.floor(chars.t / 10);
-		const woundsTotal = woundsFromOrigin(
-			tb,
-			state.rolledDice.wounds,
-			resolved.woundBonus,
-		);
-		const fateBase = resolved.fateTable
-			? fateFromTable(resolved.fateTable, state.rolledDice.fateD10 ?? 1)
-			: 0;
-		const fateTotal = Math.max(0, fateBase + resolved.fateDelta);
+		const vitals = this.#resolveVitals(chars, resolved);
+		const woundsTotal = vitals.wounds;
+		const fateTotal = vitals.fate;
 		const corrInsTotal = state.rolledDice.corrOrInsanity.reduce(
 			(a, b) => a + b,
 			0,
@@ -531,12 +598,12 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			fateTotal,
 			insanityTotal,
 			corruptionTotal,
-			fateDelta: resolved.fateDelta,
+			woundsBreakdown: vitals.woundsBreakdown,
+			fateBreakdown: vitals.fateBreakdown,
 			initiativeBonus: resolved.initiativeBonus,
 			profitFactor: resolved.profitFactor,
 			xpTotal: 5000,
-			woundRolls: state.rolledDice.wounds.join(" + "),
-			fateRoll: state.rolledDice.fateD10,
+			xpCost: resolved.xpCost,
 		};
 
 		// Career chips (free choice, p24) with Table 1-1 suggestions. The
@@ -582,14 +649,10 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				? option.label || option.key
 				: game.i18n!.localize("CREATOR.SPECIES_HUMAN"),
 			selected: state.speciesKey === option.key,
-			// Into the Storm p48: a xeno species needs the GM's permission first.
-			// The handler enforces this too; this only shows the player why.
-			selectable: option.key === HUMAN_SPECIES_KEY || state.gmPermission,
 		}));
 		context.speciesOptions = speciesChoices;
 		context.speciesLabel =
 			speciesChoices.find((option) => option.selected)?.label ?? "";
-		context.gmPermission = state.gmPermission;
 		context.speciesFateFormula = state.speciesFateFormula;
 		context.speciesWoundsFormula = state.speciesWoundsFormula;
 		context.speciesFate = state.speciesFate;
@@ -674,6 +737,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			"rogue-trader.gear",
 			"rogue-trader.drugs",
 			"rogue-trader.tools",
+			// Tau Character Guide armoury (bead eu1s): a hand-authored mixed pack,
+			// bucketed into the existing groups by item type below.
+			"rogue-trader.tau-armoury",
 		];
 		for (const packName of packs) {
 			const docs = (await getPackDocuments(packName)) as unknown as Array<{
@@ -683,6 +749,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 					availability?: string;
 					class?: string;
 					weaponFamily?: string;
+					source?: { book?: string };
 					description?: string;
 				};
 				toObject: () => object;
@@ -702,13 +769,23 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 						class: doc.system?.class,
 						weaponFamily: doc.system?.weaponFamily,
 						name: doc.name,
+						source: doc.system?.source,
 					});
 				out.push({
 					key,
 					name: `${doc.name} (${game.i18n!.localize("CREATOR.ACQ_MODIFIER")} ${modifier >= 0 ? "+" : ""}${modifier})`,
 					payload,
 					tooltip: (doc.system?.description ?? "").slice(0, 300),
-					group: packName.replace("rogue-trader.", ""),
+					// The mixed Tau armoury pack buckets by item type so its weapons,
+					// armour and gear join the matching existing group.
+					group:
+						packName === "rogue-trader.tau-armoury"
+							? doc.type === "armour"
+								? "armour"
+								: doc.type === "gear"
+									? "gear"
+									: "weapons"
+							: packName.replace("rogue-trader.", ""),
 					selectable,
 					selected: this.creatorState.acquisition?.key === key,
 				});
@@ -731,6 +808,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				classes: new Set(WEAPON_CLASSES),
 				byCategory: {},
 				exotic: new Set(),
+				sources: new Set(),
 			};
 		}
 		const talentNames = [...(this.#resolved.talents ?? [])];
@@ -746,6 +824,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				classes: new Set(WEAPON_CLASSES),
 				byCategory: {},
 				exotic: new Set(),
+				sources: new Set(),
 			};
 		}
 		talentNames.push(...(career.system?.startingTalents ?? []));
@@ -789,13 +868,19 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		});
 	}
 
-	/** Roll wound/fate/insanity/corruption dice when entering the review. */
+	/**
+	 * Roll the origin-path AND species-block vitals dice when entering the
+	 * Review step. A xeno's species block carries its own Wounds dice and Fate
+	 * bands (bead g45s); the human path uses the chosen Origin rows instead.
+	 */
 	async #rollOriginDice(): Promise<void> {
 		const resolved = this.#resolved;
 		const state = this.creatorState;
 		state.rolledDice = {
 			wounds: [],
 			fateD10: null,
+			speciesWounds: [],
+			speciesFateD10: null,
 			insanity: [],
 			corruption: [],
 			corrOrInsanity: [],
@@ -804,6 +889,16 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			state.rolledDice.wounds.push(await roll(notation));
 		}
 		if (resolved.fateTable) state.rolledDice.fateD10 = await roll("1d10");
+		if (state.speciesKey !== HUMAN_SPECIES_KEY) {
+			if (state.speciesWounds.dice) {
+				state.rolledDice.speciesWounds.push(
+					await roll(state.speciesWounds.dice),
+				);
+			}
+			if (state.speciesFate <= 0 && state.speciesFateBands.length > 0) {
+				state.rolledDice.speciesFateD10 = await roll("1d10");
+			}
+		}
 		for (const notation of resolved.insanityDice) {
 			state.rolledDice.insanity.push(await roll(notation));
 		}
@@ -941,37 +1036,6 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 	 * species therefore invalidates rolled values and any career that is no
 	 * longer legal, so both are cleared rather than left stale.
 	 */
-	/**
-	 * GM permission for xeno characters (bead ghmn). Into the Storm p48 requires
-	 * it before a Kroot may be created, so it gates the species chips. Withdrawing
-	 * it while a xeno is chosen falls back to human rather than leaving an
-	 * unpermitted xeno selected.
-	 */
-	static async #onToggleGmPermission(
-		this: CharacterCreator,
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const state = this.creatorState;
-		state.gmPermission = target.dataset.checked === "true";
-		if (!state.gmPermission && state.speciesKey !== HUMAN_SPECIES_KEY) {
-			const human = (await this.#speciesOptions()).find(
-				(o) => o.key === HUMAN_SPECIES_KEY,
-			);
-			if (human) {
-				state.speciesKey = human.key;
-				state.speciesLabel = human.label;
-				state.base = { ...human.base };
-				state.speciesFate = human.startingFate;
-				state.speciesFateFormula = human.fateFormula;
-				state.speciesWoundsFormula = human.woundsFormula;
-				state.rolled = {};
-				state.rerollUsed = false;
-			}
-		}
-		this.render({ force: true });
-	}
-
 	static async #onChooseSpecies(
 		this: CharacterCreator,
 		_event: unknown,
@@ -981,8 +1045,6 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		const option = (await this.#speciesOptions()).find((o) => o.key === key);
 		if (!option) return;
 		const state = this.creatorState;
-		// Into the Storm p48: a xeno character needs the GM's permission first.
-		if (option.key !== HUMAN_SPECIES_KEY && !state.gmPermission) return;
 		if (state.speciesKey === option.key) return;
 		state.speciesKey = option.key;
 		state.speciesLabel = option.label;
@@ -990,6 +1052,8 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		state.speciesFate = option.startingFate;
 		state.speciesFateFormula = option.fateFormula;
 		state.speciesWoundsFormula = option.woundsFormula;
+		state.speciesFateBands = [...option.fateBands];
+		state.speciesWounds = { ...option.wounds };
 		// The bases changed, so any roll taken at the old base is meaningless.
 		state.rolled = {};
 		state.rerollUsed = false;
@@ -1095,18 +1159,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			this.#baseCharacteristics(),
 			resolved.characteristics,
 		);
-		const tb = Math.floor(chars.t / 10);
-		const wounds = woundsFromOrigin(
-			tb,
-			state.rolledDice.wounds,
-			resolved.woundBonus,
-		);
-		const fate = Math.max(
-			0,
-			(resolved.fateTable
-				? fateFromTable(resolved.fateTable, state.rolledDice.fateD10 ?? 1)
-				: 0) + resolved.fateDelta,
-		);
+		const { wounds, fate } = this.#resolveVitals(chars, resolved);
 		const corrInsTotal = state.rolledDice.corrOrInsanity.reduce(
 			(a, b) => a + b,
 			0,
@@ -1136,8 +1189,10 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			insanity,
 			corruption,
 			// Core Rulebook p13: characters begin with 4,500 xp already spent plus
-			// 500 to spend on Rank 1 advances; total earned = 5,000.
-			xp: { total: 5000, spent: 4500 },
+			// 500 to spend on Rank 1 advances; total earned = 5,000. Into the
+			// Storm's expanded Origin Path options deduct their xp cost from that
+			// starting pool (bead b03f), so they raise the spent baseline.
+			xp: { total: 5000, spent: 4500 + resolved.xpCost },
 			// Psyker status from the career (bead m4me): Astropaths start
 			// with Psy Rating 2 (their starting talents); Navigators are
 			// "considered a psyker for all game purposes" (p182) with no

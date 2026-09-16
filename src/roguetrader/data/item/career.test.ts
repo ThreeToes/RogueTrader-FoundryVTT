@@ -44,6 +44,7 @@ describe("Career data model", () => {
 			"species",
 			// koau: alternate-rank gates, verbatim from the splatbook blocks.
 			"requiredCareer",
+			"requiredRace",
 			"alternateRank",
 			"requirements",
 			"otherRequirements",
@@ -74,6 +75,15 @@ describe("Career data model", () => {
 		// fateFormula carries the printed 1d10 roll when starting Fate is not a
 		// fixed value (Kroot, Orks) — bead koau.
 		expect(species.fields.fateFormula.opts.initial).toBe("");
+		// Structured vitals BESIDE the verbatim text (bead g45s).
+		expect(species.fields.fateBands).toBeDefined();
+		expect(species.fields.wounds).toBeDefined();
+		const wounds = species.fields.wounds as unknown as {
+			fields: Record<string, StubField>;
+		};
+		expect(wounds.fields.dice.opts.initial).toBe("");
+		expect(wounds.fields.toughnessMultiplier.opts.initial).toBe(2);
+		expect(wounds.fields.ignoreUnnaturalToughness.opts.initial).toBe(false);
 	});
 
 	test("advance type choices include trait (bead o3ju)", () => {

@@ -77,6 +77,9 @@ const QUALITIES = {
 	flame: "QUALITY.FLAME",
 	inaccurate: "QUALITY.INACCURATE",
 	overheats: "QUALITY.OVERHEATS",
+	// Tau Character Guide p28: an Overcharge (X) weapon may raise its Damage
+	// by X for a shot, but gains the Overheats quality for those shots.
+	overcharge: "QUALITY.OVERCHARGE",
 	powerField: "QUALITY.POWER_FIELD",
 	powerful: "QUALITY.POWERFUL",
 	primitive: "QUALITY.PRIMITIVE",

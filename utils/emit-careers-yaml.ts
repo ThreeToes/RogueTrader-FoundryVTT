@@ -93,6 +93,7 @@ interface AltCareerParsed {
 	page: number;
 	kind: "alternate" | "elite" | "xenos";
 	requiredCareer?: string;
+	requiredRace?: string;
 	alternateRank?: string;
 	requirements?: string;
 	otherRequirements?: string;
@@ -111,6 +112,13 @@ interface AltCareerParsed {
 		startingFate: number;
 		fateFormula: string;
 		woundsFormula: string;
+		fateBands?: Array<{ max: number; value: number }>;
+		wounds?: {
+			dice: string;
+			flat: number;
+			toughnessMultiplier: number;
+			ignoreUnnaturalToughness: boolean;
+		};
 	} | null;
 	ranks: Array<{
 		rank: number;
@@ -155,6 +163,7 @@ function altDocuments(entries: AltCareerParsed[]) {
 				shortDescription: "",
 				source: { book: entry.book, page: entry.page },
 				requiredCareer: entry.requiredCareer ?? "",
+				requiredRace: entry.requiredRace ?? "",
 				alternateRank: entry.alternateRank ?? "",
 				requirements: entry.requirements ?? "",
 				otherRequirements: entry.otherRequirements ?? "",
@@ -169,6 +178,13 @@ function altDocuments(entries: AltCareerParsed[]) {
 					startingFate: 0,
 					fateFormula: "",
 					woundsFormula: "",
+					fateBands: [],
+					wounds: {
+						dice: "",
+						flat: 0,
+						toughnessMultiplier: 2,
+						ignoreUnnaturalToughness: false,
+					},
 				},
 				ranks: ranks.map((rank) => ({
 					rank: rank.rank,
@@ -250,6 +266,9 @@ const TYPO_KEY_MAP: Record<string, string> = {
 	Decieve: "deceive",
 	"Totall Recall": "total-recall",
 	"Good Repuatation (Ecclesiarchy)": "good-reputation",
+	// Tau Character Guide prints the core "Navigation" skill as "Navigate
+	// (Surface)/(Stellar)" (pp12, 20, 23); map the variant to the pack key.
+	Navigate: "navigation",
 };
 
 /** Resolve an advance row to {key, name, multiplier}. */

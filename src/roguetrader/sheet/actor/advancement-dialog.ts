@@ -5,6 +5,7 @@ import {
 	availableRows,
 	characteristicNextAdvance,
 	derivedRank,
+	evaluateAlternateRankGate,
 	ledgerEntryFor,
 	multiplierRemaining,
 	rankProgress,
@@ -54,6 +55,10 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 	/** Career item from the compendium pack, loaded in _prepareContext. */
 	#career: {
 		key: string;
+		/** Career display name (alternate-rank gates print names, not slugs). */
+		name: string;
+		/** Species block (bead ghmn); blank key = human. */
+		species: { key: string; label: string };
 		ranks: Array<{
 			rank: number;
 			xpLevel: number;
@@ -61,6 +66,18 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		}>;
 		characteristicAdvances: Record<string, CharacteristicSchemeLike>;
 	} | null = null;
+
+	/**
+	 * Advance rows from ELIGIBLE alternate/elite ranks (bead g45s): once the
+	 * actor's career/species/rank/xp clear a rank's structured gate, its table
+	 * rows are offered alongside the primary career's, tagged with their
+	 * source career. Requirements/Other Requirements stay soft (GM-confirm).
+	 */
+	#alternateRows: Array<AdvanceRowLike & { source: string; sourceName: string }> =
+		[];
+
+	/** Eligible alternate ranks for the header hint. */
+	#alternateOffers: Array<{ name: string; notesText: string }> = [];
 
 	/** Skill catalog docs from the compendium (for grants by key/name). */
 	#skillDocs: Array<{
@@ -95,37 +112,56 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		// Load the career from the compendium by key.
 		this.#career = null;
 		this.#skillDocs = [];
+		this.#alternateRows = [];
+		this.#alternateOffers = [];
 		const careerKey = system.careerKey;
+		const toRows = (
+			rank: number,
+			advances: Array<Record<string, unknown>> | undefined,
+		): AdvanceRowLike[] =>
+			(advances ?? []).map((adv) => ({
+				key: String(adv.key ?? ""),
+				name: String(adv.name ?? ""),
+				type: adv.type === "talent" ? ("talent" as const) : ("skill" as const),
+				cost: Number(adv.cost ?? 0),
+				multiplier: Number(adv.multiplier ?? 1),
+				prerequisites: (adv.prerequisites ?? []) as string[],
+				rank,
+			}));
+		let allCareers: Array<{
+			id?: string;
+			name?: string;
+			system: {
+				key: string;
+				ranks?: Array<{
+					rank: number;
+					xpLevel: number;
+					advances?: Array<Record<string, unknown>>;
+				}>;
+				characteristicAdvances?: Record<string, Record<string, number>>;
+				species?: { key?: string; label?: string };
+				requiredCareer?: string;
+				requiredRace?: string;
+				alternateRank?: string;
+				requirements?: string;
+				otherRequirements?: string;
+			};
+		}> = [];
 		if (careerKey) {
-			const docs = (await getPackDocuments("rogue-trader.careers")) as unknown as Array<{
-				id?: string;
-				name?: string;
-				system: {
-					key: string;
-					ranks?: Array<{
-						rank: number;
-						xpLevel: number;
-						advances?: Array<Record<string, unknown>>;
-					}>;
-					characteristicAdvances?: Record<string, Record<string, number>>;
-				};
-			}>;
-			const doc = docs.find((d) => d.system.key === careerKey);
+			allCareers = (await getPackDocuments("rogue-trader.careers")) as unknown as typeof allCareers;
+			const doc = allCareers.find((d) => d.system.key === careerKey);
 			if (doc) {
 				this.#career = {
 					key: doc.system.key,
+					name: doc.name ?? doc.system.key,
+					species: {
+						key: doc.system.species?.key ?? "",
+						label: doc.system.species?.label ?? "",
+					},
 					ranks: (doc.system.ranks ?? []).map((rank) => ({
 						rank: rank.rank,
 						xpLevel: rank.xpLevel,
-						advances: (rank.advances ?? []).map((adv) => ({
-							key: String(adv.key ?? ""),
-							name: String(adv.name ?? ""),
-							type: adv.type === "talent" ? ("talent" as const) : ("skill" as const),
-							cost: Number(adv.cost ?? 0),
-							multiplier: Number(adv.multiplier ?? 1),
-							prerequisites: (adv.prerequisites ?? []) as string[],
-							rank: rank.rank,
-						})),
+						advances: toRows(rank.rank, rank.advances),
 					})),
 					characteristicAdvances: (doc.system.characteristicAdvances ??
 						{}) as unknown as Record<string, CharacteristicSchemeLike>,
@@ -174,6 +210,63 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		const progress = rankProgress(thresholds, spent);
 		const isGM = (game as unknown as { user?: { isGM?: boolean } }).user?.isGM;
 
+		// Alternate/elite ranks (bead g45s): offer the advance tables of every
+		// rank whose STRUCTURED gate this character clears (career/race/rank/xp).
+		// Requirements and Other Requirements stay soft notes, shown in the
+		// header hint and re-confirmed at purchase (GM-overridable, bead tfk).
+		const ownedTalents = this.actor.items
+			.filter((item) => (item.type as string) === "talent")
+			.map((item) => item.name ?? "");
+		const ownedSkills = this.actor.items
+			.filter((item) => (item.type as string) === "skill")
+			.map((item) => item.name ?? "");
+		const characteristics: Partial<Record<string, number>> = Object.fromEntries(
+			Object.entries(system.characteristics ?? {}).map(([k, v]) => [k, v.value]),
+		);
+		if (this.#career) {
+			for (const doc of allCareers) {
+				const alt = doc.system;
+				if (alt.key === this.#career.key) continue;
+				if (!alt.requiredCareer && !alt.requiredRace && !alt.alternateRank) continue;
+				const evaluation = evaluateAlternateRankGate(
+					{
+						requiredCareer: alt.requiredCareer ?? "",
+						requiredRace: alt.requiredRace ?? "",
+						alternateRank: alt.alternateRank ?? "",
+						requirements: alt.requirements ?? "",
+						otherRequirements: alt.otherRequirements ?? "",
+					},
+					{
+						careerKey: this.#career.key,
+						careerName: this.#career.name,
+						speciesKey: this.#career.species.key,
+						speciesLabel: this.#career.species.label,
+						rank: derived,
+						spent,
+						characteristics,
+						ownedTalents,
+						ownedSkills,
+						psyRating: system.psyRating ?? 0,
+						psyker: system.psyker === true,
+					},
+				);
+				if (!evaluation.eligible) continue;
+				for (const rank of alt.ranks ?? []) {
+					for (const row of toRows(rank.rank, rank.advances)) {
+						this.#alternateRows.push({
+							...row,
+							source: alt.key,
+							sourceName: doc.name ?? alt.key,
+						});
+					}
+				}
+				this.#alternateOffers.push({
+					name: doc.name ?? alt.key,
+					notesText: evaluation.notes.join("; "),
+				});
+			}
+		}
+
 		// Characteristic advance rows: next tier per characteristic from the
 		// career scheme; ledger counts prior +5 purchases.
 		context.characteristics = CHARACTERISTIC_KEYS.map((key) => {
@@ -192,8 +285,15 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			};
 		});
 
-		// Rank advance rows (held or previously held: rank <= derived).
-		const rows = availableRows(this.#career?.ranks.flatMap((r) => r.advances) ?? [], derived);
+		// Rank advance rows (held or previously held: rank <= derived), plus the
+		// eligible alternate ranks' rows (bead g45s).
+		const rows = availableRows(
+			[
+				...(this.#career?.ranks.flatMap((r) => r.advances) ?? []),
+				...this.#alternateRows,
+			],
+			derived,
+		);
 		const rankGroups: Array<Record<string, unknown>> = [];
 		for (let rank = 1; rank <= derived; rank += 1) {
 			const rankRows = rows
@@ -211,11 +311,13 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 					affordable: row.cost <= pool,
 					prereqText: row.prerequisites.filter(Boolean).join(", "),
 					prereqList: row.prerequisites.join("|"),
+					sourceName: (row as { sourceName?: string }).sourceName,
 					ledgerIndex: ledger.findIndex(
 						(entry) =>
 							entry.type === row.type &&
-							entry.key === row.key &&
-							entry.rank === row.rank,
+							entry.rank === row.rank &&
+							((row.key && entry.key === row.key) ||
+								(!row.key && entry.name === row.name)),
 					),
 				}));
 			if (rankRows.length > 0) {
@@ -235,6 +337,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		context.rankUp = derived > (system.rank ?? 1);
 		context.progress = progress;
 		context.rankGroups = rankGroups;
+		context.alternateOffers = this.#alternateOffers;
 		context.canBuy = pool > 0 && Boolean(this.#career);
 		context.isGM = isGM === true;
 		context.hasCareer = Boolean(this.#career);
@@ -329,10 +432,10 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			rank: Number(target.dataset.rank ?? 1),
 		};
 		if (!row.name) return;
-		await this.#buyRow(row);
+		await this.#buyRow(row, target.dataset.source || undefined);
 	}
 
-	async #buyRow(row: AdvanceRowLike): Promise<void> {
+	async #buyRow(row: AdvanceRowLike, source?: string): Promise<void> {
 		if (!this.#career) return;
 		const system = systemOf(this.actor);
 		const ledger = (system.advances ?? []) as AdvanceLedgerEntry[];
@@ -368,7 +471,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		}
 		if (!(await this.#confirmReasons(validation.reasons))) return;
 
-		const entry = ledgerEntryFor(row, this.#career.key);
+		const entry = ledgerEntryFor(row, source ?? this.#career.key);
 		const updates: Record<string, unknown> = {
 			advances: [...ledger, entry],
 		};

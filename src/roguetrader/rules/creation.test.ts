@@ -4,6 +4,8 @@ import {
 	careersForSpecies,
 	CREATOR_LAST_STEP,
 	creatorCanAdvance,
+	DEFAULT_SPECIES_WOUNDS,
+	fateFromBands,
 	finalCharacteristics,
 	HUMAN_SPECIES_KEY,
 	isUnresolvedChoice,
@@ -14,6 +16,7 @@ import {
 	speciesOptions,
 	validatePointBuy,
 	woundsFromOrigin,
+	woundsFromSpecies,
 	type CatalogSkill,
 	type ResolvedOrigin,
 } from "./creation";
@@ -70,6 +73,55 @@ describe("woundsFromOrigin (p17-24 home world sections)", () => {
 		expect(woundsFromOrigin(3, [7], 1)).toBe(14);
 		// Void born 1d5 rolled 1: 2*TB + 1.
 		expect(woundsFromOrigin(4, [1], 0)).toBe(9);
+	});
+});
+
+// Bead g45s: the species block carries a STRUCTURED Wounds spec and Fate
+// bands beside the verbatim text, so the creator evaluates the printed rule
+// instead of falling back to the human Origin Path tables.
+describe("species vitals (bead g45s)", () => {
+	test("woundsFromSpecies honours the multiplier, dice and flat adder", () => {
+		// Kroot p50: "Double Toughness Bonus plus 1d5+3" at TB 3, die 4.
+		expect(
+			woundsFromSpecies(
+				{ dice: "1d5", flat: 3, toughnessMultiplier: 2, ignoreUnnaturalToughness: false },
+				3,
+				[4],
+			),
+		).toBe(13);
+		// Ork p63: 1d5+1 + 2xTB (die 2) at TB 4.
+		expect(
+			woundsFromSpecies(
+				{ dice: "1d5", flat: 1, toughnessMultiplier: 2, ignoreUnnaturalToughness: true },
+				4,
+				[2],
+			),
+		).toBe(11);
+	});
+
+	test("woundsFromSpecies with no dice is just the multiplier plus flat", () => {
+		expect(woundsFromSpecies(DEFAULT_SPECIES_WOUNDS, 5, [])).toBe(10);
+	});
+
+	test("fateFromBands maps the printed 1d10 ranges", () => {
+		const bands = [
+			{ max: 5, value: 2 },
+			{ max: 10, value: 3 },
+		];
+		expect(fateFromBands(bands, 1)).toBe(2);
+		expect(fateFromBands(bands, 5)).toBe(2);
+		expect(fateFromBands(bands, 6)).toBe(3);
+		expect(fateFromBands(bands, 10)).toBe(3);
+	});
+
+	test("fateFromBands sorts unordered bands and fails loud on a gap", () => {
+		const bands = [
+			{ max: 10, value: 3 },
+			{ max: 5, value: 2 },
+		];
+		expect(fateFromBands(bands, 4)).toBe(2);
+		// No band covers the roll -> 0, never an invented value.
+		expect(fateFromBands([{ max: 5, value: 2 }], 9)).toBe(0);
 	});
 });
 
@@ -235,6 +287,16 @@ describe("species options from the careers pack (bead ghmn)", () => {
 		startingFate: 0,
 		fateFormula: "Roll 1d3: on a 1, nothing; on a 2-3, something.",
 		woundsFormula: "Twice the Toughness Bonus plus 1d5.",
+		fateBands: [
+			{ max: 1, value: 0 },
+			{ max: 3, value: 1 },
+		],
+		wounds: {
+			dice: "1d5",
+			flat: 0,
+			toughnessMultiplier: 2,
+			ignoreUnnaturalToughness: false,
+		},
 	};
 	const voidSpecies = {
 		key: "void-species",
@@ -283,6 +345,17 @@ describe("species options from the careers pack (bead ghmn)", () => {
 		expect(options[1].fateFormula).toContain("1d3");
 		expect(options[1].woundsFormula).toContain("Toughness Bonus");
 		expect(options[2].startingFate).toBe(2);
+	});
+
+	test("structured vitals are carried through, with a safe default when absent", () => {
+		const options = speciesOptions([squat, voidSpecies]);
+		expect(options[1].fateBands).toEqual(squat.fateBands);
+		expect(options[1].wounds.dice).toBe("1d5");
+		expect(options[1].wounds.toughnessMultiplier).toBe(2);
+		// A block with no structured spec falls back to the human convention
+		// (2xTB, no dice) rather than zeroing the character's Wounds.
+		expect(options[2].fateBands).toEqual([]);
+		expect(options[2].wounds).toEqual(DEFAULT_SPECIES_WOUNDS);
 	});
 
 	test("a custom human base is honoured (caller-supplied, not hardcoded)", () => {

@@ -17,6 +17,16 @@
     <p class="untrained-hint">{{localize "ADVANCE.NO_CAREER"}}</p>
     {{/unless}}
 
+    {{#if alternateOffers.length}}
+    <h2>{{localize "ADVANCE.ALTERNATE_RANKS"}}</h2>
+    <p class="method-hint">{{localize "ADVANCE.ALTERNATE_HINT"}}</p>
+    <ul class="alternate-offers">
+        {{#each alternateOffers as |offer|}}
+        <li><strong>{{offer.name}}</strong>{{#if offer.notesText}} <em>({{offer.notesText}})</em>{{/if}}</li>
+        {{/each}}
+    </ul>
+    {{/if}}
+
     <h2>{{localize "ADVANCE.CHARACTERISTIC_SCHEME"}}</h2>
     <ol class="advancement-rows">
         {{#each characteristics as |c|}}
@@ -45,14 +55,14 @@
         <ol class="advancement-rows">
             {{#each group.rows as |row|}}
             <li class="advancement-row">
-                <span class="adv-name">{{row.name}}{{#if row.prereqText}} <em class="prereq">[{{row.prereqText}}]</em>{{/if}}</span>
+                <span class="adv-name">{{row.name}}{{#if row.sourceName}} <em class="adv-source">{{row.sourceName}}</em>{{/if}}{{#if row.prereqText}} <em class="prereq">[{{row.prereqText}}]</em>{{/if}}</span>
                 <span class="adv-detail">{{row.cost}} {{localize "ADVANCE.XP"}}
                     {{#if (gt row.multiplier 1)}}<em>({{row.purchased}}/{{row.multiplier}})</em>{{/if}}
                     {{#if row.purchased}}<strong>{{localize "ADVANCE.OWNED"}}</strong>{{/if}}
                 </span>
                 <button type="button" class="adv-buy" data-action="buy" data-key="{{row.key}}" data-name="{{row.name}}"
                     data-type="{{row.type}}" data-cost="{{row.cost}}" data-multiplier="{{row.multiplier}}"
-                    data-rank="{{row.rank}}" data-prerequisites="{{row.prereqList}}"
+                    data-rank="{{row.rank}}" data-prerequisites="{{row.prereqList}}" data-source="{{row.source}}"
                     {{#unless (and ../canBuy row.remaining)}}disabled{{/unless}}>
                     {{#if row.purchased}}{{localize "ADVANCE.BUY_AGAIN"}}{{else}}{{localize "ADVANCE.BUY"}}{{/if}}
                 </button>

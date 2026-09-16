@@ -5,6 +5,7 @@ import {
 	derivedRank,
 	ELITE_ADVANCE_BASE_COST,
 	eliteLedgerEntry,
+	evaluateAlternateRankGate,
 	ledgerEntryFor,
 	multiplierRemaining,
 	PRE_SPENT_BASELINE,
@@ -14,6 +15,8 @@ import {
 	validatePurchase,
 	type AdvanceLedgerEntry,
 	type AdvanceRowLike,
+	type AlternateGateContext,
+	type AlternateRankGate,
 	type RankThresholdLike,
 } from "./advancement";
 
@@ -242,5 +245,142 @@ describe("elite advances (p39)", () => {
 		expect(entry.cost).toBe(500);
 		expect(entry.rank).toBe(0);
 		expect(entry.elite).toBe(true);
+	});
+});
+
+// Bead g45s: alternate/elite ranks become offerable only once their printed
+// gates are structured. These fixtures use the book's OWN gate wording shapes
+// (verified against the extracted metadata) rather than a copy of the pack.
+describe("evaluateAlternateRankGate (bead g45s)", () => {
+	const gate = (over: Partial<AlternateRankGate> = {}): AlternateRankGate => ({
+		requiredCareer: "",
+		requiredRace: "",
+		alternateRank: "",
+		requirements: "",
+		otherRequirements: "",
+		...over,
+	});
+	const context = (over: Partial<AlternateGateContext> = {}): AlternateGateContext => ({
+		careerKey: "seneschal",
+		careerName: "Seneschal",
+		speciesKey: "",
+		speciesLabel: "",
+		rank: 3,
+		spent: 10000,
+		characteristics: { fel: 40, int: 45 },
+		ownedTalents: [],
+		ownedSkills: [],
+		psyRating: 0,
+		psyker: false,
+		...over,
+	});
+
+	test("a matching Required Career and met rank/xp is eligible", () => {
+		const result = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Seneschal", alternateRank: "3 (10,000 xp) or higher" }),
+			context(),
+		);
+		expect(result.eligible).toBe(true);
+		expect(result.reasons).toEqual([]);
+		expect(result.minRank).toBe(3);
+		expect(result.minXp).toBe(10000);
+	});
+
+	test("a non-matching Required Career is a hard fail", () => {
+		const result = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Void-master" }),
+			context(),
+		);
+		expect(result.eligible).toBe(false);
+		expect(result.reasons.join(" ")).toContain("Requires Career");
+	});
+
+	test("rank and xp floors below the printed value are hard fails", () => {
+		const result = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Any", alternateRank: "Rank 4 or Higher (13,000 xp)" }),
+			context({ rank: 2, spent: 7000 }),
+		);
+		expect(result.eligible).toBe(false);
+		expect(result.reasons.join(" ")).toContain("Requires Rank 4");
+		expect(result.reasons.join(" ")).toContain("Requires 13000 xp");
+	});
+
+	test("Any + except excludes the named career", () => {
+		const result = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Any, except Explorator, Missionary, Ork, and Kroot." }),
+			context({ careerKey: "explorator", careerName: "Explorator" }),
+		);
+		expect(result.eligible).toBe(false);
+		expect(result.reasons.join(" ")).toContain("not permitted");
+	});
+
+	test("Any + except passes a career not on the exclusion list", () => {
+		const result = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Any, except Explorator, Missionary, Ork, and Kroot." }),
+			context({ careerKey: "seneschal", careerName: "Seneschal" }),
+		);
+		expect(result.eligible).toBe(true);
+	});
+
+	test("Any human rejects a xeno but passes a human", () => {
+		const human = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Any human" }),
+			context(),
+		);
+		expect(human.eligible).toBe(true);
+		const xeno = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Any human" }),
+			context({ speciesKey: "ork", speciesLabel: "Ork" }),
+		);
+		expect(xeno.eligible).toBe(false);
+	});
+
+	test("Any Non-Psyker rejects a psyker", () => {
+		const result = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Any Non-Psyker Explorer" }),
+			context({ psyker: true, psyRating: 2 }),
+		);
+		expect(result.eligible).toBe(false);
+		expect(result.reasons.join(" ")).toContain("non-psyker");
+	});
+
+	test("Required Race matches the career's species key or label", () => {
+		const kroot = evaluateAlternateRankGate(
+			gate({ requiredRace: "Kroot" }),
+			context({ speciesKey: "kroot", speciesLabel: "Kroot" }),
+		);
+		expect(kroot.eligible).toBe(true);
+		const human = evaluateAlternateRankGate(gate({ requiredRace: "Kroot" }), context());
+		expect(human.eligible).toBe(false);
+	});
+
+	test("Requirements are SOFT notes, not hard fails", () => {
+		const result = evaluateAlternateRankGate(
+			gate({
+				requiredCareer: "Any",
+				requirements: "Ag 35, Pilot (Any One)",
+				otherRequirements: "Must have flown a voidship.",
+			}),
+			context({ characteristics: { ag: 20 } }),
+		);
+		expect(result.eligible).toBe(true);
+		expect(result.notes.join(" ")).toContain("AG 35");
+		expect(result.notes.join(" ")).toContain("flown a voidship");
+	});
+
+	test("a met Requirement adds no note", () => {
+		const result = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Any", requirements: "Ag 35" }),
+			context({ characteristics: { ag: 40 } }),
+		);
+		expect(result.notes).toEqual([]);
+	});
+
+	test("an owned skill satisfies a named Requirement", () => {
+		const result = evaluateAlternateRankGate(
+			gate({ requiredCareer: "Any", requirements: "Tech-Use +10" }),
+			context({ ownedSkills: ["Tech-Use"] }),
+		);
+		expect(result.notes).toEqual([]);
 	});
 });

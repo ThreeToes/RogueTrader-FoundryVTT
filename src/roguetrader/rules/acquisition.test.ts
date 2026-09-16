@@ -115,6 +115,29 @@ describe("weaponTrainingCoverage (book printed pp272, 95, 100, 104-105)", () => 
 		);
 		expect(weaponTrainingCoverage([]).classes).toEqual(new Set());
 	});
+
+	it("Fire Caste Weapon Training covers Tau weapons by source (Tau p10)", () => {
+		const cov = weaponTrainingCoverage(["Fire Caste Weapon Training"]);
+		expect(cov.sources.has("tau_guide")).toBe(true);
+		// Covers the exotic-class pulse weapons the Fire Warrior's kit names...
+		expect(
+			isTrainedFor(cov, {
+				class: "basic",
+				weaponFamily: "exotic",
+				name: "Pulse Rifle",
+				source: { book: "tau_guide" },
+			}),
+		).toBe(true);
+		// ...but not another book's exotic weapon.
+		expect(
+			isTrainedFor(cov, {
+				class: "basic",
+				weaponFamily: "exotic",
+				name: "Shuriken Catapult",
+				source: { book: "rt_core" },
+			}),
+		).toBe(false);
+	});
 });
 
 describe("isTrainedFor (book printed p272 bullet 2 + p95)", () => {

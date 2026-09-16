@@ -29,6 +29,9 @@ export type OriginRow =
 	| "lure"
 	| "trials"
 	| "motivation"
+	// Into the Storm p28: Lineage is a SIXTH human row, chosen freely after
+	// the other five (bead b03f).
+	| "lineage"
 	// Non-human path rows (bead ghmn). Xenos do NOT use the Origin Path: Into
 	// the Storm p48 says "Kroot characters do not use the Origin Path (except at
 	// the GM's discretion)", and p49 replaces it with a single Kindred choice.
@@ -81,6 +84,12 @@ export interface OriginMechanics {
 	corruptionOrInsanityDice?: string;
 	initiativeBonus?: number;
 	profitFactor?: number;
+	/**
+	 * Experience-point cost deducted from starting xp (bead b03f). Into the
+	 * Storm's expanded Origin Path options each cost xp (p17: "each selection
+	 * costs a listed number of experience points"); the core chart has none.
+	 */
+	xpCost?: number;
 	/** Rules the engine cannot resolve; shown for manual application. */
 	notes?: string[];
 }
@@ -106,10 +115,12 @@ export interface OriginEntry {
 	 */
 	species?: string;
 	/**
-	 * Core origin key this entry may be taken INSTEAD of (bead b03f). Splatbook
-	 * alternates reuse a core column rather than widening the chart.
+	 * Core origin key(s) this entry may be taken INSTEAD of (bead b03f).
+	 * Splatbook alternates reuse a core column rather than widening the chart;
+	 * an expanded entry may substitute EITHER of two core entries (Into the
+	 * Storm p17 "instead of the Scavenger or Savant entry"), hence the array.
 	 */
-	replaces?: string;
+	replaces?: string | string[];
 	name: string;
 	/** Flavour prose (verbatim, trimmed). */
 	description: string;
@@ -119,13 +130,14 @@ export interface OriginEntry {
 	variants?: OriginVariant[];
 }
 
-/** Chart row order, top (Home World) to bottom (Motivation). */
+/** Chart row order, top (Home World) to bottom (Motivation then Lineage). */
 export const ORIGIN_ROWS: OriginRow[] = [
 	"home-world",
 	"birthright",
 	"lure",
 	"trials",
 	"motivation",
+	"lineage",
 ];
 
 /**
@@ -149,6 +161,7 @@ export const ORIGIN_ROW_LABEL_KEYS: Record<OriginRow, string> = {
 	lure: "ORIGIN.ROW_LURE",
 	trials: "ORIGIN.ROW_TRIALS",
 	motivation: "ORIGIN.ROW_MOTIVATION",
+	lineage: "ORIGIN.ROW_LINEAGE",
 	kindred: "ORIGIN.ROW_KINDRED",
 	klan: "ORIGIN.ROW_KLAN",
 	"know-wotz": "ORIGIN.ROW_KNOW_WOTZ",
@@ -217,6 +230,30 @@ export function originByKey(key: string): OriginEntry | undefined {
 	return originPool.find((entry) => entry.key === key);
 }
 
+/** Core origin keys an entry may substitute, normalised to an array. */
+export function replacedKeys(entry: {
+	replaces?: string | string[];
+}): string[] {
+	const value = entry?.replaces;
+	if (!value) return [];
+	return Array.isArray(value) ? value.filter(Boolean) : [value];
+}
+
+/**
+ * Every chart column an entry may occupy: its own, plus those of any core
+ * entry it "may be taken instead of". Into the Storm's expanded entries span
+ * two core slots (Fringe Survivor for Scavenger OR Savant, p17), so a single
+ * stored column would leave half its legal positions unusable (bead b03f).
+ */
+export function entryColumns(entry: OriginEntry): number[] {
+	const cols = new Set<number>([entry.col]);
+	for (const key of replacedKeys(entry)) {
+		const core = originByKey(key);
+		if (core) cols.add(core.col);
+	}
+	return [...cols];
+}
+
 export function originsInRow(row: OriginRow): OriginEntry[] {
 	return originPool
 		.filter((entry) => entry.row === row)
@@ -236,6 +273,10 @@ export function allowedColumns(row: OriginRow, prevCol: number | null): number[]
 	const cols = [...new Set(originsInRow(row).map((entry) => entry.col))].sort(
 		(a, b) => a - b,
 	);
+	// Lineage is NOT part of the constrained chart (Into the Storm p28:
+	// "Lineage choices are free and open, not constrained by the other choices
+	// of the Origin Path"), so every slot is reachable.
+	if (row === "lineage") return cols;
 	if (prevCol === null) return cols;
 	return cols.filter((col) => Math.abs(col - prevCol) <= 1);
 }
@@ -332,6 +373,8 @@ export interface ResolvedOrigin {
 	corruptionOrInsanityDice: string[];
 	initiativeBonus: number;
 	profitFactor: number;
+	/** Experience-point cost deducted from starting xp (bead b03f). */
+	xpCost: number;
 	/** Rules needing manual application, with source attribution. */
 	notes: string[];
 }
@@ -355,6 +398,7 @@ export function resolveOrigins(
 		corruptionOrInsanityDice: [],
 		initiativeBonus: 0,
 		profitFactor: 0,
+		xpCost: 0,
 		notes: [],
 	};
 
@@ -380,6 +424,7 @@ export function resolveOrigins(
 			resolved.corruptionOrInsanityDice.push(m.corruptionOrInsanityDice);
 		resolved.initiativeBonus += m.initiativeBonus ?? 0;
 		resolved.profitFactor += m.profitFactor ?? 0;
+		resolved.xpCost += m.xpCost ?? 0;
 		for (const note of m.notes ?? []) resolved.notes.push(`[${label}] ${note}`);
 	};
 

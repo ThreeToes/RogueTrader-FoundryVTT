@@ -144,6 +144,13 @@ export interface WeaponTrainingCoverage {
 	byCategory: Record<string, Set<string>>;
 	/** Exotic Weapon Proficiency subjects, lowercased for name matching. */
 	exotic: Set<string>;
+	/**
+	 * Source-book slugs whose ENTIRE weapon list a talent covers, e.g. the
+	 * Tau "Fire Caste Weapon Training" ("proficient in the use of all Tau
+	 * weaponry", Tau Character Guide p10). Matched against a weapon's
+	 * source.book so no weapon names live in code.
+	 */
+	sources: Set<string>;
 }
 
 /**
@@ -212,11 +219,18 @@ export function weaponTrainingCoverage(
 	const classes = new Set<string>();
 	const byCategory: Record<string, Set<string>> = {};
 	const exotic = new Set<string>();
+	const sources = new Set<string>();
 	for (const raw of talentNames) {
 		const name = String(raw);
 		if (/exotic weapon proficiency/i.test(name)) {
 			const subject = /\(([^)]+)\)/.exec(name)?.[1];
 			if (subject) exotic.add(subject.toLowerCase());
+			continue;
+		}
+		// Whole-source proficiency talents (Tau Character Guide p10): covers
+		// every weapon whose source.book is that book, exotic or not.
+		if (/fire caste weapon training/i.test(name)) {
+			sources.add("tau_guide");
 			continue;
 		}
 		const category =
@@ -248,7 +262,7 @@ export function weaponTrainingCoverage(
 			}
 		}
 	}
-	return { classes, byCategory, exotic };
+	return { classes, byCategory, exotic, sources };
 }
 
 /**
@@ -257,7 +271,8 @@ export function weaponTrainingCoverage(
  * wielder suffers a –20 penalty on relevant WS/BS Tests.)
  *
  * - Exotic weapons require a matching Exotic Weapon Proficiency subject
- *   (name match — the proficiency is per-weapon, "All Exotic Weapons").
+ *   (name match — the proficiency is per-weapon, "All Exotic Weapons"), or a
+ *   whole-book proficiency whose source matches the weapon (Tau).
  * - Thrown-class weapons are covered by Thrown Weapon Training (Universal
  *   only), or by Melee training covering the weapon's family (a thrown
  *   Primitive knife is also a Melee Primitive weapon).
@@ -272,10 +287,16 @@ export function isTrainedFor(
 		class?: string;
 		weaponFamily?: string;
 		name?: string;
+		/** Source cite (`{book}`) for whole-book proficiencies (Tau). */
+		source?: { book?: string };
 	},
 ): boolean {
 	const klass = String(weapon.class ?? "").toLowerCase();
 	const family = String(weapon.weaponFamily ?? "").toLowerCase();
+	// Whole-book proficiency: "Fire Caste Weapon Training" covers every Tau
+	// weapon regardless of class/family (Tau Character Guide p10).
+	const book = String(weapon.source?.book ?? "");
+	if (book && (coverage.sources ?? new Set()).has(book)) return true;
 	if (family === "exotic") {
 		const name = String(weapon.name ?? "").toLowerCase();
 		for (const subject of coverage.exotic) {

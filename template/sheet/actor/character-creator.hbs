@@ -15,25 +15,15 @@
          compendium's species blocks plus the human default — no content in
          code. The choice fixes the stage-1 characteristic bases, the printed
          Fate/Wounds rules, and WHICH Origin Path rows the character uses
-         (a xeno species has its own path). Into the Storm p48 requires the
-         GM's permission before a xeno may be created, hence the toggle. --}}
+         (a xeno species has its own path). --}}
     {{#if (eq step 0)}}
     <section class="creator-section border">
         <h1>{{localize "CREATOR.STEP_SPECIES"}}</h1>
         <p class="method-hint">{{localize "CREATOR.SPECIES_HINT"}}</p>
-        <p class="method-hint">
-            <a class="chip origin-note" data-action="toggleGmPermission"
-                data-checked="{{ifThen gmPermission "true" "false"}}"
-                data-tooltip="{{localize "CREATOR.SPECIES_GM_PERMISSION_HINT"}}">
-                <i class="fa-solid {{ifThen gmPermission "fa-square-check" "fa-square"}}"></i>
-                {{localize "CREATOR.SPECIES_GM_PERMISSION"}}
-            </a>
-        </p>
         <div class="origin-chips">
             {{#each speciesOptions as |species|}}
-            <a class="origin-chip {{#if species.selected}}selected{{/if}} {{#unless species.selectable}}unavailable{{/unless}}"
-                data-action="chooseSpecies" data-key="{{species.key}}"
-                {{#unless species.selectable}}data-tooltip="{{localize "CREATOR.SPECIES_GM_PERMISSION_HINT"}}"{{/unless}}>{{species.label}}</a>
+            <a class="origin-chip {{#if species.selected}}selected{{/if}}"
+                data-action="chooseSpecies" data-key="{{species.key}}">{{species.label}}</a>
             {{/each}}
         </div>
     </section>
@@ -223,11 +213,12 @@
 
         <h2>{{localize "CREATOR.REVIEW_DERIVED"}}</h2>
         <ul class="review-derived">
-            <li>{{localize "CREATOR.WOUNDS"}}: <strong>{{review.woundsTotal}}</strong> <em>(2×TB + {{review.woundRolls}})</em></li>
-            <li>{{localize "CREATOR.FATE"}}: <strong>{{review.fateTotal}}</strong> <em>(d10: {{review.fateRoll}}{{#unless (eq review.fateDelta 0)}}; {{review.fateDelta}}{{/unless}})</em></li>
+            <li>{{localize "CREATOR.WOUNDS"}}: <strong>{{review.woundsTotal}}</strong> <em>({{review.woundsBreakdown}})</em></li>
+            <li>{{localize "CREATOR.FATE"}}: <strong>{{review.fateTotal}}</strong> <em>({{review.fateBreakdown}})</em></li>
             <li>{{localize "CREATOR.INSANITY_POINTS"}}: <strong>{{review.insanityTotal}}</strong></li>
             <li>{{localize "CREATOR.CORRUPTION_POINTS"}}: <strong>{{review.corruptionTotal}}</strong></li>
             <li>{{localize "CREATOR.STARTING_XP"}}: <strong>{{review.xpTotal}}</strong></li>
+            {{#if review.xpCost}}<li>{{localize "CREATOR.ORIGIN_XP_COST"}}: <strong>−{{review.xpCost}}</strong></li>{{/if}}
             {{#if review.initiativeBonus}}<li>{{localize "CREATOR.INIT_BONUS"}}: +{{review.initiativeBonus}}</li>{{/if}}
             {{#if review.profitFactor}}<li>{{localize "CREATOR.PROFIT_FACTOR"}}: {{review.profitFactor}}</li>{{/if}}
         </ul>

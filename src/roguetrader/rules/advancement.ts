@@ -25,6 +25,7 @@
  */
 
 import type { CharacteristicKey } from "../data/actor/character";
+import { evaluatePrerequisites, parsePrerequisites } from "./prereq";
 
 /** xp considered already spent at character creation (Core Rulebook p13). */
 export const PRE_SPENT_BASELINE = 4500;
@@ -268,5 +269,207 @@ export function eliteLedgerEntry(
 		cost,
 		rank: 0,
 		elite: true,
+	};
+}
+
+// ------------------------------------------------------- Alternate ranks
+
+/**
+ * The verbatim gates an alternate career rank prints (bead koau / g45s).
+ * Kept as strings because the pack stores the book's own wording; the
+ * evaluator below STRUCTURES them (career list, race, rank/xp, requirements)
+ * at the edge, per this repo's "schema-first, book-notation at the edges" rule.
+ */
+export interface AlternateRankGate {
+	requiredCareer: string;
+	requiredRace: string;
+	alternateRank: string;
+	requirements: string;
+	otherRequirements: string;
+}
+
+/** What the evaluator needs to know about the character. */
+export interface AlternateGateContext {
+	/** Primary career slug. */
+	careerKey: string;
+	/** Primary career display name (gates print names, not slugs). */
+	careerName: string;
+	/** Species key ("" = human), from the career's species block. */
+	speciesKey: string;
+	/** Species display label. */
+	speciesLabel: string;
+	/** Character's derived rank (Table 2-2). */
+	rank: number;
+	/** Total xp spent. */
+	spent: number;
+	characteristics: Partial<Record<CharacteristicKey, number>>;
+	/** Owned talent names. */
+	ownedTalents: string[];
+	/** Owned skill names. */
+	ownedSkills: string[];
+	psyRating: number;
+	/** Actor's psyker flag (Navigators count as psykers). */
+	psyker: boolean;
+}
+
+export interface AlternateRankEvaluation {
+	/** True when every HARD gate (career/race/rank/xp) is met. */
+	eligible: boolean;
+	/** Hard-gate failures — the rank is not offered. */
+	reasons: string[];
+	/** Soft notes (unmet requirements + verbatim Other Requirements prose). */
+	notes: string[];
+	/** Parsed rank/xp gates for display (0 = unspecified). */
+	minRank: number;
+	minXp: number;
+}
+
+/** Normalise a book name to comparable words. */
+function normalizeGateName(value: string): string {
+	return (value ?? "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, " ")
+		.trim();
+}
+
+/**
+ * Loosely match a gate's printed name against a career/race name or slug:
+ * exact after normalising, singular/plural tolerated ("Navigators" vs
+ * "Navigator"), or the gate word is a whole word of the target ("Ork" vs
+ * "Ork Freebooter").
+ */
+function gateNameMatches(gateName: string, candidate: string): boolean {
+	const a = normalizeGateName(gateName);
+	const b = normalizeGateName(candidate);
+	if (!a || !b) return false;
+	const singular = (value: string) => value.replace(/s$/, "");
+	if (a === b || singular(a) === singular(b)) return true;
+	const aWords = a.split(" ");
+	const bWords = b.split(" ");
+	return aWords.includes(b) || bWords.includes(a);
+}
+
+/** Split an "A, B, and C" / "A, B or C" gate list. */
+function splitGateList(value: string): string[] {
+	return value
+		.replace(/\s+and\s+/gi, ",")
+		.replace(/\s+or\s+/gi, ",")
+		.split(",")
+		.map((part) => part.trim().replace(/\.$/, ""))
+		.filter(Boolean);
+}
+
+/**
+ * Evaluate an alternate/elite rank's printed gates against a character
+ * (bead g45s). HARD gates (unpermitted career/race, rank and xp below the
+ * printed floor) decide `eligible`; the stat/skill Requirements and the prose
+ * Other Requirements stay VISIBLE but soft — matching the advancement
+ * dialog's GM-overridable convention (bead tfk). Pure and testable.
+ */
+export function evaluateAlternateRankGate(
+	gate: AlternateRankGate,
+	context: AlternateGateContext,
+): AlternateRankEvaluation {
+	const reasons: string[] = [];
+	const notes: string[] = [];
+	const required = (gate.requiredCareer ?? "").trim();
+	const requiredRace = (gate.requiredRace ?? "").trim();
+
+	if (requiredRace) {
+		if (
+			!gateNameMatches(requiredRace, context.speciesLabel) &&
+			!gateNameMatches(requiredRace, context.speciesKey)
+		) {
+			reasons.push(`Requires Race: ${requiredRace}`);
+		}
+	}
+
+	if (required) {
+		const lower = required.toLowerCase();
+		if (/^any\b/.test(lower)) {
+			if (/\bhuman\b/.test(lower) && normalizeGateName(context.speciesKey) !== "") {
+				reasons.push("Requires a human Explorer.");
+			}
+			if (
+				/dark eldar/.test(lower) &&
+				normalizeGateName(context.speciesKey) !== "dark eldar"
+			) {
+				reasons.push("Requires a Dark Eldar Explorer.");
+			}
+			if (/non-psyker/.test(lower) && context.psyker) {
+				reasons.push("Requires a non-psyker Explorer.");
+			}
+			const exceptMatch = /except\s+(.*)$/i.exec(required);
+			if (exceptMatch) {
+				for (const token of splitGateList(exceptMatch[1]!)) {
+					if (
+						gateNameMatches(token, context.careerName) ||
+						gateNameMatches(token, context.careerKey) ||
+						gateNameMatches(token, context.speciesLabel) ||
+						gateNameMatches(token, context.speciesKey)
+					) {
+						reasons.push(`Career not permitted: ${token}`);
+					}
+				}
+			}
+		} else {
+			const allowed = splitGateList(required);
+			if (
+				!allowed.some(
+					(name) =>
+						gateNameMatches(name, context.careerName) ||
+						gateNameMatches(name, context.careerKey),
+				)
+			) {
+				reasons.push(`Requires Career: ${required}`);
+			}
+		}
+	}
+
+	const rankSpec = (gate.alternateRank ?? "").trim();
+	const minRank = Number(/(\d+)/.exec(rankSpec)?.[1] ?? 0);
+	const minXp = Number(
+		(/([\d,]+)\s*xp/i.exec(rankSpec)?.[1] ?? "0").replace(/,/g, ""),
+	);
+	if (minRank > 0 && context.rank < minRank) {
+		reasons.push(
+			`Requires Rank ${minRank} (character is Rank ${context.rank}).`,
+		);
+	}
+	if (minXp > 0 && context.spent < minXp) {
+		reasons.push(
+			`Requires ${minXp} xp spent (character has ${context.spent}).`,
+		);
+	}
+
+	// Requirements/Prerequisites: structured by the shared evaluator (bead
+	// tfk), but only as soft notes — a stat like "Pilot (Any One)" cannot be
+	// resolved mechanically, and the dialog confirms before purchase anyway.
+	if ((gate.requirements ?? "").trim()) {
+		const stripLadder = (name: string) => name.replace(/\s*\+\d+\s*$/, "");
+		// Ladder suffixes ride the requirement name ("Tech-Use +10"); strip them
+		// from BOTH sides so an owned base skill satisfies the row.
+		const requirementText = gate.requirements.replace(/\s*\+\d+\s*/g, " ");
+		const { unmet } = evaluatePrerequisites(parsePrerequisites(requirementText), {
+				characteristics: context.characteristics,
+				talents: [...context.ownedTalents, ...context.ownedSkills].map(
+					stripLadder,
+				),
+				psyRating: context.psyRating,
+			},
+		);
+		for (const unmet_ of unmet) notes.push(`Requirement: ${unmet_}`);
+	}
+
+	if ((gate.otherRequirements ?? "").trim()) {
+		notes.push(gate.otherRequirements.trim());
+	}
+
+	return {
+		eligible: reasons.length === 0,
+		reasons,
+		notes,
+		minRank,
+		minXp,
 	};
 }

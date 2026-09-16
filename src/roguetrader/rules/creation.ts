@@ -118,6 +118,60 @@ export interface SpeciesSource {
 	startingFate?: number;
 	fateFormula?: string;
 	woundsFormula?: string;
+	fateBands?: Array<{ max: number; value: number }>;
+	wounds?: Partial<SpeciesWoundsSpec>;
+}
+
+/** One band of a rolled starting-Fate table: a 1d10 result <= max -> value. */
+export interface FateBand {
+	max: number;
+	value: number;
+}
+
+/**
+ * Structured starter-Wounds spec (bead g45s), stored BESIDE the verbatim
+ * woundsFormula in the species block. The creator evaluates this; the prose is
+ * display-only. `toughnessMultiplier` is the book's "twice the Toughness
+ * Bonus" (normally 2), `flat` the adder after the dice ("1d5+1" -> 1), and
+ * `ignoreUnnaturalToughness` the Ork carve-out at p63.
+ */
+export interface SpeciesWoundsSpec {
+	/** Dice notation for the rolled part ("1d5"); "" = none. */
+	dice: string;
+	flat: number;
+	toughnessMultiplier: number;
+	ignoreUnnaturalToughness: boolean;
+}
+
+/** Human origin-path convention (2xTB): the fallback when a species omits it. */
+export const DEFAULT_SPECIES_WOUNDS: SpeciesWoundsSpec = {
+	dice: "",
+	flat: 0,
+	toughnessMultiplier: 2,
+	ignoreUnnaturalToughness: false,
+};
+
+/** Starting Wounds for a species block: multiplier x TB + dice + flat. */
+export function woundsFromSpecies(
+	spec: SpeciesWoundsSpec,
+	toughnessBonus: number,
+	diceTotals: number[],
+): number {
+	return (
+		toughnessBonus * spec.toughnessMultiplier +
+		diceTotals.reduce((sum, value) => sum + value, 0) +
+		spec.flat
+	);
+}
+
+/**
+ * Starting Fate from the printed 1d10 bands (nearest band wins, ascending).
+ * Returns 0 when no band covers the roll, so a malformed table fails loudly
+ * at the sheet rather than inventing a value.
+ */
+export function fateFromBands(bands: FateBand[], d10: number): number {
+	const ordered = [...(bands ?? [])].sort((a, b) => a.max - b.max);
+	return ordered.find((band) => d10 <= band.max)?.value ?? 0;
 }
 
 export interface SpeciesOption {
@@ -133,6 +187,10 @@ export interface SpeciesOption {
 	fateFormula: string;
 	/** Verbatim printed Wounds formula. */
 	woundsFormula: string;
+	/** Structured starter-Fate bands (bead g45s); empty = fixed/none. */
+	fateBands: FateBand[];
+	/** Structured starter-Wounds spec (bead g45s). */
+	wounds: SpeciesWoundsSpec;
 }
 
 /** The human species is the ABSENCE of a species block, never a pack record. */
@@ -161,6 +219,8 @@ export function speciesOptions(
 		startingFate: 0,
 		fateFormula: "",
 		woundsFormula: "",
+		fateBands: [],
+		wounds: { ...DEFAULT_SPECIES_WOUNDS },
 	};
 	const byKey = new Map<string, SpeciesOption>([[human.key, human]]);
 	for (const source of sources ?? []) {
@@ -181,6 +241,11 @@ export function speciesOptions(
 			startingFate: source?.startingFate ?? 0,
 			fateFormula: source?.fateFormula ?? "",
 			woundsFormula: source?.woundsFormula ?? "",
+			fateBands: (source?.fateBands ?? []).map((band) => ({
+				max: Number(band?.max ?? 0),
+				value: Number(band?.value ?? 0),
+			})),
+			wounds: { ...DEFAULT_SPECIES_WOUNDS, ...(source?.wounds ?? {}) },
 		});
 	}
 	return [...byKey.values()];

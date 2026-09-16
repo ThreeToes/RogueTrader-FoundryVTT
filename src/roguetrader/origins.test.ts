@@ -5,6 +5,7 @@ import {
 	allowedColumns,
 	characteristicDeltas,
 	effectiveMechanics,
+	entryColumns,
 	evaluateOriginDice,
 	fateFromTable,
 	getOriginEntries,
@@ -35,7 +36,11 @@ setOriginEntries(
 			row: String(s.row ?? "home-world") as OriginRow,
 			col: Number(s.col ?? 0),
 			species: s.species ? String(s.species) : undefined,
-			replaces: s.replaces ? String(s.replaces) : undefined,
+			replaces: Array.isArray(s.replaces)
+				? (s.replaces as unknown[]).map(String)
+				: s.replaces
+					? String(s.replaces)
+					: undefined,
 			name: doc.name ?? "",
 			description: String(s.description ?? ""),
 			effect: s.effect ? String(s.effect) : undefined,
@@ -73,6 +78,20 @@ describe("origin path chart (Core Rulebook p16)", () => {
 		}
 	});
 
+	test("expanded entries may occupy both slots they replace (bead b03f)", () => {
+		// Fringe Survivor may be taken instead of Scavenger OR Savant.
+		const fringe = originByKey("fringe-survivor")!;
+		const cols = entryColumns(fringe).sort((a, b) => a - b);
+		expect(cols).toEqual([0, 4]);
+		// Every replacement key is a real core entry on the same row.
+		for (const replaced of ["scavenger", "savant"]) {
+			const core = originByKey(replaced)!;
+			expect(core.row).toBe("birthright");
+		}
+		// Lineage is free and open, not adjacency-constrained.
+		expect(allowedColumns("lineage", 2).length).toBe(6);
+	});
+
 	test("keys are unique across the whole chart", () => {
 		const keys = ORIGIN_ENTRIES.map((entry) => entry.key);
 		expect(new Set(keys).size).toBe(keys.length);
@@ -96,10 +115,12 @@ describe("origin path chart (Core Rulebook p16)", () => {
 	});
 
 	// Book example (p16): Scavenger is on the edge, so only Tainted (below)
-	// or Criminal (only adjacent) are reachable.
+	// or Criminal (only adjacent) are reachable. Expanded entries sharing those
+	// slots (bead b03f) are checked separately, so filter to the core chart.
 	test("book example: edge Scavenger reaches only Tainted and Criminal", () => {
 		const cols = allowedColumns("lure", 0);
 		const names = originsInRow("lure")
+			.filter((e) => !e.replaces)
 			.filter((e) => cols.includes(e.col))
 			.map((e) => e.name);
 		expect(names).toEqual(["Tainted", "Criminal"]);
@@ -275,6 +296,17 @@ describe("resolveOrigins", () => {
 		expect(fel.fateDelta).toBe(0);
 	});
 
+	test("expanded options deduct their xp cost from starting xp (bead b03f)", () => {
+		const resolved = resolveOrigins({
+			lineage: { key: "witch-born", variantKey: "perilous-choice" },
+			birthright: { key: "fringe-survivor", variantKey: "survivalist" },
+		});
+		// 500 (Perilous Choice) + 300 (Survivalist).
+		expect(resolved.xpCost).toBe(800);
+		// The core chart has no cost.
+		expect(resolveOrigins({ lure: { key: "criminal" } }).xpCost).toBe(0);
+	});
+
 	test("unknown picks are ignored, not thrown", () => {
 		const resolved = resolveOrigins({
 			lure: { key: "does-not-exist" },
@@ -331,13 +363,14 @@ describe("choice coverage", () => {
 // the human Origin Path (Into the Storm p48: "Kroot characters do not use the
 // Origin Path"), and p49 replaces it with a single Kindred choice.
 describe("species origin paths (bead ghmn)", () => {
-	test("human uses the five core rows", () => {
+	test("human uses the six core rows (Lineage added by Into the Storm)", () => {
 		expect(originRowsForSpecies("")).toEqual([
 			"home-world",
 			"birthright",
 			"lure",
 			"trials",
 			"motivation",
+			"lineage",
 		]);
 	});
 

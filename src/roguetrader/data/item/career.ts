@@ -37,6 +37,8 @@ declare startingSkills: string[];
 	declare ranks: CareerRank[];
 	/** Verbatim "Required Career(s):" gate (alternate ranks / elite advances). */
 	declare requiredCareer: string;
+	/** Verbatim "Required Race:" gate (Kroot Shaper: "Required Race: Kroot"). */
+	declare requiredRace: string;
 	/** Verbatim "Alternate Rank:" gate, e.g. "3 (10,000 xp) or higher". */
 	declare alternateRank: string;
 	/** Verbatim "Requirements:" short stat gate. */
@@ -50,6 +52,17 @@ declare startingSkills: string[];
 		startingFate: number;
 		fateFormula: string;
 		woundsFormula: string;
+		/** Structured starter-Fate bands (bead g45s): 1d10 <= max -> value.
+		 *  Empty = a fixed startingFate (or none). */
+		fateBands: Array<{ max: number; value: number }>;
+		/** Structured starter-Wounds spec (bead g45s) evaluated by the creator;
+		 *  the verbatim woundsFormula above stays display-only. */
+		wounds: {
+			dice: string;
+			flat: number;
+			toughnessMultiplier: number;
+			ignoreUnnaturalToughness: boolean;
+		};
 	};
 
 	static override defineSchema() {
@@ -157,6 +170,39 @@ declare startingSkills: string[];
 				/** Verbatim starting-Fate roll, when not a fixed value. */
 				fateFormula: new foundry.data.fields.StringField({ initial: "" }),
 				woundsFormula: new foundry.data.fields.StringField({ initial: "" }),
+				/** Structured starter-Fate bands (bead g45s). */
+				fateBands: new foundry.data.fields.ArrayField(
+					new foundry.data.fields.SchemaField({
+						max: new foundry.data.fields.NumberField({
+							integer: true,
+							min: 1,
+							initial: 10,
+						}),
+						value: new foundry.data.fields.NumberField({
+							integer: true,
+							min: 0,
+							initial: 0,
+						}),
+					}),
+					{ initial: () => [] },
+				),
+				/** Structured starter-Wounds spec (bead g45s). */
+				wounds: new foundry.data.fields.SchemaField({
+					dice: new foundry.data.fields.StringField({ initial: "" }),
+					flat: new foundry.data.fields.NumberField({
+						integer: true,
+						min: 0,
+						initial: 0,
+					}),
+					toughnessMultiplier: new foundry.data.fields.NumberField({
+						integer: true,
+						min: 0,
+						initial: 2,
+					}),
+					ignoreUnnaturalToughness: new foundry.data.fields.BooleanField({
+						initial: false,
+					}),
+				}),
 			}),
 			/**
 			 * Alternate-rank gates (bead koau): the book's own verbatim
@@ -164,6 +210,7 @@ declare startingSkills: string[];
 			 * "Other Requirements:" lines. Blank on the core-8.
 			 */
 			requiredCareer: new foundry.data.fields.StringField({ initial: "" }),
+			requiredRace: new foundry.data.fields.StringField({ initial: "" }),
 			alternateRank: new foundry.data.fields.StringField({ initial: "" }),
 			requirements: new foundry.data.fields.StringField({ initial: "" }),
 			otherRequirements: new foundry.data.fields.StringField({ initial: "" }),

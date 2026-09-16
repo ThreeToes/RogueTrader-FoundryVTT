@@ -358,6 +358,16 @@ describe("species origin paths (bead ghmn)", () => {
 		}
 	});
 
+	test("tau uses ONLY the Classified Competence row", () => {
+		// Tau Character Guide p7: "A Tau Explorer must choose from one of the six
+		// following Classified Competencies at character creation" — the Tau
+		// replacement for the Origin Path, not the human chart.
+		expect(originRowsForSpecies("tau")).toEqual(["competence"]);
+		for (const human of ORIGIN_ROWS) {
+			expect(originRowsForSpecies("tau")).not.toContain(human);
+		}
+	});
+
 	test("dark-eldar has NO path, because the book gives it none", () => {
 		// Soul Reaver p97, verbatim: "All Dark Eldar characters possess the
 		// following Traits, Skills, Talents, and abilities" — a COMMON package
@@ -376,9 +386,10 @@ describe("species origin paths (bead ghmn)", () => {
 	});
 
 	test("a species with no entries yields NO path, not the human one", () => {
-		// "tau" has no content in any pack. Showing the human chart would be
-		// wrong; showing nothing is honest.
-		expect(originRowsForSpecies("tau")).toEqual([]);
+		// "slaugth" has no content in any pack. Showing the human chart would be
+		// wrong; showing nothing is honest. (Tau used to stand in for this, until
+		// the Tau Character Guide gave them a Classified Competence row.)
+		expect(originRowsForSpecies("slaugth")).toEqual([]);
 	});
 
 	test("every species-bound entry is reachable through its own path", () => {

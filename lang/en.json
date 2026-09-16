@@ -1008,6 +1008,7 @@
   "ORIGIN.ROW_KINDRED": "Kindred",
   "ORIGIN.ROW_KLAN": "Klan",
   "ORIGIN.ROW_KNOW_WOTZ": "Orky Know-Wotz",
+  "ORIGIN.ROW_COMPETENCE": "Classified Competence",
   "CREATOR.NO_CREATE_PERMISSION": "You lack permission to create new characters — right-click your own character to run creation on it, or ask the GM.",
   "TAB.BACKGROUND": "Background",
   "BACKGROUND.ORIGINS": "Origins",

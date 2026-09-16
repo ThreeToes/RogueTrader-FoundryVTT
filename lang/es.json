@@ -1011,6 +1011,7 @@
   "ORIGIN.ROW_KINDRED": "Estirpe",
   "ORIGIN.ROW_KLAN": "Klan",
   "ORIGIN.ROW_KNOW_WOTZ": "Saber Orko (Know-Wotz)",
+  "ORIGIN.ROW_COMPETENCE": "Competencia Clasificada",
   "CREATOR.NO_CREATE_PERMISSION": "No tienes permiso para crear nuevos personajes — haz clic derecho en tu propio personaje para ejecutar la creación sobre él, o pídeselo al DJ.",
   "TAB.BACKGROUND": "Trasfondo",
   "BACKGROUND.ORIGINS": "Orígenes",

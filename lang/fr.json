@@ -1010,6 +1010,7 @@
   "ORIGIN.ROW_KINDRED": "Lignée",
   "ORIGIN.ROW_KLAN": "Klan",
   "ORIGIN.ROW_KNOW_WOTZ": "Savoir Ork (Know-Wotz)",
+  "ORIGIN.ROW_COMPETENCE": "Compétence Classifiée",
   "CREATOR.NO_CREATE_PERMISSION": "Vous n'avez pas la permission de créer de nouveaux personnages — cliquez droit sur votre propre personnage pour y lancer la création, ou demandez au MJ.",
   "TAB.BACKGROUND": "Historique",
   "BACKGROUND.ORIGINS": "Origines",

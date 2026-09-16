@@ -37,7 +37,10 @@ export type OriginRow =
 	// Ork path (Into the Storm p61-62, "ORK ORIGINS"): Da Klan and Orky
 	// Know-Wotz, one choice from each.
 	| "klan"
-	| "know-wotz";
+	| "know-wotz"
+	// Tau path (Tau Character Guide p7-8): "A Tau Explorer must choose from one of
+	// the six following Classified Competencies at character creation."
+	| "competence";
 
 /** Characteristic modifier: signed delta applied to the base roll. */
 export interface CharMod {
@@ -130,7 +133,12 @@ export const ORIGIN_ROWS: OriginRow[] = [
  * ORIGIN_ROWS so the human chart's five rows stay exactly five, and appended to
  * ROW_ORDER only for ordering purposes.
  */
-export const XENO_ORIGIN_ROWS: OriginRow[] = ["kindred", "klan", "know-wotz"];
+export const XENO_ORIGIN_ROWS: OriginRow[] = [
+	"kindred",
+	"klan",
+	"know-wotz",
+	"competence",
+];
 
 /** Canonical row order across every path (human first, then xeno rows). */
 const ROW_ORDER: OriginRow[] = [...ORIGIN_ROWS, ...XENO_ORIGIN_ROWS];
@@ -144,6 +152,7 @@ export const ORIGIN_ROW_LABEL_KEYS: Record<OriginRow, string> = {
 	kindred: "ORIGIN.ROW_KINDRED",
 	klan: "ORIGIN.ROW_KLAN",
 	"know-wotz": "ORIGIN.ROW_KNOW_WOTZ",
+	competence: "ORIGIN.ROW_COMPETENCE",
 };
 
 // ---------------------------------------------------------------- Runtime pool

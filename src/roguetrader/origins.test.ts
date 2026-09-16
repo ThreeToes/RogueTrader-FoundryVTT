@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
 import { parse } from "yaml";
 import {
@@ -22,12 +22,21 @@ import {
 	type OriginVariant,
 } from "./origins";
 
-// Epic 1gb7: the chart content lives in the `origins` compendium pack; load it
-// into the pure module's pool so these logic tests run against the real
-// content (rather than a hand fixture that could drift from the pack).
-const packDocs = parse(
-	readFileSync("src/packs/rogue_trader/origins/origins.yaml", "utf8"),
-) as Array<{ name?: string; system?: Record<string, unknown> }>;
+// Epic 1gb7: the chart content lives in the PRIVATE `origins` compendium pack.
+// CI does not ship compendia (src/packs is machine-local), so the pack-driven
+// suites below are SKIPPED when the pack is absent and run against the real
+// content locally. The pack-shape guard lives in the packs repo
+// (src/packs/rogue_trader/origins/origins.test.ts).
+const ORIGIN_PACK = "src/packs/rogue_trader/origins/origins.yaml";
+const HAS_ORIGIN_PACK = existsSync(ORIGIN_PACK);
+const packDocs = (
+	HAS_ORIGIN_PACK
+		? (parse(readFileSync(ORIGIN_PACK, "utf8")) as Array<{
+				name?: string;
+				system?: Record<string, unknown>;
+			}>)
+		: []
+);
 setOriginEntries(
 	packDocs.map((doc) => {
 		const s = doc.system ?? {};
@@ -53,7 +62,14 @@ setOriginEntries(
 );
 const ORIGIN_ENTRIES = getOriginEntries();
 
-describe("origin path chart (Core Rulebook p16)", () => {
+/**
+ * Pack-driven suites are skipped in CI (no compendia) and run locally, where
+ * the engine is exercised against the real YAML rather than a fixture that
+ * could drift. Pure-function suites below run everywhere.
+ */
+const packDescribe = describe.skipIf(!HAS_ORIGIN_PACK);
+
+packDescribe("origin path chart (Core Rulebook p16)", () => {
 	test("every row is present with six contiguous columns", () => {
 		for (const row of ORIGIN_ROWS) {
 			// COLUMNS, not entries: splatbook alternates reuse a core column
@@ -127,7 +143,7 @@ describe("origin path chart (Core Rulebook p16)", () => {
 	});
 });
 
-describe("origin mechanics", () => {
+packDescribe("origin mechanics", () => {
 	test("death world characteristic modifiers match the book", () => {
 		const entry = originByKey("death-world");
 		expect(entry).toBeDefined();
@@ -242,7 +258,7 @@ describe("fateFromTable", () => {
 	});
 });
 
-describe("resolveOrigins", () => {
+packDescribe("resolveOrigins", () => {
 	test("merges fixed mechanics, variant, and choices without double-apply", () => {
 		const resolved = resolveOrigins({
 			"home-world": { key: "death-world", optionChoice: "Jaded" },
@@ -315,7 +331,7 @@ describe("resolveOrigins", () => {
 	});
 });
 
-describe("choice coverage", () => {
+packDescribe("choice coverage", () => {
 	test("every optionChoice, characteristicChoice and alternateChoice is non-empty", () => {
 		for (const entry of ORIGIN_ENTRIES) {
 			const blobs = entry.variants
@@ -362,7 +378,7 @@ describe("choice coverage", () => {
 // Bead ghmn: a species' Origin path is DERIVED FROM THE PACK. Xenos do not use
 // the human Origin Path (Into the Storm p48: "Kroot characters do not use the
 // Origin Path"), and p49 replaces it with a single Kindred choice.
-describe("species origin paths (bead ghmn)", () => {
+packDescribe("species origin paths (bead ghmn)", () => {
 	test("human uses the six core rows (Lineage added by Into the Storm)", () => {
 		expect(originRowsForSpecies("")).toEqual([
 			"home-world",

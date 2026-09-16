@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
 import { parse } from "yaml";
 import {
@@ -10,13 +10,21 @@ import {
 } from "./origins";
 
 // Epic 1gb7 follow-up: the heirloom content (key, range, grant payload) lives
-// in the `heirlooms` compendium pack; load it into the pure module's pool so
-// these logic tests run against the real data. Table 1-2 in the
+// in the PRIVATE `heirlooms` compendium pack. CI does not ship compendia
+// (src/packs is machine-local), so this suite is SKIPPED when the pack is
+// absent and runs against the real data locally. Table 1-2 in the
 // creationtables RollTable remains the prose/range source and is cross-checked
 // by the pack test (src/packs/rogue_trader/heirlooms/heirlooms.test.ts).
-const docs = parse(
-	readFileSync("src/packs/rogue_trader/heirlooms/heirlooms.yaml", "utf8"),
-) as Array<{ name?: string; system?: Record<string, unknown> }>;
+const HEIRLOOM_PACK = "src/packs/rogue_trader/heirlooms/heirlooms.yaml";
+const HAS_HEIRLOOM_PACK = existsSync(HEIRLOOM_PACK);
+const docs = (
+	HAS_HEIRLOOM_PACK
+		? (parse(readFileSync(HEIRLOOM_PACK, "utf8")) as Array<{
+				name?: string;
+				system?: Record<string, unknown>;
+			}>)
+		: []
+);
 setHeirloomEntries(
 	docs.map((doc) => {
 		const s = doc.system ?? {};
@@ -42,10 +50,13 @@ setHeirloomEntries(
 );
 const heirloomItems = getHeirloomEntries();
 
+/** Skipped in CI (no compendia); runs locally against the real pack. */
+const heirloomDescribe = describe.skipIf(!HAS_HEIRLOOM_PACK);
+
 // Bead rboc: Table 1-2: Heirloom Items (Core Rulebook p31).
 // Five 1d100 ranges rolled by the creator's stage 3.5.
 
-describe("heirloom table (Core Rulebook Table 1-2)", () => {
+heirloomDescribe("heirloom table (Core Rulebook Table 1-2)", () => {
 	test("five entries cover 1-100 exactly, in order", () => {
 		expect(heirloomItems).toHaveLength(5);
 		let next = 1;

@@ -1490,29 +1490,45 @@ export function guardedBatch(raw: PutBatch, pack: string): PutBatch {
 }
 
 /**
- * Sidecar asset directories mirrored into a pack's built LevelDB folder
- * (bead v2cn). `portraits/` is the NPC-portrait convention: book art lives
- * beside the YAML inside the private pack and is copied next to the database,
- * so it reaches the sheet as `systems/rogue-trader/packs/<pack>/portraits/x`
- * without ever touching the public tree (the public release refuses any
- * artifact containing `packs/`).
+ * Sidecar asset directories carried into the built system (bead v2cn, revived
+ * for the portrait rollout). Art lives beside the pack YAMLs inside the
+ * PRIVATE packs repo; the built system needs it on a path Foundry can serve,
+ * so each pack's asset dirs are mirrored to `release/rogue_trader/private/
+ * <pack>/` and referenced as `systems/rogue-trader/private/<pack>/<file>`.
+ *
+ * WHY NOT INSIDE `packs/<pack>/` (learned the hard way): Foundry OWNS pack
+ * directories. A compendium data migration rewrites that LevelDB dir and
+ * anything else living in it is destroyed — every portrait 404'd after the
+ * first world launch.
+ *
+ * WHY THIS BEATS `asset/`: art from the books or the web is third-party
+ * copyright. The public release is built with no `src/packs` clone, so nothing
+ * mirrors there and `private/` never reaches the public zip
+ * (release-public.yaml also refuses an artifact containing it).
  */
 export const PACK_ASSET_DIRS = ["portraits"] as const;
 
+/** Private (non-pack) asset root inside the built system. */
+export const PACK_PRIVATE_DEST = "./release/rogue_trader/private";
+
 /**
- * Mirror a pack's sidecar asset dirs from its source folder into its built
- * pack folder. buildPack recreates the destination from scratch, so this must
- * run AFTER the LevelDB is written. Returns the dir names actually copied.
+ * Mirror a pack's asset dirs from its private source folder into its built
+ * private folder. Runs AFTER the pack's LevelDB is written (buildPack wipes
+ * the pack dir first). The destination is replaced wholesale so a deleted
+ * portrait cannot linger in a build. Returns the dir names actually copied.
  */
 export async function mirrorPackAssets(
 	sourcePackDir: string,
-	destPackDir: string,
+	packPrivateDir: string,
 ): Promise<string[]> {
 	const copied: string[] = [];
 	for (const dir of PACK_ASSET_DIRS) {
 		const src = path.join(sourcePackDir, dir);
 		if (!existsSync(src)) continue;
-		await cp(src, path.join(destPackDir, dir), { recursive: true });
+		const dest = path.join(packPrivateDir, dir);
+		await rm(dest, { recursive: true, force: true });
+		await mkdir(path.dirname(dest), { recursive: true });
+		await cp(src, dest, { recursive: true });
 		copied.push(dir);
 	}
 	return copied;
@@ -1687,14 +1703,16 @@ async function buildPack(
 	await batch.write();
 	await database.close();
 
-	// Portraits/asset sidecars (bead v2cn): the rebuild above wipes packPath, so
-	// mirror the authored assets back in after the database is written.
+	// Pack art (bead v2cn): mirrored OUTSIDE the pack dir, which Foundry owns
+	// and rewrites during compendium migrations.
 	const mirrored = await mirrorPackAssets(
 		path.join(PACK_SRC, folder),
-		packPath,
+		path.join(PACK_PRIVATE_DEST, folder),
 	);
 	if (mirrored.length > 0) {
-		console.log(`[packs] ${folder}: mirrored ${mirrored.join(", ")}/ assets`);
+		console.log(
+			`[packs] ${folder}: mirrored ${mirrored.join(", ")}/ -> private/${folder}`,
+		);
 	}
 	return count;
 }

@@ -75,8 +75,9 @@ export class Character extends foundry.abstract.TypeDataModel<
 	/**
 	 * Extracted-entry provenance (bead cl5k): the book slug + PRINTED page an
 	 * NPC statblock came from, the same shape items carry. Blank for hand-made
-	 * PCs/actors; set on compendium NPCs so portrait/art mapping and content
-	 * audits have machine-readable origin instead of a free-text comment.
+	 * PCs/actors; set on compendium NPCs so content audits and "where does this
+	 * statblock come from" questions have a machine-readable origin instead of
+	 * a free-text comment.
 	 */
 	declare source: { book: string; page: number };
 	/** Linked dynasty actor (owner redesign: characters ATTACH to the group's dynasty, one per group by default). */

@@ -120,6 +120,13 @@ jobs:
                   if unzip -l rogue-trader.zip | grep -q "packs/"; then
                       echo "::error::rogue-trader.zip contains compendium packs"; exit 1
                   fi
+                  # Same gate for pack ART (bead v2cn): portraits live in the
+                  # private packs repo and are mirrored to private/<pack>/ by
+                  # the packer. This build has no src/packs clone, so private/
+                  # must not exist at all — art in the public zip is a leak.
+                  if unzip -l rogue-trader.zip | grep -q "private/"; then
+                      echo "::error::rogue-trader.zip contains private pack assets"; exit 1
+                  fi
                   echo "zip is packless"
 
             - name: Push code and manifest to GitHub

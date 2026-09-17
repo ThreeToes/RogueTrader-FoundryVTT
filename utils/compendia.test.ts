@@ -897,20 +897,36 @@ describe("compendium folder groupings (bead nsqt)", () => {
  * governance warning itself.
  */
 describe("mirrorPackAssets (bead v2cn)", () => {
-	test("mirrors portraits/ into the built pack dir", async () => {
+	test("mirrors portraits/ into the private asset dir, never the pack dir", async () => {
 		const root = await mkdtemp(path.join(tmpdir(), "pack-assets-"));
 		const src = path.join(root, "src", "npcs");
-		const dest = path.join(root, "dest", "npcs");
+		const dest = path.join(root, "release", "private", "npcs");
 		await mkdir(path.join(src, "portraits"), { recursive: true });
-		await writeFile(path.join(src, "portraits", "a.png"), "x");
-		await mkdir(dest, { recursive: true });
+		await writeFile(path.join(src, "portraits", "a.webp"), "x");
 
 		const copied = await mirrorPackAssets(src, dest);
 		expect(copied).toEqual(["portraits"]);
-		expect(existsSync(path.join(dest, "portraits", "a.png"))).toBe(true);
+		expect(existsSync(path.join(dest, "portraits", "a.webp"))).toBe(true);
+		// Foundry owns packs/<pack>/ and rewrites it during compendium
+		// migrations, so the mirror must never target a pack directory.
+		expect(dest.includes(`${path.sep}packs${path.sep}`)).toBe(false);
 	});
 
-	test("is a no-op when the source has no asset dirs", async () => {
+	test("replaces the destination wholesale so a deleted portrait cannot linger", async () => {
+		const root = await mkdtemp(path.join(tmpdir(), "pack-assets-"));
+		const src = path.join(root, "src");
+		const dest = path.join(root, "private", "npcs");
+		await mkdir(path.join(src, "portraits"), { recursive: true });
+		await writeFile(path.join(src, "portraits", "keep.webp"), "x");
+		await mkdir(path.join(dest, "portraits"), { recursive: true });
+		await writeFile(path.join(dest, "portraits", "stale.webp"), "y");
+
+		await mirrorPackAssets(src, dest);
+		expect(existsSync(path.join(dest, "portraits", "keep.webp"))).toBe(true);
+		expect(existsSync(path.join(dest, "portraits", "stale.webp"))).toBe(false);
+	});
+
+	test("is a no-op when the pack ships no art (the public build)", async () => {
 		const root = await mkdtemp(path.join(tmpdir(), "pack-assets-"));
 		const src = path.join(root, "src");
 		await mkdir(src, { recursive: true });

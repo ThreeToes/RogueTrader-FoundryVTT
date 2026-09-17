@@ -9,6 +9,7 @@
  */
 
 import { effectsAreLive } from "../item/effects";
+import { sourceField } from "../item/source";
 import { careers, sorceryRanks } from "../../registry";
 
 export const CHARACTERISTIC_KEYS = [
@@ -71,6 +72,13 @@ export class Character extends foundry.abstract.TypeDataModel<
 	};
 	/** Stage 4 free-text (bead ay0, Core Rulebook p31-34). */
 	declare life: { motivation: string };
+	/**
+	 * Extracted-entry provenance (bead cl5k): the book slug + PRINTED page an
+	 * NPC statblock came from, the same shape items carry. Blank for hand-made
+	 * PCs/actors; set on compendium NPCs so portrait/art mapping and content
+	 * audits have machine-readable origin instead of a free-text comment.
+	 */
+	declare source: { book: string; page: number };
 	/** Linked dynasty actor (owner redesign: characters ATTACH to the group's dynasty, one per group by default). */
 	declare dynastyUuid: string;
 	declare careerKey: string;
@@ -296,6 +304,12 @@ export class Character extends foundry.abstract.TypeDataModel<
 			 * follow-up found the field was silently dropped on save).
 			 */
 			notes: new foundry.data.fields.HTMLField({ initial: "" }),
+			/**
+			 * Statblock provenance (bead cl5k): book slug + printed page, shared
+			 * shape with item entries (data/item/source.ts). Blank-initial so the
+			 * character creator and hand-made actors never need it.
+			 */
+			source: sourceField(),
 			/**
 			 * Career reference: registry key into CONFIG.ROGUE_TRADER.careers
 			 * (bead 0ib). Homebrew careers registered at init are pickable too;

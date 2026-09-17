@@ -77,3 +77,22 @@ describe("Character schema: blank-safe choice fields", () => {
 		expect(schema.sanctioned.opts.initial).toBe(true);
 	});
 });
+
+/**
+ * Statblock provenance (bead cl5k): compendium NPCs record the book slug +
+ * PRINTED page they were extracted from, the same `{book, page}` shape items
+ * carry (data/item/source.ts). Blank-initial so PCs and hand-made actors are
+ * unaffected. Without a declared field the packer's `system.source` was
+ * silently dropped on load (the d7js lesson).
+ */
+describe("Character schema: statblock source (bead cl5k)", () => {
+	const schema = Character.defineSchema() as unknown as Record<string, any>;
+
+	test("source is a {book, page} schema field, blank-initial", () => {
+		expect(schema.source).toBeDefined();
+		const fields = schema.source.fields as Record<string, any>;
+		expect(fields.book.opts.initial).toBe("");
+		expect(fields.page.opts.initial).toBe(0);
+		expect(fields.page.opts.min).toBe(0);
+	});
+});

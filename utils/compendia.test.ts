@@ -1,4 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import {
 	actorItemKey,
 	actorKey,
@@ -8,6 +12,7 @@ import {
 	documentId,
 	folderId,
 	guardedBatch,
+	mirrorPackAssets,
 	readManifestPacks,
 	MANIFEST_PACKS_YAML,
 	resolveEntryGroup,
@@ -377,6 +382,32 @@ describe("actor packs (bead et3x)", () => {
 		expect(
 			(embedded[0].system as Record<string, unknown>).equipState,
 		).toBeUndefined();
+	});
+
+	test("a linked clone's type comes from the SOURCE key, not the physical pack (regression)", () => {
+		// Concept consolidation: the physical pack is `character-options` while
+		// the entry's source (the historical pack name) is `talents`. Resolving
+		// from the physical id fell through to "gear" and stripped every NPC
+		// statblock item of its real type.
+		const conceptIndex: ItemSourceIndex = new Map([
+			[
+				"Talent of Note",
+				[
+					{
+						pack: "character-options",
+						source: "talents",
+						type: "talent",
+						id: documentId("Talent of Note"),
+						entry: { name: "Talent of Note", system: {} },
+					},
+				],
+			],
+		]);
+		const { embedded } = toActorSourceDocument(
+			{ name: "X", type: "npc", items: [{ name: "Talent of Note" }] },
+			conceptIndex,
+		);
+		expect(embedded[0].type).toBe("talent");
 	});
 
 	test("sourceName links a specialisation clone to its base entry", () => {
@@ -865,6 +896,29 @@ describe("compendium folder groupings (bead nsqt)", () => {
  * broken. Skipped wholesale when there is no content clone (CI), same as the
  * governance warning itself.
  */
+describe("mirrorPackAssets (bead v2cn)", () => {
+	test("mirrors portraits/ into the built pack dir", async () => {
+		const root = await mkdtemp(path.join(tmpdir(), "pack-assets-"));
+		const src = path.join(root, "src", "npcs");
+		const dest = path.join(root, "dest", "npcs");
+		await mkdir(path.join(src, "portraits"), { recursive: true });
+		await writeFile(path.join(src, "portraits", "a.png"), "x");
+		await mkdir(dest, { recursive: true });
+
+		const copied = await mirrorPackAssets(src, dest);
+		expect(copied).toEqual(["portraits"]);
+		expect(existsSync(path.join(dest, "portraits", "a.png"))).toBe(true);
+	});
+
+	test("is a no-op when the source has no asset dirs", async () => {
+		const root = await mkdtemp(path.join(tmpdir(), "pack-assets-"));
+		const src = path.join(root, "src");
+		await mkdir(src, { recursive: true });
+		expect(await mirrorPackAssets(src, path.join(root, "dest"))).toEqual([]);
+		expect(existsSync(path.join(root, "dest"))).toBe(false);
+	});
+});
+
 describe("readManifestPacks (manifest-packs.yaml fragment)", () => {
 	test("fragment shape and pack-folder coverage", async () => {
 		const packs = await readManifestPacks();

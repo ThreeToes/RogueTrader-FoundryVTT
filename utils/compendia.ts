@@ -16,7 +16,7 @@
 // - document shape: {_id, name, type, system, effects: [], _stats:{coreVersion}}
 
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { ClassicLevel } from "classic-level";
 import yaml from "yaml";
@@ -1292,19 +1292,22 @@ export function toEmbeddedItemDocument(
 	const doc =
 		resolved && !standalone
 			? // Linked: clone the PACK's real system data (type resolution via
-			  // the source pack's folder rules), then apply the authoring
-			  // entry's name/overrides on top (specialisations, ladder, AP).
+			  // the SOURCE key's folder rules — the historical pack name, which is
+			  // what FOLDER_TYPE_DEFAULTS is keyed by; the physical pack id is the
+			  // same for single-source packs but NOT for a merged concept pack),
+			  // then apply the authoring entry's name/overrides on top
+			  // (specialisations, ladder, AP).
 			  toSourceDocument(
-				{
-					...resolved.entry,
-					...(entry.name ? { name: entry.name } : {}),
-					system: {
-						...(resolved.entry.system ?? {}),
-						...(entry.system ?? {}),
+					{
+						...resolved.entry,
+						...(entry.name ? { name: entry.name } : {}),
+						system: {
+							...(resolved.entry.system ?? {}),
+							...(entry.system ?? {}),
+						},
 					},
-				},
-				resolved.pack,
-			)
+					resolved.source ?? resolved.pack,
+			  )
 			: toSourceDocument(entry, resolved?.pack ?? "npcs");
 	// Duplicate names within one actor would collide on the deterministic id.
 	if (seenIds.has(String(doc._id))) {
@@ -1486,6 +1489,35 @@ export function guardedBatch(raw: PutBatch, pack: string): PutBatch {
 	};
 }
 
+/**
+ * Sidecar asset directories mirrored into a pack's built LevelDB folder
+ * (bead v2cn). `portraits/` is the NPC-portrait convention: book art lives
+ * beside the YAML inside the private pack and is copied next to the database,
+ * so it reaches the sheet as `systems/rogue-trader/packs/<pack>/portraits/x`
+ * without ever touching the public tree (the public release refuses any
+ * artifact containing `packs/`).
+ */
+export const PACK_ASSET_DIRS = ["portraits"] as const;
+
+/**
+ * Mirror a pack's sidecar asset dirs from its source folder into its built
+ * pack folder. buildPack recreates the destination from scratch, so this must
+ * run AFTER the LevelDB is written. Returns the dir names actually copied.
+ */
+export async function mirrorPackAssets(
+	sourcePackDir: string,
+	destPackDir: string,
+): Promise<string[]> {
+	const copied: string[] = [];
+	for (const dir of PACK_ASSET_DIRS) {
+		const src = path.join(sourcePackDir, dir);
+		if (!existsSync(src)) continue;
+		await cp(src, path.join(destPackDir, dir), { recursive: true });
+		copied.push(dir);
+	}
+	return copied;
+}
+
 async function buildPack(
 	folder: string,
 	ClassicLevelCtor: typeof ClassicLevel,
@@ -1654,6 +1686,16 @@ async function buildPack(
 
 	await batch.write();
 	await database.close();
+
+	// Portraits/asset sidecars (bead v2cn): the rebuild above wipes packPath, so
+	// mirror the authored assets back in after the database is written.
+	const mirrored = await mirrorPackAssets(
+		path.join(PACK_SRC, folder),
+		packPath,
+	);
+	if (mirrored.length > 0) {
+		console.log(`[packs] ${folder}: mirrored ${mirrored.join(", ")}/ assets`);
+	}
 	return count;
 }
 

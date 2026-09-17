@@ -1,6 +1,6 @@
 import { systemOf } from "../../data/accessors";
 import { sheetContext } from "../context";
-import { getPackDocuments } from "../pack-resolve";
+import { getCharacterOptionDocs } from "../pack-resolve";
 import {
 	availableRows,
 	characteristicNextAdvance,
@@ -148,7 +148,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			};
 		}> = [];
 		if (careerKey) {
-			allCareers = (await getPackDocuments("rogue-trader.careers")) as unknown as typeof allCareers;
+			allCareers = (await getCharacterOptionDocs("career")) as unknown as typeof allCareers;
 			const doc = allCareers.find((d) => d.system.key === careerKey);
 			if (doc) {
 				this.#career = {
@@ -169,7 +169,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			}
 		}
 		{
-			const docs = (await getPackDocuments("rogue-trader.skills")) as unknown as Array<{
+			const docs = (await getCharacterOptionDocs("skill")) as unknown as Array<{
 				id?: string;
 				name?: string;
 				system: { key?: string; characteristic?: string };
@@ -189,7 +189,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		// "psychic-technique", ...).
 		this.#nameByKey = {};
 		{
-			const docs = (await getPackDocuments("rogue-trader.talents")) as unknown as Array<{
+			const docs = (await getCharacterOptionDocs("talent")) as unknown as Array<{
 				name?: string;
 				system: { key?: string };
 			}>;

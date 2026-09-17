@@ -9,12 +9,14 @@ import { talentGrant } from "./grant-helpers";
 
 interface FakePackDoc {
 	name: string;
+	type: string;
 	system: Record<string, unknown>;
 }
 
 const PACK_DOCS: FakePackDoc[] = [
 	{
 		name: "Resistance",
+		type: "talent",
 		system: {
 			category: "defence",
 			description: "Gain +10 bonus to Resistance Tests against Fear.",
@@ -22,6 +24,7 @@ const PACK_DOCS: FakePackDoc[] = [
 	},
 	{
 		name: "Air of Authority",
+		type: "talent",
 		system: { category: "offence", description: "Prerequisites: Fel 30." },
 	},
 ];
@@ -30,7 +33,7 @@ function stubGame(docs: FakePackDoc[]) {
 	(globalThis as Record<string, unknown>).game = {
 		packs: {
 			get: (id: string) =>
-				id === "rogue-trader.talents"
+				id === "rogue-trader.character-options"
 					? { getDocuments: async () => docs }
 					: undefined,
 		},

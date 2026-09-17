@@ -24,10 +24,10 @@ import yaml from "yaml";
 
 const PARSED = "src/packs/.extraction-src/careers-parsed.json";
 const ALT_PARSED = "src/packs/.extraction-src/alt-careers-parsed.json";
-const SKILLS_YAML = "src/packs/rogue_trader/skills/skills.yaml";
-const TALENTS_YAML = "src/packs/rogue_trader/talents/talents.yaml";
-const TRAITS_YAML = "src/packs/rogue_trader/traits/traits.yaml";
-const OUT = "src/packs/rogue_trader/careers/careers.yaml";
+const SKILLS_YAML = "src/packs/rogue_trader/character-options/skills.yaml";
+const TALENTS_YAML = "src/packs/rogue_trader/character-options/talents.yaml";
+const TRAITS_YAML = "src/packs/rogue_trader/character-options/traits.yaml";
+const OUT = "src/packs/rogue_trader/character-options/careers.yaml";
 
 if (!existsSync(PARSED)) {
 	throw new Error(`run src/packs/.extraction-src/parse-careers.mjs first (${PARSED} missing)`);

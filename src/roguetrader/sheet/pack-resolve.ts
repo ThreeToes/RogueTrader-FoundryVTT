@@ -46,6 +46,20 @@ export async function getPackDocuments(packId: string): Promise<unknown[]> {
 	return (await pack.getDocuments()) as unknown[];
 }
 
+/** Concept pack holding the character-option Items (bead 4tj1). */
+export const CHARACTER_OPTIONS_PACK = "rogue-trader.character-options";
+
+/**
+ * Character-option documents of ONE Item type from the merged concept pack
+ * (bead 4tj1) — the replacement for the per-pack
+ * per-source getPackDocuments idiom. Types: skill, talent,
+ * career, origin, origintrait, psychicpower, navigatorpower, aptitude, trait.
+ */
+export async function getCharacterOptionDocs(type: string): Promise<unknown[]> {
+	const docs = await getPackDocuments(CHARACTER_OPTIONS_PACK);
+	return docs.filter((doc) => (doc as { type?: string }).type === type);
+}
+
 /** Open a resolved document's sheet, loudly reporting a missing binding. */export async function openDocumentSheet(
 	item: unknown,
 	label: string,

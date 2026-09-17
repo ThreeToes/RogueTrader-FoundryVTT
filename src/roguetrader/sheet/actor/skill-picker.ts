@@ -1,6 +1,6 @@
 import { CHARACTERISTIC_KEYS, Character } from "../../data/actor/character";
 import { sheetContext } from "../context";
-import { getPackDocuments } from "../pack-resolve";
+import { getCharacterOptionDocs } from "../pack-resolve";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
@@ -40,8 +40,8 @@ export class SkillPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 		const context = sheetContext(await super._prepareContext(_options));
 		const catalog: Array<{ id: string; name: string; characteristic: string }> =
 			[];
-		const documents = (await getPackDocuments(
-			"rogue-trader.skills",
+		const documents = (await getCharacterOptionDocs(
+			"skill",
 		)) as foundry.documents.Item[];
 		for (const doc of documents) {
 			catalog.push({
@@ -79,8 +79,8 @@ export class SkillPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	): Promise<void> {
 		const name = target.dataset.name;
 		if (!name || !this.actor) return;
-		const documents = (await getPackDocuments(
-			"rogue-trader.skills",
+		const documents = (await getCharacterOptionDocs(
+			"skill",
 		)) as foundry.documents.Item[];
 		const source = documents.find((doc) => doc.name === name);
 		if (!source) return;

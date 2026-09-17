@@ -350,7 +350,7 @@
   "PSYCHIC_POWER.SUSTAINED_TOOLTIP": "Actuellement maintenu : -1 de Rang psychique effectif, +10 aux jets de Phénomènes. [traduction automatique]",
   "PSYCHIC_POWER.PHENOMENA_ROLL": "Phénomènes psychiques",
   "PSYCHIC_POWER.TABLE_MISS": "Résultat de la table de Phénomènes manquant — vérifiez le compendium psychicphenomena. [traduction automatique]",
-  "PSYCHIC_POWER.NO_TABLE": "Le compendium des Phénomènes Psychiques n'est pas installé. [traduction automatique]",
+  "PSYCHIC_POWER.NO_TABLE": "Le compendium des Tables Aléatoires n'est pas installé. [traduction automatique]",
   "PSYCHIC_POWER.DAMAGE_ROLL": "Dégâts de {power}",
   "PSYCHIC_POWER.SORCERY_FREE_ACTION": "Les pouvoirs d'Action Gratuite ne peuvent être appris par la Sorcellerie (Edge of the Abyss p86) — un acte sorcier exige toujours un rituel.",
   "PSYCHIC_POWER.SORCERY_RITUAL": "Sorcier : nécessite un geste rituel",

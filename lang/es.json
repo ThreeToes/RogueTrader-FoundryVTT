@@ -343,7 +343,7 @@
   "PSYCHIC_POWER.SUSTAINED_TOOLTIP": "Actualmente sostenido: -1 de Nivel psíquico efectivo, +10 a las tiradas de Fenómenos. [traducción automática]",
   "PSYCHIC_POWER.PHENOMENA_ROLL": "Fenómenos psíquicos",
   "PSYCHIC_POWER.TABLE_MISS": "Falta el resultado de la tabla de Fenómenos — comprueba el compendio psychicphenomena. [traducción automática]",
-  "PSYCHIC_POWER.NO_TABLE": "El compendio de Fenómenos Psíquicos no está instalado. [traducción automática]",
+  "PSYCHIC_POWER.NO_TABLE": "El compendio de Tablas Aleatorias no está instalado. [traducción automática]",
   "PSYCHIC_POWER.DAMAGE_ROLL": "Daño de {power}",
   "PSYCHIC_POWER.SORCERY_FREE_ACTION": "Los poderes de Acción Gratuita no pueden aprenderse mediante la Hechicería (Edge of the Abyss p86): un acto hechiceril siempre requiere un ritual.",
   "PSYCHIC_POWER.SORCERY_RITUAL": "Hechiceril: requiere un gesto ritual",

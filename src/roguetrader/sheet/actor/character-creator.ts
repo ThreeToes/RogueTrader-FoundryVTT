@@ -53,7 +53,7 @@ import {
 } from "../../rules/grants";
 import { sheetContext } from "../context";
 import { waitForDefaultGrants } from "../default-grants";
-import { getPackDocuments } from "../pack-resolve";
+import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
 import { promptParameterisedSubject, talentGrant } from "./grant-helpers";
 
 /** yclz: prompt for a parameterised talent's subject; resolved names pass through. */
@@ -90,8 +90,8 @@ let careerDocsCache: CareerDocLike[] | null = null;
 /** The careers pack, read once. */
 async function careerDocs(): Promise<CareerDocLike[]> {
 	if (!careerDocsCache) {
-		careerDocsCache = (await getPackDocuments(
-			"rogue-trader.careers",
+		careerDocsCache = (await getCharacterOptionDocs(
+			"career",
 		)) as unknown as CareerDocLike[];
 	}
 	return careerDocsCache;
@@ -731,65 +731,67 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		const out: AcqOption[] = [];
 		this.#acquisitionPayloads.clear();
 		const coverage = await this.#weaponTrainingCoverage();
-		const packs = [
-			"rogue-trader.weapons",
-			"rogue-trader.armour",
-			"rogue-trader.gear",
-			"rogue-trader.drugs",
-			"rogue-trader.tools",
-			// Tau Character Guide armoury (bead eu1s): a hand-authored mixed pack,
-			// bucketed into the existing groups by item type below.
-			"rogue-trader.tau-armoury",
-		];
-		for (const packName of packs) {
-			const docs = (await getPackDocuments(packName)) as unknown as Array<{
-				name?: string;
-				type?: string;
-				system?: {
-					availability?: string;
-					class?: string;
-					weaponFamily?: string;
-					source?: { book?: string };
-					description?: string;
-				};
-				toObject: () => object;
-			}>;
-			for (const doc of docs) {
-				if (!doc.name) continue;
-				const modifier = availabilityModifier(doc.system?.availability ?? "");
-				if (modifier === null || modifier < 0) continue;
-				const key = `${packName}::${doc.name}`;
-				const payload = doc.toObject() as object;
-				this.#acquisitionPayloads.set(key, payload);
-				const isWeapon =
-					doc.type === "melee-weapon" || doc.type === "ranged-weapon";
-				const selectable =
-					!isWeapon ||
-					isTrainedFor(coverage, {
-						class: doc.system?.class,
-						weaponFamily: doc.system?.weaponFamily,
-						name: doc.name,
-						source: doc.system?.source,
-					});
-				out.push({
-					key,
-					name: `${doc.name} (${game.i18n!.localize("CREATOR.ACQ_MODIFIER")} ${modifier >= 0 ? "+" : ""}${modifier})`,
-					payload,
-					tooltip: (doc.system?.description ?? "").slice(0, 300),
-					// The mixed Tau armoury pack buckets by item type so its weapons,
-					// armour and gear join the matching existing group.
-					group:
-						packName === "rogue-trader.tau-armoury"
-							? doc.type === "armour"
-								? "armour"
-								: doc.type === "gear"
-									? "gear"
-									: "weapons"
-							: packName.replace("rogue-trader.", ""),
-					selectable,
-					selected: this.creatorState.acquisition?.key === key,
+		const docs = (await getPackDocuments(
+			"rogue-trader.equipment",
+		)) as unknown as Array<{
+			name?: string;
+			type?: string;
+			flags?: { "rogue-trader"?: { source?: string } };
+			system?: {
+				availability?: string;
+				class?: string;
+				weaponFamily?: string;
+				source?: { book?: string };
+				description?: string;
+			};
+			toObject: () => object;
+		}>;
+		for (const doc of docs) {
+			if (!doc.name) continue;
+			// Acquisition buckets (bead n7hu): six packs became one `equipment`
+			// pack, so bucket by the build-time source flag. The Tau armoury is
+			// hand-authored mixed-type, so it buckets by item type; heirlooms and
+			// cybernetics are not acquisitions.
+			const source = doc.flags?.["rogue-trader"]?.source ?? "";
+			const group =
+				source === "tau-armoury"
+					? doc.type === "armour"
+						? "armour"
+						: doc.type === "gear"
+							? "gear"
+							: "weapons"
+					: source === "weapons" ||
+						  source === "armour" ||
+						  source === "gear" ||
+						  source === "drugs" ||
+						  source === "tools"
+						? source
+						: null;
+			if (!group) continue;
+			const modifier = availabilityModifier(doc.system?.availability ?? "");
+			if (modifier === null || modifier < 0) continue;
+			const key = `${source}::${doc.name}`;
+			const payload = doc.toObject() as object;
+			this.#acquisitionPayloads.set(key, payload);
+			const isWeapon =
+				doc.type === "melee-weapon" || doc.type === "ranged-weapon";
+			const selectable =
+				!isWeapon ||
+				isTrainedFor(coverage, {
+					class: doc.system?.class,
+					weaponFamily: doc.system?.weaponFamily,
+					name: doc.name,
+					source: doc.system?.source,
 				});
-			}
+			out.push({
+				key,
+				name: `${doc.name} (${game.i18n!.localize("CREATOR.ACQ_MODIFIER")} ${modifier >= 0 ? "+" : ""}${modifier})`,
+				payload,
+				tooltip: (doc.system?.description ?? "").slice(0, 300),
+				group,
+				selectable,
+				selected: this.creatorState.acquisition?.key === key,
+			});
 		}
 		return out.sort((a, b) => String(a.name).localeCompare(String(b.name)));
 	}
@@ -812,8 +814,8 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			};
 		}
 		const talentNames = [...(this.#resolved.talents ?? [])];
-		const careerDocs = (await getPackDocuments(
-			"rogue-trader.careers",
+		const careerDocs = (await getCharacterOptionDocs(
+			"career",
 		)) as unknown as Array<{
 			name?: string;
 			system?: { key?: string; startingTalents?: string[] };
@@ -1325,17 +1327,26 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			};
 			const grants: object[] = [];
 			if (entry.grant.kind === "pack-item") {
-				const docs = (await getPackDocuments(
-					entry.grant.pack,
-				)) as unknown as Array<{
+				const packId = entry.grant.pack;
+				if (!packId) {
+					console.error(
+						`rogue-trader | heirloom "${entry.name}" has a pack-item grant with no pack`,
+					);
+					return;
+				}
+				const docs = (await getPackDocuments(packId)) as unknown as Array<{
 					name?: string;
 					type?: string;
 					toObject: () => object;
 				}>;
-				const doc = docs.find((d) => d.name === entry.grant.item);
+				const doc = docs.find(
+					// The pack also holds a same-named heirloom template (bead n7hu);
+					// clone the real gear item, never the template.
+					(d) => d.name === entry.grant.item && d.type !== "heirloom",
+				);
 				if (!doc) {
 					console.error(
-						`rogue-trader | heirloom pack item "${entry.grant.item}" not found in ${entry.grant.pack}`,
+						`rogue-trader | heirloom pack item "${entry.grant.item}" not found in ${packId}`,
 					);
 					return;
 				}
@@ -1444,19 +1455,16 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		// document, meh0), then unmatched options (talents, or manual if
 		// unresolved).
 		const catalog: CatalogSkill[] = [];
-		const pack = game.packs!.get("rogue-trader.skills");
-		if (pack) {
-			const docs = (await pack.getDocuments()) as unknown as Array<{
-				name?: string;
-				system: { characteristic: string };
-			}>;
-			for (const doc of docs) {
-				if (doc.name)
-					catalog.push({
-						name: doc.name,
-						characteristic: doc.system.characteristic,
-					});
-			}
+		const docs = (await getCharacterOptionDocs("skill")) as unknown as Array<{
+			name?: string;
+			system: { characteristic: string };
+		}>;
+		for (const doc of docs) {
+			if (doc.name)
+				catalog.push({
+					name: doc.name,
+					characteristic: doc.system.characteristic,
+				});
 		}
 		const { grants, unmatched } = matchOriginSkills(resolved, catalog);
 		const provenance = { grantedBy: GRANTED_BY_CREATOR };

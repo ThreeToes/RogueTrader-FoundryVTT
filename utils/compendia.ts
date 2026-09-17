@@ -98,6 +98,95 @@ export function resolveEntryType(
 }
 
 /**
+ * Concept packs (bead 8ubu) hold several source YAML files in ONE physical
+ * pack. Type + grouping resolution stays keyed by the historical pack name,
+ * which is now the source file STEM (e.g. items/weapons.yaml -> "weapons"),
+ * so the existing derivation tables keep working. ALIASES folds the few
+ * stems that differ from their resolver key (the `ships` pack holds
+ * components.yaml + ships.yaml).
+ */
+const SOURCE_ALIASES: Readonly<Record<string, string>> = {
+	components: "ships",
+};
+
+/** Source file stem -> resolver key (the historical pack name). */
+export function sourceKey(stem: string): string {
+	return SOURCE_ALIASES[stem] ?? stem;
+}
+
+/**
+ * Source key -> the concept folder it nests under inside a merged pack
+ * (bead 8ubu). Each consolidation bead adds its entries; null keeps the
+ * intra-source label at the root (or nothing when both are null).
+ */
+const SOURCE_TOP_LABELS: Readonly<Record<string, string | null>> = {
+	// Actor concept pack (bead imiq): one pack holds starship + vehicle
+	// actors; these nest the faction labels / the vehicle root.
+	starships: "Starships",
+	vehicles: "Vehicles",
+	// Afflictions concept pack (bead 2qfk): mutations + madness.
+	mutations: "Mutations",
+	madness: "Madness",
+	// Equipment concept pack (bead n7hu): personal arms and gear.
+	weapons: "Weapons",
+	armour: "Armour",
+	gear: "Gear",
+	drugs: "Drugs",
+	tools: "Tools",
+	cybernetics: "Cybernetics",
+	"tau-armoury": "Tau Armoury",
+	heirlooms: "Heirlooms",
+	// Character-options concept pack (bead 4tj1).
+	skills: "Skills",
+	talents: "Talents",
+	aptitudes: "Aptitudes",
+	careers: "Careers",
+	traits: "Traits",
+	"origin-traits": "Origin Traits",
+	origins: "Origins",
+	psychicpowers: "Psychic Powers",
+	navigatorpowers: "Navigator Powers",
+	// Ships concept pack (bead i2xg): hulls/components nest under one label,
+	// ship tables get their own folder.
+	ships: "Hulls & Components",
+	shiptables: "Ship Tables",
+	// RollTable concept pack (bead j9pg).
+	criticals: "Critical Hits",
+	creationtables: "Creation Tables",
+	psychicphenomena: "Psychic Phenomena",
+};
+
+/**
+ * Final folder label for one entry: the concept label with the intra-source
+ * label nested beneath it (`Weapons/Las Weapons`). When only one side exists
+ * it is used as-is, so single-source packs are unchanged.
+ */
+export function conceptFolderLabel(
+	source: string,
+	intra: string | null,
+	topLabels: Readonly<Record<string, string | null>> = SOURCE_TOP_LABELS,
+): string | null {
+	const top = topLabels[source] ?? null;
+	if (!top) return intra;
+	if (!intra || intra === top) return top;
+	return `${top}/${intra}`;
+}
+
+/**
+ * Full concept folder label for one entry — the intra-source label with the
+ * concept prefix applied. This is the value `buildPackFolders` keys byLabel
+ * with, so document `folder` stamping must use it (not the bare
+ * resolveEntryGroup result) or concept-pack documents land at the root while
+ * their folders sit empty (bead 8ubu follow-up).
+ */
+export function resolveEntryFolder(
+	entry: Record<string, unknown>,
+	source: string,
+): string | null {
+	return conceptFolderLabel(source, resolveEntryGroup(entry, source));
+}
+
+/**
  * Compendium folder groupings (bead nsqt).
  *
  * Foundry 14 supports Folder documents inside compendium packs
@@ -679,10 +768,17 @@ export function buildPackFolders(
 	pack: string,
 	entries: Array<Record<string, unknown>>,
 	folderType = "Item",
+	sourceOf: (entry: Record<string, unknown>) => string = () => pack,
+	topLabels: Readonly<Record<string, string | null>> = SOURCE_TOP_LABELS,
 ): { folders: Array<Record<string, unknown>>; byLabel: Map<string, string> } {
 	const labels = new Set<string>();
 	for (const entry of entries) {
-		const group = resolveEntryGroup(entry, pack);
+		const source = sourceOf(entry);
+		const group = conceptFolderLabel(
+			source,
+			resolveEntryGroup(entry, source),
+			topLabels,
+		);
 		if (group) labels.add(group);
 	}
 	// Create parents before children so "/"-nested labels get their parents.
@@ -725,11 +821,7 @@ export function buildPackFolders(
  * packs key each collection by document class: items live under `!items!`,
  * roll tables under `!tables!`.
  */
-export const TABLE_PACKS: ReadonlySet<string> = new Set([
-	"criticals",
-	"psychicphenomena",
-	"creationtables",
-]);
+export const TABLE_PACKS: ReadonlySet<string> = new Set(["rolltables"]);
 
 /**
  * Packs whose documents are Actors (bead et3x). Foundry LevelDB packs store
@@ -745,8 +837,7 @@ export const TABLE_PACKS: ReadonlySet<string> = new Set([
  */
 export const ACTOR_PACKS: ReadonlySet<string> = new Set([
 	"npcs",
-	"vehicles",
-	"starships",
+	"vessels",
 ]);
 
 export function actorKey(actorId: string): string {
@@ -781,6 +872,8 @@ export function journalPageKey(journalId: string, pageId: string): string {
 export interface LinkTarget {
 	pack: string;
 	id: string;
+	/** Resolved document type (item subtype), for `[[<type>:Name]]` links. */
+	type?: string;
 }
 
 /** Name -> link targets, across every pack (items, actors, journals). */
@@ -800,18 +893,29 @@ export function resolveLinks(text: string, index: LinkIndex): string {
 		for (const target of targets) packs.add(target.pack);
 	}
 	return text.replace(/\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g, (_m, rawName, label) => {
-		let name = String(rawName).trim();
-		let qualifier: string | null = null;
-		const colon = name.indexOf(":");
-		if (colon > 0) {
-			const prefix = name.slice(0, colon).trim();
-			if (packs.has(prefix)) {
-				qualifier = prefix;
-				name = name.slice(colon + 1).trim();
+		const raw = String(rawName).trim();
+		const colon = raw.indexOf(":");
+		const prefix = colon > 0 ? raw.slice(0, colon).trim() : "";
+		const rest = colon > 0 ? raw.slice(colon + 1).trim() : raw;
+		let name = raw;
+		let targets: LinkTarget[] = [];
+		if (colon > 0 && packs.has(prefix)) {
+			// Pack-qualified: [[pack:Name]].
+			name = rest;
+			targets = (index.get(name) ?? []).filter((t) => t.pack === prefix);
+		} else if (colon > 0) {
+			// Type-qualified: [[trait:Fear]] — needed once several same-name
+			// entries share one merged concept pack (bead 4tj1).
+			const byType = (index.get(rest) ?? []).filter((t) => t.type === prefix);
+			if (byType.length > 0) {
+				name = rest;
+				targets = byType;
+			} else {
+				targets = index.get(raw) ?? [];
 			}
+		} else {
+			targets = index.get(name) ?? [];
 		}
-		let targets = index.get(name) ?? [];
-		if (qualifier) targets = targets.filter((t) => t.pack === qualifier);
 		if (targets.length === 0) {
 			console.warn(
 				`compendia: journal link "[[${rawName}]]" matches no compendium document — left as plain text (loud failure, bead rb5g/lore)`,
@@ -831,11 +935,15 @@ export function resolveLinks(text: string, index: LinkIndex): string {
 
 /** Where one pack's item lives, for compendium-source stamping (et3x). */
 export interface ItemSourceIndexEntry {
-	/** Pack folder (== compendium name). */
+	/** Physical pack folder (== compendium name, for the source uuid). */
 	pack: string;
+	/** Source file key (stem/alias) the entry was authored in. `fromPack:`
+	 * references this, so concept packs need no fromPack rewrite; defaults to
+	 * `pack` when unset (legacy/tests). */
+	source?: string;
 	/** Deterministic document id (documentId(name)). */
 	id: string;
-	/** Resolved item type (FOLDER_TYPE_DEFAULTS + folder rules). */
+	/** Resolved item type (declared type, FOLDER_TYPE_DEFAULTS, source rules). */
 	type: string;
 	/** The pack's full authored entry, so embedded clones inherit real
 	 * system data (a bare {name} would produce a dataless item that breaks
@@ -944,6 +1052,8 @@ function toSourceDocument(entry: Record<string, unknown>, folder: string) {
 	) {
 		system.description = entry.description;
 	}
+	const entryFlags = (entry.flags ?? {}) as Record<string, unknown>;
+	const rtFlags = (entryFlags["rogue-trader"] ?? {}) as Record<string, unknown>;
 	return {
 		_id: id,
 		name: entry.name,
@@ -951,7 +1061,13 @@ function toSourceDocument(entry: Record<string, unknown>, folder: string) {
 		system,
 		effects: Array.isArray(entry.effects) ? entry.effects : [],
 		_stats: entry._stats ?? { coreVersion: 14 },
-		flags: entry.flags ?? {},
+		flags: {
+			...entryFlags,
+			// Build-time provenance (bead n7hu): the source YAML key inside a
+			// merged concept pack, so runtime consumers can bucket a document by
+			// its original source (e.g. the creator's acquisition groups).
+			"rogue-trader": { ...rtFlags, source: folder } as Record<string, unknown>,
+		},
 	};
 }
 
@@ -1005,14 +1121,16 @@ export async function buildItemSourceIndex(
 		}
 		for (const file of files) {
 			const entries = await readYamlEntries(path.join(PACK_SRC, dir.name, file));
+			const key = sourceKey(file.replace(/\.yaml$/, ""));
 			for (const entry of entries) {
 				const name = String(entry.name ?? "");
 				if (!name) continue;
 				const list = index.get(name) ?? [];
 				list.push({
 					pack: dir.name,
+					source: key,
 					id: documentId(name, entry._id as string | undefined),
-					type: resolveEntryType(entry, dir.name),
+					type: resolveEntryType(entry, key),
 					entry,
 				});
 				index.set(name, list);
@@ -1031,12 +1149,18 @@ export async function buildLinkIndex(
 	dirs: Array<{ name: string }>,
 ): Promise<LinkIndex> {
 	const index: LinkIndex = new Map();
-	const add = (name: string, pack: string, entry?: Record<string, unknown>) => {
+	const add = (
+		name: string,
+		pack: string,
+		type?: string,
+		entry?: Record<string, unknown>,
+	) => {
 		if (!name) return;
 		const list = index.get(name) ?? [];
 		list.push({
 			pack,
 			id: documentId(name, entry?._id as string | undefined),
+			type,
 		});
 		index.set(name, list);
 	};
@@ -1051,13 +1175,23 @@ export async function buildLinkIndex(
 		}
 		for (const file of files) {
 			const entries = await readYamlEntries(path.join(PACK_SRC, dir.name, file));
+			const isItemPack =
+				!TABLE_PACKS.has(dir.name) &&
+				!ACTOR_PACKS.has(dir.name) &&
+				!JOURNAL_PACKS.has(dir.name);
+			const key = sourceKey(file.replace(/\.yaml$/, ""));
 			for (const entry of entries) {
-				add(String(entry.name ?? ""), dir.name, entry);
+				const type = isItemPack
+					? resolveEntryType(entry, key)
+					: typeof entry.type === "string"
+						? entry.type
+						: undefined;
+				add(String(entry.name ?? ""), dir.name, type, entry);
 				// Actor packs: embedded items are link targets too (e.g. an NPC
 				// species' own statblock items) — index them under the pack.
 				for (const item of Array.isArray(entry.items) ? entry.items : []) {
 					const raw = typeof item === "string" ? { name: item } : item;
-					if (raw && raw.name) add(String(raw.name), dir.name);
+					if (raw && raw.name) add(String(raw.name), dir.name, undefined, raw);
 				}
 			}
 		}
@@ -1128,17 +1262,18 @@ export function toEmbeddedItemDocument(
 	const candidates = index.get(sourceName) ?? [];
 	let resolved: ItemSourceIndexEntry | null = null;
 	if (fromPack) {
-		resolved =
-			candidates.find((c) => c.pack === fromPack) ?? {
-				pack: fromPack,
-				// Deterministic id from the name, matching how that pack would
-				// have emitted the item.
-				id: documentId(sourceName),
-				type: "gear",
-				// No authored entry available — the authoring entry's own system
-				// data carries the clone.
-				entry: {},
-			};
+		// `fromPack` names the SOURCE file key (the historical pack name), so a
+		// concept pack can pin an item without rewriting every reference. A
+		// miss is a loud failure (bead szgv): the old fallback fabricated a
+		// dataless `gear` item — the exact silent-degradation bug this
+		// resolver exists to prevent (z4aa).
+		const match = candidates.find((c) => (c.source ?? c.pack) === fromPack);
+		if (!match) {
+			throw new Error(
+				`compendia: embedded item "${name}" declares fromPack: ${fromPack}, but "${sourceName}" is not in that source — correct fromPack, add the item to a pack, or mark standalone: true`,
+			);
+		}
+		resolved = match;
 	} else if (candidates.length === 1) {
 		resolved = candidates[0];
 	} else if (candidates.length > 1) {
@@ -1286,6 +1421,34 @@ export function toActorSourceDocument(
 	return { actor, embedded };
 }
 
+/** Minimal put/write batch surface the duplicate-key guard wraps. */
+export interface PutBatch {
+	put(key: string, value: string): void;
+	write(): Promise<void>;
+}
+
+/**
+ * Guard against silent document loss (bead 3e6u): LevelDB keys are unique,
+ * so two entries that resolve to the same id overwrite each other with no
+ * warning — and documentId is name-based, so that is exactly what happens
+ * for same-name entries with no explicit `_id`. Fail loudly instead.
+ */
+export function guardedBatch(raw: PutBatch, pack: string): PutBatch {
+	const seen = new Set<string>();
+	return {
+		put(key: string, value: string): void {
+			if (seen.has(key)) {
+				throw new Error(
+					`compendia: ${pack}: duplicate document key "${key}" — two entries resolve to the same id (documentId is name-based). Give one an explicit "_id" (16 alphanumeric characters).`,
+				);
+			}
+			seen.add(key);
+			raw.put(key, value);
+		},
+		write: () => raw.write(),
+	};
+}
+
 async function buildPack(
 	folder: string,
 	ClassicLevelCtor: typeof ClassicLevel,
@@ -1310,13 +1473,17 @@ async function buildPack(
 	const files = await readdir(path.join(PACK_SRC, folder));
 	const sourceFiles = files.filter((file) => file.endsWith(".yaml"));
 
-	const batch = database.batch();
+	const batch = guardedBatch(database.batch(), folder);
 	let count = 0;
 
 	// Read every yaml file once, up front. Grouping (bead nsqt) needs the
 	// pack's full entry set so "/"-nested group parents resolve regardless of
 	// which file holds them, and item documents need their folder _id stamps.
 	const fileEntries = new Map<string, Array<Record<string, unknown>>>();
+	// entry -> source file key (stem, aliased): drives type + folder grouping
+	// for concept packs holding several source files (bead 8ubu). Identity map
+	// because the same entry objects are reused below.
+	const sourceByEntry = new Map<Record<string, unknown>, string>();
 	for (const file of sourceFiles) {
 		const entries = await readYamlEntries(path.join(PACK_SRC, folder, file));
 		if (!isActorPack && !isTablePack && !isJournalPack) {
@@ -1325,17 +1492,25 @@ async function buildPack(
 				entries,
 			);
 		}
+		const key = sourceKey(file.replace(/\.yaml$/, ""));
+		for (const entry of entries) sourceByEntry.set(entry, key);
 		fileEntries.set(file, entries);
 	}
+	const sourceOf = (entry: Record<string, unknown>): string =>
+		sourceByEntry.get(entry) ?? folder;
 
 	// Folder emission: Item packs only. Folder docs go under `!folders!<id>`;
 	// item docs carry `folder: <id>` (see toFolderSourceDocument for the
 	// Foundry-14 verification notes).
 	let folderStamps = new Map<string, string>();
-	if (!isTablePack && !isActorPack && !isJournalPack) {
+	if (!isActorPack && !isJournalPack) {
+		// Table packs get folders too (bead j9pg): Folder.type is the pack's
+		// primary document class, so a RollTable pack nests under RollTable.
 		const { folders: packFolders, byLabel } = buildPackFolders(
 			folder,
 			[...fileEntries.values()].flat(),
+			isTablePack ? "RollTable" : "Item",
+			sourceOf,
 		);
 		for (const f of packFolders) {
 			batch.put(`!folders!${String(f._id)}`, f as unknown as string);
@@ -1353,6 +1528,7 @@ async function buildPack(
 			folder,
 			[...fileEntries.values()].flat(),
 			"Actor",
+			sourceOf,
 		);
 		for (const f of packFolders) {
 			batch.put(`!folders!${String(f._id)}`, f as unknown as string);
@@ -1362,15 +1538,15 @@ async function buildPack(
 	}
 
 	for (const entries of fileEntries.values()) {
-		for (const source of entries) {
+		for (const entry of entries) {
 			if (isActorPack) {
 				// Foundry stores Actor docs under the `!actors!` sublevel with
 				// embedded items split into `!actors.items!<actorId>.<itemId>`
 				// records; the actor doc carries only the id array (et3x, core
 				// _getSublevelNames + deleteOrphanDocuments verified).
-				const group = resolveEntryGroup(source, folder);
+				const group = resolveEntryFolder(entry, sourceOf(entry));
 				const { actor, embedded } = toActorSourceDocument(
-					source,
+					entry,
 					itemIndex,
 					group ? (actorFolderStamps.get(group) ?? null) : null,
 				);
@@ -1389,7 +1565,7 @@ async function buildPack(
 				// Foundry stores JournalEntry docs under `!journal!` with their
 				// embedded pages split into `!journal.pages!<journalId>.<pageId>`
 				// records (same embedded-collection pattern as actors, et3x).
-				const { journal, pages } = toJournalSourceDocument(source, linkIndex);
+				const { journal, pages } = toJournalSourceDocument(entry, linkIndex);
 				const journalId = String(journal._id);
 				batch.put(journalKey(journalId), journal as unknown as string);
 				for (const page of pages) {
@@ -1402,12 +1578,12 @@ async function buildPack(
 				continue;
 			}
 			const doc: Record<string, unknown> = isTablePack
-				? toTableSourceDocument(source)
-				: toSourceDocument(source, folder);
+				? toTableSourceDocument(entry)
+				: toSourceDocument(entry, sourceOf(entry));
 			if (folderStamps.size > 0) {
 				// Stamp the compendium folder (bead nsqt): root documents carry
 				// folder: null, grouped ones their folder's _id.
-				const group = resolveEntryGroup(source, folder);
+				const group = resolveEntryFolder(entry, sourceOf(entry));
 				doc.folder = group ? (folderStamps.get(group) ?? null) : null;
 			}
 			if (isTablePack) {

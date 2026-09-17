@@ -1853,9 +1853,9 @@ export async function rollPhenomena(
 	const total = Math.min(100, raw + modifier);
 	const tableName = phenomenaTableName(total);
 
-	const pack = game.packs?.get("rogue-trader.psychicphenomena");
+	const pack = game.packs?.get("rogue-trader.rolltables");
 	if (!pack) {
-		console.warn("rogue-trader | psychicphenomena pack missing");
+		console.warn("rogue-trader | rolltables pack missing");
 		ui.notifications?.warn(game.i18n.localize("PSYCHIC_POWER.NO_TABLE"));
 		return;
 	}

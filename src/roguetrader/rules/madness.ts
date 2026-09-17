@@ -1,6 +1,6 @@
 /**
  * Insanity & corruption mechanics (epic 1g2t) — PURE, data-in/data-out.
- * Track data lives in the rogue-trader.madness compendium (06qc/e6x9);
+ * Track data lives in the rogue-trader.afflictions compendium (06qc/e6x9);
  * this module provides the book arithmetic over it:
  *
  * - Insanity Track (Table 10-5): degree + Trauma-test modifier per IP band;

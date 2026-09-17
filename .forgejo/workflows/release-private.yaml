@@ -58,7 +58,7 @@ jobs:
                   git clone --depth 1 \
                     "https://prancingpony.jumblerumbling.com/${{ env.PACKS_REPO }}.git" \
                     src/packs
-                  test -d src/packs/rogue_trader/talents || {
+                  test -d src/packs/rogue_trader/character-options || {
                       echo "::error::pack sources not where the packer expects them (src/packs/rogue_trader/)"; exit 1; }
                   test -f src/packs/rogue_trader/manifest-packs.yaml || {
                       echo "::error::pack-declaration fragment missing (src/packs/rogue_trader/manifest-packs.yaml)"; exit 1; }
@@ -95,7 +95,8 @@ jobs:
                     if (m.download !== process.env.DOWNLOAD) throw new Error(`zip manifest download ${m.download} != ${process.env.DOWNLOAD}`);
                     if (!Array.isArray(m.packs) || m.packs.length === 0) throw new Error("zip manifest has no packs");
                   '
-                  test -d release/rogue_trader/packs/talents
+                  test -d release/rogue_trader/packs/character-options
+                  test -d release/rogue_trader/packs/equipment
                   test -d release/rogue_trader/packs/npcs
 
             # act runner images are slimmer than GitHub-hosted ubuntu-latest:

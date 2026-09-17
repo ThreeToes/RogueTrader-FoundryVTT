@@ -642,7 +642,7 @@
   "PSYCHIC_POWER.SUSTAINED_TOOLTIP": "Currently sustained: -1 effective Psy Rating, +10 to Phenomena rolls.",
   "PSYCHIC_POWER.PHENOMENA_ROLL": "Psychic Phenomena",
   "PSYCHIC_POWER.TABLE_MISS": "Phenomena table result missing — check the psychicphenomena pack.",
-  "PSYCHIC_POWER.NO_TABLE": "The Psychic Phenomena compendium is not installed.",
+  "PSYCHIC_POWER.NO_TABLE": "The Random Tables compendium is not installed.",
   "PSYCHIC_POWER.DAMAGE_ROLL": "{power} damage",
   "PSYCHIC_POWER.SORCERY_FREE_ACTION": "Free Action powers cannot be learned through Sorcery (Edge of the Abyss p86) — a sorcerous act always needs a ritual.",
   "PSYCHIC_POWER.SORCERY_RITUAL": "Sorcerous: requires a ritual gesture",

@@ -1,6 +1,6 @@
 import { talents } from "../../registry";
 import { sheetContext } from "../context";
-import { getPackDocuments } from "../pack-resolve";
+import { getCharacterOptionDocs } from "../pack-resolve";
 import {
 	evaluatePrerequisites,
 	parsePrerequisites,
@@ -116,7 +116,7 @@ export class TalentPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	static async #findPackTalent(
 		name: string,
 	): Promise<{ prereqText: string } | null> {
-		const docs = (await getPackDocuments("rogue-trader.talents")) as unknown as Array<{
+		const docs = (await getCharacterOptionDocs("talent")) as unknown as Array<{
 			name?: string;
 			system: { description?: string };
 		}>;

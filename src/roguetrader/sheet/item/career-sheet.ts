@@ -19,6 +19,7 @@ interface AdvanceRow {
 interface PackIndexEntry {
 	name?: string;
 	uuid: string;
+	type?: string;
 }
 
 /** slug() matching the emit script's key convention. */
@@ -39,11 +40,13 @@ function keyIndexMap(): Map<string, { uuid: string; name: string }> {
 		string,
 		{ index: Map<string, PackIndexEntry> }
 	>;
-	for (const packName of ["rogue-trader.talents", "rogue-trader.skills"]) {
-		const pack = packs.get(packName);
-		if (!pack) continue;
+	// One merged pack holds both types (bead 4tj1); keep only talent/skill
+	// index entries so advance rows link to the right source items.
+	const pack = packs.get("rogue-trader.character-options");
+	if (pack) {
 		for (const entry of pack.index.values()) {
 			if (!entry.name) continue;
+			if (entry.type !== "talent" && entry.type !== "skill") continue;
 			map.set(slugify(entry.name), {
 				uuid: entry.uuid,
 				name: entry.name,

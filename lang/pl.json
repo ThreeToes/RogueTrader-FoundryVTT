@@ -357,7 +357,7 @@
   "PSYCHIC_POWER.SUSTAINED_TOOLTIP": "Obecnie podtrzymywana: -1 efektywnej Rangi psychicznej, +10 do rzutów na Zjawiska. [tłumaczenie maszynowe]",
   "PSYCHIC_POWER.PHENOMENA_ROLL": "Zjawiska psychiczne",
   "PSYCHIC_POWER.TABLE_MISS": "Brak wyniku w tabeli Zjawisk — sprawdź kompendium psychicphenomena. [tłumaczenie maszynowe]",
-  "PSYCHIC_POWER.NO_TABLE": "Kompendium Zjawisk Psychicznych nie jest zainstalowane. [tłumaczenie maszynowe]",
+  "PSYCHIC_POWER.NO_TABLE": "Kompendium Tabel Losowych nie jest zainstalowane. [tłumaczenie maszynowe]",
   "PSYCHIC_POWER.DAMAGE_ROLL": "Obrażenia: {power}",
   "PSYCHIC_POWER.SORCERY_FREE_ACTION": "Mocy o czasie Akcja Wolna nie można nauczyć się przez Czarnoksięstwo (Edge of the Abyss s. 86) — akt czarnoksięski zawsze wymaga rytuału.",
   "PSYCHIC_POWER.SORCERY_RITUAL": "Czarnoksięstwo: wymaga gestu rytualnego",

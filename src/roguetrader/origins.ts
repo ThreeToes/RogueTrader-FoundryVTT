@@ -3,7 +3,7 @@
  *
  * The chart CONTENT (each option's name/description/effect/mechanics/variants)
  * now lives in the private `origins` compendium pack
- * (src/packs/rogue_trader/origins/origins.yaml, one `origin` Item per option)
+ * (src/packs/rogue_trader/character-options/origins.yaml, one `origin` Item per option)
  * so the verbatim book text never ships in system code — the extraction
  * convention. This module keeps:
  *   - the shared types (creator + pack loader);
@@ -495,7 +495,7 @@ export interface HeirloomEntry {
 	name: string;
 	/** 1d100 range of the source table row. */
 	range: [number, number];
-	/** Source RollTable ("creationtables/Table 1-2: Heirloom Items"). */
+	/** Source RollTable ("rolltables/Table 1-2: Heirloom Items"). */
 	table?: string;
 	grant: HeirloomGrant;
 }

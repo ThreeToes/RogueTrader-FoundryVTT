@@ -14,8 +14,8 @@ import {
 // (src/packs is machine-local), so this suite is SKIPPED when the pack is
 // absent and runs against the real data locally. Table 1-2 in the
 // creationtables RollTable remains the prose/range source and is cross-checked
-// by the pack test (src/packs/rogue_trader/heirlooms/heirlooms.test.ts).
-const HEIRLOOM_PACK = "src/packs/rogue_trader/heirlooms/heirlooms.yaml";
+// by the pack test (src/packs/rogue_trader/equipment/heirlooms.test.ts).
+const HEIRLOOM_PACK = "src/packs/rogue_trader/equipment/heirlooms.yaml";
 const HAS_HEIRLOOM_PACK = existsSync(HEIRLOOM_PACK);
 const docs = (
 	HAS_HEIRLOOM_PACK
@@ -90,7 +90,7 @@ heirloomDescribe("heirloom table (Core Rulebook Table 1-2)", () => {
 		const pistol = heirloomForRoll(5);
 		expect(pistol.grant).toMatchObject({
 			kind: "pack-item",
-			pack: "rogue-trader.weapons",
+			pack: "rogue-trader.equipment",
 			item: "Archeotech Laspistol",
 			craftsmanship: "best",
 		});
@@ -110,7 +110,7 @@ heirloomDescribe("heirloom table (Core Rulebook Table 1-2)", () => {
 	test("each entry links to the source Table 1-2", () => {
 		for (const entry of heirloomItems) {
 			expect(entry.key.length).toBeGreaterThan(0);
-			expect(entry.table).toBe("creationtables/Table 1-2: Heirloom Items");
+			expect(entry.table).toBe("rolltables/Table 1-2: Heirloom Items");
 		}
 	});
 });

@@ -18,7 +18,7 @@
  *
  * Usage:
  *   bun utils/emit-weapons-yaml.ts
- *   bun utils/emit-weapons-yaml.ts --in parsed.json --out ../packs/weapons/weapons.yaml
+ *   bun utils/emit-weapons-yaml.ts --in parsed.json --out ../packs/equipment/weapons.yaml
  */
 import { readFileSync } from "node:fs";
 import yaml from "yaml";
@@ -333,7 +333,7 @@ export async function main(
 		: "src/packs/.extraction-src/weapons2-parsed.json";
 	const outArg = argv.includes("--out")
 		? argv[argv.indexOf("--out") + 1]
-		: "src/packs/rogue_trader/weapons/weapons.yaml";
+		: "src/packs/rogue_trader/equipment/weapons.yaml";
 	const proseArg = argv.includes("--prose")
 		? argv[argv.indexOf("--prose") + 1]
 		: "src/packs/.extraction-src/weapons2-prose.json";

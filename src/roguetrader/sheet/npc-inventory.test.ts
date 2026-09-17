@@ -106,7 +106,7 @@ describe("npcInventoryGroups (no more all-types-in-one list)", () => {
 				type: "ranged-weapon",
 				flags: {
 					"rogue-trader": {
-						compendiumSource: "Compendium.rogue-trader.weapons.abc123",
+						compendiumSource: "Compendium.rogue-trader.equipment.abc123",
 					},
 				},
 			},
@@ -114,7 +114,7 @@ describe("npcInventoryGroups (no more all-types-in-one list)", () => {
 		]);
 		const items = groups.flatMap((g) => g.items);
 		expect(items.find((i) => i.name === "Lasgun")?.source).toBe(
-			"Compendium.rogue-trader.weapons.abc123",
+			"Compendium.rogue-trader.equipment.abc123",
 		);
 		// standalone/homebrew items render NO link — source stays empty
 		expect(items.find((i) => i.name === "Homebrew Gun")?.source).toBe("");

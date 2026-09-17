@@ -26,8 +26,8 @@ import {
 // CI does not ship compendia (src/packs is machine-local), so the pack-driven
 // suites below are SKIPPED when the pack is absent and run against the real
 // content locally. The pack-shape guard lives in the packs repo
-// (src/packs/rogue_trader/origins/origins.test.ts).
-const ORIGIN_PACK = "src/packs/rogue_trader/origins/origins.yaml";
+// (src/packs/rogue_trader/character-options/origins.test.ts).
+const ORIGIN_PACK = "src/packs/rogue_trader/character-options/origins.yaml";
 const HAS_ORIGIN_PACK = existsSync(ORIGIN_PACK);
 const packDocs = (
 	HAS_ORIGIN_PACK

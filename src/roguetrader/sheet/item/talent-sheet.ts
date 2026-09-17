@@ -57,7 +57,7 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 				}
 			} else {
 				console.warn(
-					`rogue-trader | bare talent "${doc.name}" has no match in rogue-trader.talents — leaving as-is`,
+					`rogue-trader | bare talent "${doc.name}" has no match in the character-options pack — leaving as-is`,
 				);
 			}
 		}

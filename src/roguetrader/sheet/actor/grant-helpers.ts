@@ -6,7 +6,7 @@
  */
 
 import {
-	getPackDocuments,
+	getCharacterOptionDocs,
 } from "../pack-resolve";
 import {
 	parameterisedBase,
@@ -22,7 +22,7 @@ import {
 export async function findPackTalentDoc(
 	name: string,
 ): Promise<(PackTalentSnapshot & { id?: string }) | null> {
-	const docs = (await getPackDocuments("rogue-trader.talents")) as unknown as Array<
+	const docs = (await getCharacterOptionDocs("talent")) as unknown as Array<
 		PackTalentSnapshot & { id?: string }
 	>;
 	const lower = name.toLowerCase();
@@ -49,7 +49,7 @@ export async function talentGrant(
 	}
 	if (!doc) {
 		console.warn(
-			`rogue-trader | talent "${name}" not found in rogue-trader.talents; granting a bare item`,
+			`rogue-trader | talent "${name}" not found in the character-options pack; granting a bare item`,
 		);
 	}
 	return talentGrantPayload(name, doc, options);

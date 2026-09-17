@@ -285,7 +285,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 					id: "a1",
 					name: "Flak Armour",
 					worn: true,
-					uuid: "Compendium.rogue-trader.weapons.abc",
+					uuid: "Compendium.rogue-trader.equipment.abc",
 				},
 			],
 			itemGroups: [
@@ -299,7 +299,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		});
 		// armour row has a source stamp -> link renders
 		expect(html).toContain('data-action="openPackItem"');
-		expect(html).toContain('data-uuid="Compendium.rogue-trader.weapons.abc"');
+		expect(html).toContain('data-uuid="Compendium.rogue-trader.equipment.abc"');
 		// gear row without a source renders NO link (no dead affordance)
 		const gearRow = html.split("Rope")[1]?.split("</li>")[0] ?? "";
 		expect(gearRow).not.toContain("openPackItem");
@@ -314,7 +314,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 			damage: "1d10+3",
 			penetration: 0,
 			isRanged: false,
-			uuid: "Compendium.rogue-trader.weapons.abc",
+			uuid: "Compendium.rogue-trader.equipment.abc",
 			rollAction: "rollNpcWeapon",
 			damageAction: "rollNpcDamage",
 		});

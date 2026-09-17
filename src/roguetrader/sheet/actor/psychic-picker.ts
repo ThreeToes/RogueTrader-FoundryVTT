@@ -2,10 +2,10 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
 
 import { sheetContext } from "../context";
-import { getPackDocuments } from "../pack-resolve";
+import { getCharacterOptionDocs } from "../pack-resolve";
 
 /**
- * Psychic power compendium picker (bead m4me): lists `rogue-trader.psychicpowers`
+ * Psychic power compendium picker (bead m4me): lists the character-options
  * pack documents and grants them as owned psychicpower items. The pack does
  * not exist yet (extraction bead 5u5) — the picker degrades to a hint until
  * it lands. Mirrors SkillPicker/TalentPicker.
@@ -37,8 +37,8 @@ export class PsychicPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	async _prepareContext(_options: object = {}) {
 		const context = sheetContext(await super._prepareContext(_options as never));
-		const documents = (await getPackDocuments(
-			"rogue-trader.psychicpowers",
+		const documents = (await getCharacterOptionDocs(
+			"psychicpower",
 		)) as unknown as Array<{
 			uuid?: string;
 			name?: string;

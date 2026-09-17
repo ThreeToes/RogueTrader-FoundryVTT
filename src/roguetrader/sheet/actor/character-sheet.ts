@@ -5,7 +5,7 @@ import {
 	systemOf,
 } from "../../data/accessors";
 import { RtActorSheet } from "../context";
-import { getPackDocuments } from "../pack-resolve";
+import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
 import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { derivedRank, totalSpent } from "../../rules/advancement";
@@ -681,8 +681,8 @@ export class CharacterSheet extends RtActorSheet {
 		await waitForDefaultGrants(this.actor.uuid);
 		if (this.actor.items.size > 0) return;
 		if (this.actor.type !== "explorer" && this.actor.type !== "npc") return;
-		const documents = (await getPackDocuments(
-			"rogue-trader.skills",
+		const documents = (await getCharacterOptionDocs(
+			"skill",
 		)) as foundry.documents.Item[];
 		const grants = missingSkillGrants(
 			documents.map(
@@ -722,7 +722,7 @@ export class CharacterSheet extends RtActorSheet {
 		// || expressions with nested quotes, see character-sheet render error).
 		context.advancementTooltip = game.i18n!.localize("ADVANCE.OPEN");
 		if (system.careerKey) {
-			const docs = (await getPackDocuments("rogue-trader.careers")) as unknown as Array<{
+			const docs = (await getCharacterOptionDocs("career")) as unknown as Array<{
 				system: {
 					key: string;
 					ranks?: Array<{ rank: number; xpLevel: number }>;
@@ -974,7 +974,7 @@ export class CharacterSheet extends RtActorSheet {
 		context.talentRows = byType(["talent"]);
 		// Compendium link per talent row (bead oaaz): pack uuid by name
 		// (case-insensitive), same careers-pack pattern as careerItemId above.
-		const packDocs = (await getPackDocuments("rogue-trader.talents")) as unknown as Array<{
+		const packDocs = (await getCharacterOptionDocs("talent")) as unknown as Array<{
 			uuid?: string;
 			name?: string;
 		}>;
@@ -1112,7 +1112,7 @@ export class CharacterSheet extends RtActorSheet {
 		// Career link: the compendium career item behind the actor's careerKey,
 		// opened via openCareerSheet for the full crunch tables. Diagnostic log
 		// when the lookup fails (bead qwp6) — pack missing, or key mismatch.
-		const docs = (await getPackDocuments("rogue-trader.careers")) as unknown as Array<{
+		const docs = (await getCharacterOptionDocs("career")) as unknown as Array<{
 			uuid?: string;
 			system: { key: string };
 		}>;
@@ -1120,7 +1120,7 @@ export class CharacterSheet extends RtActorSheet {
 			const careerDoc = docs.find((d) => d.system.key === system.careerKey);
 			if (!careerDoc) {
 				console.warn(
-					`rogue-trader | no career doc with system.key "${system.careerKey}" in rogue-trader.careers`,
+					`rogue-trader | no career doc with system.key "${system.careerKey}" in the character-options pack`,
 				);
 			}
 			context.careerItemId = careerDoc?.uuid ?? "";
@@ -1188,11 +1188,12 @@ export class CharacterSheet extends RtActorSheet {
  * The mutation pack (bead kam1): Ravaged Body rolls further mutations off it,
  * and the granted Items are cloned from it.
  */
-const MUTATION_PACK = "rogue-trader.mutations";
+const MUTATION_PACK = "rogue-trader.afflictions";
 
 /** Structural view of a mutation pack document (band + name). */
 interface MutationPackDoc {
 	name?: string;
+	type?: string;
 	system?: { tableKey?: string; rollMin?: number; rollMax?: number };
 	toObject?: () => unknown;
 }
@@ -1272,9 +1273,9 @@ async function prepareDroppedItems(
 			// procedure actually needs the table.
 			let packDocs: MutationPackDoc[] | null = null;
 			const loadMutations = async (): Promise<MutationPackDoc[]> => {
-				packDocs ??= (await getPackDocuments(
-					MUTATION_PACK,
-				)) as MutationPackDoc[];
+				packDocs ??= (
+					(await getPackDocuments(MUTATION_PACK)) as MutationPackDoc[]
+				).filter((doc) => doc.type === "mutation");
 				return packDocs;
 			};
 			const outcome = await applyAfflictionProcedure(system.procedure, {
@@ -1354,10 +1355,13 @@ async function prepareDroppedItems(
 async function resolveMutationByName(
 	name: string,
 ): Promise<foundry.documents.Item | null> {
-	const docs = (await getPackDocuments(MUTATION_PACK)) as Array<{
-		name?: string;
-		toObject?: () => unknown;
-	}>;
+	const docs = (
+		(await getPackDocuments(MUTATION_PACK)) as Array<{
+			name?: string;
+			type?: string;
+			toObject?: () => unknown;
+		}>
+	).filter((doc) => doc.type === "mutation");
 	const found = docs.find((doc) => doc.name === name) ?? null;
 	return found as unknown as foundry.documents.Item | null;
 }

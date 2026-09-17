@@ -89,7 +89,7 @@ import { TraitSheet } from "./item/trait-sheet";
 import { CareerSheet } from "./item/career-sheet";
 import { WeaponSheet } from "./item/weapon-sheet";
 import { registerSharedPartials } from "./partials";
-import { getPackDocuments } from "./pack-resolve";
+import { getCharacterOptionDocs, getPackDocuments } from "./pack-resolve";
 import { trackDefaultGrants } from "./default-grants";
 
 // 6a1x: any sheet constructor. never[] params (not unknown[]) so concrete
@@ -299,7 +299,7 @@ export function sheetInit() {
 		// pack definitions pre-warm at ready (commonSkillCatalog pattern).
 		let originTraitDefs: OriginTraitDef[] = [];
 		Hooks.once("ready", () => {
-			getPackDocuments("rogue-trader.origin-traits").then((rawDocs) => {
+			getCharacterOptionDocs("origintrait").then((rawDocs) => {
 				const docs = rawDocs as Array<foundry.documents.Item>;
 				originTraitDefs = docs.map((doc) => {
 					const s = doc.system as unknown as Record<string, unknown>;
@@ -324,7 +324,7 @@ export function sheetInit() {
 		// `origins` pack; warm the pure module's pool at ready so the creator
 		// and sheet resolve entries synchronously.
 		Hooks.once("ready", () => {
-			getPackDocuments("rogue-trader.origins").then((rawDocs) => {
+			getCharacterOptionDocs("origin").then((rawDocs) => {
 				const docs = rawDocs as Array<foundry.documents.Item>;
 				setOriginEntries(
 					docs.map((doc) => {
@@ -347,11 +347,14 @@ export function sheetInit() {
 		});
 
 		// Heirloom grant templates (Table 1-2, epic 1gb7 follow-up): the
-		// per-heirloom grant payloads live in the `heirlooms` pack; warm the
-		// pure module's pool at ready.
+		// per-heirloom grant payloads live in the `equipment` pack (bead n7hu);
+		// warm the pure module's pool at ready.
 		Hooks.once("ready", () => {
-			getPackDocuments("rogue-trader.heirlooms").then((rawDocs) => {
-				const docs = rawDocs as Array<foundry.documents.Item>;
+			getPackDocuments("rogue-trader.equipment").then((rawDocs) => {
+				// The equipment pack also holds arms/gear; keep the heirloom types.
+				const docs = (rawDocs as Array<foundry.documents.Item>).filter(
+					(doc) => doc.type === "heirloom",
+				);
 				setHeirloomEntries(
 					docs.map((doc) => {
 						const s = doc.system as unknown as Record<string, unknown>;
@@ -392,8 +395,11 @@ export function sheetInit() {
 			modifier: number;
 		}> = [];
 		Hooks.once("ready", () => {
-			getPackDocuments("rogue-trader.madness").then((madnessRaw) => {
-				const madnessDocs = madnessRaw as Array<foundry.documents.Item>;
+			getPackDocuments("rogue-trader.afflictions").then((madnessRaw) => {
+				// The afflictions pack also holds mutations; keep the madness rows.
+				const madnessDocs = (
+					madnessRaw as Array<foundry.documents.Item>
+				).filter((doc) => doc.type === "madnessentry");
 				madnessRows = madnessDocs.map((doc) => {
 					const s = doc.system as unknown as Record<string, unknown>;
 					return {
@@ -653,7 +659,7 @@ export function sheetInit() {
 				});
 		});
 		Hooks.once("ready", () => {
-			getPackDocuments("rogue-trader.skills").then((rawDocs) => {
+			getCharacterOptionDocs("skill").then((rawDocs) => {
 				const docs = rawDocs as Array<foundry.documents.Item>;
 				commonSkillCatalog = docs.map(
 					(doc) =>

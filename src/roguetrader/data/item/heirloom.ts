@@ -40,7 +40,7 @@ export class Heirloom extends Gear {
 			...super.defineSchema(),
 			/** Stable slug; matches the source RollTable result's item flag. */
 			key: new fields.StringField({ initial: "" }),
-			/** Source RollTable ("creationtables/Table 1-2: Heirloom Items"). */
+			/** Source RollTable ("rolltables/Table 1-2: Heirloom Items"). */
 			table: new fields.StringField({ initial: "" }),
 			/** 1d100 range of the source table row (drift-guarded by a test). */
 			range: new fields.SchemaField({

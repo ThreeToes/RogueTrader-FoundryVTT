@@ -4,13 +4,16 @@ import {
 	actorKey,
 	buildPackFolders,
 	buildTableResults,
+	conceptFolderLabel,
 	documentId,
 	folderId,
+	guardedBatch,
 	readManifestPacks,
 	MANIFEST_PACKS_YAML,
 	resolveEntryGroup,
 	resolveEntryType,
 	resolveLinks,
+	sourceKey,
 	toTableSourceDocument,
 	type ItemSourceIndex,
 	toActorSourceDocument,
@@ -58,6 +61,86 @@ describe("resolveEntryType", () => {
 
 	test("falls back to gear when the type is missing", () => {
 		expect(resolveEntryType({}, "misc")).toBe("gear");
+	});
+});
+
+describe("concept packs (bead 8ubu)", () => {
+	test("sourceKey aliases the ships components file", () => {
+		expect(sourceKey("components")).toBe("ships");
+		expect(sourceKey("weapons")).toBe("weapons");
+	});
+
+	test("conceptFolderLabel nests intra-source labels under the concept", () => {
+		const tops = { weapons: "Weapons", skills: "Skills", gametables: null };
+		expect(conceptFolderLabel("weapons", "Las Weapons", tops)).toBe(
+			"Weapons/Las Weapons",
+		);
+		expect(conceptFolderLabel("skills", null, tops)).toBe("Skills");
+		expect(conceptFolderLabel("weapons", null, tops)).toBe("Weapons");
+		// no concept label -> the intra-source label is used as-is
+		expect(conceptFolderLabel("gametables", "SOI I", tops)).toBe("SOI I");
+	});
+
+	test("buildPackFolders groups several sources under one pack", () => {
+		const lasgun = { name: "Lasgun", system: { weaponFamily: "las" } };
+		const acrobatics = { name: "Acrobatics", type: "Item" };
+		const keyOf = new Map<Record<string, unknown>, string>([
+			[lasgun, "weapons"],
+			[acrobatics, "skills"],
+		]);
+		const { folders, byLabel } = buildPackFolders(
+			"character-options",
+			[lasgun, acrobatics],
+			"Item",
+			(entry) => keyOf.get(entry) ?? "character-options",
+			{ weapons: "Weapons", skills: "Skills" },
+		);
+		expect(folders.map((f) => f.name).sort()).toEqual([
+			"Las Weapons",
+			"Skills",
+			"Weapons",
+		]);
+		const las = folders.find((f) => f.name === "Las Weapons");
+		expect(las?.folder).toBe(byLabel.get("Weapons"));
+		expect(byLabel.get("Weapons")).toBe(
+			folderId("character-options", "Weapons"),
+		);
+	});
+});
+
+describe("guardedBatch (bead 3e6u)", () => {
+	test("throws on a duplicate document key instead of overwriting", () => {
+		const written: string[] = [];
+		const batch = guardedBatch(
+			{
+				put: (key) => {
+					written.push(key);
+				},
+				write: () => Promise.resolve(),
+			},
+			"weapons",
+		);
+		batch.put("!items!abc", "{}");
+		expect(() => batch.put("!items!abc", "{}")).toThrow(
+			/duplicate document key/,
+		);
+		expect(written).toEqual(["!items!abc"]);
+	});
+
+	test("allows distinct keys", () => {
+		const written: string[] = [];
+		const batch = guardedBatch(
+			{
+				put: (key) => {
+					written.push(key);
+				},
+				write: () => Promise.resolve(),
+			},
+			"weapons",
+		);
+		batch.put("!items!a", "{}");
+		expect(() => batch.put("!items!b", "{}")).not.toThrow();
+		expect(written).toEqual(["!items!a", "!items!b"]);
 	});
 });
 
@@ -152,6 +235,9 @@ describe("documentId", () => {
 });
 
 describe("actor packs (bead et3x)", () => {
+	// Synthetic pack labels: this suite builds its own in-memory index, so the
+	// names are arbitrary and NOT the shipped pack ids (which were consolidated
+	// into equipment/character-options in beads n7hu/4tj1).
 	const index: ItemSourceIndex = new Map([
 		[
 			"Lasgun",
@@ -279,6 +365,15 @@ describe("actor packs (bead et3x)", () => {
 		);
 	});
 
+	test("throws loudly when fromPack names a source without that item (szgv)", () => {
+		expect(() =>
+			toActorSourceDocument(
+				{ name: "X", items: [{ name: "Lasgun", fromPack: "armour" }] },
+				index,
+			),
+		).toThrow(/declares fromPack: armour/);
+	});
+
 	test("throws loudly for an unlinked embedded item (never silently drop)", () => {
 		expect(() =>
 			toActorSourceDocument({ name: "X", items: [{ name: "Mystery Gubbin" }] }, index),
@@ -291,7 +386,7 @@ describe("actor packs (bead et3x)", () => {
 		).toThrow(/ambiguous across packs/);
 	});
 
-	test("standalone opts out with intent and stamps nothing", () => {
+	test("standalone opts out with intent and stamps no source link", () => {
 		const { embedded } = toActorSourceDocument(
 			{
 				name: "X",
@@ -299,8 +394,12 @@ describe("actor packs (bead et3x)", () => {
 			},
 			index,
 		);
+		// Build-time provenance (flags."rogue-trader".source) is always stamped;
+		// standalone means no compendium link, not no flags.
 		expect(
-			(embedded[0].flags as Record<string, unknown>)["rogue-trader"],
+			(embedded[0].flags as Record<string, Record<string, unknown>>)[
+				"rogue-trader"
+			]?.compendiumSource,
 		).toBeUndefined();
 	});
 
@@ -531,20 +630,38 @@ describe("compendium folder groupings (bead nsqt)", () => {
 			).toBe("NPC Vessels");
 		});
 
-		test("starships actor pack groups by faction with Actor folder type (bead 5lbn)", () => {
+		test("vessels actor pack nests starship factions under a Starships folder (bead imiq)", () => {
 			const entries = [
 				{ name: "Ork Kroozer", type: "starship", group: "Ork", system: {} },
 				{ name: "Eldar Hellebore", type: "starship", group: "Eldar", system: {} },
 				{ name: "The Sirius", type: "starship", group: "Imperium", system: {} },
+				{ name: "Rhino APC", type: "vehicle", system: {} },
 			];
-			const { folders, byLabel } = buildPackFolders("starships", entries, "Actor");
+			const keyOf = new Map<Record<string, unknown>, string>([
+				[entries[0], "starships"],
+				[entries[1], "starships"],
+				[entries[2], "starships"],
+				[entries[3], "vehicles"],
+			]);
+			const { folders, byLabel } = buildPackFolders(
+				"vessels",
+				entries,
+				"Actor",
+				(entry) => keyOf.get(entry) ?? "vessels",
+			);
 			expect(folders.map((f) => f.name).sort()).toEqual([
 				"Eldar",
 				"Imperium",
 				"Ork",
+				"Starships",
+				"Vehicles",
 			]);
 			expect(folders.every((f) => f.type === "Actor")).toBe(true);
-			expect(byLabel.get("Ork")).toBe(String(folders.find((f) => f.name === "Ork")._id));
+			expect(byLabel.get("Vehicles")).toBeDefined();
+			expect(byLabel.get("Starships/Ork")).toBeDefined();
+			// the faction folder hangs off the Starships concept folder
+			const ork = folders.find((f) => f.name === "Ork");
+			expect(ork?.folder).toBe(byLabel.get("Starships"));
 		});
 
 		test("gametables group by the kind→chapter map (bead 5lbn)", () => {
@@ -625,7 +742,14 @@ describe("compendium folder groupings (bead nsqt)", () => {
 				{ name: "B", system: { weaponFamily: "las" } },
 				{ name: "C", system: { weaponFamily: "chain" } },
 			];
-			const { folders, byLabel } = buildPackFolders("weapons", entries);
+			// Neutral topLabels: this test exercises the raw derivation labels.
+			const { folders, byLabel } = buildPackFolders(
+				"weapons",
+				entries,
+				"Item",
+				undefined,
+				{},
+			);
 			expect(folders).toHaveLength(2);
 			const las = folders.find((f) => f.name === "Las Weapons");
 			const chain = folders.find((f) => f.name === "Chain Weapons");
@@ -641,10 +765,16 @@ describe("compendium folder groupings (bead nsqt)", () => {
 		});
 
 		test("nests '/' labels under their parent folder", () => {
-			const { folders, byLabel } = buildPackFolders("weapons", [
-				{ name: "A", group: "Pistols" },
-				{ name: "B", group: "Pistols/Las" },
-			]);
+			const { folders, byLabel } = buildPackFolders(
+				"weapons",
+				[
+					{ name: "A", group: "Pistols" },
+					{ name: "B", group: "Pistols/Las" },
+				],
+				"Item",
+				undefined,
+				{},
+			);
 			expect(folders).toHaveLength(2);
 			const pistols = folders.find((f) => f.name === "Pistols");
 			const las = folders.find((f) => f.name === "Las");
@@ -657,9 +787,13 @@ describe("compendium folder groupings (bead nsqt)", () => {
 		test("nested groups auto-create their implied parent (bead g0vv)", () => {
 			// "Pistols/Las" implies "Pistols" — the parent folder is created
 			// even when no entry maps to it directly.
-			const { folders, byLabel } = buildPackFolders("weapons", [
-				{ name: "A", group: "Pistols/Las" },
-			]);
+			const { folders, byLabel } = buildPackFolders(
+				"weapons",
+				[{ name: "A", group: "Pistols/Las" }],
+				"Item",
+				undefined,
+				{},
+			);
 			const parent = folders.find((f) => f.name === "Pistols");
 			expect(parent).toBeDefined();
 			expect(byLabel.get("Pistols")).toBe(String(parent._id));
@@ -690,8 +824,12 @@ describe("readManifestPacks (manifest-packs.yaml fragment)", () => {
 		}
 		// Stable spine: removing a fragment entry must be loud, not silent.
 		for (const required of [
-			"skills",
-			"talents",
+			"character-options",
+			"equipment",
+			"afflictions",
+			"ships",
+			"vessels",
+			"rolltables",
 			"npcs",
 			"rules",
 			"intothemaw",
@@ -708,7 +846,11 @@ describe("readManifestPacks (manifest-packs.yaml fragment)", () => {
 });
 
 describe("resolveLinks (journal authoring links)", () => {
-	const index = new Map<string, Array<{ pack: string; id: string }>>([
+	// Synthetic pack labels (arbitrary; the resolver only compares strings).
+	const index = new Map<
+		string,
+		Array<{ pack: string; id: string; type?: string }>
+	>([
 		[
 			"Tainted",
 			[
@@ -717,6 +859,14 @@ describe("resolveLinks (journal authoring links)", () => {
 			],
 		],
 		["Soiled", [{ pack: "madness", id: "mad2" }]],
+		// Same-pack, same-name entries (the merged character-options pack).
+		[
+			"Fear",
+			[
+				{ pack: "character-options", id: "trait1", type: "trait" },
+				{ pack: "character-options", id: "origin1", type: "origin" },
+			],
+		],
 	]);
 
 	test("unqualified links resolve to the first pack", () => {
@@ -731,6 +881,12 @@ describe("resolveLinks (journal authoring links)", () => {
 		);
 		expect(resolveLinks("[[origins:Tainted|Tainted Lure]]", index)).toBe(
 			"@UUID[Compendium.rogue-trader.origins.ori1]{Tainted Lure}",
+		);
+	});
+
+	test("type: qualifier disambiguates same-name entries in one pack", () => {
+		expect(resolveLinks("[[trait:Fear]]", index)).toBe(
+			"@UUID[Compendium.rogue-trader.character-options.trait1]{Fear}",
 		);
 	});
 

@@ -267,7 +267,7 @@ describe("creatorCanAdvance (character-creator Next gate, fix 2026-09-14)", () =
 // These fixtures are deliberately INVENTED (a "squat" species and joke
 // careers): this suite tests the DERIVATION, and must never carry book values,
 // so that a change to the real pack can never be masked by a copy of it here.
-// The pack-driven guarantee lives in src/packs/rogue_trader/careers/
+// The pack-driven guarantee lives in src/packs/rogue_trader/character-options/
 // careers.test.ts, which asserts the derived options equal the YAML.
 describe("species options from the careers pack (bead ghmn)", () => {
 	const squat = {

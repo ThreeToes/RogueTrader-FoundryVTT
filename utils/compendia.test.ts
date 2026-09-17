@@ -260,7 +260,11 @@ describe("actor packs (bead et3x)", () => {
 					pack: "armour",
 					id: documentId("Flak Armour"),
 					type: "armour",
-					entry: { name: "Flak Armour", system: { armourPoints: { body: 4 } } },
+					entry: {
+						name: "Flak Armour",
+						type: "armour",
+						system: { armourPoints: { body: 4 } },
+					},
 				},
 				{
 					pack: "gear",
@@ -321,7 +325,58 @@ describe("actor packs (bead et3x)", () => {
 		expect(embedded[0].system).toEqual({
 			class: "ranged",
 			damage: "1d10+3 E",
+			// NPC default (bead i1sw): a statblock weapon ships carried.
+			equipState: "carried",
 		});
+	});
+
+	test("compendium NPC inventory ships equipped: weapon carried, armour worn (bead i1sw)", () => {
+		const { embedded } = toActorSourceDocument(
+			{
+				name: "X",
+				type: "npc",
+				items: [
+					{ name: "Lasgun" },
+					{ name: "Flak Armour", fromPack: "armour" },
+					{ name: "Common Lore" },
+				],
+			},
+			index,
+		);
+		expect(
+			(embedded[0].system as Record<string, unknown>).equipState,
+		).toBe("carried");
+		expect(
+			(embedded[1].system as Record<string, unknown>).equipState,
+		).toBe("worn");
+		// Non-physical items (skills) have no equip state.
+		expect(
+			(embedded[2].system as Record<string, unknown>).equipState,
+		).toBeUndefined();
+	});
+
+	test("an authored equipState wins over the NPC default", () => {
+		const { embedded } = toActorSourceDocument(
+			{
+				name: "X",
+				type: "npc",
+				items: [{ name: "Lasgun", system: { equipState: "stowed" } }],
+			},
+			index,
+		);
+		expect(
+			(embedded[0].system as Record<string, unknown>).equipState,
+		).toBe("stowed");
+	});
+
+	test("only npc actors get the inventory equipped", () => {
+		const { embedded } = toActorSourceDocument(
+			{ name: "X", type: "starship", items: [{ name: "Lasgun" }] },
+			index,
+		);
+		expect(
+			(embedded[0].system as Record<string, unknown>).equipState,
+		).toBeUndefined();
 	});
 
 	test("sourceName links a specialisation clone to its base entry", () => {

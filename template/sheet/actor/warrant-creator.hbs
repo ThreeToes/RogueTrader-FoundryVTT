@@ -1,0 +1,89 @@
+<div class="warrant-creator">
+    <div class="creator-header">
+        <input type="text" name="warrant-name" value="{{name}}" placeholder="{{localize "WARRANT_CREATOR.NAME_PLACEHOLDER"}}" />
+    </div>
+
+    {{#if picks.length}}
+    <div class="warrant-summary border">
+        <h2 class="inv-group-label">{{localize "WARRANT_CREATOR.SUMMARY"}}</h2>
+        <div class="warrant-summary-grid">
+            {{#each picks as |pick|}}
+            <div class="stat">
+                <label>{{pick.label}}</label>
+                <span class="summary-value">{{pick.name}}</span>
+            </div>
+            {{/each}}
+        </div>
+    </div>
+    {{/if}}
+
+    <section class="creator-section border">
+        <h1>{{step.label}} <span class="step-counter">{{step.number}}/{{step.total}}</span></h1>
+        <p class="method-hint">{{localize "WARRANT_CREATOR.HINT"}}</p>
+
+        {{#if step.options.length}}
+        <div class="origin-options">
+            {{#each step.options as |opt|}}
+            <a class="origin-chip {{#if opt.selected}}selected{{/if}}"
+                data-action="choose" data-row="{{../step.row}}"
+                data-key="{{#if opt.selected}}{{else}}{{opt.key}}{{/if}}">{{opt.name}}</a>
+            {{/each}}
+        </div>
+        {{else}}
+        <p class="static-value">{{localize "WARRANT_CREATOR.NO_OPTIONS"}}</p>
+        {{/if}}
+
+        {{#if step.selectedOption}}
+        <div class="origin-detail">
+            <p class="origin-effect">
+                <span class="chip origin-mod">{{localize "WARRANT_CREATOR.SP"}} {{step.selectedOption.shipPoints}} / {{localize "WARRANT_CREATOR.PF"}} {{step.selectedOption.profitFactor}}</span>
+            </p>
+            <div class="origin-effect">{{{step.selectedOption.description}}}</div>
+            {{#if step.selectedOption.notes.length}}
+            <ul class="warrant-notes">
+                {{#each step.selectedOption.notes as |note|}}<li>{{note}}</li>{{/each}}
+            </ul>
+            {{/if}}
+        </div>
+        {{/if}}
+    </section>
+
+    <div class="warrant-totals border">
+        <h3 class="inv-group-label">{{localize "WARRANT_CREATOR.TOTALS"}}</h3>
+        <div class="warrant-summary-grid">
+            <div class="stat">
+                <label>{{localize "WARRANT_CREATOR.SHIP_POINTS"}}</label>
+                <span class="summary-value">{{totals.shipPoints}}</span>
+            </div>
+            <div class="stat">
+                <label>{{localize "WARRANT_CREATOR.PROFIT_FACTOR"}}</label>
+                <span class="summary-value">{{totals.profitFactor}}</span>
+            </div>
+            {{#if totals.renown}}
+            <div class="stat">
+                <label>{{localize "WARRANT_CREATOR.RENOWN"}}</label>
+                <span class="summary-value">{{totals.renown}}</span>
+            </div>
+            {{/if}}
+        </div>
+        {{#unless totals.complete}}
+        <p class="method-hint">{{localize "WARRANT_CREATOR.INCOMPLETE"}}</p>
+        {{/unless}}
+        {{#if totals.notes.length}}
+        <ul class="warrant-notes">
+            {{#each totals.notes as |note|}}<li>{{note}}</li>{{/each}}
+        </ul>
+        {{/if}}
+    </div>
+
+    <div class="creator-footer">
+        {{> "rt/creator-nav"
+            backLabel=(localize "WARRANT_CREATOR.PREV")
+            backDisabled=(eq step.index 0)
+            forwardAction=(ifThen step.last "finish" "next")
+            forwardLabel=(ifThen step.last (localize "WARRANT_CREATOR.FINISH") (localize "WARRANT_CREATOR.NEXT"))
+            forwardPrimary=step.last
+            forwardDisabled=step.notPicked
+        }}
+    </div>
+</div>

@@ -9,6 +9,7 @@ import { PsychicPower } from "../data/item/psychic-power";
 import { NavigatorPower } from "../data/item/navigator-power";
 import { OriginTrait } from "../data/item/origin-trait";
 import { Origin } from "../data/item/origin";
+import { WarrantOption } from "../data/item/warrant-option";
 import { Heirloom } from "../data/item/heirloom";
 import { Mutation } from "../data/item/mutation";
 import { MadnessEntry } from "../data/item/madness";
@@ -61,9 +62,16 @@ import {
 	type OriginVariant,
 } from "../origins";
 import { talentEffectHandlers } from "../rules/talent-effects";
+import {
+	isWarrantRow,
+	setWarrantEntries,
+	type WarrantEntry,
+	type WarrantRow,
+} from "../rules/warrant";
 import { CharacterSheet } from "./actor/character-sheet";
 import { CharacterCreator } from "./actor/character-creator";
 import { ShipCreator } from "./actor/ship-creator";
+import { WarrantCreator } from "./actor/warrant-creator";
 import { VehicleSheet } from "./actor/vehicle-sheet";
 import { DynastySheet } from "./actor/dynasty-sheet";
 import { Dynasty } from "../data/actor/dynasty";
@@ -91,6 +99,42 @@ import { WeaponSheet } from "./item/weapon-sheet";
 import { registerSharedPartials } from "./partials";
 import { getCharacterOptionDocs, getPackDocuments } from "./pack-resolve";
 import { trackDefaultGrants } from "./default-grants";
+
+/**
+ * Actor-directory context-menu entry (v14 ContextMenuEntry shape). The menu
+ * array is built once and shared across every entry, so per-target behaviour
+ * lives in `condition`: ContextMenu.render(target) evaluates each entry's
+ * condition(target) and only renders the ones that pass (fvtt-types
+ * ux/context-menu.d.mts). This is how a creator entry is offered only on its
+ * own actor type (bead ugd2).
+ */
+type DirectoryEntryOption = {
+	label: string;
+	icon: string;
+	onClick: (event?: PointerEvent, element?: HTMLElement) => void;
+	condition?: (element?: HTMLElement) => boolean;
+};
+
+/**
+ * Resolve the world actor behind a directory entry context-menu target (the
+ * element the menu was triggered for). v14 entry markup carries data-entry-id
+ * (document-partial.hbs); older cores used data-document-id.
+ */
+function resolveEntryActor(
+	element?: HTMLElement,
+): foundry.documents.Actor | undefined {
+	const entryEl = element?.closest<HTMLElement>(
+		"[data-entry-id], [data-document-id]",
+	);
+	const resolvedId =
+		entryEl?.dataset.entryId ??
+		entryEl?.dataset.documentId ??
+		element?.dataset?.documentId;
+	if (!resolvedId) return undefined;
+	return (
+		game.actors as unknown as { get: (id: string) => unknown }
+	).get(resolvedId) as foundry.documents.Actor | undefined;
+}
 
 // 6a1x: any sheet constructor. never[] params (not unknown[]) so concrete
 // ApplicationV2 constructors with specific optional options objects are
@@ -383,6 +427,41 @@ export function sheetInit() {
 			});
 		});
 
+		// Ship & Warrant Path option pool (epic 1d2n): the chart content lives
+		// in the `warrant` pack; warm the pure module's pool at ready so the
+		// creator and the Dynasty sheet resolve options synchronously.
+		Hooks.once("ready", () => {
+			getPackDocuments("rogue-trader.warrant").then((rawDocs) => {
+				const docs = (rawDocs as Array<foundry.documents.Item>).filter(
+					(doc) => doc.type === "warrant-option",
+				);
+				setWarrantEntries(
+					docs
+						.map((doc) => {
+							const s = doc.system as unknown as Record<string, unknown>;
+							const mechanics = (s.mechanics ?? {}) as {
+								shipPoints?: unknown;
+								profitFactor?: unknown;
+								notes?: unknown[];
+							};
+							return {
+								key: String(s.key ?? ""),
+								row: String(s.row ?? "") as WarrantRow,
+								col: Number(s.col ?? 0),
+								name: doc.name ?? "",
+								description: String(s.description ?? ""),
+								mechanics: {
+									shipPoints: Number(mechanics.shipPoints ?? 0),
+									profitFactor: Number(mechanics.profitFactor ?? 0),
+									notes: (mechanics.notes ?? []).map(String),
+								},
+							} satisfies WarrantEntry;
+						})
+						.filter((entry) => entry.key && isWarrantRow(entry.row)),
+				);
+			});
+		});
+
 		// Madness track rows (epic 1g2t): the sheet's trauma/malignancy tests
 		// read the track rows. Afflictions are owned Items (epic nt8k) whose
 		// effects feed the item-effects funnel directly, so no def cache is
@@ -489,6 +568,11 @@ export function sheetInit() {
 				origintrait: { model: OriginTrait, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 				// Origin Path chart entries (epic 1gb7; moved out of rules/origins.ts).
 				origin: { model: Origin, sheet: GearSheet, label: "TYPES.Item.origin" },
+				"warrant-option": {
+					model: WarrantOption,
+					sheet: GearSheet,
+					label: "TYPES.Item.warrant-option",
+				},
 				// Heirloom grant templates (Table 1-2, epic 1gb7 follow-up).
 				heirloom: { model: Heirloom, sheet: GearSheet, label: "TYPES.Item.heirloom" },
 				mutation: { model: Mutation, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
@@ -707,13 +791,11 @@ export function sheetInit() {
 		// three defensively — the callback ignores its arguments, so a double
 		// fire (if two names exist on one core) is harmless: it only pushes
 		// into whatever array the firing hook passed.
-		// Permission model (bead ay0): finishing the wizard creates a world
-		// actor ONLY when opened without an actor target; opened on an
-		// actor entry it UPDATES that actor in place, which needs no
-		// actor-creation permission. So the entry is offered on actor
-		// entries to everyone; the creation-only open (no actor resolved)
-		// is limited to users who can create actors (GM, or players with
-		// "Create New Actors") so players never hit the hard server error.
+		// Permission model (bead ay0): each creator entry is offered ONLY on
+		// its own actor type (per-target condition below, bead ugd2) and opens
+		// that actor in update-in-place mode, which needs no actor-creation
+		// permission. The canCreateActors guard is kept as a defensive
+		// fallback (unreachable while the condition resolves).
 		// Hoisted above both menu entries (bead 9cre follow-up) so the ship
 		// creator's entry shares the same check.
 		const user = game.user as unknown as {
@@ -727,45 +809,22 @@ export function sheetInit() {
 		);
 		const creatorEntry = (
 			_app: unknown,
-			entryOptions: Array<{
-				// v14: ContextMenuEntry#name is deprecated -> #label (the
-				// "backwards-compatible support removed in v16" warning on
-				// right-click, reported 2026-09-05).
-				label: string;
-				icon: string;
-				// v14: ContextMenuEntry#callback is deprecated -> #onClick
-				// (support removed in v16, reported 2026-09-06); the v14
-				// ContextMenuCallback signature is (event, target).
-				onClick: (event?: PointerEvent, element?: HTMLElement) => void;
-			}>,
+			entryOptions: DirectoryEntryOption[],
 		) => {
 			entryOptions.push({
 				label: "CREATOR.MENU",
 				icon: "fa-solid fa-user-plus",
+				// Offered ONLY on Explorer entries (bead ugd2).
+				condition: (element?: HTMLElement) =>
+					resolveEntryActor(element)?.type === "explorer",
 				// v14 ContextMenuCallback: onClick(event, target) — the first
 				// arg is the PointerEvent, the second is the element the menu
 				// was triggered for (core source foundry.mjs ContextMenuCallback).
 				onClick: (_event?: PointerEvent, element?: HTMLElement) => {
-					// When invoked from an actor entry, pre-load that actor so the
-					// creator updates it in place instead of making a new one.
-					// v14 entry markup carries data-entry-id (document-partial.hbs);
-					// older cores used data-document-id.
-					const entryEl = element?.closest<HTMLElement>(
-						"[data-entry-id], [data-document-id]",
-					);
-					const resolvedId =
-						entryEl?.dataset.entryId ??
-						entryEl?.dataset.documentId ??
-						element?.dataset?.documentId;
-					const candidate = resolvedId
-						? ((game.actors as unknown as {
-								get: (id: string) => unknown;
-							}).get(resolvedId) as foundry.documents.Actor | undefined)
-						: undefined;
-					// Only character-carrying actors pre-fill; right-clicking a
-					// vehicle/ship/planet/dynasty entry (the menu is offered on every
-					// actor entry) creates a fresh explorer instead of handing a
-					// characterless actor to the creator.
+					// condition guarantees an Explorer entry, so the creator updates
+					// that actor in place. The permission guard is a defensive
+					// fallback only (unreachable while the condition holds).
+					const candidate = resolveEntryActor(element);
 					const actor = (
 						candidate?.system as { characteristics?: unknown } | undefined
 					)?.characteristics
@@ -791,36 +850,20 @@ export function sheetInit() {
 		hooksOn.on("getActorDirectoryEntryContext", creatorEntry);
 
 		// Ship creator (bead 9cre): "Create Ship (wizard)" on the Actors
-		// directory menu, mirroring the character-creator entry's permission
-		// model. Starship entries open the creator in update-in-place mode;
-		// other entries/open-without-target follow the same create rules.
+		// directory menu, mirroring the character-creator entry. Offered ONLY
+		// on Starship entries (bead ugd2); opens in update-in-place mode.
 		const shipCreatorEntry = (
 			_app: unknown,
-			entryOptions: Array<{
-				label: string;
-				icon: string;
-				// v14 ContextMenuCallback: (event, target).
-				onClick: (event?: PointerEvent, element?: HTMLElement) => void;
-			}>,
+			entryOptions: DirectoryEntryOption[],
 		) => {
 			entryOptions.push({
 				label: "SHIP_CREATOR.MENU",
 				icon: "fa-solid fa-rocket",
+				condition: (element?: HTMLElement) =>
+					resolveEntryActor(element)?.type === "starship",
 				onClick: (_event?: PointerEvent, element?: HTMLElement) => {
-					const entryEl = element?.closest<HTMLElement>(
-						"[data-entry-id], [data-document-id]",
-					);
-					const resolvedId =
-						entryEl?.dataset.entryId ??
-						entryEl?.dataset.documentId ??
-						element?.dataset?.documentId;
-					const actor = resolvedId
-						? ((game.actors as unknown as {
-								get: (id: string) => unknown;
-							}).get(resolvedId) as foundry.documents.Actor | undefined)
-						: undefined;
-					const isStarship =
-						actor && (actor.type as string) === "starship";
+					const actor = resolveEntryActor(element);
+					const isStarship = actor && (actor.type as string) === "starship";
 					if (!isStarship && !canCreateActors) {
 						ui.notifications?.warn(
 							game.i18n!.localize("CREATOR.NO_CREATE_PERMISSION"),
@@ -838,34 +881,20 @@ export function sheetInit() {
 		hooksOn.on("getActorDirectoryEntryContext", shipCreatorEntry);
 
 		// Planet creator (owner ask, planet tables): "Create Planet (wizard)"
-		// on the Actors directory menu, same permission model as the ship
-		// creator. Planet entries open the creator in update-in-place mode.
+		// on the Actors directory menu, same model as the ship creator.
+		// Offered ONLY on Planet entries (bead ugd2); opens in place.
 		const planetCreatorEntry = (
 			_app: unknown,
-			entryOptions: Array<{
-				label: string;
-				icon: string;
-				onClick: (event?: PointerEvent, element?: HTMLElement) => void;
-			}>,
+			entryOptions: DirectoryEntryOption[],
 		) => {
 			entryOptions.push({
 				label: "PLANET_CREATOR.MENU",
 				icon: "fa-solid fa-globe",
+				condition: (element?: HTMLElement) =>
+					resolveEntryActor(element)?.type === "planet",
 				onClick: (_event?: PointerEvent, element?: HTMLElement) => {
-					const entryEl = element?.closest<HTMLElement>(
-						"[data-entry-id], [data-document-id]",
-					);
-					const resolvedId =
-						entryEl?.dataset.entryId ??
-						entryEl?.dataset.documentId ??
-						element?.dataset?.documentId;
-					const actor = resolvedId
-						? ((game.actors as unknown as {
-								get: (id: string) => unknown;
-							}).get(resolvedId) as foundry.documents.Actor | undefined)
-						: undefined;
-					const isPlanet =
-						actor && (actor.type as string) === "planet";
+					const actor = resolveEntryActor(element);
+					const isPlanet = actor && (actor.type as string) === "planet";
 					if (!isPlanet && !canCreateActors) {
 						ui.notifications?.warn(
 							game.i18n!.localize("CREATOR.NO_CREATE_PERMISSION"),
@@ -881,5 +910,36 @@ export function sheetInit() {
 		hooksOn.on("getActorContextOptions", planetCreatorEntry);
 		hooksOn.on("getEntryContextAbstractSidebarTab", planetCreatorEntry);
 		hooksOn.on("getActorDirectoryEntryContext", planetCreatorEntry);
+
+		// Ship & Warrant Path creator (epic 1d2n, bead d7a9): "Create Warrant"
+		// on the Actors directory menu, offered ONLY on Dynasty entries (bead
+		// ugd2 gate). Writes the picks + summed SP/PF onto that dynasty.
+		const warrantCreatorEntry = (
+			_app: unknown,
+			entryOptions: DirectoryEntryOption[],
+		) => {
+			entryOptions.push({
+				label: "WARRANT_CREATOR.MENU",
+				icon: "fa-solid fa-scroll",
+				condition: (element?: HTMLElement) =>
+					resolveEntryActor(element)?.type === "dynasty",
+				onClick: (_event?: PointerEvent, element?: HTMLElement) => {
+					const actor = resolveEntryActor(element);
+					const isDynasty = actor && (actor.type as string) === "dynasty";
+					if (!isDynasty && !canCreateActors) {
+						ui.notifications?.warn(
+							game.i18n!.localize("CREATOR.NO_CREATE_PERMISSION"),
+						);
+						return;
+					}
+					new WarrantCreator({
+						actor: isDynasty ? actor : undefined,
+					} as never).render({ force: true } as never);
+				},
+			});
+		};
+		hooksOn.on("getActorContextOptions", warrantCreatorEntry);
+		hooksOn.on("getEntryContextAbstractSidebarTab", warrantCreatorEntry);
+		hooksOn.on("getActorDirectoryEntryContext", warrantCreatorEntry);
 	});
 }

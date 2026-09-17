@@ -7,16 +7,75 @@
             <span class="chip origin-mod">{{shipPointsRemaining}} / {{shipPoints.total}}
                 ({{localize "DYNASTY.SPENT"}}: {{shipPoints.spent}})</span>
         </div>
-        <div class="traits-row">
-            <span class="origin-label">{{localize "DYNASTY.SP_TOTAL"}}:</span>
-            <input name="system.shipPoints.total" type="number" min="0" value="{{source.system.shipPoints.total}}" />
-            <span class="origin-label">{{localize "DYNASTY.SP_SPENT"}}:</span>
-            <input name="system.shipPoints.spent" type="number" min="0" value="{{source.system.shipPoints.spent}}" />
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "DYNASTY.SP_TOTAL"}}</label>
+                <input name="system.shipPoints.total" type="number" min="0"
+                    value="{{source.system.shipPoints.total}}" />
+            </div>
+            <div class="stat">
+                <label>{{localize "DYNASTY.SP_SPENT"}}</label>
+                <input name="system.shipPoints.spent" type="number" min="0"
+                    value="{{source.system.shipPoints.spent}}" />
+            </div>
         </div>
         <div class="traits-row">
             <button type="button" class="ladder-option" data-action="rollStarting"
                 data-tooltip="{{localize "DYNASTY.ROLL_HINT"}}">{{localize "DYNASTY.ROLL_STARTING"}}</button>
         </div>
+
+        <div class="warrant-section">
+            <h1 class="inv-group-label">{{localize "DYNASTY.WARRANT"}}</h1>
+            {{#if warrantPoolEmpty}}
+            <p class="method-hint">{{localize "DYNASTY.WARRANT_POOL_MISSING"}}</p>
+            {{else}}
+            <p class="method-hint">{{localize "DYNASTY.WARRANT_HINT"}}</p>
+            <div class="warrant-grid">
+                {{#each warrantRows as |wr|}}
+                <div class="warrant-row">
+                    <span class="warrant-row-label">{{wr.label}}</span>
+                    <div class="chip-select">
+                        <label class="chip-option">
+                            <input type="radio" name="warrant-{{wr.row}}" value=""
+                                data-warrant-row="{{wr.row}}" {{#unless wr.picked}}checked{{/unless}} />
+                            <span class="chip">{{localize "DYNASTY.WARRANT_NONE_PICK"}}</span>
+                        </label>
+                        {{#each wr.options as |opt|}}
+                        <label class="chip-option">
+                            <input type="radio" name="warrant-{{wr.row}}" value="{{opt.key}}"
+                                data-warrant-row="{{wr.row}}" {{#if opt.selected}}checked{{/if}} />
+                            <span class="chip">{{opt.name}}</span>
+                        </label>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+            <div class="warrant-footer">
+                {{#if warrant.hasPicks}}
+                <span class="chip origin-mod">{{localize "DYNASTY.WARRANT_FROM"}}:
+                    {{localize "DYNASTY.SHIP_POINTS"}} {{warrant.shipPoints}} /
+                    {{localize "DYNASTY.PROFIT_FACTOR"}} {{warrant.profitFactor}}</span>
+                {{#if warrant.renown}}
+                <span class="chip">{{localize "WARRANT.ROW_RENOWN"}}: {{warrant.renown}}</span>
+                {{/if}}
+                {{#unless warrant.complete}}
+                <span class="method-hint">{{localize "DYNASTY.WARRANT_INCOMPLETE"}}</span>
+                {{/unless}}
+                <button type="button" class="ladder-option"
+                    data-action="clearWarrant">{{localize "DYNASTY.WARRANT_CLEAR"}}</button>
+                {{else}}
+                <p class="static-value">{{localize "DYNASTY.WARRANT_NONE"}}</p>
+                {{/if}}
+            </div>
+            {{#if warrant.notes.length}}
+            <ul class="warrant-notes">
+                {{#each warrant.notes as |note|}}<li>{{note}}</li>{{/each}}
+            </ul>
+            {{/if}}
+            {{/if}}
+        </div>
+
         <div class="traits-row">
             <label class="origin-label" for="dynasty-notes">{{localize "DYNASTY.NOTES"}}</label>
         </div>

@@ -17,6 +17,17 @@ export class Dynasty extends foundry.abstract.TypeDataModel<
 	declare profitFactor: number;
 	declare shipPoints: { total: number; spent: number };
 	declare notes: string;
+	/**
+	 * Ship & Warrant Path provenance (Into the Storm pp33-44): row id ->
+	 * chosen option key, plus the totals that path produced. The top-level
+	 * profitFactor/shipPoints above stay the APPLIED values; this is the
+	 * record of how they were derived (bead 5pnl).
+	 */
+	declare warrant: {
+		picks: Record<string, string>;
+		shipPoints: number;
+		profitFactor: number;
+	};
 
 	static override defineSchema() {
 		return {
@@ -39,6 +50,29 @@ export class Dynasty extends foundry.abstract.TypeDataModel<
 					integer: true,
 					initial: 0,
 					required: true,
+				}),
+			}),
+			/**
+			 * Ship & Warrant Path record (bead 5pnl). `picks` maps a chart row id
+			 * (warrant-age | fortune-fate | acquisition | sanction | contacts |
+			 * renown) to the chosen option key; the totals are the path's derived
+			 * starting values. A blank record is the safe default for every
+			 * existing dynasty actor.
+			 */
+			warrant: new foundry.data.fields.SchemaField({
+				picks: new foundry.data.fields.TypedObjectField(
+					new foundry.data.fields.StringField({ initial: "" }),
+					{ initial: () => ({}) },
+				),
+				shipPoints: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
+				profitFactor: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
 				}),
 			}),
 			/** Free-text dynasty notes (Warrant details, holdings...). */

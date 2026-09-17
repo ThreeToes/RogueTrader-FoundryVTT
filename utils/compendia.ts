@@ -74,6 +74,9 @@ const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
 	// `game-table` instead of falling back to plain Gear (which dropped
 	// rating/threshold silently — same bug class as madness/mutations above).
 	shiptables: "game-table",
+	// Ship & Warrant Path options (Into the Storm pp33-44): a dedicated Item
+	// type so the per-row key/col + SP/PF mechanics survive Foundry's schema.
+	warrant: "warrant-option",
 };
 
 /** Work out the real item type for an authored entry. */
@@ -1389,6 +1392,35 @@ export function toJournalSourceDocument(
 	return { journal, pages };
 }
 
+/**
+ * NPC inventory ships READY (owner ask): a compendium NPC's embedded weapons
+ * and gear arrive "carried" and its armour "worn". Without this every
+ * statblock attack needed a manual equip toggle AND the NPC's armour soaked
+ * nothing (the target-side damage path counts only WORN armour). An explicit
+ * equipState authored on the embedded item still wins. Non-physical items
+ * (skills, talents, traits, powers) have no equip state and are left alone.
+ */
+const NPC_EQUIP_STATE: Readonly<Record<string, string>> = {
+	armour: "worn",
+	"ranged-weapon": "carried",
+	"melee-weapon": "carried",
+	gear: "carried",
+	tool: "carried",
+	ammunition: "carried",
+	"force-field": "carried",
+	"weapon-modification": "carried",
+	"armour-modification": "carried",
+};
+
+function equipNpcInventoryItem(doc: Record<string, unknown>): void {
+	const state = NPC_EQUIP_STATE[String(doc.type ?? "")];
+	if (!state) return;
+	const system = { ...((doc.system as Record<string, unknown>) ?? {}) };
+	if (system.equipState) return;
+	system.equipState = state;
+	doc.system = system;
+}
+
 export function toActorSourceDocument(
 	entry: Record<string, unknown>,
 	index: ItemSourceIndex,
@@ -1403,10 +1435,15 @@ export function toActorSourceDocument(
 			return toEmbeddedItemDocument(itemEntry, index, seenIds);
 		},
 	);
+	const actorType =
+		typeof entry.type === "string" && entry.type ? entry.type : "npc";
+	if (actorType === "npc") {
+		for (const doc of embedded) equipNpcInventoryItem(doc);
+	}
 	const actor: Record<string, unknown> = {
 		_id: documentId(name, entry._id as string | undefined),
 		name,
-		type: typeof entry.type === "string" && entry.type ? entry.type : "npc",
+		type: actorType,
 		system: entry.system ?? {},
 		// Embedded collections are stored as ids; records live in sublevels.
 		items: embedded.map((d) => String(d._id)),

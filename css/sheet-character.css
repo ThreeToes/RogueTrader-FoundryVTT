@@ -229,6 +229,94 @@
 	overflow-y: auto;
 }
 
+/* Ship & Warrant Path creator (bead d7a9): mirrors the character creator's
+   chip selection pattern (chips + selected-detail below). The body must
+   scroll: a row's verbatim prose exceeds the fixed window height, and the
+   window is resizable (AGENTS.md rule). */
+.rogue-trader.warrant-creator {
+	min-width: 560px;
+}
+
+.rogue-trader.warrant-creator .window-content {
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+}
+
+.rogue-trader .warrant-creator .origin-options {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.rogue-trader .warrant-creator .origin-chip {
+	border: 1px solid var(--rt-border-strong);
+	border-radius: var(--rt-radius);
+	padding: 2px 8px;
+	cursor: pointer;
+}
+
+.rogue-trader .warrant-creator .origin-chip.selected {
+	background: var(--rt-border);
+	color: var(--color-text-light-highlight, var(--rt-gold-soft));
+}
+
+.rogue-trader .warrant-creator .origin-detail {
+	border-left: 2px solid var(--rt-border-strong);
+	margin: 4px 0 0 8px;
+	padding: 2px 0 2px 10px;
+}
+
+.rogue-trader .warrant-creator .origin-effect {
+	font-size: var(--rt-fs-md);
+	margin: 4px 0;
+}
+
+.rogue-trader .warrant-creator .warrant-summary-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.rogue-trader .warrant-creator .warrant-notes,
+.rogue-trader.sheet.dynasty .warrant-notes {
+	margin: 4px 0;
+	padding-left: 18px;
+}
+
+/* Dynasty sheet: Warrant Path section (bead mrsb). Row pickers reuse the
+   shared chip-select radio-chip pattern; the six chart rows sit on a
+   responsive two-column grid instead of a stack of full-width selects. */
+.rogue-trader.sheet.dynasty .warrant-section {
+	margin-top: 8px;
+	border-top: 1px solid var(--rt-border);
+	padding-top: 6px;
+}
+
+.rogue-trader.sheet.dynasty .warrant-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 8px 12px;
+	margin-bottom: 6px;
+}
+
+.rogue-trader.sheet.dynasty .warrant-row-label {
+	display: block;
+	font-size: var(--rt-fs-sm);
+	font-weight: bold;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--rt-gold);
+	margin-bottom: 2px;
+}
+
+.rogue-trader.sheet.dynasty .warrant-footer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
 .rogue-trader .character-creator {
 	display: flex;
 	flex-direction: column;

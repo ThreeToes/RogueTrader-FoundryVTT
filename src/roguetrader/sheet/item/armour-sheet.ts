@@ -1,4 +1,5 @@
 import { Armour } from "../../data/item/armour";
+import { Battlesuit } from "../../data/item/battlesuit";
 import { bodyLocations } from "../../registry";
 import { effectActions, effectEditorChoices } from "./effect-actions";
 
@@ -67,6 +68,25 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
 		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
+
+		// Tau battlesuits (bead rojm) share this sheet and add the profile block
+		// the book prints on p38: Hard Points, Size, Strength, Primary Systems and
+		// a Recommended Loadout. Exposed only for that type, so plain armour
+		// renders exactly as before.
+		if (this.document.type === "battlesuit") {
+			const suit = system as Battlesuit;
+			context.battlesuit = {
+				hardPoints: suit.hardPoints,
+				size: suit.size,
+				strength: suit.strength,
+				// Arrays are edited as one comma-separated line: the book lists both
+				// as prose enumerations ("Blacksun filters, enhanced motive
+				// systems, ..."), so a joined string is the honest editor.
+				primarySystems: (suit.primarySystems ?? []).join(", "),
+				recommendedLoadout: (suit.recommendedLoadout ?? []).join(", "),
+				specialRules: suit.specialRules ?? "",
+			};
+		}
 
 		// Description tab: enriched HTML from the system description
 		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).

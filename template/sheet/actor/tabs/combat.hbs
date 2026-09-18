@@ -74,5 +74,35 @@
             </div>
         </div>
         {{/if}}
+        {{#if criticals.any}}
+        {{!-- Critical Damage (bead ks3k): accumulated per location, plus every
+             effect still being suffered and the battlesuit repair action. --}}
+        <div class="inv-group-header">
+            <h1>{{localize "CRITICAL.HEADER"}}</h1>
+            <div class="criticals-list">
+                {{#each criticals.rows as |row|}}
+                <span class="chip critical-location" data-tooltip="{{localize "CRITICAL.LOCATION_HINT"}}">
+                    {{localize row.labelKey}}: <strong>{{row.severity}}</strong>
+                </span>
+                {{/each}}
+            </div>
+            {{#if criticals.effects.length}}
+            <ul class="critical-effects">
+                {{#each criticals.effects as |effect|}}
+                <li class="critical-effect">
+                    <span class="location-label">{{localize effect.locationLabelKey}}</span>
+                    <span class="critical-source">{{#if (eq effect.source "battlesuit")}}{{localize "CRITICAL.SOURCE_BATTLESUIT"}}{{else}}{{localize "CRITICAL.SOURCE_CORE"}}{{/if}}</span>
+                    <span class="critical-roll">{{localize "CRITICAL.ROLL"}} {{effect.roll}}</span>
+                    <p class="critical-text">{{effect.text}}</p>
+                </li>
+                {{/each}}
+            </ul>
+            {{/if}}
+            {{#if criticals.canRepair}}
+            <button type="button" class="ladder-option" data-action="repairBattlesuit"
+                data-tooltip="{{localize "CRITICAL.REPAIR_HINT"}}">{{localize "CRITICAL.REPAIR"}}</button>
+            {{/if}}
+        </div>
+        {{/if}}
     </div>
 </section>

@@ -46,6 +46,20 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
 		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
 
+		// Tau battlesuit systems (bead i0dc) share this sheet: expose the category
+		// and the Hard Point cost the suit's budget is spent on. Guarded so plain
+		// gear renders exactly as before.
+		if (this.document.type === "battlesuit-system") {
+			const system = this.document.system as { category?: string; hardPointCost?: number };
+			context.battlesuitSystem = {
+				category: foundry.utils.getProperty(
+					this.document,
+					"system.category",
+				),
+				hardPointCost: system.hardPointCost ?? 0,
+			};
+		}
+
 		context.descriptionHTML =
 			await foundry.applications.ux.TextEditor.enrichHTML(
 				this.document.system.description,

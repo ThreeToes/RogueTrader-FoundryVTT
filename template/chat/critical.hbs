@@ -1,0 +1,43 @@
+{{!-- Critical Damage result card (bead ks3k). Posts after damage is applied:
+     wounds first, then whatever ran past 0 Wounds becomes Critical Damage.
+     A worn Tau battlesuit may divert that into Table 1-5 instead (p31). --}}
+<div class="rogue-trader chat critical">
+    <div class="background border">
+        <h1>{{localize "CRITICAL.TITLE"}}</h1>
+        <div class="critical-body">
+            <p class="critical-damage-taken">
+                <strong>{{localize "CRITICAL.WOUNDS_APPLIED"}}:</strong>
+                <span class="wounds-applied">{{woundsApplied}}</span>
+                {{#if excess}}
+                &middot; <strong>{{localize "CRITICAL.EXCESS"}}:</strong>
+                <span class="critical-excess">{{excess}}</span>
+                <span class="location-label">{{localize locationLabelKey}}</span>
+                <span class="damage-type">({{damageType}})</span>
+                {{/if}}
+            </p>
+            {{#if overrideUsed}}
+            <p class="critical-override">
+                {{localize "CRITICAL.BATTLESUIT_OVERRIDE"}}
+            </p>
+            {{/if}}
+            {{#if warning}}
+            <p class="critical-warning">
+                {{localize "CRITICAL.TABLE_MISSING"}}: <em>{{warning}}</em>
+            </p>
+            {{/if}}
+            {{#if effects.length}}
+            <ul class="critical-effects">
+                {{#each effects as |effect|}}
+                <li class="critical-effect">
+                    <span class="critical-source">{{#if (eq effect.source "battlesuit")}}{{localize "CRITICAL.SOURCE_BATTLESUIT"}}{{else}}{{localize "CRITICAL.SOURCE_CORE"}}{{/if}}</span>
+                    <span class="critical-roll">{{localize "CRITICAL.ROLL"}} {{effect.roll}}</span>
+                    <span class="location-label">{{localize effect.locationLabelKey}}</span>
+                    <span class="critical-severity">{{localize "CRITICAL.SEVERITY"}} {{effect.severity}}</span>
+                    <p class="critical-text">{{effect.text}}</p>
+                </li>
+                {{/each}}
+            </ul>
+            {{/if}}
+        </div>
+    </div>
+</div>

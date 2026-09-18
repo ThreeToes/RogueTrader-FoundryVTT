@@ -1,6 +1,31 @@
 <section class="tab {{tabs.data.cssClass}}" data-group="primary" data-tab="data">
     <div class="stats border">
         <h1>{{localize "TITLE.STATS"}}</h1>
+        {{#if battlesuitSystem}}
+        {{!-- Tau battlesuit system (bead i0dc): the category Table 1-5 names and
+             the Hard Point cost the suit's budget is spent on. --}}
+        <div class="stats-row">
+            <div class="stat battlesuit-category">
+                <label>{{localize "BATTLESUIT_SYSTEM.CATEGORY"}}</label>
+                {{#if editable}}
+                <select name="system.category">
+                    {{selectOptions (config "battlesuitSystemCategories") selected=source.system.category localize=true}}
+                </select>
+                {{else}}
+                <p class="static-value">{{localize (lookup (config "battlesuitSystemCategories") source.system.category)}}</p>
+                {{/if}}
+            </div>
+            <div class="stat battlesuit-hard-points">
+                <label>{{localize "BATTLESUIT_SYSTEM.HARD_POINT_COST"}}</label>
+                {{#if editable}}
+                <input name="system.hardPointCost" type="number" min="0" value="{{source.system.hardPointCost}}"
+                    data-tooltip="{{localize "BATTLESUIT_SYSTEM.HARD_POINT_COST_HINT"}}" />
+                {{else}}
+                <p class="static-value">{{source.system.hardPointCost}}</p>
+                {{/if}}
+            </div>
+        </div>
+        {{/if}}
         <div class="stats-row">
             <div class="stat craftsmanship">
                 <label>{{localize "GEAR.CRAFTSMANSHIP"}}</label>

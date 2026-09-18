@@ -2,6 +2,8 @@ import { Character } from "../data/actor/character";
 import { Vehicle } from "../data/actor/vehicle";
 import { Ammunition } from "../data/item/ammunition";
 import { Armour } from "../data/item/armour";
+import { Battlesuit } from "../data/item/battlesuit";
+import { BattlesuitSystem } from "../data/item/battlesuit-system";
 import { ForceField } from "../data/item/force-field";
 import { Gear } from "../data/item/gear";
 import { MeleeWeapon } from "../data/item/melee-weapon";
@@ -40,6 +42,10 @@ import {
 	rollSnapOut,
 } from "../rules/adapter";
 import type { DamageApplyFlag, DamageRollFlag } from "../rules/chat-flags";
+import {
+	applyDamageWithCriticals,
+	postCriticalCard,
+} from "../rules/criticals";
 import { missingSkillGrants } from "../rules/default-skills";
 import {
 	STATUS_IMG,
@@ -208,17 +214,24 @@ async function applyToTarget(
 	const user = game as unknown as { user?: { isGM?: boolean } };
 	if (!target.isOwner && !user.user?.isGM) return;
 
-	const current = Number(wounds.value ?? 0);
-	const applied = Math.min(Number(woundsAmount ?? 0), current);
-	const next = Math.max(0, current - applied);
+	const effective: DamageApplyFlag = { ...(existing ?? {}) };
 	button.disabled = true;
-	await target.update({ system: { wounds: { value: next } } });
+	// Wounds first, then Critical Damage for whatever runs past 0 (bead ks3k).
+	// The card carries the damage type + hit location so the right critical
+	// table is used; a card posted before that flag existed falls back to
+	// Impact/Body rather than refusing to apply the damage.
+	const outcome = await applyDamageWithCriticals({
+		actor: target,
+		damage: Number(woundsAmount ?? 0),
+		damageType: effective.damageType ?? "Impact",
+		location: effective.location ?? "",
+	});
 	if (message) {
 		await message.update({
 			flags: {
 				"rogue-trader": {
 					damageApply: {
-						...existing,
+						...effective,
 						wounds: woundsAmount,
 						targetUuid,
 						applied: true,
@@ -227,8 +240,16 @@ async function applyToTarget(
 			},
 		});
 	}
+	await postCriticalCard(
+		target as unknown as { uuid?: string },
+		outcome,
+		{
+			damageType: effective.damageType ?? "Impact",
+			location: effective.location ?? "",
+		},
+	);
 	ui.notifications?.info(
-		game.i18n.format("DAMAGE.APPLIED", { wounds: applied }),
+		game.i18n.format("DAMAGE.APPLIED", { wounds: outcome.woundsApplied }),
 	);
 }
 
@@ -529,6 +550,23 @@ export function sheetInit() {
 					label: "ROGUE_TRADER.WEAPON.SHEET",
 				},
 				armour: { model: Armour, sheet: ArmourSheet, label: "ROGUE_TRADER.ARMOUR.SHEET" },
+				// Tau battlesuits (bead rojm): worn armour plus Hard Points, Size,
+				// Strength, Primary Systems and a recommended loadout — the Tau
+				// Character Guide profile block (printed p38). Rendered by the armour
+				// sheet, which adds the battlesuit section for this type.
+				battlesuit: {
+					model: Battlesuit,
+					sheet: ArmourSheet,
+					label: "TYPES.Item.battlesuit",
+				},
+				// Tau battlesuit systems (bead i0dc): Primary/Support/Signature/Weapon
+				// Systems, with the category Table 1-5 names and the Hard Point cost
+				// the suit's budget is spent on.
+				"battlesuit-system": {
+					model: BattlesuitSystem,
+					sheet: GearSheet,
+					label: "TYPES.Item.battlesuit-system",
+				},
 				skill: { model: Skill, sheet: SkillSheet, label: "ROGUE_TRADER.SKILL.SHEET" },
 				talent: { model: Talent, sheet: TalentSheet, label: "ROGUE_TRADER.TALENT.SHEET" },
 				career: { model: Career, sheet: CareerSheet, label: "TYPES.Item.career" },

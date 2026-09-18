@@ -363,6 +363,10 @@ async function postWeaponDamage(
 					wounds: damage.wounds,
 					targetUuid: target.uuid,
 					applied: false,
+					// Bead ks3k: the apply step converts damage past 0 Wounds into
+					// Critical Damage, which needs the type and the hit location.
+					damageType: String(damageType ?? "Impact"),
+					location,
 				},
 			},
 		},

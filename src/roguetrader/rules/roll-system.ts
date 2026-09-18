@@ -1651,6 +1651,39 @@ export interface RollTestOptions {
 	skipDialog?: boolean;
 }
 
+/**
+ * Run a skill test WITHOUT the dialog and return the outcome (bead ks3k).
+ *
+ * For rules that must act on the Degrees of Success rather than merely post a
+ * card — the Tau battlesuit repair test is the first caller. The passed
+ * modifiers go through the same funnel collection as any other roll, so the
+ * contributor breakdown on the card stays honest: this is a fast-forward, not
+ * a silent roll, and the caller sees the same outcome the player sees.
+ *
+ * Returns null when the request could not be prepared (no such skill item),
+ * which callers report rather than treating as a failure.
+ */
+export async function rollSkillOutcome(
+	actor: Actor,
+	itemId: string,
+	modifiers: Modifier[] = [],
+): Promise<TestOutcome | null> {
+	const prepared = await skillHandler.prepare({
+		kind: "skill",
+		actor,
+		itemId,
+		modifiers,
+	});
+	if (!prepared) return null;
+	const { outcome } = await runTest(
+		actor,
+		prepared,
+		[...prepared.initialModifiers, ...modifiers],
+		{ skillName: prepared.context.skillName },
+	);
+	return outcome;
+}
+
 /** Roll a characteristic test: dialog -> funnel -> kernel -> chat card. */
 export async function rollTest(
 	actor: Actor,

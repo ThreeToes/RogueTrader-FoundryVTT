@@ -11,6 +11,7 @@
 import { effectsAreLive } from "../item/effects";
 import { sourceField } from "../item/source";
 import { careers, sorceryRanks } from "../../registry";
+import { MAX_CRITICAL_SEVERITY } from "../../../rules-engine/src/index";
 
 export const CHARACTERISTIC_KEYS = [
 	"ws",
@@ -34,6 +35,33 @@ export class Character extends foundry.abstract.TypeDataModel<
 
 	declare characteristics: Record<string, { value: number; unnatural: number }>;
 	declare wounds: { value: number; max: number };
+	/**
+	 * Critical Damage per body location, accumulated (bead ks3k). The core book
+	 * tracks it per location and caps it at 10 (the critical tables print ten
+	 * severities); 0 means the location has taken no critical damage.
+	 */
+	declare criticals: Record<string, number>;
+	/**
+	 * Critical effects this character is currently suffering — one entry per
+	 * crit rolled, whether from a core Critical Hit table or the Tau battlesuit
+	 * table (Tau Guide p31). Effects stay until cleared (e.g. by a battlesuit
+	 * repair test), which is why they are stored rather than derived.
+	 */
+	declare criticalEffects: Array<{
+		id: string;
+		location: string;
+		severity: number;
+		table: string;
+		roll: number;
+		source: string;
+		text: string;
+	}>;
+	/**
+	 * Combat round in which a worn battlesuit already used its 1d10 Critical
+	 * Damage override (Tau Guide p31: "the first time ... each Turn"). 0 = not
+	 * used yet; compared against the current round at apply time.
+	 */
+	declare criticalOverrideRound: number;
 	declare fatigue: number;
 	declare fate: { value: number; max: number };
 	declare insanity: number;
@@ -141,12 +169,49 @@ export class Character extends foundry.abstract.TypeDataModel<
 					initial: 0,
 				}),
 			}),
-			fatigue: new foundry.data.fields.NumberField({
+			/** Critical Damage per location, capped at 10 (bead ks3k). */
+			criticals: new foundry.data.fields.TypedObjectField(
+				new foundry.data.fields.NumberField({
+					min: 0,
+					max: MAX_CRITICAL_SEVERITY,
+					integer: true,
+					initial: 0,
+				}),
+			),
+			/** Suffered critical effects, kept until something removes them. */
+			criticalEffects: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.SchemaField({
+					id: new foundry.data.fields.StringField({ initial: "" }),
+					location: new foundry.data.fields.StringField({ initial: "body" }),
+					severity: new foundry.data.fields.NumberField({
+						min: 1,
+						max: MAX_CRITICAL_SEVERITY,
+						integer: true,
+						initial: 1,
+					}),
+					table: new foundry.data.fields.StringField({ initial: "" }),
+					roll: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					/** "core" for a Critical Hit table, "battlesuit" for Table 1-5. */
+					source: new foundry.data.fields.StringField({ initial: "core" }),
+					text: new foundry.data.fields.StringField({ initial: "" }),
+				}),
+				{ initial: () => [] },
+			),
+			/** Round a battlesuit last used its 1d10 override; 0 = never. */
+			criticalOverrideRound: new foundry.data.fields.NumberField({
 				min: 0,
 				integer: true,
 				initial: 0,
 			}),
-			fate: new foundry.data.fields.SchemaField({
+			fatigue: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 0,
+			}),			fate: new foundry.data.fields.SchemaField({
 				value: new foundry.data.fields.NumberField({
 					min: 0,
 					integer: true,

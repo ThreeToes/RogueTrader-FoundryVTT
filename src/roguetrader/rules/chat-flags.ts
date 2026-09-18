@@ -23,6 +23,13 @@ export interface DamageApplyFlag {
 	wounds?: number;
 	targetUuid?: string;
 	applied?: boolean;
+	/**
+	 * Damage type + hit location (bead ks3k): the apply step needs both to pick
+	 * the right critical table once wounds run out. The card already displays
+	 * them, so this only stops the click handler recomputing them.
+	 */
+	damageType?: string;
+	location?: string;
 }
 
 /** The system's chat-message flag namespace. */

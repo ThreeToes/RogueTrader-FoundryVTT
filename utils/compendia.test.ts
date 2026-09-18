@@ -16,6 +16,7 @@ import {
 	readManifestPacks,
 	MANIFEST_PACKS_YAML,
 	resolveEntryGroup,
+	resolveEntryFolder,
 	resolveEntryType,
 	resolveLinks,
 	sourceKey,
@@ -84,6 +85,22 @@ describe("concept packs (bead 8ubu)", () => {
 		expect(conceptFolderLabel("weapons", null, tops)).toBe("Weapons");
 		// no concept label -> the intra-source label is used as-is
 		expect(conceptFolderLabel("gametables", "SOI I", tops)).toBe("SOI I");
+	});
+
+	/**
+	 * The npcs pack groups by entry NAME through NPC_GROUPS, which only covers
+	 * npcs.yaml. A second authoring file in the same pack resolves its group
+	 * against that file's STEM instead, so without a SOURCE_TOP_LABELS entry its
+	 * documents land at the pack root (bead o2gx: the four Tau drones showed up
+	 * loose in the compendium next to the concept folders).
+	 */
+	test("a second authoring file in an actor pack still gets a folder", () => {
+		expect(resolveEntryFolder({ name: "Tau Gun Drone" }, "tau-drones")).toBe(
+			"Tau",
+		);
+		expect(resolveEntryFolder({ name: "Tau Shield Drone" }, "tau-drones")).toBe(
+			"Tau",
+		);
 	});
 
 	test("buildPackFolders groups several sources under one pack", () => {

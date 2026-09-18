@@ -11,6 +11,8 @@ import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { derivedRank, totalSpent } from "../../rules/advancement";
 import { careers, equipStates, sorceryRanks } from "../../registry";
 import { collectSorceryRank } from "../../rules/talent-effects";
+import { criticalSheetContext } from "../../rules/criticals";
+import { rollBattlesuitRepair } from "../../rules/battlesuit-repair";
 import { effectiveSorceryRank } from "../../rules/casting";
 import { effectiveMechanics, originByKey } from "../../origins";
 import {
@@ -93,8 +95,20 @@ export class CharacterSheet extends RtActorSheet {
 			rollTraumaTest: CharacterSheet.#onRollTraumaTest,
 			rollMalignancyTest: CharacterSheet.#onRollMalignancyTest,
 			snapOut: CharacterSheet.#onSnapOut,
+			repairBattlesuit: CharacterSheet.#onRepairBattlesuit,
 		},
 	};
+
+	/**
+	 * Battlesuit repair (Tau Character Guide p31): rolls the Hard (-20) Tech-Use
+	 * or Trade (Armourer) Test through the normal skill path and applies its
+	 * Degrees of Success — one effect plus one per Degree, nothing on a failure.
+	 */
+	static async #onRepairBattlesuit(this: {
+		actor: foundry.documents.Actor;
+	}): Promise<void> {
+		await rollBattlesuitRepair(this.actor);
+	}
 
 	/** "Snap out of it" (p296, bead q1ql): success ends the condition. */
 	static async #onSnapOut(this: {
@@ -707,6 +721,10 @@ export class CharacterSheet extends RtActorSheet {
 		await this.#ensureDefaultSkills();
 		const context = await super._prepareContext(options);
 		const system = this.actor.system as Character;
+
+		// Critical Damage panel (bead ks3k): per-location totals, the effects
+		// still being suffered, and whether a worn battlesuit can repair them.
+		context.criticals = criticalSheetContext(this.actor);
 
 		// Career picker (bead 0ib): choices from the careers registry; the
 		// read-only label resolves via the registry so homebrew careers work.

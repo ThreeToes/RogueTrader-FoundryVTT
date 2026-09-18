@@ -118,6 +118,20 @@ const PROTECTION_TYPES = {
 } as const;
 
 /**
+ * Tau battlesuit system categories (Tau Character Guide printed pp31-38).
+ * The order is the book's own and matters: Primary Systems are integral to the
+ * suit, Support and Weapon Systems are what Hard Points are spent on, and
+ * Signature Systems are the experimental Unique tier — which is exactly how
+ * Table 1-5: Battlesuit Critical Effects refers to them.
+ */
+const BATTLESUIT_SYSTEM_CATEGORIES = {
+	primary: "BATTLESUIT_SYSTEM.CATEGORY_PRIMARY",
+	support: "BATTLESUIT_SYSTEM.CATEGORY_SUPPORT",
+	signature: "BATTLESUIT_SYSTEM.CATEGORY_SIGNATURE",
+	weapon: "BATTLESUIT_SYSTEM.CATEGORY_WEAPON",
+} as const;
+
+/**
  * Core vehicle classes. Extend freely via the registry; this seed is not
  * exhaustive - edit here or register from a module.
  */
@@ -237,6 +251,9 @@ const TALENTS = {
 export const bodyLocations = new EntryRegistry(BODY_LOCATIONS);
 export const qualities = new EntryRegistry(QUALITIES);
 export const protectionTypes = new EntryRegistry(PROTECTION_TYPES);
+export const battlesuitSystemCategories = new EntryRegistry(
+	BATTLESUIT_SYSTEM_CATEGORIES,
+);
 export const vehicleClasses = new EntryRegistry(VEHICLE_CLASSES);
 export const weaponFamilies = new EntryRegistry(WEAPON_FAMILIES);
 export const vehicleFacings = new EntryRegistry(VEHICLE_FACINGS);
@@ -350,6 +367,7 @@ type RogueTraderRegistries = {
 	bodyLocations: EntryRegistry;
 	qualities: EntryRegistry;
 	protectionTypes: EntryRegistry;
+	battlesuitSystemCategories: EntryRegistry;
 	vehicleClasses: EntryRegistry;
 	vehicleFacings: EntryRegistry;
 	vehicleTraits: EntryRegistry;
@@ -380,6 +398,7 @@ export function attachRegistriesToConfig() {
 	rt.bodyLocations = bodyLocations;
 	rt.qualities = qualities;
 	rt.protectionTypes = protectionTypes;
+	rt.battlesuitSystemCategories = battlesuitSystemCategories;
 	rt.vehicleClasses = vehicleClasses;
 	rt.vehicleFacings = vehicleFacings;
 	rt.vehicleTraits = vehicleTraits;

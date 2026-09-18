@@ -157,6 +157,12 @@ const SOURCE_TOP_LABELS: Readonly<Record<string, string | null>> = {
 	criticals: "Critical Hits",
 	creationtables: "Creation Tables",
 	psychicphenomena: "Psychic Phenomena",
+	// Tau units authoring file (bead o2gx). The npcs pack groups by NPC_GROUPS
+	// keyed on the entry NAME, which only covers npcs.yaml; entries from another
+	// authoring file in the same pack resolve their group against that file's
+	// stem instead, so without this the drones landed at the pack root (the
+	// loose "Tau * Drone" rows seen in the compendium).
+	"tau-drones": "Tau",
 };
 
 /**

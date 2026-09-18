@@ -103,6 +103,16 @@
           "description"
         ]
       },
+      "battlesuit": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "battlesuit-system": {
+        "htmlFields": [
+          "description"
+        ]
+      },
       "skill": {},
       "talent": {
         "htmlFields": [

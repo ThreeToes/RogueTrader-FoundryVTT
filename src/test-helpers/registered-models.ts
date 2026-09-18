@@ -27,6 +27,11 @@ export const ITEM_MODELS: Record<string, ModelEntry> = {
 	"ranged-weapon": { spec: "../roguetrader/data/item/ranged-weapon", className: "RangedWeapon" },
 	"melee-weapon": { spec: "../roguetrader/data/item/melee-weapon", className: "MeleeWeapon" },
 	armour: { spec: "../roguetrader/data/item/armour", className: "Armour" },
+	battlesuit: { spec: "../roguetrader/data/item/battlesuit", className: "Battlesuit" },
+	"battlesuit-system": {
+		spec: "../roguetrader/data/item/battlesuit-system",
+		className: "BattlesuitSystem",
+	},
 	skill: { spec: "../roguetrader/data/item/skill", className: "Skill" },
 	talent: { spec: "../roguetrader/data/item/talent", className: "Talent" },
 	career: { spec: "../roguetrader/data/item/career", className: "Career" },

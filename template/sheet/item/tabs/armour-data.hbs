@@ -23,8 +23,7 @@
             </div>
         </div>
         <div class="stats-row">
-            <div class="stat protection-type">
-                <label>{{localize "ARMOUR.PROTECTION_TYPE"}}</label>
+            <div class="stat protection-type">                <label>{{localize "ARMOUR.PROTECTION_TYPE"}}</label>
                 {{#if editable}}
                 <select name="system.protectionType">
                     {{selectOptions (config "protectionTypes") selected=source.system.protectionType localize=true}}
@@ -42,6 +41,70 @@
                 {{/if}}
             </div>
         </div>
+        {{#if battlesuit}}
+        {{!-- Tau battlesuit profile block (Tau Character Guide printed p38). --}}
+        <div class="stats-row">
+            <div class="stat hard-points">
+                <label>{{localize "BATTLESUIT.HARD_POINTS"}}</label>
+                {{#if editable}}
+                <input name="system.hardPoints" type="number" min="0" value="{{source.system.hardPoints}}"
+                    data-tooltip="{{localize "BATTLESUIT.HARD_POINTS_HINT"}}" />
+                {{else}}
+                <p class="static-value">{{source.system.hardPoints}}</p>
+                {{/if}}
+            </div>
+            <div class="stat battlesuit-size">
+                <label>{{localize "BATTLESUIT.SIZE"}}</label>
+                {{#if editable}}
+                <input name="system.size" type="text" value="{{source.system.size}}"
+                    data-tooltip="{{localize "BATTLESUIT.SIZE_HINT"}}" />
+                {{else}}
+                <p class="static-value">{{source.system.size}}</p>
+                {{/if}}
+            </div>
+            <div class="stat battlesuit-strength">
+                <label>{{localize "BATTLESUIT.STRENGTH"}}</label>
+                {{#if editable}}
+                <input name="system.strength" type="number" min="0" value="{{source.system.strength}}"
+                    data-tooltip="{{localize "BATTLESUIT.STRENGTH_HINT"}}" />
+                {{else}}
+                <p class="static-value">{{source.system.strength}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "BATTLESUIT.PRIMARY_SYSTEMS"}}</label>
+                {{#if editable}}
+                <input name="system.primarySystems" type="text" value="{{battlesuit.primarySystems}}"
+                    data-tooltip="{{localize "BATTLESUIT.PRIMARY_SYSTEMS_HINT"}}" />
+                {{else}}
+                <p class="static-value">{{battlesuit.primarySystems}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "BATTLESUIT.RECOMMENDED_LOADOUT"}}</label>
+                {{#if editable}}
+                <input name="system.recommendedLoadout" type="text" value="{{battlesuit.recommendedLoadout}}"
+                    data-tooltip="{{localize "BATTLESUIT.RECOMMENDED_LOADOUT_HINT"}}" />
+                {{else}}
+                <p class="static-value">{{battlesuit.recommendedLoadout}}</p>
+                {{/if}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "BATTLESUIT.SPECIAL_RULES"}}</label>
+                {{#if editable}}
+                <textarea name="system.specialRules" rows="3">{{source.system.specialRules}}</textarea>
+                {{else}}
+                <p class="static-value">{{source.system.specialRules}}</p>
+                {{/if}}
+            </div>
+        </div>
+        {{/if}}
         <div class="stats-row">
             <div class="stat craftsmanship">
                 <label>{{localize "GEAR.CRAFTSMANSHIP"}}</label>

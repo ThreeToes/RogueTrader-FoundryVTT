@@ -1,4 +1,19 @@
 export {
+	BATTLESUIT_CRITICAL_TABLE,
+	battlesuitSuffersCritical,
+	CRITICAL_DAMAGE_TYPES,
+	CRITICAL_REGIONS,
+	criticalRegion,
+	criticalSeverity,
+	criticalTableName,
+	MAX_CRITICAL_SEVERITY,
+	repairEffectCount,
+	selectCriticalResult,
+	splitWoundDamage,
+	type CriticalRegion,
+	type CriticalResultRow,
+} from "./criticals";
+export {
 	type DamageOutcome,
 	type DamageRequest,
 	parseDamageFormula,

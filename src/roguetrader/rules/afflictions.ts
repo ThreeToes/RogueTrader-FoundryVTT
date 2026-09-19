@@ -17,15 +17,10 @@
  * "1d10" and therefore ADDED, the opposite of the book — do not regress.)
  */
 
-import type { EffectData } from "../data/item/effects";
+import type { ActorView } from "../domain/model/actor";
+import { collectEffects } from "../domain/effects";
+import type { EffectData } from "../domain/model/effect";
 import { type MutationRow, rollRavagedBody } from "../data/item/mutation-roll";
-
-/** Minimal shape of an owned affliction Item (for grant resolution). */
-export interface GrantSourceLike {
-	name?: string;
-	type?: string;
-	system?: { effects?: EffectData[] };
-}
 
 /** One trait/talent/skill grant carried by an owned affliction. */
 export interface ResolvedGrant {
@@ -47,25 +42,27 @@ export interface ResolvedGrant {
  * resolves the named pack. Duplicates (same pack+name+benefit) collapse so a
  * trait granted by two mutations does not double-chip.
  */
-export function resolveAfflictionGrants(
-	items: GrantSourceLike[] | undefined,
-): ResolvedGrant[] {
+export function resolveAfflictionGrants(view: ActorView): ResolvedGrant[] {
 	const seen = new Set<string>();
 	const out: ResolvedGrant[] = [];
-	for (const item of items ?? []) {
-		if (item.type !== "mutation" && item.type !== "madnessentry") continue;
-		for (const effect of item.system?.effects ?? []) {
-			if (effect.kind !== "grants-item") continue;
-			const target = (effect.testKey ?? "").trim();
-			const [pack, ...rest] = target.split(":");
-			const name = rest.join(":").trim();
-			if (!pack || !name) continue;
-			const benefit = (effect.label ?? "").trim();
-			const key = `${pack}:${name}:${benefit}`;
-			if (seen.has(key)) continue;
-			seen.add(key);
-			out.push({ pack, name, benefit, source: item.name ?? "" });
-		}
+	for (const hit of collectEffects(view, {
+		channel: "acquisition",
+		itemWhere: (item) =>
+			item.type === "mutation" || item.type === "madnessentry",
+	})) {
+		if (hit.spec.kind !== "grants-item") continue;
+		const payload = hit.spec.read?.(hit.item, hit.effect, {
+			channel: "acquisition",
+		}) as { target: string; benefit: string } | null;
+		if (!payload) continue;
+		const [pack, ...rest] = payload.target.split(":");
+		const name = rest.join(":").trim();
+		if (!pack || !name) continue;
+		const benefit = payload.benefit;
+		const key = `${pack}:${name}:${benefit}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push({ pack, name, benefit, source: hit.item.name });
 	}
 	return out;
 }

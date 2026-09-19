@@ -33,7 +33,7 @@
                     <span class="critical-roll">{{localize "CRITICAL.ROLL"}} {{effect.roll}}</span>
                     <span class="location-label">{{localize effect.locationLabelKey}}</span>
                     <span class="critical-severity">{{localize "CRITICAL.SEVERITY"}} {{effect.severity}}</span>
-                    <p class="critical-text">{{effect.text}}</p>
+                    <p class="critical-text">{{#if effect.manual}}{{localize "CRITICAL.APPLY_MANUALLY"}}{{else}}{{effect.text}}{{/if}}</p>
                 </li>
                 {{/each}}
             </ul>

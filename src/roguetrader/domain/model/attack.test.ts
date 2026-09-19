@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { attackProfileOf } from "./attack-profile";
+import { attackProfileOf } from "./attack";
 
 // Bead kam1: weapons and printed mutation attacks resolve to ONE profile shape
 // so the to-hit handler and damage pipeline do not fork.
+// Moved from rules/attack-profile.test.ts in phase 1.
 
 const melee = {
 	id: "w1",
@@ -108,8 +109,12 @@ describe("attackProfileOf (bead kam1)", () => {
 	});
 
 	test("non-attack item types have no profile", () => {
-		expect(attackProfileOf({ name: "Backpack", type: "gear", system: {} })).toBeNull();
-		expect(attackProfileOf({ name: "Flak", type: "armour", system: {} })).toBeNull();
+		expect(
+			attackProfileOf({ name: "Backpack", type: "gear", system: {} }),
+		).toBeNull();
+		expect(
+			attackProfileOf({ name: "Flak", type: "armour", system: {} }),
+		).toBeNull();
 	});
 
 	test("nullish input is safe", () => {

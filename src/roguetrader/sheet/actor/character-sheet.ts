@@ -11,6 +11,7 @@ import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { derivedRank, totalSpent } from "../../rules/advancement";
 import { careers, equipStates, sorceryRanks } from "../../registry";
 import { collectSorceryRank } from "../../rules/talent-effects";
+import { actorView } from "../../infrastructure/foundry/actor-view";
 import { criticalSheetContext } from "../../rules/criticals";
 import { rollBattlesuitRepair } from "../../rules/battlesuit-repair";
 import { effectiveSorceryRank } from "../../rules/casting";
@@ -636,7 +637,7 @@ export class CharacterSheet extends RtActorSheet {
 				system.psyker === true ||
 				(system.psyRating ?? 0) >= 1 ||
 				(system.sorceryRank ?? "") !== "" ||
-				collectSorceryRank(this.actor) > 0 ||
+				collectSorceryRank(actorView(this.actor)) > 0 ||
 				hasPowers
 			)
 		) {
@@ -819,7 +820,7 @@ export class CharacterSheet extends RtActorSheet {
 		// Sorcery (epic 0hap): the rank select + the Table 6-1 sanctioned
 		// toggle. Owned Sorcery talents win; the field is the manual fallback.
 		const sorceryRank = effectiveSorceryRank(
-			collectSorceryRank(this.actor),
+			collectSorceryRank(actorView(this.actor)),
 			system.sorceryRank,
 		);
 		context.sorceryRank = sorceryRank;
@@ -1117,11 +1118,7 @@ export class CharacterSheet extends RtActorSheet {
 		// disorders/malignancies/mutations ("traits:Fear", "talents:Iron Jaw").
 		// The chip copies the pack item on click; nothing is auto-granted.
 		context.afflictionGrants = resolveAfflictionGrants(
-			this.actor.items.map((item) => ({
-				name: item.name ?? "",
-				type: item.type,
-				system: item.system as never,
-			})),
+			actorView(this.actor),
 		).map((grant) => ({
 			...grant,
 			label: grant.benefit ? `${grant.name} ${grant.benefit}` : grant.name,
@@ -1163,13 +1160,7 @@ export class CharacterSheet extends RtActorSheet {
 		context.derived = {
 			...system.movement(),
 			initiative: system.initiativeBonus(),
-			woundsMax: woundsMax(
-				system,
-				this.actor.items.map((item) => ({
-					type: item.type,
-					system: item.system as never,
-				})),
-			),
+			woundsMax: woundsMax(actorView(this.actor)),
 			fatigueMax: fatigueThreshold(system),
 		};
 

@@ -1,12 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import type { MutationRow } from "../data/item/mutation-roll";
+import { buildActorView } from "../domain/model/build";
 import { afflictionProcedures } from "../registry";
 import {
 	afflictionProcedureNames,
 	applyAfflictionProcedure,
-	resolveAfflictionGrants,
+	resolveAfflictionGrants as resolveAfflictionGrantsView,
 	resolveEffectValues,
 } from "./afflictions";
+
+// Phase 2: the resolver takes an ActorView. Wrapper keeps the fixtures readable.
+const resolveAfflictionGrants = (items: unknown[]) =>
+	resolveAfflictionGrantsView(buildActorView({ items }));
 
 describe("resolveEffectValues (epic nt8k)", () => {
 	test("rolls characteristic-modifier dice once into value", async () => {

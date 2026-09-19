@@ -873,6 +873,7 @@
   "CRITICAL.EXCESS": "Obrażenia krytyczne",
   "CRITICAL.BATTLESUIT_OVERRIDE": "Pancerz bojowy pochłonął cios: Tabela 1-5 decyduje, co się psuje, zamiast rany krytycznej.",
   "CRITICAL.TABLE_MISSING": "Tabela krytyków niedostępna",
+  "CRITICAL.APPLY_MANUALLY": "Zawartość tabeli niezainstalowana — zastosuj efekt ręcznie.",
   "CRITICAL.SOURCE_CORE": "Tabela trafień krytycznych",
   "CRITICAL.SOURCE_BATTLESUIT": "Pancerz bojowy (Tabela 1-5)",
   "CRITICAL.ROLL": "Rzut",

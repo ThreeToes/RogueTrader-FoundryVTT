@@ -849,6 +849,7 @@
   "CRITICAL.EXCESS": "Dégâts critiques",
   "CRITICAL.BATTLESUIT_OVERRIDE": "L'exo-armure a absorbé le coup : la Table 1-5 décide de ce qui casse au lieu d'une blessure critique.",
   "CRITICAL.TABLE_MISSING": "Table des critiques indisponible",
+  "CRITICAL.APPLY_MANUALLY": "Contenu de table non installé — appliquez l'effet manuellement.",
   "CRITICAL.SOURCE_CORE": "Table des coups critiques",
   "CRITICAL.SOURCE_BATTLESUIT": "Exo-armure (Table 1-5)",
   "CRITICAL.ROLL": "Jet",

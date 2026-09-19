@@ -31,6 +31,8 @@ import {
 	splitWoundDamage,
 } from "../../rules-engine/src/index";
 import { postCard } from "./chat-flags";
+import type { ContentPort } from "../application/ports";
+import { foundryContent } from "../infrastructure/foundry/content";
 
 /** Compendium pack holding the critical RollTables (bead j9pg consolidation). */
 export const CRITICAL_ROLLTABLES_PACK = "rogue-trader.rolltables";
@@ -44,6 +46,8 @@ export interface CriticalEffectRow {
 	roll: number;
 	source: "core" | "battlesuit";
 	text: string;
+	/** True when the table content was not installed; apply manually. */
+	manual?: boolean;
 }
 
 /** What resolving one hit produced. */
@@ -58,6 +62,8 @@ export interface CriticalOutcome {
 	overrideUsed: boolean;
 	/** Set when the tables were unavailable — the damage still applied. */
 	warning?: string;
+	/** True when the critical was recorded without its table text (manual). */
+	manual?: boolean;
 }
 
 interface ItemLike {
@@ -151,23 +157,13 @@ export function totalCriticalDamage(actor: unknown): number {
 /** Find a RollTable in the rolltables pack by name. */
 export async function findCriticalTable(
 	name: string,
+	content: ContentPort = foundryContent,
 ): Promise<TableLike | undefined> {
-	const packs = (
-		game as unknown as {
-			packs?: {
-				get: (id: string) => { getDocuments: () => Promise<unknown[]> } | undefined;
-			};
-		}
-	).packs;
-	const pack = packs?.get(CRITICAL_ROLLTABLES_PACK);
-	if (!pack) {
-		console.warn(
-			`rogue-trader | criticals: compendium pack ${CRITICAL_ROLLTABLES_PACK} not installed`,
-		);
-		return undefined;
-	}
-	const docs = (await pack.getDocuments()) as TableLike[];
-	return docs.find((doc) => doc.name === name);
+	const table = await content.find(CRITICAL_ROLLTABLES_PACK, name);
+	// Content-optional: a missing pack is NOT an error. The caller records the
+	// critical from the kernel's severity/location and asks the player to apply
+	// the table effect manually.
+	return table ? (table as TableLike) : undefined;
 }
 
 /** Roll 1d100 (or the table's own formula) through the Foundry Roll API. */
@@ -205,6 +201,8 @@ export async function resolveCritical(outcome: {
 	/** Injectable dice for tests. */
 	overrideRoll?: number;
 	tableRoll?: number;
+	/** Content provider (defaults to the Foundry packs). */
+	content?: ContentPort;
 }): Promise<CriticalOutcome> {
 	const actor = asActor(outcome.actor);
 	const excess = Math.max(0, outcome.excess);
@@ -237,9 +235,23 @@ export async function resolveCritical(outcome: {
 		? BATTLESUIT_CRITICAL_TABLE
 		: criticalTableName(outcome.damageType, location);
 
-	const table = await findCriticalTable(tableName);
+	const table = await findCriticalTable(tableName, outcome.content);
 	if (!table) {
+		// Content-optional fallback: the kernel still knows the severity and
+		// location, so record the critical and let the player apply the table
+		// effect manually. Never a silent no-op.
 		result.warning = tableName;
+		result.manual = true;
+		result.effects.push({
+			id: effectId(),
+			location,
+			severity,
+			table: tableName,
+			roll: 0,
+			source: useBattlesuitTable ? "battlesuit" : "core",
+			text: "",
+			manual: true,
+		});
 		return result;
 	}
 	const roll = outcome.tableRoll ?? (await rollDie(table.formula ?? "1d10"));
@@ -275,6 +287,8 @@ export async function applyDamageWithCriticals(outcome: {
 	location: string;
 	overrideRoll?: number;
 	tableRoll?: number;
+	/** Content provider (defaults to the Foundry packs). */
+	content?: ContentPort;
 }): Promise<CriticalOutcome> {
 	const actor = asActor(outcome.actor);
 	const supportsCriticals = actor.system?.criticals !== undefined &&
@@ -294,6 +308,7 @@ export async function applyDamageWithCriticals(outcome: {
 		excess,
 		overrideRoll: outcome.overrideRoll,
 		tableRoll: outcome.tableRoll,
+		content: outcome.content,
 	});
 	resolved.woundsApplied = applied;
 

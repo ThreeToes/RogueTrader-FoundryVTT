@@ -1,11 +1,27 @@
 import { describe, expect, test } from "bun:test";
+import type { Modifier } from "../../rules-engine/src/modifier";
+import { buildActorView, type LooseActor } from "../domain/model/build";
 import {
 	breakdown,
-	collectConditionKeys,
-	collectTestModifiers,
+	collectConditionKeys as collectConditionKeysView,
+	collectTestModifiers as collectTestModifiersView,
 	mergeModifiers,
 	testContributors,
+	type TestModifierContext,
 } from "./funnel";
+
+// Phase 1/2: the collectors take an ActorView. These thin wrappers keep the
+// fixtures below readable (loose document-shaped objects) while still
+// exercising the read-model boundary end to end.
+const collectTestModifiers = (
+	actor: LooseActor,
+	context: TestModifierContext,
+	extra: Modifier[] = [],
+) => collectTestModifiersView(buildActorView(actor), context, extra);
+const collectConditionKeys = (
+	actor: LooseActor,
+	context: TestModifierContext,
+) => collectConditionKeysView(buildActorView(actor), context);
 
 describe("mergeModifiers", () => {
 	test("deduplicates by id, first wins", () => {
@@ -107,7 +123,7 @@ describe("contributor registry", () => {
 			},
 		]);
 		const mods = testContributors.run(
-			{},
+			buildActorView({}),
 			{ kind: "characteristic", key: "ws" },
 		);
 		expect(mods).toHaveLength(1);

@@ -922,6 +922,7 @@
   "CRITICAL.EXCESS": "Critical Damage",
   "CRITICAL.BATTLESUIT_OVERRIDE": "The battlesuit absorbed the hit: Table 1-5 decides what breaks instead of a critical wound.",
   "CRITICAL.TABLE_MISSING": "Critical table unavailable",
+  "CRITICAL.APPLY_MANUALLY": "Table content not installed — apply the effect manually.",
   "CRITICAL.SOURCE_CORE": "Critical Hit table",
   "CRITICAL.SOURCE_BATTLESUIT": "Battlesuit (Table 1-5)",
   "CRITICAL.ROLL": "Roll",

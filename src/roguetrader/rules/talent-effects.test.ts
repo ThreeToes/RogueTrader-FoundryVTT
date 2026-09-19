@@ -1,9 +1,29 @@
 import { describe, expect, test } from "bun:test";
+import { buildActorView, type LooseActor } from "../domain/model/build";
 import {
-	collectSorceryRank,
-	collectTalentDamageEffects,
+	applyTearing,
+	collectRollMechanicEffects as collectRollMechanicEffectsView,
+	collectSorceryRank as collectSorceryRankView,
+	collectTalentDamageEffects as collectTalentDamageEffectsView,
+	collectTargetTraitDamageEffects as collectTargetTraitDamageEffectsView,
+	parseSpecialMechanics,
 	talentEffectHandlers,
 } from "./talent-effects";
+
+// Phase 2: the collectors take an ActorView. These wrappers keep the fixtures
+// below readable while still exercising the read-model boundary.
+const collectTalentDamageEffects = (
+	actor: LooseActor,
+	opts: Parameters<typeof collectTalentDamageEffectsView>[1],
+) => collectTalentDamageEffectsView(buildActorView(actor), opts);
+const collectRollMechanicEffects = (
+	actor: LooseActor,
+	opts: Parameters<typeof collectRollMechanicEffectsView>[1],
+) => collectRollMechanicEffectsView(buildActorView(actor), opts);
+const collectTargetTraitDamageEffects = (actor: LooseActor) =>
+	collectTargetTraitDamageEffectsView(buildActorView(actor));
+const collectSorceryRank = (actor: LooseActor) =>
+	collectSorceryRankView(buildActorView(actor));
 
 // Bead fjw: talent damage kinds. Data shapes follow the Table 4-1 benefit
 // text (VERIFY prose p95-99):
@@ -170,8 +190,8 @@ describe("weapon-scoped damage effects (bead 2k5)", () => {
 		id: "weapon-1",
 		name: "Chainsword",
 		type: "melee-weapon",
-		equipState,
 		system: {
+			...(equipState ? { equipState } : {}),
 			effects: [{ kind: "damage-flat", value: 3, label: "Serrated" }],
 		},
 	});
@@ -179,15 +199,19 @@ describe("weapon-scoped damage effects (bead 2k5)", () => {
 		id: "weapon-2",
 		name: "Lasgun",
 		type: "ranged-weapon",
-		equipState: "carried",
-		system: { effects: [{ kind: "damage-flat", value: 99, label: "Not This One" }] },
+		system: {
+			equipState: "carried",
+			effects: [{ kind: "damage-flat", value: 99, label: "Not This One" }],
+		},
 	};
 	const inertArmour = {
 		id: "armour-1",
 		name: "Flak",
 		type: "armour",
-		equipState: "worn",
-		system: { effects: [{ kind: "damage-flat", value: 50, label: "No Basis" }] },
+		system: {
+			equipState: "worn",
+			effects: [{ kind: "damage-flat", value: 50, label: "No Basis" }],
+		},
 	};
 
 	test("the attacking weapon's own damage effects apply", () => {
@@ -240,7 +264,6 @@ describe("weapon-scoped damage effects (bead 2k5)", () => {
 // damage taken, failure = 1d10 Impact no armour/TB; Blast (X) = everyone
 // within X metres also hit.
 // ---------------------------------------------------------------------------
-import { applyTearing, collectRollMechanicEffects, parseSpecialMechanics } from "./talent-effects";
 
 describe("parseSpecialMechanics", () => {
 	test("parses tearing/toxic/blast-N special strings", () => {
@@ -338,9 +361,6 @@ describe("roll-mechanic kinds are discoverable (bead gci0)", () => {
 // ---------------------------------------------------------------------------
 // Target-side trait damage machinery (bead zyv1).
 // ---------------------------------------------------------------------------
-import {
-	collectTargetTraitDamageEffects,
-} from "./talent-effects";
 
 describe("collectTargetTraitDamageEffects (bead zyv1)", () => {
 	const trait = (name: string, effects: unknown[]) => ({

@@ -7,8 +7,9 @@
  * kernel. Functions NEVER mutate documents - callers render or decide.
  */
 
-import { talentEffectHandlers } from "./talent-effects";
-import { effectsAreLive, type EffectData } from "../data/item/effects";
+import type { ActorView } from "../domain/model/actor";
+import { collectEffects } from "../domain/effects";
+import type { EffectData } from "../domain/model/effect";
 
 /** Minimal shape of an owned item whose effects feed derived values. */
 export interface OwnedItemLike {
@@ -44,22 +45,14 @@ export interface CharacterSystemLike {
  * Dark-Heresy-style and contradicts every Home World section. Owned items
  * contribute only when live (equipped).
  */
-export function woundsMax(
-	character: CharacterSystemLike,
-	items: OwnedItemLike[] = [],
-): number {
-	const base = Math.max(0, character.wounds?.max ?? 0);
-	const levels = items.reduce((total, item) => {
-		if (!effectsAreLive(item.type, item.system?.equipState)) return total;
-		for (const effect of item.system?.effects ?? []) {
-			if (effect.kind !== "wounds-max") continue;
-			const results = talentEffectHandlers.run({}, item, effect);
-			for (const result of results) {
-				if (typeof result === "number") total += result;
-			}
-		}
-		return total;
-	}, 0);
+export function woundsMax(view: ActorView): number {
+	const base = Math.max(0, view.system.wounds?.max ?? 0);
+	let levels = 0;
+	for (const hit of collectEffects(view, { channel: "derived" })) {
+		if (hit.spec.kind !== "wounds-max") continue;
+		const value = hit.spec.read?.(hit.item, hit.effect, { channel: "derived" });
+		if (typeof value === "number") levels += value;
+	}
 	return base + levels;
 }
 

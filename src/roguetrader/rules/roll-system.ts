@@ -35,6 +35,12 @@ import {
 	shipCritical,
 } from "../../rules-engine/src/index";
 import { systemOf } from "../data/accessors";
+import type { ActorView } from "../domain/model/actor";
+import { actorView } from "../infrastructure/foundry/actor-view";
+import {
+	foundryContent,
+	ROLLTABLES_PACK,
+} from "../infrastructure/foundry/content";
 import { crewQualityEffects } from "./ship-crew";
 import {
 	effectivePsyRating,
@@ -72,7 +78,7 @@ import {
 	shockOutcome,
 } from "./fear";
 import { equipStateOf } from "../data/accessors";
-import { attackProfileOf } from "./attack-profile";
+import { attackProfileOf } from "../domain/model/attack";
 import { corruptionExpressions, type EffectData } from "../data/item/effects";
 import { postCard, type RtMessageFlags } from "./chat-flags";
 import { TestDialog } from "./test-dialog";
@@ -295,7 +301,7 @@ export interface TestDialogResultLike {
  * doubling.
  */
 export function dialogContributors(
-	actor: Actor,
+	view: ActorView,
 	kind: TestKind,
 	key: string,
 	modifiers: Modifier[],
@@ -304,7 +310,7 @@ export function dialogContributors(
 ): Modifier[] {
 	return mergeModifiers(
 		modifiers,
-		collectTestModifiers(actor, { kind, key, weapon, skillName }),
+		collectTestModifiers(view, { kind, key, weapon, skillName }),
 	);
 }
 
@@ -313,13 +319,13 @@ export function dialogContributors(
  * resolveTest -> roll card. Used by every kind.
  */
 export async function runTest(
-	actor: Actor,
+	view: ActorView,
 	prepared: PreparedRoll,
 	modifiers: Modifier[],
 	context: RollContext,
 ): Promise<{ outcome: TestOutcome; messageId: string | null; target: number }> {
 	const collected = collectTestModifiers(
-		actor,
+		view,
 		{
 			kind: prepared.testKind,
 			key: prepared.testKey,
@@ -356,7 +362,7 @@ export async function runTest(
 		: game.i18n.localize("ROLL.FAILURE");
 
 	const message = await postCard(
-		actor,
+		view,
 		"systems/rogue-trader/template/chat/roll.hbs",
 		{
 			title: prepared.title,
@@ -643,7 +649,7 @@ export const psychicHandler: RollHandler<"psychic"> = {
 			// Owned Sorcerer/Master Sorcerer talents win; the manual field is
 			// the GM/homebrew fallback (epic 0hap).
 			sorceryRank: effectiveSorceryRank(
-				collectSorceryRank(actor),
+				collectSorceryRank(actorView(actor)),
 				system.sorceryRank,
 			),
 			sanctioned: system.sanctioned,
@@ -1318,7 +1324,7 @@ export const fearHandler: RollHandler<"fear"> = {
 			fearReroll(request.actor)
 		) {
 			const reroll = await runTest(
-				request.actor,
+				actorView(request.actor),
 				{
 					...prepared,
 					title: `${prepared.title} — ${game.i18n.localize("FEAR.REROLL_NOTE")}`,
@@ -1482,6 +1488,7 @@ export async function rollSnapOut(
 		);
 		return;
 	}
+	const view = actorView(actor);
 	const modifiers = [
 		...(options.modifiers ?? []),
 	];
@@ -1496,17 +1503,17 @@ export async function rollSnapOut(
 			key: "wp",
 			weapon: null,
 		};
-		const conditions = collectConditionKeys(actor, conditionScope);
+		const conditions = collectConditionKeys(view, conditionScope);
 		const result = await TestDialog.show({
 			title,
 			baseTarget: characteristic.value,
-			contributors: dialogContributors(actor, "characteristic", "wp", modifiers, null),
+			contributors: dialogContributors(view, "characteristic", "wp", modifiers, null),
 			...conditions.length > 0
 				? {
 						conditions,
 						collectForConditions: (flags: Record<string, boolean>) =>
 							collectTestModifiers(
-								actor,
+								view,
 								{ ...conditionScope, flags },
 								modifiers,
 							),
@@ -1518,7 +1525,7 @@ export async function rollSnapOut(
 		if (result.flags) finalFlags = { ...finalFlags, ...result.flags };
 	}
 	const { outcome } = await runTest(
-		actor,
+		view,
 		{
 			title,
 			baseTarget: characteristic.value,
@@ -1564,6 +1571,7 @@ export async function performRoll(request: RollRequest): Promise<void> {
 	const handler = rollHandlers[request.kind];
 	const prepared = await handler.prepare(request);
 	if (!prepared) return;
+	const view = actorView(request.actor);
 
 	let dialog: TestDialogResultLike | null = null;
 	let modifiers = prepared.initialModifiers;
@@ -1578,7 +1586,7 @@ export async function performRoll(request: RollRequest): Promise<void> {
 			skillName: prepared.context.skillName,
 		};
 		const conditions = collectConditionKeys(
-			request.actor,
+			view,
 			conditionScope,
 		).filter(
 			(key) => !(prepared.handledConditionFlags ?? []).includes(key),
@@ -1587,7 +1595,7 @@ export async function performRoll(request: RollRequest): Promise<void> {
 			title: prepared.title,
 			baseTarget: prepared.baseTarget,
 			contributors: dialogContributors(
-				request.actor,
+				view,
 				prepared.testKind,
 				prepared.testKey,
 				modifiers,
@@ -1600,7 +1608,7 @@ export async function performRoll(request: RollRequest): Promise<void> {
 						conditions,
 						collectForConditions: (flags: Record<string, boolean>) =>
 							collectTestModifiers(
-								request.actor,
+								view,
 								{ ...conditionScope, flags },
 								modifiers,
 							),
@@ -1628,7 +1636,7 @@ export async function performRoll(request: RollRequest): Promise<void> {
 		: baseContext;
 
 	const { outcome, messageId, target } = await runTest(
-		request.actor,
+		view,
 		prepared,
 		modifiers,
 		context,
@@ -1676,7 +1684,7 @@ export async function rollSkillOutcome(
 	});
 	if (!prepared) return null;
 	const { outcome } = await runTest(
-		actor,
+		actorView(actor),
 		prepared,
 		[...prepared.initialModifiers, ...modifiers],
 		{ skillName: prepared.context.skillName },
@@ -1886,18 +1894,12 @@ export async function rollPhenomena(
 	const total = Math.min(100, raw + modifier);
 	const tableName = phenomenaTableName(total);
 
-	const pack = game.packs?.get("rogue-trader.rolltables");
-	if (!pack) {
-		console.warn("rogue-trader | rolltables pack missing");
-		ui.notifications?.warn(game.i18n.localize("PSYCHIC_POWER.NO_TABLE"));
-		return;
-	}
-	const tables = (await pack.getDocuments()) as unknown as Array<{
-		name?: string;
-		results?: Array<{ text?: string; range?: [number, number] }>;
-	}>;
-	const table = tables.find((t) => t.name === tableName);
-	const result = table?.results?.find(
+	// Content-optional: the roll and its total are ALWAYS posted; the table text
+	// is looked up when the compendium is installed, otherwise the card says to
+	// apply the result manually. A missing pack never posts nothing.
+	const table = await foundryContent.find(ROLLTABLES_PACK, tableName);
+	const results = table?.results ? Array.from(table.results) : [];
+	const result = results.find(
 		(r) => total >= (r.range?.[0] ?? 0) && total <= (r.range?.[1] ?? 0),
 	);
 	const text = result?.text ?? game.i18n.localize("PSYCHIC_POWER.TABLE_MISS");

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { buildActorView } from "../domain/model/build";
 import {
 	corruptionThreshold,
 	fatigueThreshold,
@@ -20,21 +21,26 @@ const char = {
 describe("derived character values", () => {
 	describe("woundsMax", () => {
 		test("stored base + Sound Constitution levels (bead hbu: book formula)", () => {
-			expect(woundsMax(char)).toBe(14); // stored base (2xTB + 1d5+2)
-			const withTalent = woundsMax(char, [
-				{
-					type: "talent",
-					name: "Sound Constitution",
-					system: { effects: [{ kind: "wounds-max" }, { kind: "wounds-max" }] },
-				},
-				{
-					type: "talent",
-					name: "Unrelated",
-					system: {
-						effects: [{ kind: "test-modifier", testKey: "bs", value: 5 }],
-					},
-				},
-			]);
+			expect(woundsMax(buildActorView({ system: char }))).toBe(14); // stored base (2xTB + 1d5+2)
+			const withTalent = woundsMax(
+				buildActorView({
+					system: char,
+					items: [
+						{
+							type: "talent",
+							name: "Sound Constitution",
+							system: { effects: [{ kind: "wounds-max" }, { kind: "wounds-max" }] },
+						},
+						{
+							type: "talent",
+							name: "Unrelated",
+							system: {
+								effects: [{ kind: "test-modifier", testKey: "bs", value: 5 }],
+							},
+						},
+					],
+				}),
+			);
 			expect(withTalent).toBe(16);
 		});
 
@@ -48,8 +54,12 @@ describe("derived character values", () => {
 					effects: [{ kind: "wounds-max", value: 2 }],
 				},
 			});
-			expect(woundsMax(char, [gearItem("carried")])).toBe(16);
-			expect(woundsMax(char, [gearItem("stowed")])).toBe(14);
+			expect(
+				woundsMax(buildActorView({ system: char, items: [gearItem("carried")] })),
+			).toBe(16);
+			expect(
+				woundsMax(buildActorView({ system: char, items: [gearItem("stowed")] })),
+			).toBe(14);
 		});
 	});
 

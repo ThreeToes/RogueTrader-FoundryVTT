@@ -11,23 +11,9 @@
  */
 
 import type { Modifier } from "../../rules-engine/src/modifier";
+import type { ActorView } from "../domain/model/actor";
+import { collectEffects } from "../domain/effects";
 import { isWeaponType } from "../data/accessors";
-
-interface ItemLike {
-	name?: string;
-	id?: string;
-	type?: string;
-	system?: {
-		effects?: Array<{
-			kind?: string;
-			testKey?: string;
-			value?: number;
-			dice?: string;
-			label?: string;
-			condition?: string;
-		}>;
-	};
-}
 
 export interface TalentEffectLike {
 	kind?: string;
@@ -182,16 +168,15 @@ talentEffectHandlers.register("grants-technique", (_actor, _talent, effect) => {
  * 1 = Sorcerer (half Int-Bonus Psy Rating), 2 = Master Sorcerer (full).
  * `casting.ts` combines this with the manual actor field. Pure.
  */
-export function collectSorceryRank(actor: unknown): number {
+export function collectSorceryRank(view: ActorView): number {
 	let rank = 0;
-	const items = (actor as { items?: ItemLike[] }).items ?? [];
-	for (const item of items) {
-		if (item.type !== "talent") continue;
-		for (const effect of item.system?.effects ?? []) {
-			if (effect.kind !== "sorcery-rank") continue;
-			const value = Number(effect.value ?? 0);
-			if (Number.isFinite(value)) rank = Math.max(rank, value);
-		}
+	for (const hit of collectEffects(view, {
+		channel: "derived",
+		itemWhere: (item) => item.type === "talent",
+	})) {
+		if (hit.spec.kind !== "sorcery-rank") continue;
+		const value = hit.spec.read?.(hit.item, hit.effect, { channel: "derived" });
+		if (typeof value === "number") rank = Math.max(rank, value);
 	}
 	return rank;
 }
@@ -237,7 +222,7 @@ export function parseSpecialMechanics(special: string[] | undefined): RollMechan
  * Pure; the adapter turns the result into dice rolls and card notes.
  */
 export function collectRollMechanicEffects(
-	actor: unknown,
+	view: ActorView,
 	opts: {
 		weaponId?: string;
 		attackType: "melee-weapon" | "ranged-weapon";
@@ -251,42 +236,38 @@ export function collectRollMechanicEffects(
 	},
 ): RollMechanics {
 	const out: RollMechanics = { tearing: false, toxic: false, blast: null };
-	if (opts.special?.length) {
-		const parsed = parseSpecialMechanics(opts.special);
+	const absorb = (parsed: RollMechanics) => {
 		out.tearing ||= parsed.tearing;
 		out.toxic ||= parsed.toxic;
 		if (parsed.blast !== null) out.blast = Math.max(out.blast ?? 0, parsed.blast);
-	}
-	const items = (actor as { items?: ItemLike[] }).items ?? [];
-	for (const item of items) {
-		const isTalent = item.type === "talent";
-		const isWeapon =
-			opts.weaponId !== undefined &&
+	};
+	if (opts.special?.length) absorb(parseSpecialMechanics(opts.special));
+	const itemWhere = (item: { type: string; id: string }) =>
+		item.type === "talent" ||
+		(opts.weaponId !== undefined &&
 			item.id === opts.weaponId &&
-			isWeaponType(item.type);
-		if (!isTalent && !isWeapon) continue;
-		const special = (
-			item.system as unknown as { special?: string[] } | undefined
-		)?.special;
-		if (isWeapon && special) {
-			const parsed = parseSpecialMechanics(special);
-			out.tearing ||= parsed.tearing;
-			out.toxic ||= parsed.toxic;
-			if (parsed.blast !== null) out.blast = Math.max(out.blast ?? 0, parsed.blast);
-		}
-		for (const effect of item.system?.effects ?? []) {
-			const kind = effect.kind ?? "";
-			if (kind !== "tearing" && kind !== "toxic" && kind !== "blast") continue;
-			if (kind === "tearing") out.tearing = true;
-			else if (kind === "toxic") out.toxic = true;
-			else {
-				const rating = Number(effect.value ?? 0);
-				if (Number.isFinite(rating)) {
-					out.blast = Math.max(out.blast ?? 0, rating);
-				}
+			isWeaponType(item.type));
+	for (const hit of collectEffects(view, {
+		channel: "roll-mechanic",
+		weaponId: opts.weaponId,
+		itemWhere,
+	})) {
+		if (hit.spec.kind === "tearing") out.tearing = true;
+		else if (hit.spec.kind === "toxic") out.toxic = true;
+		else if (hit.spec.kind === "blast") {
+			const rating = hit.spec.read?.(hit.item, hit.effect, {
+				channel: "roll-mechanic",
+			});
+			if (typeof rating === "number") {
+				out.blast = Math.max(out.blast ?? 0, rating);
 			}
 		}
 	}
+	const weapon =
+		opts.weaponId !== undefined
+			? view.items.find((item) => item.id === opts.weaponId)
+			: undefined;
+	if (weapon?.special.length) absorb(parseSpecialMechanics([...weapon.special]));
 	return out;
 }
 
@@ -320,15 +301,10 @@ export interface TargetTraitDamageCollection {
  * double-count — max wins. Never below 1 (natural).
  */
 export function targetToughnessMultiplier(
-	target: unknown,
+	view: ActorView,
 	collected: TargetTraitDamageCollection,
 ): number {
-	const unnatural =
-		(
-			target as {
-				system?: { characteristics?: { t?: { unnatural?: number } } };
-			}
-		).system?.characteristics?.t?.unnatural ?? 1;
+	const unnatural = view.system.characteristics?.t?.unnatural ?? 1;
 	return Math.max(1, unnatural, collected.tbMultiplier ?? 1);
 }
 
@@ -338,32 +314,25 @@ export function targetToughnessMultiplier(
  * keeps the rows visible in the damage-card breakdown.
  */
 export function collectTargetTraitDamageEffects(
-	target: unknown,
+	view: ActorView,
 ): TargetTraitDamageCollection {
 	const out: TargetTraitDamageCollection = { tbMultiplier: null, reduction: [] };
-	const items = (target as { items?: ItemLike[] }).items;
-	if (!items) return out;
-	for (const item of items) {
-		if (item.type !== "trait") continue;
-		for (const effect of item.system?.effects ?? []) {
-			const value = Number(effect.value);
-			// Invalid or non-positive values are skipped, never zeroed: bad
-			// pack data must not silently become "no effect".
-			if (!Number.isFinite(value) || value <= 0) continue;
-			if (effect.kind === "tb-multiplier") {
-				// Multipliers don't stack: the strongest one wins (a creature
-				// with two ×N sources is unexpected, but the invariant is safe).
+	for (const hit of collectEffects(view, {
+		channel: "target-soak",
+		itemWhere: (item) => item.type === "trait",
+	})) {
+		if (hit.spec.kind === "tb-multiplier") {
+			const value = hit.spec.read?.(hit.item, hit.effect, {
+				channel: "target-soak",
+			});
+			if (typeof value === "number") {
 				out.tbMultiplier = Math.max(out.tbMultiplier ?? 0, value);
-			} else if (effect.kind === "damage-reduction") {
-				// Item name rides on the id so same-shaped rows on different
-				// traits stay additive (funnel dedupe lesson).
-				out.reduction.push({
-					id: `trait-reduction:${item.name ?? ""}:${effect.label ?? ""}`,
-					source: { type: "item", label: "SOURCE.FROM_TRAITS" },
-					label: effect.label || item.name || "",
-					value,
-				});
 			}
+		} else if (hit.spec.kind === "damage-reduction") {
+			const modifier = hit.spec.toModifier?.(hit.item, hit.effect, {
+				channel: "target-soak",
+			});
+			if (modifier) out.reduction.push(modifier);
 		}
 	}
 	return out;
@@ -406,7 +375,7 @@ export interface TalentDamageCollection {
 }
 
 export function collectTalentDamageEffects(
-	actor: unknown,
+	view: ActorView,
 	opts: {
 		attackType: "melee-weapon" | "ranged-weapon";
 		flags?: Record<string, boolean>;
@@ -415,57 +384,30 @@ export function collectTalentDamageEffects(
 	},
 ): TalentDamageCollection {
 	const out: TalentDamageCollection = { damage: [], critical: [] };
-	const items = (actor as { items?: Array<ItemLike & { id?: string; equipState?: string }> })
-		.items;
-	if (!items) return out;
-	for (const item of items) {
-		// Bead 2k5: damage effects apply from (a) talents (always live) and
-		// (b) the attacking weapon ITSELF, when carried. Armour/gear damage
-		// effects have no book basis and stay inert (documented decision;
-		// worn armour adding damage is not a RT core rule).
-		const isTalent = item.type === "talent";
-		const isAttackingWeapon =
-			opts.weaponId !== undefined &&
+	// Bead 2k5: damage effects apply from (a) talents (always live) and (b) the
+	// attacking weapon ITSELF, when carried. Armour/gear damage effects have no
+	// book basis and stay inert (documented decision).
+	const itemWhere = (item: { type: string; id: string }) =>
+		item.type === "talent" ||
+		(opts.weaponId !== undefined &&
 			item.id === opts.weaponId &&
-			isWeaponType(item.type) &&
-			(item.equipState === undefined || item.equipState === "carried");
-		if (!isTalent && !isAttackingWeapon) continue;
-		for (const effect of item.system?.effects ?? []) {
-			const kind = effect.kind ?? "";
-			const isDamage = kind === "damage-flat";
-			const isCritical = kind === "critical-damage";
-			if (!isDamage && !isCritical) continue;
-			const key = effect.testKey ?? "";
-			const bucket =
-				key === ""
-					? "any"
-					: key === "melee"
-						? "melee-weapon"
-						: key === "ranged"
-							? "ranged-weapon"
-							: key;
-			if (bucket !== "any" && bucket !== opts.attackType) continue;
-			const condition = effect.condition ?? "";
-			if (condition && !opts.flags?.[condition]) continue;
-			const value = Number(effect.value);
-			if (!Number.isFinite(value) || value === 0) continue;
-			const idPrefix = isTalent ? "talent-damage" : "weapon-damage";
-			const sourceLabel = isTalent ? "SOURCE.FROM_TALENTS" : "SOURCE.FROM_WEAPONS";
-			const mod: Modifier = {
-				id: `${idPrefix}:${item.name ?? ""}:${kind}:${effect.label ?? ""}:${condition || "any"}`,
-				source: {
-					type: isTalent ? "talent" : "item",
-					label: sourceLabel,
-				},
-				// Unlabelled effects fall back to the owning item's name, never
-				// a generic slug. Item name is in the id so same-shaped effects
-				// on different weapons stay additive (funnel dedupe lesson).
-				label: effect.label || item.name || "",
-				value,
-				...(condition ? { condition } : {}),
-			};
-			(isDamage ? out.damage : out.critical).push(mod);
-		}
+			isWeaponType(item.type));
+	for (const hit of collectEffects(view, {
+		channel: "damage",
+		attackType: opts.attackType,
+		weaponId: opts.weaponId,
+		flags: opts.flags,
+		itemWhere,
+	})) {
+		const modifier = hit.spec.toModifier?.(hit.item, hit.effect, {
+			channel: "damage",
+			attackType: opts.attackType,
+			weaponId: opts.weaponId,
+			flags: opts.flags,
+		});
+		if (!modifier) continue;
+		if (hit.spec.kind === "critical-damage") out.critical.push(modifier);
+		else out.damage.push(modifier);
 	}
 	return out;
 }

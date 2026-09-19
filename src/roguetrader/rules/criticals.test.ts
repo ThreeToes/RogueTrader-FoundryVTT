@@ -1,10 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
+	NO_CONTENT_PORT,
+	type ContentPort,
+} from "../application/ports";
+import {
 	criticalSheetContext,
 	criticalsOf,
 	currentRound,
 	overrideAppliesThisTurn,
 	repairSkillFor,
+	resolveCritical,
 	totalCriticalDamage,
 	wornBattlesuit,
 } from "./criticals";
@@ -202,5 +207,51 @@ describe("criticalSheetContext", () => {
 		);
 		expect(context.canRepair).toBe(false);
 		expect(context.any).toBe(true);
+	});
+});
+
+// Content-optional (epic kof0, phase 3; owner requirement): with no compendium
+// the critical is still recorded from the kernel's severity/location and the
+// player applies the table effect manually. Installing the content only adds
+// the table text.
+describe("content-optional criticals (epic kof0, phase 3)", () => {
+	test("with no compendium the critical is recorded and flagged manual", async () => {
+		const outcome = await resolveCritical({
+			actor: actorWith([]),
+			damageType: "Impact",
+			location: "body",
+			excess: 5,
+			tableRoll: 3,
+			content: NO_CONTENT_PORT,
+		});
+		expect(outcome.manual).toBe(true);
+		expect(outcome.effects).toHaveLength(1);
+		expect(outcome.effects[0]?.location).toBe("body");
+		expect(outcome.effects[0]?.severity).toBeGreaterThan(0);
+		expect(outcome.effects[0]?.manual).toBe(true);
+		expect(outcome.effects[0]?.text).toBe("");
+	});
+
+	test("with content installed the table text is used", async () => {
+		const content: ContentPort = {
+			capabilities: () => ({ ...NO_CONTENT_PORT.capabilities(), criticalTables: true }),
+			documents: async () => [],
+			find: async () => ({
+				name: "Impact Critical Effects",
+				formula: "1d5",
+				results: [{ text: "Gut wound", range: [1, 5] }],
+			}),
+		};
+		const outcome = await resolveCritical({
+			actor: actorWith([]),
+			damageType: "Impact",
+			location: "body",
+			excess: 5,
+			tableRoll: 3,
+			content,
+		});
+		expect(outcome.manual).toBeUndefined();
+		expect(outcome.effects[0]?.text).toBe("Gut wound");
+		expect(outcome.effects[0]?.manual).toBeUndefined();
 	});
 });

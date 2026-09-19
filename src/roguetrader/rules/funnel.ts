@@ -1,5 +1,7 @@
 import type { Modifier } from "../../rules-engine/src/modifier";
-import { effectsAreLive } from "../data/item/effects";
+import type { ActorView } from "../domain/model/actor";
+import type { TestKind } from "../domain/model/test";
+import { collectEffects } from "../domain/effects";
 import {
 	resolveFireModeBonus,
 	type HomebrewProfile,
@@ -15,32 +17,19 @@ import {
  * the rules engine. Sources push `Modifier` values in; consumers (roll
  * dialogs, chat cards) receive an ordered breakdown and a total.
  *
- * v2 adds the contributor registry - the rules-layer analogue of
- * EntryRegistry: modules register contributor functions at init (attached to
- * CONFIG.ROGUE_TRADER in sheet/init.ts) and collectTestModifiers runs them
- * all. New sources never touch sheet or roll code.
+ * The item-effect walk lives in the effect engine (domain/effects): this module
+ * registers the contributors and runs them over an `ActorView`. New sources
+ * never touch sheet or roll code.
  *
- * Built-in contributors are pure functions over system data:
+ * Built-in contributors:
  * - "effect": ActiveEffect changes keyed `system.testModifier` become additive
  *   modifiers (change value parsed as a number).
  * - "weapon-qualities": when a test carries a weapon, known qualities map to
  *   fixed contributions (data table below; values are remembered RT core
  *   rules, flagged for verification).
  */
-/** Test kinds that reach the funnel. */
-export type TestKind =
-	| "characteristic"
-	| "skill"
-	| "attack"
-	| "vehicle-handling"
-	// Focus Power Test (bead sa6, Core Rulebook p157): a Characteristic/Skill test
-	// with the +5-per-effective-PR bonus expressed as a funnel-visible
-	// modifier, so power/talent effects contribute via the normal funnel.
-	| "focus-power"
-	// Fear Test (bead jpbm, Core Rulebook p295): a Willpower test whose
-	// severity penalty is a funnel-visible modifier; context flag "fear" lets
-	// authored guarded effects (Resistance +10 etc.) apply here only.
-	| "fear";
+/** Test kinds that reach the funnel (re-exported from the domain model). */
+export type { TestKind } from "../domain/model/test";
 
 export interface TestModifierContext {
 	/** What kind of test is being rolled. */
@@ -63,7 +52,7 @@ export interface TestModifierContext {
 }
 
 export type TestContributor = (
-	actor: unknown,
+	view: ActorView,
 	context: TestModifierContext,
 ) => Modifier[];
 
@@ -81,11 +70,11 @@ export const testContributors = {
 		return [...contributorsByType.keys()];
 	},
 	/** Run every registered contributor; malformed results are ignored. */
-	run(actor: unknown, context: TestModifierContext): Modifier[] {
+	run(view: ActorView, context: TestModifierContext): Modifier[] {
 		const out: Modifier[] = [];
 		for (const fns of contributorsByType.values()) {
 			for (const fn of fns) {
-				const mods = fn(actor, context) ?? [];
+				const mods = fn(view, context) ?? [];
 				if (Array.isArray(mods)) out.push(...mods);
 			}
 		}
@@ -110,11 +99,11 @@ export function mergeModifiers(
  * precedence by id, then every registered contributor runs.
  */
 export function collectTestModifiers(
-	actor: unknown,
+	view: ActorView,
 	context: TestModifierContext,
 	extra: Modifier[] = [],
 ): Modifier[] {
-	return mergeModifiers(extra, testContributors.run(actor, context));
+	return mergeModifiers(extra, testContributors.run(view, context));
 }
 
 /** Ordered {label, value} breakdown for chat cards. */
@@ -133,17 +122,15 @@ const QUALITY_CONTRIBUTIONS: Record<
 	(context: TestModifierContext) => number | null
 > = {
 	// Accurate: VERIFIED book p115-116 (PDF p116): +10 to BS with an Aim
-	// Action, in addition to the aiming bonus. (Extra d10 per two degrees
-	// on a single shot = damage-pipeline work, bead gci0.)
+	// Action, in addition to the aiming bonus.
 	accurate: (context) =>
 		context.aimed && context.kind === "attack" ? 10 : null,
 	// Defensive: VERIFIED book p115 (PDF p116): +15 to Parry but -10 when
-	// used to make attacks. The parry side needs parry-context plumbing
-	// (bead gci0, with Balanced/Unbalanced); the attack penalty lives here.
+	// used to make attacks. The attack penalty lives here.
 	defensive: (context) => (context.kind === "attack" ? -10 : null),
 };
 
-testContributors.register("weapon-qualities", (_actor, context) => {
+testContributors.register("weapon-qualities", (_view, context) => {
 	if (context.kind !== "attack" || !context.weapon) return [];
 	const special = context.weapon.special ?? [];
 	const mods: Modifier[] = [];
@@ -164,12 +151,11 @@ testContributors.register("weapon-qualities", (_actor, context) => {
 
 // ---------------------------------------------------------------------------
 // Built-in contributor: origin traits (bead tgq9). Traits derive at runtime
-// from Character.system.origins -> cached pack definitions (CONFIG.ROGUE_TRADER
-// .originTraits.getDefs, attached at init). Modifier-kind traits contribute
-// test modifiers with stable ids (additive); grants/notes render on the
-// Background tab and never contribute here.
+// from Character.system.origins -> cached pack definitions. Modifier-kind
+// traits contribute test modifiers with stable ids (additive); grants/notes
+// render on the Background tab and never contribute here.
 // ---------------------------------------------------------------------------
-testContributors.register("origin-traits", (actor, context) => {
+testContributors.register("origin-traits", (view, context) => {
 	const getDefs =
 		typeof CONFIG !== "undefined"
 			? (
@@ -182,8 +168,7 @@ testContributors.register("origin-traits", (actor, context) => {
 			: undefined;
 	const defs = getDefs?.() ?? [];
 	if (defs.length === 0) return [];
-	const origins = (actor as { system?: { origins?: Record<string, unknown> } })
-		.system?.origins as never;
+	const origins = view.system.origins as never;
 	if (!origins) return [];
 	// Pure resolution (rules/origin-traits; no import cycle — it does not
 	// import the funnel).
@@ -204,17 +189,12 @@ testContributors.register("origin-traits", (actor, context) => {
 //   Semi-Auto Burst: "+10 to BS, additional hit for every two degrees"
 //   Full Auto Burst: "+20 to BS, additional hit for every degree"
 // Additional hits are out of scope here (to-hit modifier only).
-// Aim (+10/+20) is surfaced as a dialog-contributed modifier in the adapter;
-// charge (+10 WS, Berserk Charge replaces it with +20) is a condition flag,
-// see the talent contributor below.
 // ---------------------------------------------------------------------------
-testContributors.register("attack-context", (_actor, context) => {
+testContributors.register("attack-context", (_view, context) => {
 	if (context.kind !== "attack") return [];
 	const mods: Modifier[] = [];
 	// Bead 9if: homebrew profile overrides the core fire-mode bonuses via a
-	// provider attached at init (CONFIG.ROGUE_TRADER.homebrew.getProfile);
-	// absent provider = core rules (Core Rulebook p237). Guarded for pure-test
-	// environments where the Foundry global is absent.
+	// provider attached at init (CONFIG.ROGUE_TRADER.homebrew.getProfile).
 	const homebrewProvider =
 		typeof CONFIG !== "undefined"
 			? (
@@ -254,25 +234,15 @@ testContributors.register("attack-context", (_actor, context) => {
 // ---------------------------------------------------------------------------
 // Built-in contributor: ActiveEffect changes keyed `system.testModifier`.
 // ---------------------------------------------------------------------------
-testContributors.register("effect", (actor) => {
-	const effects = (
-		actor as {
-			appliedEffects?: Array<{
-				id?: string;
-				name?: string;
-				changes?: Array<{ key?: string; value?: unknown }>;
-			}>;
-		}
-	).appliedEffects;
-	if (!Array.isArray(effects)) return [];
+testContributors.register("effect", (view) => {
 	const mods: Modifier[] = [];
-	for (const effect of effects) {
-		for (const change of effect.changes ?? []) {
+	for (const effect of view.appliedEffects) {
+		for (const change of effect.changes) {
 			if (change.key !== "system.testModifier") continue;
 			const value = Number(change.value);
 			if (!Number.isFinite(value) || value === 0) continue;
 			mods.push({
-				id: `effect:${effect.id ?? effect.name ?? "unnamed"}`,
+				id: `effect:${effect.id || effect.name || "unnamed"}`,
 				source: { type: "effect", label: effect.name ?? "Effect" },
 				label: effect.name ?? "Effect",
 				value,
@@ -283,101 +253,29 @@ testContributors.register("effect", (actor) => {
 });
 
 // ---------------------------------------------------------------------------
-// Built-in contributor: owned item effects -> test modifiers (funnel v2).
-// Each item's effects (kind/testKey/value/label, see data/item/effects.ts)
-// map to Modifier[]; empty testKey acts as wildcard across all tests. Attack
-// tests carry context.key = "bs"/"ws", so keyed effects only apply to
-// matching tests - mirror of the weapon-qualities contributor.
-//
-// Items contribute only when live (effectsAreLive, bead yb6): talents are
-// always "known"; physical items must be equipped (worn armour, carried gear
-// and weapons).
-//
-// Kinds handled here (bead fjw):
-// - "test-modifier": applies to every test kind (default/legacy shape).
-// - "attack-modifier": applies to ATTACK tests only (Berserk Charge +20 when
-//   charging, Gunslinger, ...). Verified against prose p95-99: these talents
-//   modify the attack roll, not arbitrary characteristic/skill tests.
-// Other kinds (damage-flat, critical-damage, wounds-max, ...) belong to their
-// registered handlers / the damage pipeline (rules/talent-effects.ts).
+// Built-in contributor: owned item effects -> test modifiers. The walk itself
+// lives in the effect engine (domain/effects); this contributor only maps the
+// hits. Kinds handled there: "test-modifier" (any test), "attack-modifier"
+// (attack tests only), "characteristic-modifier" (characteristic-keyed).
 // ---------------------------------------------------------------------------
-interface EffectLike {
-	kind?: string;
-	testKey?: string;
-	value?: number;
-	label?: string;
-	condition?: string;
-}
-
-interface ItemLike {
-	name?: string;
-	type?: string;
-	system?: {
-		effects?: EffectLike[];
-		equipState?: string;
-	};
-}
-
-/** The three funnel-readable effect kinds, or null for handler-owned kinds. */
-type FunnelEffectKind = "test" | "attack" | "characteristic";
-
-function funnelEffectKind(
-	kind: string | undefined,
-	context: TestModifierContext,
-): FunnelEffectKind | null {
-	if (kind === undefined || kind === "" || kind === "test-modifier") {
-		return "test";
-	}
-	if (kind === "attack-modifier" && context.kind === "attack") return "attack";
-	if (kind === "characteristic-modifier") return "characteristic";
-	return null;
-}
-
-/**
- * Whether an effect's test key targets this test. Characteristic changes
- * match only their own characteristic; "skill:<name>" keys match the SKILL
- * test's item name (bead r1k) so "Medikit: +20 Medicae" never hits every Int
- * test; empty keys are wildcards. Value and condition are not considered, so
- * this is also the predicate the pre-roll condition toggles use.
- */
-function effectTargetsContext(
-	effect: EffectLike,
-	context: TestModifierContext,
-	kind: FunnelEffectKind,
-): boolean {
-	const key = effect.testKey;
-	if (kind === "characteristic") return Boolean(key) && key === context.key;
-	if (key?.startsWith("skill:")) {
-		return (
-			context.skillName?.toLowerCase() === key.slice("skill:".length).toLowerCase()
-		);
-	}
-	return key === "" || key === undefined || key === context.key;
-}
-
-/** Every live item effect that targets this test, regardless of its guard. */
-function liveEffectsForTest(
-	actor: unknown,
-	context: TestModifierContext,
-): Array<{ item: ItemLike; effect: EffectLike; kind: FunnelEffectKind }> {
-	const items = (actor as { items?: ItemLike[] } | undefined)?.items;
-	const out: Array<{
-		item: ItemLike;
-		effect: EffectLike;
-		kind: FunnelEffectKind;
-	}> = [];
-	for (const item of items ?? []) {
-		const type = item.type ?? "";
-		if (!effectsAreLive(type, item.system?.equipState)) continue;
-		for (const effect of item.system?.effects ?? []) {
-			const kind = funnelEffectKind(effect.kind, context);
-			if (!kind) continue;
-			if (!effectTargetsContext(effect, context, kind)) continue;
-			out.push({ item, effect, kind });
-		}
-	}
-	return out;
-}
+testContributors.register("item-effects", (view, context) => {
+	return collectEffects(view, {
+		channel: "test",
+		testKind: context.kind,
+		testKey: context.key,
+		skillName: context.skillName,
+		flags: context.flags,
+	}).flatMap((hit) => {
+		const modifier = hit.spec.toModifier?.(hit.item, hit.effect, {
+			channel: "test",
+			testKind: context.kind,
+			testKey: context.key,
+			skillName: context.skillName,
+			flags: context.flags,
+		});
+		return modifier ? [modifier] : [];
+	});
+});
 
 /**
  * Guarded-effect condition keys that COULD apply to this test (bead xu83).
@@ -387,78 +285,20 @@ function liveEffectsForTest(
  * flag is currently set; deduped in first-seen order.
  */
 export function collectConditionKeys(
-	actor: unknown,
+	view: ActorView,
 	context: TestModifierContext,
 ): string[] {
 	const keys: string[] = [];
-	for (const { effect } of liveEffectsForTest(actor, context)) {
+	const hits = collectEffects(view, {
+		channel: "test",
+		testKind: context.kind,
+		testKey: context.key,
+		skillName: context.skillName,
+		ignoreGuards: true,
+	});
+	for (const { effect } of hits) {
 		const condition = (effect.condition ?? "").trim();
 		if (condition && !keys.includes(condition)) keys.push(condition);
 	}
 	return keys;
 }
-
-const SOURCE_LABELS: Record<string, string> = {
-	talent: "SOURCE.FROM_TALENTS",
-	// Rulebook traits (Ch XIV) are innate items; their test-side effect rows
-	// flow through the same contributor (bead zyv1).
-	trait: "SOURCE.FROM_TRAITS",
-	// Afflictions as owned Items (epic nt8k): mutations and the madness-pack
-	// disorders/malignancies are innate, so their rows feed the funnel here.
-	mutation: "SOURCE.FROM_MUTATIONS",
-	madnessentry: "SOURCE.FROM_AFFLICTIONS",
-	armour: "SOURCE.FROM_ARMOUR",
-	gear: "SOURCE.FROM_GEAR",
-	"melee-weapon": "SOURCE.FROM_WEAPONS",
-	"ranged-weapon": "SOURCE.FROM_WEAPONS",
-};
-
-testContributors.register("item-effects", (actor, context) => {
-	const mods: Modifier[] = [];
-	for (const { item, effect, kind } of liveEffectsForTest(actor, context)) {
-		const type = item.type ?? "";
-		const isCharacteristicModifier = kind === "characteristic";
-		const isAttackModifier = kind === "attack";
-		const key = effect.testKey;
-		// Guarded effects (bead czx) only apply when the matching context
-		// flag is set; the condition label rides on the Modifier for the
-		// chat/dialog breakdown.
-		const condition = effect.condition;
-		if (condition) {
-			if (!context.flags?.[condition]) continue;
-		}
-		const value = Number(effect.value);
-		if (!Number.isFinite(value) || value === 0) continue;
-		const isTalent = type === "talent";
-		const idPrefix = isTalent ? "talent" : `item:${type}`;
-		// The owning item's name must be part of the id: two different
-		// talents/gear can contribute identical (label, testKey, condition)
-		// triples and every one of them is additive (bug report: only the
-		// first showed). Dedupe must only collapse the SAME source's
-		// re-collected rows across the dialog round-trip.
-		const keyPart = isAttackModifier
-			? "attack"
-			: isCharacteristicModifier
-				? `char:${key}`
-				: key || "any";
-		mods.push({
-			id: `${idPrefix}:${item.name ?? ""}:${keyPart}:${effect.label ?? ""}:${condition || "any"}`,
-			source: {
-				type: isTalent ? "talent" : "item",
-				label: SOURCE_LABELS[type] ?? "SOURCE.FROM_GEAR",
-			},
-			// Unlabelled effects fall back to the owning item's name (the
-			// talent/gear name), never the raw type slug.
-			label: effect.label || item.name || "",
-			value,
-			...(condition ? { condition } : {}),
-		});
-	}
-	return mods;
-});
-
-/*
- * Afflictions (epic nt8k) are owned Items (mutation / madnessentry), so their
- * rows are handled by the "item-effects" contributor above — there is no
- * separate ledger contributor.
- */

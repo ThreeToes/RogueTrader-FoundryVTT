@@ -7,6 +7,7 @@ import {
 	rtCore,
 } from "../../rules-engine/src/index";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
+import { actorView } from "../infrastructure/foundry/actor-view";
 import { bodyLocationLabelKey } from "./labels";
 import {
 	applyTearing,
@@ -16,7 +17,7 @@ import {
 	targetToughnessMultiplier,
 } from "./talent-effects";
 import type { DamageRollFlag } from "./chat-flags";
-import { type AttackProfile, attackProfileOf } from "./attack-profile";
+import { type AttackProfile, attackProfileOf } from "../domain/model/attack";
 
 /**
  * Thin Foundry adapter: the ONLY runtime Foundry-coupled rolling code.
@@ -192,7 +193,7 @@ async function postWeaponDamage(
 	// Roll-mechanic weapon qualities (bead gci0): Tearing rolls one extra
 	// damage die (lowest result discarded — book wording, NOT roll-twice);
 	// Toxic/Blast are post-resolution prompts shown on the card.
-	const mechanics = collectRollMechanicEffects(attacker, {
+	const mechanics = collectRollMechanicEffects(actorView(attacker), {
 		weaponId: profile.id ?? undefined,
 		attackType: profile.attackType,
 		// The attacking profile's own qualities: a mutation attack carries
@@ -276,15 +277,15 @@ async function postWeaponDamage(
 	// rules layer (targetToughnessMultiplier): max of the canonical
 	// characteristics.t.unnatural field and the trait tb-multiplier effects,
 	// so the same book trait carried both ways never double-counts.
-	const traitDamage = collectTargetTraitDamageEffects(target);
+	const traitDamage = collectTargetTraitDamageEffects(actorView(target));
 	const toughnessBonus =
-		naturalToughnessBonus * targetToughnessMultiplier(target, traitDamage);
+		naturalToughnessBonus * targetToughnessMultiplier(actorView(target), traitDamage);
 
 	// Talent damage effects (bead fjw): damage-flat joins the roll before
 	// soak; critical-damage applies only when the to-hit was critical.
 	// Both are item-sourced talent effects, condition-guarded via flags.
 	const attackType = profile.attackType;
-	const talentDamage = collectTalentDamageEffects(attacker, {
+	const talentDamage = collectTalentDamageEffects(actorView(attacker), {
 		attackType,
 		// Bead 2k5: the attacking weapon's own damage effects apply; note
 		// the item id is needed for per-item matching.

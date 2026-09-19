@@ -10,12 +10,16 @@
  * The to-hit handler, the damage pipeline and the weapon-quality lookup all
  * consume this one shape, so a mutation attack travels the same road as a
  * weapon attack instead of growing a parallel pipeline.
+ *
+ * Moved from `rules/attack-profile.ts` (phase 1): it is pure domain logic, so
+ * it lives in the domain model and the Foundry builder resolves `attack` once
+ * per item.
  */
 
-import { isWeaponType } from "../data/accessors";
-import { normaliseDamageType } from "../data/item/damage-types";
+import { normaliseDamageType } from "./damage";
+import { isWeaponType } from "./taxonomy";
 
-/** The subset of a weapon Item the shared damage pipeline actually reads. */
+/** The subset of a weapon's system data the damage pipeline reads. */
 export interface DamageSource {
 	id?: string | null;
 	name?: string;
@@ -28,6 +32,14 @@ export interface DamageSource {
 		primitive?: boolean;
 		special?: string[];
 	};
+}
+
+/** Minimal structural view of an item that may carry an attack. */
+export interface AttackSource {
+	id?: string | null;
+	name?: string;
+	type?: string;
+	system?: unknown;
 }
 
 /** A resolved attack: weapon or mutation, normalised. */
@@ -68,14 +80,6 @@ export interface AttackProfile {
 	source: DamageSource;
 }
 
-/** Minimal structural view of an Item, for both shapes. */
-interface ItemLike {
-	id?: string | null;
-	name?: string;
-	type?: string;
-	system?: unknown;
-}
-
 /** Printed attack block on a mutation (mirrors data/item/mutation.ts). */
 interface MutationAttackLike {
 	characteristic?: string;
@@ -95,7 +99,9 @@ interface MutationAttackLike {
  * authored `attack` block — a mutation without one is not an attack, however
  * combat-flavoured its prose. Anything else returns null.
  */
-export function attackProfileOf(item: ItemLike | null | undefined): AttackProfile | null {
+export function attackProfileOf(
+	item: AttackSource | null | undefined,
+): AttackProfile | null {
 	if (!item) return null;
 	const type = (item.type ?? "") as string;
 	if (isWeaponType(type)) {

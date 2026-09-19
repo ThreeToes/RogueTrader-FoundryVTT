@@ -372,6 +372,7 @@
   "VEHICLE_SYSTEM.WEAPONS_MOUNT": "Weapons Mount",
   "VEHICLE.CLASS": "Vehicle Class",
   "VEHICLE.SIZE": "Size",
+  "VEHICLE.TOKEN_FOOTPRINT_HINT": "Battle-map footprint from the size category (in grid squares).",
   "VEHICLE.STRUCTURAL_INTEGRITY": "Structural Integrity",
   "VEHICLE.HANDLING": "Handling",
   "VEHICLE.SPEED": "Speed",

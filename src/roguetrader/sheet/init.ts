@@ -68,6 +68,7 @@ import {
 	type OriginVariant,
 } from "../origins";
 import { talentEffectHandlers } from "../rules/talent-effects";
+import { vehicleTokenFootprint } from "../rules/vehicle-tokens";
 import {
 	isWarrantRow,
 	setWarrantEntries,
@@ -796,6 +797,31 @@ export function sheetInit() {
 						},
 				);
 			});
+		});
+
+		// Vehicle token footprints (bead yyd1): keep prototypeToken.width/height
+		// in step with the size category (rules/vehicle-tokens). The packer
+		// bakes the same mapping into compendium actors; these hooks cover
+		// blank/manually-created vehicles and later edits to the Size field.
+		Hooks.on("preCreateActor", (actor) => {
+			if (actor.type !== "vehicle") return;
+			const { width, height } = vehicleTokenFootprint(
+				(actor.system as { size?: string } | undefined)?.size,
+			);
+			actor.updateSource({ prototypeToken: { width, height } });
+		});
+		Hooks.on("preUpdateActor", (actor, changed) => {
+			if (actor.type !== "vehicle") return;
+			const nextSize = (changed.system as { size?: string } | undefined)?.size;
+			if (nextSize === undefined) return;
+			const { width, height } = vehicleTokenFootprint(nextSize);
+			const token = actor.prototypeToken as { width?: number; height?: number };
+			if (token.width === width && token.height === height) return;
+			foundry.utils.mergeObject(
+				changed,
+				{ prototypeToken: { width, height } },
+				{ inplace: true },
+			);
 		});
 
 		Hooks.on("createActor", async (actor, _options, userId) => {

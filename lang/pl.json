@@ -598,6 +598,7 @@
   "VEHICLE_SYSTEM.WEAPONS_MOUNT": "Zamontowanie broni",
   "VEHICLE.CLASS": "Klasa pojazdu",
   "VEHICLE.SIZE": "Rozmiar",
+  "VEHICLE.TOKEN_FOOTPRINT_HINT": "Ślad na mapie bitewnej według kategorii rozmiaru (w polach).",
   "VEHICLE.STRUCTURAL_INTEGRITY": "Integralność konstrukcji",
   "VEHICLE.HANDLING": "Prowadzenie",
   "VEHICLE.SPEED": "Prędkość",

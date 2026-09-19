@@ -16,7 +16,11 @@
             </div>
             <div class="header-cell">
                 <label>{{localize "VEHICLE.SIZE"}}</label>
-                <input name="system.size" type="text" value="{{source.system.size}}" />
+                <div class="size-footprint">
+                    <input name="system.size" type="text" value="{{source.system.size}}" />
+                    <span class="token-footprint"
+                        title="{{localize 'VEHICLE.TOKEN_FOOTPRINT_HINT'}}">{{tokenFootprint}}</span>
+                </div>
             </div>
         </div>
         <div class="header-line line-2">

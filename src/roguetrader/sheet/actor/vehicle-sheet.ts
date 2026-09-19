@@ -1,5 +1,6 @@
 import { Vehicle } from "../../data/actor/vehicle";
 import { isWeaponType } from "../../data/accessors";
+import { tokenFootprintLabel } from "../../rules/vehicle-tokens";
 import {
 	vehicleClasses,
 	vehicleFacings,
@@ -58,6 +59,10 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	async _prepareContext(options: object = {}) {
 		const context = await super._prepareContext(options);
 		const system = this.document.system as Vehicle;
+
+		// Derived battle-map footprint from the size category (bead yyd1), shown
+		// next to the free-text Size field so the effect is visible.
+		context.tokenFootprint = tokenFootprintLabel(system.size);
 
 		// Per-facing armour rows from the registry (same anatomy as the armour
 		// tab body layout on character sheets).

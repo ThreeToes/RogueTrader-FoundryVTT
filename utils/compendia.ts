@@ -20,6 +20,7 @@ import { cp, mkdir, readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { ClassicLevel } from "classic-level";
 import yaml from "yaml";
+import { vehicleTokenFootprint } from "../src/roguetrader/rules/vehicle-tokens";
 
 const PACK_SRC = "./src/packs/rogue_trader";
 const PACK_DEST = "./release/rogue_trader/packs";
@@ -1464,6 +1465,20 @@ export function toActorSourceDocument(
 	};
 	if (typeof entry.img === "string" && entry.img) actor.img = entry.img;
 	if (entry.prototypeToken) actor.prototypeToken = entry.prototypeToken;
+	if (actorType === "vehicle") {
+		// Bead yyd1: bake the size-category footprint into the compendium actor
+		// so an imported vehicle lands at the right token size. An explicit
+		// authored width/height still wins (the mapping is the default).
+		const authored = (actor.prototypeToken ?? {}) as Record<string, unknown>;
+		const { width, height } = vehicleTokenFootprint(
+			(entry.system as { size?: string } | undefined)?.size,
+		);
+		actor.prototypeToken = {
+			...authored,
+			width: (authored.width as number | undefined) ?? width,
+			height: (authored.height as number | undefined) ?? height,
+		};
+	}
 	return { actor, embedded };
 }
 

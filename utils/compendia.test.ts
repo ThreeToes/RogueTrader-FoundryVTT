@@ -327,6 +327,49 @@ describe("actor packs (bead et3x)", () => {
 		expect((actor.items as string[])[0]).toBe(embedded[0]._id);
 	});
 
+	test("bakes a vehicle token footprint from its size category (bead yyd1)", () => {
+		const { actor } = toActorSourceDocument(
+			{
+				name: "Rhino APC",
+				type: "vehicle",
+				system: { size: "Enormous" },
+				img: "systems/rogue-trader/private/vessels/portraits/rhino-apc.webp",
+				prototypeToken: {
+					texture: {
+						src: "systems/rogue-trader/private/vessels/portraits/rhino-apc.webp",
+					},
+				},
+			},
+			index,
+		);
+		expect(actor.prototypeToken).toEqual({
+			texture: {
+				src: "systems/rogue-trader/private/vessels/portraits/rhino-apc.webp",
+			},
+			width: 3,
+			height: 3,
+		});
+
+		// An authored width/height still wins over the derived default.
+		const { actor: authored } = toActorSourceDocument(
+			{
+				name: "Custom",
+				type: "vehicle",
+				system: { size: "Massive" },
+				prototypeToken: { width: 2, height: 6 },
+			},
+			index,
+		);
+		expect(authored.prototypeToken).toEqual({ width: 2, height: 6 });
+
+		// Non-vehicle actors are untouched.
+		const { actor: npc } = toActorSourceDocument(
+			{ name: "X", type: "npc" },
+			index,
+		);
+		expect(npc.prototypeToken).toBeUndefined();
+	});
+
 	test("stamps the compendium source on linked embedded items", () => {
 		const { embedded } = toActorSourceDocument(
 			{ name: "X", items: [{ name: "Lasgun" }] },

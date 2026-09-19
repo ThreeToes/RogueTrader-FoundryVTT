@@ -574,6 +574,7 @@
   "VEHICLE_SYSTEM.WEAPONS_MOUNT": "Monture d'armes",
   "VEHICLE.CLASS": "Classe de véhicule",
   "VEHICLE.SIZE": "Taille",
+  "VEHICLE.TOKEN_FOOTPRINT_HINT": "Empreinte sur le plateau selon la catégorie de taille (en cases).",
   "VEHICLE.STRUCTURAL_INTEGRITY": "Intégrité structurelle",
   "VEHICLE.HANDLING": "Maniabilité",
   "VEHICLE.SPEED": "Vitesse",

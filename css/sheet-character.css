@@ -1216,6 +1216,20 @@
     min-height: 380px;
 }
 
+/* Size field + its derived battle-map footprint (bead yyd1). */
+.rogue-trader.sheet.vehicle .size-footprint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rogue-trader.sheet.vehicle .token-footprint {
+    flex: none;
+    white-space: nowrap;
+    font-size: var(--rt-fs-sm);
+    color: var(--rt-muted);
+}
+
 .rogue-trader.sheet.vehicle .facing-ap {
     width: 4em;
     text-align: center;

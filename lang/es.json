@@ -562,6 +562,7 @@
   "VEHICLE_SYSTEM.WEAPONS_MOUNT": "Montura de armas",
   "VEHICLE.CLASS": "Clase de vehículo",
   "VEHICLE.SIZE": "Tamaño",
+  "VEHICLE.TOKEN_FOOTPRINT_HINT": "Huella en el mapa de batalla según la categoría de tamaño (en casillas).",
   "VEHICLE.STRUCTURAL_INTEGRITY": "Integridad estructural",
   "VEHICLE.HANDLING": "Manejo",
   "VEHICLE.SPEED": "Velocidad",

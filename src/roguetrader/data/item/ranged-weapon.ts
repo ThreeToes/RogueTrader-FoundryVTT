@@ -17,6 +17,9 @@ export class RangedWeapon extends Weapon {
 				required: true,
 				nullable: false,
 			}),
+			// This schema is the source of truth for the rate of fire; the READ
+			// shape is declared once as `RateOfFire` (data/item/rate-of-fire.ts),
+			// which the sheets import rather than re-declaring these fields.
 			rateOfFire: new foundry.data.fields.SchemaField({
 				singleShot: new foundry.data.fields.BooleanField({ initial: true }),
 				burst: new foundry.data.fields.NumberField({

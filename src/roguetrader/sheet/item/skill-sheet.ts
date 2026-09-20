@@ -20,7 +20,7 @@ export class SkillSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = sheetContext(await super._prepareContext(options));
+		const context = sheetContext(await super._prepareContext(options as never));
 		context.characteristicChoices = Skill.characteristicChoices;
 		context.ladderOptions = LADDER_OPTIONS;
 		// Read-only display labels keyed by ladder value.

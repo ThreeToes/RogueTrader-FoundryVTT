@@ -8,7 +8,6 @@
  * Inaccurate cancellation come back as post-dialog rows.
  */
 
-import type { Actor } from "fvtt-types/documents";
 import { attackProfileOf } from "../../domain/model/attack";
 import { equipStateOf, systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";

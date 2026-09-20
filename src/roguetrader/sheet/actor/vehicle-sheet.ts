@@ -14,7 +14,7 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "vehicle"],
-		position: { width: 560, height: "auto" },
+		position: { width: 560, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
@@ -48,9 +48,9 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static TABS = {
 		primary: {
 			tabs: [
-				{ id: "status", group: "primary", label: "TAB.STATUS" },
-				{ id: "weapons", group: "primary", label: "TAB.WEAPONS" },
-				{ id: "details", group: "primary", label: "TAB.DETAILS" },
+				{ id: "status", group: "primary", label: "TAB.STATUS", cssClass: "" },
+				{ id: "weapons", group: "primary", label: "TAB.WEAPONS", cssClass: "" },
+				{ id: "details", group: "primary", label: "TAB.DETAILS", cssClass: "" },
 			],
 			initial: "status",
 		},

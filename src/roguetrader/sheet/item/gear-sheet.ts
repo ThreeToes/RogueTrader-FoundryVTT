@@ -2,11 +2,13 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 import { effectActions, effectEditorChoices } from "./effect-actions";
+import { ITEM_DATA_TABS } from "../tabs";
+import { sheetContext } from "../context";
 
 export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "gear"],
-		position: { width: 500, height: "auto" },
+		position: { width: 500, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: { ...effectActions },
@@ -27,18 +29,10 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		},
 	};
 
-	static TABS = {
-		primary: {
-			tabs: [
-				{ id: "data", group: "primary", label: "TAB.DATA" },
-				{ id: "notes", group: "primary", label: "TAB.DESCRIPTION" },
-			],
-			initial: "data",
-		},
-	};
+	static TABS = ITEM_DATA_TABS;
 
-	async _prepareContext(options) {
-		const context = await super._prepareContext(options);
+	async _prepareContext(options: object = {}) {
+		const context = sheetContext(await super._prepareContext(options as never));
 
 		// Context.tabs is a flat record keyed by tab id: { data: {...}, notes: {...} }.
 		context.tabs = this._prepareTabs("primary");

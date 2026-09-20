@@ -37,7 +37,7 @@ export class SkillPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options));
+		const context = sheetContext(await super._prepareContext(_options as never));
 		const catalog: Array<{ id: string; name: string; characteristic: string }> =
 			[];
 		const documents = (await getCharacterOptionDocs(
@@ -91,12 +91,16 @@ export class SkillPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	static async #addCustom(
 		this: SkillPicker,
 		_event: unknown,
-		form: HTMLFormElement,
+		target: HTMLElement,
 	): Promise<void> {
-		const skillName = new FormData(form).get("name") as string | null;
-		const characteristic = new FormData(form).get("characteristic") as
-			| string
-			| null;
+		// Foundry hands the element carrying [data-action] — the BUTTON, not the
+		// form it sits in — so `new FormData(target)` would throw. Resolve the
+		// form from the button.
+		const form = target.closest("form");
+		if (!(form instanceof HTMLFormElement)) return;
+		const data = new FormData(form);
+		const skillName = data.get("name") as string | null;
+		const characteristic = data.get("characteristic") as string | null;
 		if (!skillName || !characteristic) return;
 		await this.actor.createEmbeddedDocuments("Item", [
 			{

@@ -274,7 +274,7 @@
         {{> "rt/creator-nav"
             backLabel=(localize "CREATOR.BACK")
             backHidden=(eq step 0)
-            forwardAction=(ifThen (eq step 4) "create" "next")
+            forwardAction=(ifThen (eq step 4) "finish" "next")
             forwardLabel=(ifThen (eq step 4) (localize "CREATOR.CREATE") (localize "CREATOR.NEXT"))
             forwardPrimary=(eq step 4)
             forwardDisabled=(ifThen canNext false true)

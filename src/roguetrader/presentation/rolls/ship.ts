@@ -6,7 +6,6 @@
  * kernel for all the maths.
  */
 
-import type { Actor } from "fvtt-types/documents";
 import {
 	applyVoidShields,
 	crewLossFromHullDamage,
@@ -20,6 +19,7 @@ import {
 	rangeModifier,
 	resolveSalvoDamage,
 	shipCritical,
+	type ShipComponentState,
 } from "../../../rules-engine/src/index";
 import { systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
@@ -135,13 +135,11 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 	},
 	async after(request, prepared, outcome, _messageId) {
 		const ports = getPorts();
-		const data = prepared.kindData ?? {};
-		const kind = data.weaponKind as "macrobattery" | "lance";
-		const strength = data.strength as number;
-		if (!outcome.success) {
-			// Miss: no hits, no damage (the card already shows the failure).
-			return;
-		}
+		const data = prepared.kindData;
+		// Miss: no hits, no damage (the card already shows the failure).
+		// prepare() always sets kindData for a salvo; the guard types it (bead ezys).
+		if (!outcome.success || !data) return;
+		const { weaponKind: kind, strength, critRating, damage } = data;
 		const target = ports.targets.actor() as
 			| (Actor & { system?: Record<string, unknown> })
 			| undefined;
@@ -181,8 +179,7 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		// hits ignore Armour entirely.
 		let damageTotal = 0;
 		if (through > 0) {
-			damageTotal = (await ports.dice.roll(`${through}${data.damage ?? ""}`))
-				.total;
+			damageTotal = (await ports.dice.roll(`${through}${damage}`)).total;
 		}
 		const salvo = resolveSalvoDamage({
 			damageTotal,
@@ -206,7 +203,7 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		// the chart. A critical that deals no Hull damage still does 1
 		// automatic point (p220).
 		let criticalEntry = null;
-		if (isCritical(outcome.degrees, data.critRating as number)) {
+		if (isCritical(outcome.degrees, critRating)) {
 			criticalEntry = shipCritical((await ports.dice.roll("1d5")).total || 1);
 			if (salvo.hullDamage === 0) {
 				const hi = Math.max(0, targetSystem.hullIntegrity?.value ?? 0);
@@ -304,7 +301,7 @@ export const shipRepairHandler: RollHandler<"ship-repair"> = {
 			return null;
 		}
 		const sys = item.system as unknown as {
-			state?: string;
+			state?: ShipComponentState;
 			depressurised?: boolean;
 		};
 		const state = sys.state ?? "intact";
@@ -336,14 +333,14 @@ export const shipRepairHandler: RollHandler<"ship-repair"> = {
 			initialModifiers: [difficultModifier],
 			weapon: null,
 			context: {},
-			kindData: { itemId: request.itemId, componentId: item.id },
+			kindData: { itemId: request.itemId, componentId: item.id ?? undefined },
 		};
 	},
 	async after(request, prepared, outcome, _messageId) {
 		if (!outcome.success) return;
 		const ports = getPorts();
 		const component = request.actor.items.get(
-			(prepared.kindData?.componentId as string) ?? "",
+			prepared.kindData?.componentId ?? "",
 		);
 		if (!component) return;
 		const { turns } = emergencyRepairsOutcome(outcome.degrees);

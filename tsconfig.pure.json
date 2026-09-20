@@ -1,0 +1,22 @@
+{
+	"//": "Type-check the Foundry-free layers only (epic kof0, bead ihpm).",
+	"//why": [
+		"A full `tsc -p tsconfig.json` over src/** OOMs (>4GB, ~83s) because",
+		"loading fvtt-types instantiates the whole Foundry API surface, and the",
+		"sheet classes that extend ApplicationV2 / ActorSheetV2 / TypeDataModel",
+		"explode the type graph. Measured: this scoped check runs in ~0.7s and is",
+		"green, while infrastructure+presentation+bootstrap OOM.",
+		"The layers covered here are exactly the ones the architecture boundary",
+		"test already guarantees are Foundry-free, so no `types` are needed."
+	],
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"types": []
+	},
+	"include": [
+		"src/rules-engine/src/**/*.ts",
+		"src/roguetrader/domain/**/*.ts",
+		"src/roguetrader/application/**/*.ts"
+	],
+	"exclude": ["node_modules", "release", "packs", "utils", "**/*.test.ts"]
+}

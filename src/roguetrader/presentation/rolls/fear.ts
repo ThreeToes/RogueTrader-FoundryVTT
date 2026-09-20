@@ -13,7 +13,6 @@
  * ports for i18n / notify / dice / actor writes.
  */
 
-import type { Actor } from "fvtt-types/documents";
 import { systemOf } from "../../data/accessors";
 import { actorView } from "../../infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";
@@ -153,7 +152,11 @@ export const fearHandler: RollHandler<"fear"> = {
 	},
 	async after(request, prepared, outcome, _messageId, info) {
 		const ports = getPorts();
-		const rerolled = (prepared.kindData?.rerolled as boolean) ?? false;
+		// prepare() always sets kindData for a fear test; the guard is what makes
+		// the payload typed instead of cast (bead ezys).
+		const data = prepared.kindData;
+		if (!data) return;
+		const rerolled = data.rerolled ?? false;
 		// Unshakeable Faith (book p108: "may re-roll failed Fear Tests"): one
 		// automatic re-roll with the SAME modifier set, visibly noted; the
 		// re-roll's own outcome replaces the original (no second re-roll).
@@ -163,7 +166,7 @@ export const fearHandler: RollHandler<"fear"> = {
 				{
 					...prepared,
 					title: `${prepared.title} — ${ports.i18n.t("FEAR.REROLL_NOTE")}`,
-					kindData: { ...prepared.kindData, rerolled: true },
+					kindData: { ...data, rerolled: true },
 				},
 				info?.modifiers ?? [],
 				prepared.context,
@@ -173,7 +176,7 @@ export const fearHandler: RollHandler<"fear"> = {
 			outcome.degrees = reroll.outcome.degrees;
 		}
 		if (outcome.success) return;
-		const situation = (prepared.kindData?.situation as string) ?? "combat";
+		const situation = data.situation;
 		const finalTarget = info?.target ?? prepared.baseTarget;
 		if (situation !== "combat") {
 			// Non-combat failure (p296): −10 on concentration Tests while

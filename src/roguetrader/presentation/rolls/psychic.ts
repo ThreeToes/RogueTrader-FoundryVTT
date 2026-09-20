@@ -101,7 +101,9 @@ export const psychicHandler: RollHandler<"psychic"> = {
 			: await promptStrength(cap);
 		if (!strength) return null;
 		// Push level is encoded in the prompt choice ("push:2"); default +1.
-		const [strengthLevel, pushLevelsRaw] = strength.split(":");
+		const [strengthRaw, pushLevelsRaw] = strength.split(":");
+		// One cast at the parse boundary, so every later read is typed.
+		const strengthLevel = strengthRaw as StrengthLevel;
 		const pushLevels =
 			strengthLevel === "push"
 				? Math.min(cap, Math.max(1, Number(pushLevelsRaw ?? "1") || 1))
@@ -110,7 +112,7 @@ export const psychicHandler: RollHandler<"psychic"> = {
 		const sustainedCount = system.sustainedPowers?.length ?? 0;
 		const effPr = effectivePsyRating({
 			psyRating: casting.rating,
-			strength: strengthLevel as "fettered" | "unfettered" | "push",
+			strength: strengthLevel,
 			pushLevels,
 			sustainedCount,
 		});
@@ -162,14 +164,14 @@ export const psychicHandler: RollHandler<"psychic"> = {
 		const power = item?.system as unknown as
 			| { subtype?: string; damage?: string; name?: string }
 			| undefined;
-		const strength = prepared.kindData?.strength as StrengthLevel;
+		const data = prepared.kindData;
 		// Psychic Phenomena (Table 6-1 triggers, book p157).
-		if (shouldRollPhenomena(strength, outcome)) {
+		if (data && shouldRollPhenomena(data.strength, outcome)) {
 			await rollPhenomena(request.actor, {
-				pushLevels: (prepared.kindData?.pushLevels as number) ?? 0,
-				sustainedCount: (prepared.kindData?.sustainedCount as number) ?? 0,
+				pushLevels: data.pushLevels,
+				sustainedCount: data.sustainedCount,
 				// Sorcerer Corruption total, added FIRST (EA p86).
-				corruption: (prepared.kindData?.corruption as number) ?? 0,
+				corruption: data.corruption,
 			});
 		}
 		// Success handling via the resolution registry (design mso6 addendum).

@@ -1,11 +1,13 @@
 import type { CharacteristicKey } from "../../data/actor/character";
 import {
+	getHeirloomEntries,
+	heirloomForRoll,
+} from "../../rules/heirlooms";
+import {
 	allowedColumns,
 	type CharMod,
 	entryColumns,
 	fateFromTable,
-	getHeirloomEntries,
-	heirloomForRoll,
 	ORIGIN_ROW_LABEL_KEYS,
 	type OriginPick,
 	type OriginRow,
@@ -15,7 +17,7 @@ import {
 	originsInRow,
 	type ResolvedOrigin,
 	resolveOrigins,
-} from "../../origins";
+} from "../../rules/origins";
 import {
 	availabilityModifier,
 	isTrainedFor,
@@ -54,6 +56,7 @@ import {
 import { sheetContext } from "../context";
 import { waitForDefaultGrants } from "../default-grants";
 import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
+import { CreatorApplication } from "./creator-application";
 import { promptParameterisedSubject, talentGrant } from "./grant-helpers";
 
 /** yclz: prompt for a parameterised talent's subject; resolved names pass through. */
@@ -62,9 +65,6 @@ async function resolveParameterisedTalent(
 ): Promise<string | null> {
 	return promptParameterisedSubject(name);
 }
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ApplicationV2 } = foundry.applications.api;
 
 /** Career-doc suggestion cache (system.suggestedHomeWorlds), per session. */
 let careerSuggestionCache: Map<string, string[]> | null = null;
@@ -110,7 +110,6 @@ const CHARACTERISTIC_ORDER: CharacteristicKey[] = [
 ];
 
 interface CreatorState {
-	step: number;
 	name: string;
 	method: "roll" | "points";
 	/**
@@ -170,7 +169,6 @@ interface AcqOption {
 
 function emptyState(): CreatorState {
 	return {
-		step: 0,
 		name: "",
 		method: "roll",
 		base: {
@@ -236,14 +234,13 @@ async function roll(formula: string): Promise<number> {
  * Factor and Ship Points, Select Equipment) are group-level or advancement-
  * engine dependent and remain out of scope for the creator itself.
  */
-export class CharacterCreator extends HandlebarsApplicationMixin(
-	ApplicationV2,
-) {
-	static DEFAULT_OPTIONS = {
+export class CharacterCreator extends CreatorApplication {
+	static DEFAULT_OPTIONS = CreatorApplication.creatorOptions({
 		id: "rogue-trader-character-creator",
-		classes: ["rogue-trader", "sheet", "character-creator"],
-		position: { width: 720, height: 640 },
-		window: { title: "CREATOR.TITLE", resizable: true },
+		slug: "character-creator",
+		titleKey: "CREATOR.TITLE",
+		width: 720,
+		height: 640,
 		actions: {
 			setMethod: CharacterCreator.#onSetMethod,
 			rollOne: CharacterCreator.#onRollOne,
@@ -258,22 +255,27 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
 			toggleAcqGroup: CharacterCreator.#onToggleAcqGroup,
 			rollHeirloom: CharacterCreator.#onRollHeirloom,
-			prev: CharacterCreator.#onPrev,
-			next: CharacterCreator.#onNext,
-			create: CharacterCreator.#onCreate,
+			finish: CharacterCreator.#onCreate,
 		},
-	};
+	});
+
+	/** Species, characteristics, Origin Path, review, equipment. */
+	protected get lastStep(): number {
+		return CREATOR_LAST_STEP;
+	}
+
+	/**
+	 * Step 2 is the Origin Path: its wounds/Fate/insanity dice are rolled on
+	 * entry (the dice belong to the origin rows, not the species).
+	 */
+	protected override async onEnterStep(step: number): Promise<void> {
+		if (step === 2) await this.#rollOriginDice();
+	}
 
 	creatorState: CreatorState = emptyState();
 
-	/**
-	 * Optional existing actor (right-clicked entry): the creator prefills
-	 * from it and UPDATES it on finish instead of creating a new actor.
-	 */
-	targetActor: foundry.documents.Actor | null = null;
-
 	constructor(options: { actor?: foundry.documents.Actor } & object = {}) {
-		super(options as never);
+		super(options);
 		// Only character-carrying actors can prefill/update-in-place. Right-
 		// clicking a vehicle, ship, planet or dynasty entry (the creator menu is
 		// offered on every actor entry) must start a fresh explorer, not crash
@@ -289,7 +291,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				characteristics: Record<CharacteristicKey, { value: number }>;
 				careerKey?: string;
 			};
-			this.creatorState.name = this.targetActor.name ?? "";
+			this.name = this.targetActor.name ?? "";
 			this.creatorState.careerKey = system.careerKey ?? "";
 			// Existing characteristics prefill as rolled values; the player can
 			// re-roll (book: one re-roll) or switch to point-buy.
@@ -365,7 +367,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		if (input && !input.dataset.wired) {
 			input.dataset.wired = "1";
 			input.addEventListener("input", () => {
-				this.creatorState.name = input.value;
+				this.name = input.value;
 			});
 		}
 	}
@@ -450,8 +452,8 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 			await super._prepareContext(_options as never),
 		);
 		const state = this.creatorState;
-		context.step = state.step;
-		context.name = state.name;
+		context.step = this.step;
+		context.name = this.name;
 		context.isRoll = state.method === "roll";
 		context.isPoints = state.method === "points";
 		context.characteristics = CHARACTERISTIC_ORDER.map((key) => {
@@ -678,7 +680,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		};
 
 		context.canCreate =
-			state.step === CREATOR_LAST_STEP &&
+			this.step === CREATOR_LAST_STEP &&
 			originRows.every((row) => Boolean(state.picks[row])) &&
 			Boolean(state.careerKey) &&
 			(state.method === "roll" ? true : pointBuy.valid) &&
@@ -699,7 +701,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		// The forward button must be enabled on every step before the last;
 		// `canCreate` is step-3 only, so it cannot gate Next directly.
 		context.canNext = creatorCanAdvance(
-			state.step,
+			this.step,
 			Boolean(context.canCreate),
 		);
 		return context;
@@ -1079,20 +1081,6 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		this.render({ force: true });
 	}
 
-	static async #onPrev(this: CharacterCreator): Promise<void> {
-		this.creatorState.step = Math.max(0, this.creatorState.step - 1);
-		this.render({ force: true });
-	}
-
-	static async #onNext(this: CharacterCreator): Promise<void> {
-		const next = Math.min(CREATOR_LAST_STEP, this.creatorState.step + 1);
-		// Step 2 is the Origin Path: its wounds/Fate/insanity dice are rolled on
-		// entry (the dice belong to the origin rows, not the species).
-		if (next === 2) await this.#rollOriginDice();
-		this.creatorState.step = next;
-		this.render({ force: true });
-	}
-
 	/** Stage 6 (printed p272): choose the single starting free acquisition. */
 	static async #onToggleAcqGroup(
 		this: CharacterCreator,
@@ -1253,7 +1241,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 				if (!confirmed) return;
 			}
 			await target.update({
-				name: state.name || this.targetActor.name,
+				name: this.name || this.targetActor.name,
 				system: systemPayload,
 			} as never);
 			await this.#applyGrantsAndSummary(target, state, resolved);
@@ -1264,7 +1252,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 		}
 
 		const actor = (await foundry.documents.Actor.create({
-			name: state.name || game.i18n!.localize("CREATOR.DEFAULT_NAME"),
+			name: this.name || game.i18n!.localize("CREATOR.DEFAULT_NAME"),
 			type: "explorer",
 			system: systemPayload,
 		} as never)) as unknown as {
@@ -1551,7 +1539,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(
 					}</p>`
 				: "";
 		await foundry.documents.ChatMessage.create({
-			content: `<div class="rogue-trader creator-summary"><h3>${state.name}</h3><ul>${rows}</ul>${pf}${initiative}${psykerNote}${notes}</div>`,
+			content: `<div class="rogue-trader creator-summary"><h3>${this.name}</h3><ul>${rows}</ul>${pf}${initiative}${psykerNote}${notes}</div>`,
 		} as never);
 	}
 }

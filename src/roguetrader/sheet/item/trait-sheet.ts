@@ -13,7 +13,7 @@ import { effectActions, effectEditorChoices } from "./effect-actions";
 export class TraitSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "trait"],
-		position: { width: 500, height: "auto" },
+		position: { width: 500, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: { ...effectActions },
@@ -30,7 +30,7 @@ export class TraitSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = sheetContext(await super._prepareContext(options));
+		const context = sheetContext(await super._prepareContext(options as never));
 
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
 		Object.assign(context, effectEditorChoices((key) =>

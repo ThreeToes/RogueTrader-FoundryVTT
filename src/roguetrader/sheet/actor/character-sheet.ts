@@ -4,7 +4,10 @@ import {
 	isWeaponType,
 	systemOf,
 } from "../../data/accessors";
-import { RtActorSheet } from "../context";
+import { sheetContext } from "../context";
+
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { ActorSheetV2 } = foundry.applications.sheets;
 import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
 import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
@@ -15,7 +18,7 @@ import { actorView } from "../../infrastructure/foundry/actor-view";
 import { criticalSheetContext } from "../../rules/criticals";
 import { rollBattlesuitRepair } from "../../rules/battlesuit-repair";
 import { effectiveSorceryRank } from "../../rules/casting";
-import { effectiveMechanics, originByKey } from "../../origins";
+import { effectiveMechanics, originByKey } from "../../rules/origins";
 import {
 	resolveOriginTraits,
 } from "../../rules/origin-traits";
@@ -27,7 +30,7 @@ import {
 	type MadnessPoints,
 	type OwnedAfflictionLike,
 } from "../../rules/madness";
-import type { Modifier } from "../../rules-engine/src/modifier";
+import type { Modifier } from "../../../rules-engine/src/modifier";
 import {
 	performRoll,
 	rollSnapOut,
@@ -64,7 +67,7 @@ import { TalentPicker } from "./talent-picker";
 
 // (CharacteristicView, MAX_UNNATURAL_STEPS moved to sheet/skills-domain — bead 6l90)
 
-export class CharacterSheet extends RtActorSheet {
+export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "character"],
 		position: { width: 600, height: 500 },
@@ -602,13 +605,23 @@ export class CharacterSheet extends RtActorSheet {
 	static TABS = {
 		primary: {
 			tabs: [
-				{ id: "data", group: "primary", label: "TAB.STATS" },
-				{ id: "combat", group: "primary", label: "TAB.COMBAT" },
-				{ id: "skills", group: "primary", label: "TAB.SKILLS" },
-				{ id: "background", group: "primary", label: "TAB.BACKGROUND" },
-				{ id: "psychic", group: "primary", label: "TAB.PSYCHIC" },
-				{ id: "inventory", group: "primary", label: "TAB.INVENTORY" },
-				{ id: "notes", group: "primary", label: "TAB.NOTES" },
+				{ id: "data", group: "primary", label: "TAB.STATS", cssClass: "" },
+				{ id: "combat", group: "primary", label: "TAB.COMBAT", cssClass: "" },
+				{ id: "skills", group: "primary", label: "TAB.SKILLS", cssClass: "" },
+				{
+					id: "background",
+					group: "primary",
+					label: "TAB.BACKGROUND",
+					cssClass: "",
+				},
+				{ id: "psychic", group: "primary", label: "TAB.PSYCHIC", cssClass: "" },
+				{
+					id: "inventory",
+					group: "primary",
+					label: "TAB.INVENTORY",
+					cssClass: "",
+				},
+				{ id: "notes", group: "primary", label: "TAB.NOTES", cssClass: "" },
 			],
 			initial: "data",
 		},
@@ -720,7 +733,7 @@ export class CharacterSheet extends RtActorSheet {
 
 	async _prepareContext(options: { isFirstRender: boolean }) {
 		await this.#ensureDefaultSkills();
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const system = this.actor.system as Character;
 
 		// Critical Damage panel (bead ks3k): per-location totals, the effects
@@ -963,11 +976,7 @@ export class CharacterSheet extends RtActorSheet {
 					damage?: string;
 					penetration?: number;
 					clip?: number;
-					rateOfFire?: {
-						singleShot: boolean;
-						burst: number;
-						fullAuto: number;
-					};
+					rateOfFire?: RateOfFire;
 				};
 				const isRanged = item.type === "ranged-weapon";
 				return {

@@ -19,6 +19,8 @@
  * only).
  */
 
+import { ChartPool } from "../domain/model/chart";
+
 export type WarrantRow =
 	| "warrant-age"
 	| "fortune-fate"
@@ -70,52 +72,46 @@ export interface WarrantEntry {
 	mechanics: WarrantMechanics;
 }
 
-let warrantPool: WarrantEntry[] = [];
+const warrantPool = new ChartPool<WarrantEntry>(WARRANT_ROWS);
 
 /** Replace the runtime chart pool (pack loader / tests). */
 export function setWarrantEntries(entries: WarrantEntry[]): void {
-	warrantPool = entries;
+	warrantPool.set(entries);
 }
 
 /** The current runtime chart pool. */
 export function getWarrantEntries(): WarrantEntry[] {
-	return warrantPool;
+	return [...warrantPool.all()];
 }
 
 export function isWarrantRow(value: string): value is WarrantRow {
-	return WARRANT_ROWS.includes(value as WarrantRow);
+	return warrantPool.isRow(value);
 }
 
 export function warrantByKey(key: string): WarrantEntry | undefined {
-	return warrantPool.find((entry) => entry.key === key);
+	return warrantPool.byKey(key);
 }
 
 /** Every entry in a row, ordered by column. */
 export function warrantInRow(row: WarrantRow): WarrantEntry[] {
-	return warrantPool
-		.filter((entry) => entry.row === row)
-		.sort((a, b) => a.col - b.col);
+	return warrantPool.inRow(row);
 }
 
 /** Distinct occupied columns of a row (a row may leave gaps). */
 export function warrantRowColumns(row: WarrantRow): number[] {
-	return [...new Set(warrantInRow(row).map((entry) => entry.col))].sort(
-		(a, b) => a - b,
-	);
+	return warrantPool.rowColumns(row);
 }
 
 /**
  * Which columns of `row` are reachable from the previous pick at `prevCol`
  * (p33: the choice directly below, or either adjacent neighbour). The first
- * row is completely open.
+ * row is completely open. The adjacency lives in ChartPool (bead 8hkq).
  */
 export function allowedWarrantColumns(
 	row: WarrantRow,
 	prevCol: number | null,
 ): number[] {
-	const cols = warrantRowColumns(row);
-	if (prevCol === null) return cols;
-	return cols.filter((col) => Math.abs(col - prevCol) <= 1);
+	return warrantPool.allowedColumns(row, prevCol);
 }
 
 export interface WarrantPick {

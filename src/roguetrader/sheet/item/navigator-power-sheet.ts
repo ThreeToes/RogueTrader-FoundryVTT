@@ -13,7 +13,7 @@ export class NavigatorPowerSheet extends HandlebarsApplicationMixin(
 ) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "navigator-power"],
-		position: { width: 500, height: "auto" },
+		position: { width: 500, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: { ...effectActions },

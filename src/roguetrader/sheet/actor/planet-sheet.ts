@@ -1,5 +1,8 @@
 import { PlanetActor } from "../../data/actor/planet-actor";
-import { RtActorSheet } from "../context";
+import { sheetContext } from "../context";
+
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { ActorSheetV2 } = foundry.applications.sheets;
 
 /**
  * Book table names for the planet-generation kinds (owner bug report: raw
@@ -41,10 +44,10 @@ interface AttachedTable {
  * compendium). Attached tables group by kind and render read-only; the
  * authoritative row texts live on the items. Fully resizable.
  */
-export class PlanetSheet extends RtActorSheet {
+export class PlanetSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "planet"],
-		position: { width: 560, height: "auto" },
+		position: { width: 560, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
@@ -67,7 +70,7 @@ export class PlanetSheet extends RtActorSheet {
 	}
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const system = this.document.system as PlanetActor;
 		const profile = (
 			[

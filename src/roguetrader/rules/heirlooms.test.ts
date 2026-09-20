@@ -7,7 +7,7 @@ import {
 	setHeirloomEntries,
 	type HeirloomEntry,
 	type HeirloomGrantKind,
-} from "./origins";
+} from "./heirlooms";
 
 // Epic 1gb7 follow-up: the heirloom content (key, range, grant payload) lives
 // in the PRIVATE `heirlooms` compendium pack. CI does not ship compendia

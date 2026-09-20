@@ -10,6 +10,7 @@
         "build:templates": "cp -R ./template release/rogue_trader/",
         "watch": "bun utils/build.ts --watch",
         "lint": "biome lint",
+        "typecheck:pure": "tsc -p tsconfig.pure.json",
         "format": "biome format --write",
         "check": "biome check"
     },

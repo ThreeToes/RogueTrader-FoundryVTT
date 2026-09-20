@@ -17,7 +17,10 @@ import {
 	rollShipSalvo,
 } from "../../rules/adapter";
 import { cloneItemFromDrop, cloneItemIntoActor } from "../drop-clone";
-import { RtActorSheet } from "../context";
+import { sheetContext } from "../context";
+
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { ActorSheetV2 } = foundry.applications.sheets;
 import { getPackDocuments } from "../pack-resolve";
 
 /** Row for the hull picker: ships pack `ship` docs. */
@@ -41,7 +44,7 @@ const COMPONENT_CATEGORIES: Array<{ key: string; labelKey: string }> = [
  * SP delta), the two Complications (rolled from the ships pack with
  * 1d10), Ship Points and Space trackers, and notes. Fully resizable.
  */
-export class ShipSheet extends RtActorSheet {
+export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "starship"],
 		position: { width: 640, height: 560 },
@@ -85,9 +88,14 @@ export class ShipSheet extends RtActorSheet {
 	static TABS = {
 		primary: {
 			tabs: [
-				{ id: "hull", group: "primary", label: "STARSHIP.TAB_HULL" },
-				{ id: "refit", group: "primary", label: "STARSHIP.TAB_REFIT" },
-				{ id: "combat", group: "primary", label: "STARSHIP.TAB_COMBAT" },
+				{ id: "hull", group: "primary", label: "STARSHIP.TAB_HULL", cssClass: "" },
+				{ id: "refit", group: "primary", label: "STARSHIP.TAB_REFIT", cssClass: "" },
+				{
+					id: "combat",
+					group: "primary",
+					label: "STARSHIP.TAB_COMBAT",
+					cssClass: "",
+				},
 			],
 			initial: "hull",
 		},
@@ -126,7 +134,7 @@ export class ShipSheet extends RtActorSheet {
 	}
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const system = this.document.system as unknown as {
 			hullName: string;
 			hullClass: string;

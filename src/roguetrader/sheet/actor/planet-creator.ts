@@ -25,8 +25,7 @@ import {
 	rollMatchesRange,
 } from "../../rules/planet-tables";
 import { sheetContext } from "../context";
-
-const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
+import { CreatorApplication } from "./creator-application";
 
 /** One draw stage of the world-generation sequence. */
 interface PlanetStage {
@@ -114,42 +113,30 @@ function emptyStages(): Record<string, StageState> {
 }
 
 
-export class PlanetCreator extends HandlebarsApplicationMixin(ApplicationV2) {
-	static DEFAULT_OPTIONS = {
+export class PlanetCreator extends CreatorApplication {
+	static DEFAULT_OPTIONS = CreatorApplication.creatorOptions({
 		id: "rogue-trader-planet-creator",
-		classes: ["rogue-trader", "sheet", "planet-creator"],
-		position: { width: 640, height: 560 },
-		window: { title: "PLANET_CREATOR.TITLE", resizable: true },
+		slug: "planet-creator",
+		titleKey: "PLANET_CREATOR.TITLE",
+		width: 640,
+		height: 560,
 		actions: {
 			roll: PlanetCreator.#onRoll,
-			prev: PlanetCreator.#onPrev,
-			next: PlanetCreator.#onNext,
 			bump: PlanetCreator.#onBump,
 			finish: PlanetCreator.#onFinish,
 		},
-	};
+	});
 
-	name = "";
-
-	/** Wizard step (0..STAGES.length-1). */
-	stepIndex = 0;
+	/** The last draw stage. */
+	protected get lastStep(): number {
+		return STAGES.length - 1;
+	}
 
 	/** Profile snapshot written to the planet actor at finish. */
 	profile: Record<string, string> = {};
 
 	/** Per-stage draw state (modifier + drawn row). */
 	stages = emptyStages();
-
-	/** Optional existing planet (context-menu entry): update in place. */
-	targetActor: foundry.documents.Actor | null = null;
-
-	constructor(
-		options: { actor?: foundry.documents.Actor; name?: string } & object = {},
-	) {
-		super(options as never);
-		this.targetActor = options.actor ?? null;
-		this.name = options.name ?? this.targetActor?.name ?? "";
-	}
 
 	static PARTS = {
 		form: {
@@ -183,7 +170,7 @@ export class PlanetCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 		summary: string;
 		description: string;
 	} | null> {
-		const stage = STAGES[this.stepIndex];
+		const stage = STAGES[this.step];
 		if (!stage) return null;
 		const drawn = this.stages[stage.key];
 		if (!drawn.uuid) return null;
@@ -201,8 +188,8 @@ export class PlanetCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	async _prepareContext(_options: object = {}) {
 		const context = sheetContext(await super._prepareContext(_options as never));
-		const index = Math.max(0, Math.min(this.stepIndex, STAGES.length - 1));
-		this.stepIndex = index;
+		const index = Math.max(0, Math.min(this.step, STAGES.length - 1));
+		this.step = index;
 		const stage = STAGES[index];
 		const drawn = this.stages[stage.key];
 		// Development rows are keyed by species (roll field = species name);
@@ -369,16 +356,6 @@ export class PlanetCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 		const state = this.stages[stageKey];
 		if (!state) return;
 		state.modifier += Number(target.dataset.delta ?? 0);
-		this.render({ force: true });
-	}
-
-	static async #onPrev(this: PlanetCreator): Promise<void> {
-		this.stepIndex = Math.max(0, this.stepIndex - 1);
-		this.render({ force: true });
-	}
-
-	static async #onNext(this: PlanetCreator): Promise<void> {
-		this.stepIndex = Math.min(this.stepIndex + 1, STAGES.length - 1);
 		this.render({ force: true });
 	}
 

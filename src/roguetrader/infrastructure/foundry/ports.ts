@@ -6,7 +6,6 @@
  * `setPorts(fake)` to run the rules headlessly.
  */
 
-import type { Actor } from "fvtt-types/documents";
 import type {
 	Actors,
 	Chat,

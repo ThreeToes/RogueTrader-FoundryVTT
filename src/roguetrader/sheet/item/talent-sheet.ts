@@ -14,7 +14,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "talent"],
-		position: { width: 500, height: "auto" },
+		position: { width: 500, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: { ...effectActions },

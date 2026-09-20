@@ -11,15 +11,13 @@ import {
 	getOriginEntries,
 	ORIGIN_ROWS,
 	originByKey,
+	originEntryFromDoc,
+	originRowChoices,
 	originRowsForSpecies,
 	originsInRow,
 	resolveOrigins,
 	setOriginEntries,
-	type CharMod,
-	type OriginEntry,
-	type OriginMechanics,
-	type OriginRow,
-	type OriginVariant,
+	speciesKeyOfEntry,
 } from "./origins";
 
 // Epic 1gb7: the chart content lives in the PRIVATE `origins` compendium pack.
@@ -37,29 +35,7 @@ const packDocs = (
 			}>)
 		: []
 );
-setOriginEntries(
-	packDocs.map((doc) => {
-		const s = doc.system ?? {};
-		return {
-			key: String(s.key ?? ""),
-			row: String(s.row ?? "home-world") as OriginRow,
-			col: Number(s.col ?? 0),
-			species: s.species ? String(s.species) : undefined,
-			replaces: Array.isArray(s.replaces)
-				? (s.replaces as unknown[]).map(String)
-				: s.replaces
-					? String(s.replaces)
-					: undefined,
-			name: doc.name ?? "",
-			description: String(s.description ?? ""),
-			effect: s.effect ? String(s.effect) : undefined,
-			mechanics: (s.mechanics ?? {}) as OriginMechanics,
-			variants: Array.isArray(s.variants)
-				? (s.variants as OriginVariant[])
-				: undefined,
-		} satisfies OriginEntry;
-	}),
-);
+setOriginEntries(packDocs.map((doc) => originEntryFromDoc(doc)));
 const ORIGIN_ENTRIES = getOriginEntries();
 
 /**
@@ -454,6 +430,110 @@ packDescribe("species origin paths (bead ghmn)", () => {
 				if ((entry.species ?? "").trim() !== key) continue;
 				expect(rows.has(entry.row), `${key}: ${entry.name}`).toBe(true);
 			}
+		}
+	});
+
+	// Bug report 2026-09-20 (screenshot): "I picked human and I see every
+	// species' origins." The ready-time warmer built its entries inline and
+	// silently dropped `species` and `replaces`, so every entry looked human and
+	// the creator offered the whole xeno chart on the human Origin Path.
+	//
+	// This test did NOT catch it, because it mapped the pack ITSELF — correctly.
+	// The mapping is now shared (originEntryFromDoc) so the suite exercises the
+	// same code the warmer runs; these two cases are the reported symptom stated
+	// directly, and they fail the moment the mapper drops a field again.
+	test("REGRESSION: the human path is exactly the six human rows", () => {
+		expect(originRowsForSpecies("")).toEqual([
+			"home-world",
+			"birthright",
+			"lure",
+			"trials",
+			"motivation",
+			"lineage",
+		]);
+	});
+
+	test("REGRESSION: no xeno entry is offered on a human row", () => {
+		const humanRows = new Set(originRowsForSpecies(""));
+		for (const entry of getOriginEntries()) {
+			if (speciesKeyOfEntry(entry) === "") continue;
+			expect(
+				humanRows.has(entry.row),
+				`${entry.name} (${entry.species}) must not sit on a human row`,
+			).toBe(false);
+		}
+		// And the human rows carry no species-bound entry at all.
+		for (const row of humanRows) {
+			for (const entry of originsInRow(row)) {
+				expect(speciesKeyOfEntry(entry), `${row}: ${entry.name}`).toBe("");
+			}
+		}
+	});
+
+	test("REGRESSION: the row vocabulary covers every row the pack uses", () => {
+		// Bug 2026-09-20: the `row` DataModel field built its `choices` from
+		// ORIGIN_ROWS (the human path only), so Foundry coerced every xeno row to
+		// the field's `initial` — all 23 xeno entries landed on Home World and the
+		// human chart rendered 35 chips. The choices are built by a shared helper
+		// now, so this can fail.
+		const choices = new Set(Object.keys(originRowChoices()));
+		const packRows = new Set(getOriginEntries().map((e) => e.row));
+		expect(packRows.size).toBeGreaterThan(6);
+		for (const row of packRows) {
+			expect(choices.has(row), `row "${row}" missing from the choices`).toBe(true);
+		}
+		// And the human five must still be a strict subset — the xeno rows are
+		// APPENDED, never substituted.
+		for (const row of ORIGIN_ROWS) {
+			expect(choices.has(row), row).toBe(true);
+		}
+	});
+
+	test("REGRESSION: a xeno pick resolves its mechanics", () => {
+		// Same family: resolveOrigins iterated ORIGIN_ROWS, so a xeno character's
+		// picks were skipped entirely and their characteristic deltas, skills and
+		// talents silently vanished.
+		const xenoEntry = getOriginEntries().find(
+			(e) => speciesKeyOfEntry(e) !== "" && e.row === "klan",
+		);
+		expect(xenoEntry, "a klan entry in the pack").toBeDefined();
+		if (!xenoEntry) return;
+		const resolved = resolveOrigins({
+			klan: { row: "klan", key: xenoEntry.key },
+		});
+		// The pick must be seen at all: its notes are appended under its own
+		// label, which only happens when the row is iterated.
+		expect(resolved.notes.join(" ")).toContain(xenoEntry.name);
+	});
+
+	test("REGRESSION: an alternate keeps its replaces list", () => {
+		// The same omission dropped `replaces`, which silently disabled the b03f
+		// substitution logic (an alternate occupies its core slot, and an
+		// EXPANDED alternate may occupy either of two core slots).
+		const alternates = getOriginEntries().filter((e) => e.replaces);
+		expect(alternates.length).toBeGreaterThan(0);
+
+		// Every substituted key must resolve to a real core entry — an
+		// unresolvable one would leave the alternate on a single column.
+		for (const entry of alternates) {
+			const keys = Array.isArray(entry.replaces)
+				? entry.replaces
+				: [entry.replaces as string];
+			for (const key of keys) {
+				expect(originByKey(key), `${entry.name} replaces ${key}`).toBeDefined();
+			}
+		}
+
+		// The expanded alternates span two core slots (Into the Storm p17); a
+		// handful legitimately occupy a single one, so assert that the multi-slot
+		// ones EXIST rather than that all of them do.
+		const spanning = alternates.filter((e) => entryColumns(e).length > 1);
+		expect(spanning.length).toBeGreaterThan(0);
+		for (const entry of spanning) {
+			expect(
+				entryColumns(entry).length,
+				`${entry.name} should span its own column plus its core's`,
+			).toBeLessThanOrEqual(6);
 		}
 	});
 });

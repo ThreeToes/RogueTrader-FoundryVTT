@@ -9,7 +9,6 @@
  * exists and performRoll never needs editing.
  */
 
-import type { Actor } from "fvtt-types/documents";
 import { type Modifier, type TestOutcome } from "../../../rules-engine/src/index";
 import { systemOf } from "../../data/accessors";
 import { actorView } from "../../infrastructure/foundry/actor-view";
@@ -395,7 +394,6 @@ export async function rollSnapOut(
 			weapon: null,
 			context: { flags: finalFlags },
 			templateVars: {},
-			kindData: {},
 		},
 		finalModifiers,
 		{ flags: finalFlags },

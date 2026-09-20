@@ -1,4 +1,4 @@
-import { ORIGIN_ROWS } from "../../origins";
+import { originRowChoices } from "../../rules/origins";
 import { CHARACTERISTIC_KEYS } from "../actor/character";
 import { Gear } from "./gear";
 
@@ -103,9 +103,15 @@ export class Origin extends Gear {
 			...super.defineSchema(),
 			/** Chart key (e.g. "death-world"); referenced by system.origins picks. */
 			key: new fields.StringField({ initial: "" }),
-			/** Chart row (p16): home-world | birthright | lure | trials | motivation. */
+			/** Chart row (p16): home-world | birthright | lure | trials | motivation | lineage,
+			 *  plus the xeno paths' rows (kindred | klan | know-wotz | competence).
+			 *
+			 * MUST be the WHOLE chart vocabulary, not ORIGIN_ROWS: that constant is the
+			 * human path only, and a `choices` list narrower than the data silently
+			 * coerces every out-of-vocabulary value to `initial` — which put all 23
+			 * xeno entries on the human Home World row (bug 2026-09-20). */
 			row: new fields.StringField({
-				choices: Object.fromEntries(ORIGIN_ROWS.map((r) => [r, r])),
+				choices: originRowChoices(),
 				initial: "home-world",
 			}),
 			/** Column index (0-based) on the p16 chart; adjacency uses this. */

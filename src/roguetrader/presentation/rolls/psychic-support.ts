@@ -8,7 +8,6 @@
  * Every side effect goes through a port: dice, chat, content and actor writes.
  */
 
-import type { Actor } from "fvtt-types/documents";
 import { systemOf } from "../../data/accessors";
 import type { EffectData } from "../../domain/model/effect";
 import { corruptionExpressions } from "../../domain/model/effect";

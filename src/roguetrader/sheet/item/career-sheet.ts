@@ -1,5 +1,6 @@
 import { careers } from "../../registry";
 import type { CareerRank } from "../../data/item/career";
+import { ITEM_DESCRIPTION_TABS } from "../tabs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -111,15 +112,7 @@ export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		return `${game.i18n.localize("CAREER.HEADER")}: ${this.document.name}`;
 	}
 
-	static TABS = {
-		primary: {
-			tabs: [
-				{ id: "description", group: "primary", label: "TAB.DESCRIPTION" },
-				{ id: "data", group: "primary", label: "TAB.DATA" },
-			],
-			initial: "description",
-		},
-	};
+	static TABS = ITEM_DESCRIPTION_TABS;
 
 	async _prepareContext(options: object = {}) {
 		const context = await super._prepareContext(options);

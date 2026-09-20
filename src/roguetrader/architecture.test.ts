@@ -225,7 +225,7 @@ describe("architecture boundaries (epic kof0)", () => {
 	test("the scanner flags a Foundry import in domain", () => {
 		const violations = violationsFor(
 			"src/roguetrader/domain/x.ts",
-			'import type { Actor } from "fvtt-types/documents";\n',
+			'import type { Actor } from "fvtt-types";\n',
 		);
 		expect(violations.length).toBeGreaterThan(0);
 	});
@@ -265,7 +265,7 @@ describe("architecture boundaries (epic kof0)", () => {
 	test("the scanner allows infrastructure to use Foundry", () => {
 		const violations = violationsFor(
 			"src/roguetrader/infrastructure/foundry/dice.ts",
-			'import type { Actor } from "fvtt-types/documents";\nexport const r = new foundry.dice.Roll("1d100");\n',
+			'import type { Actor } from "fvtt-types";\nexport const r = new foundry.dice.Roll("1d100");\n',
 		);
 		expect(violations).toEqual([]);
 	});

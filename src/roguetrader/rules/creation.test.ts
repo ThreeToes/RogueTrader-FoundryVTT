@@ -238,8 +238,13 @@ describe("creatorCanAdvance (character-creator Next gate, fix 2026-09-14)", () =
 			expect(template).not.toContain(`{{#if (eq step ${CREATOR_LAST_STEP + 1})}}`);
 		});
 
-		test("the nav marks the last step as the primary Create action", () => {
-			expect(template).toContain(`(ifThen (eq step ${CREATOR_LAST_STEP}) "create" "next")`);
+		test("the nav marks the last step as the primary Finish action", () => {
+			// The action name is `finish`, not `create` (bead 7ife): all four
+			// creators now name their final action the same thing, and this test
+			// is what caught the rename.
+			expect(template).toContain(
+				`(ifThen (eq step ${CREATOR_LAST_STEP}) "finish" "next")`,
+			);
 			expect(template).toContain(`forwardPrimary=(eq step ${CREATOR_LAST_STEP})`);
 		});
 

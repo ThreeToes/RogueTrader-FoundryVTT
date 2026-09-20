@@ -26,7 +26,7 @@ import {
 	type ShipComponentLike,
 } from "../../rules/ship-systems";
 
-const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
+import { CreatorApplication } from "./creator-application";
 
 interface ShipPick {
 	uuid: string;
@@ -42,8 +42,6 @@ interface ShipPick {
 }
 
 function emptyShipState(): {
-	step: number;
-	name: string;
 	spBudget: number;
 	hullUuid: string | null;
 	hullName: string;
@@ -62,8 +60,6 @@ function emptyShipState(): {
 	} | null;
 } {
 	return {
-		step: 0,
-		name: "",
 		spBudget: 0,
 		hullUuid: null,
 		hullName: "",
@@ -147,37 +143,28 @@ async function fetchComponentOptions(): Promise<PackOption[]> {
 		}));
 }
 
-export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
-	static DEFAULT_OPTIONS = {
+export class ShipCreator extends CreatorApplication {
+	static DEFAULT_OPTIONS = CreatorApplication.creatorOptions({
 		id: "rogue-trader-ship-creator",
-		classes: ["rogue-trader", "sheet", "ship-creator"],
-		position: { width: 720, height: 640 },
-		window: { title: "SHIP_CREATOR.TITLE", resizable: true },
+		slug: "ship-creator",
+		titleKey: "SHIP_CREATOR.TITLE",
+		width: 720,
+		height: 640,
 		actions: {
-			prev: ShipCreator.#onPrev,
-			next: ShipCreator.#onNext,
 			pickHull: ShipCreator.#onPickHull,
 			toggleGroup: ShipCreator.#onToggleGroup,
 			pickComponent: ShipCreator.#onPickComponent,
 			setCrewQuality: ShipCreator.#onSetCrewQuality,
 			finish: ShipCreator.#onFinish,
 		},
-	};
+	});
+
+	/** Hull, then essential components, then supplemental. */
+	protected get lastStep(): number {
+		return 2;
+	}
 
 	creatorState = emptyShipState();
-
-	/** Optional existing starship (right-clicked entry): update in place. */
-	targetActor: foundry.documents.Actor | null = null;
-
-	constructor(
-		options: { actor?: foundry.documents.Actor } & object = {},
-	) {
-		super(options as never);
-		this.targetActor = options.actor ?? null;
-		if (this.targetActor) {
-			this.creatorState.name = this.targetActor.name ?? "";
-		}
-	}
 
 	static PARTS = {
 		form: {
@@ -256,8 +243,8 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 	async _prepareContext(_options: object = {}) {
 		const context = sheetContext(await super._prepareContext(_options as never));
 		const state = this.creatorState;
-		context.step = state.step;
-		context.name = state.name;
+		context.step = this.step;
+		context.name = this.name;
 		context.spBudget = state.spBudget;
 		context.crewQualities = Object.fromEntries(
 			Object.keys(CREW_QUALITIES).map((key) => [
@@ -404,7 +391,7 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 						if (key === "spBudget") {
 							this.creatorState.spBudget = Number(input.value) || 0;
 						} else {
-							this.creatorState.name = input.value;
+							this.name = input.value;
 						}
 					});
 			}
@@ -475,16 +462,6 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 				},
 			];
 		}
-		this.render({ force: true });
-	}
-
-	static async #onPrev(this: ShipCreator): Promise<void> {
-		this.creatorState.step = Math.max(0, this.creatorState.step - 1);
-		this.render({ force: true });
-	}
-
-	static async #onNext(this: ShipCreator): Promise<void> {
-		this.creatorState.step = Math.min(2, this.creatorState.step + 1);
 		this.render({ force: true });
 	}
 
@@ -706,7 +683,7 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 				await target.deleteEmbeddedDocuments("Item", stale);
 			}
 			await target.update({
-				name: state.name || this.targetActor.name,
+				name: this.name || this.targetActor.name,
 				system: systemPayload,
 			} as never);
 			if (payloads.length > 0) {
@@ -718,7 +695,7 @@ export class ShipCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 
 		const actor = (await foundry.documents.Actor.create({
-			name: state.name || game.i18n!.localize("SHIP_CREATOR.DEFAULT_NAME"),
+			name: this.name || game.i18n!.localize("SHIP_CREATOR.DEFAULT_NAME"),
 			type: "starship",
 			system: systemPayload,
 		} as never)) as unknown as {

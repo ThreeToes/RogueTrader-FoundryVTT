@@ -10,17 +10,25 @@
  */
 
 import { migrateLegacyActors, withoutLegacyCharacterTypes } from "../migrations";
+import {
+	firstStr,
+	nested,
+	num,
+	optionalStr,
+	packSystem,
+	str,
+	strArray,
+} from "../data/pack-fields";
 import type { SkillSourceLike } from "../rules/default-skills";
 import {
+	setHeirloomEntries,
 	type HeirloomEntry,
 	type HeirloomGrantKind,
-	type OriginEntry,
-	type OriginMechanics,
-	type OriginRow,
-	type OriginVariant,
-	setHeirloomEntries,
+} from "../rules/heirlooms";
+import {
+	originEntryFromDoc,
 	setOriginEntries,
-} from "../origins";
+} from "../rules/origins";
 import type { OriginTraitDef } from "../rules/origin-traits";
 import {
 	isWarrantRow,
@@ -49,16 +57,16 @@ function warmOriginTraits(): void {
 		getCharacterOptionDocs("origintrait").then((rawDocs) => {
 			const docs = rawDocs as Array<foundry.documents.Item>;
 			originTraitDefs = docs.map((doc) => {
-				const s = doc.system as unknown as Record<string, unknown>;
+				const s = packSystem(doc);
 				return {
 					name: doc.name ?? "",
-					originKey: String(s.originKey ?? ""),
-					traitKey: String(s.traitKey ?? ""),
-					kind: String(s.kind ?? "note") as OriginTraitDef["kind"],
-					testKey: String(s.testKey ?? ""),
-					value: Number(s.value ?? 0),
-					grantKind: String(s.grantKind ?? ""),
-					text: String(s.description ?? s.shortDescription ?? ""),
+					originKey: str(s, "originKey"),
+					traitKey: str(s, "traitKey"),
+					kind: str(s, "kind", "note") as OriginTraitDef["kind"],
+					testKey: str(s, "testKey"),
+					value: num(s, "value"),
+					grantKind: str(s, "grantKind"),
+					text: firstStr(s, "description", "shortDescription"),
 				};
 			});
 		});
@@ -75,23 +83,11 @@ function warmOrigins(): void {
 	Hooks.once("ready", () => {
 		getCharacterOptionDocs("origin").then((rawDocs) => {
 			const docs = rawDocs as Array<foundry.documents.Item>;
-			setOriginEntries(
-				docs.map((doc) => {
-					const s = doc.system as unknown as Record<string, unknown>;
-					return {
-						key: String(s.key ?? ""),
-						row: String(s.row ?? "home-world") as OriginRow,
-						col: Number(s.col ?? 0),
-						name: doc.name ?? "",
-						description: String(s.description ?? ""),
-						effect: s.effect ? String(s.effect) : undefined,
-						mechanics: (s.mechanics ?? {}) as OriginMechanics,
-						variants: Array.isArray(s.variants)
-							? (s.variants as OriginVariant[])
-							: undefined,
-					} as OriginEntry;
-				}),
-			);
+			// The mapping is SHARED with the rules module (bead ghmn bug fix):
+			// building it inline here silently dropped `species` and `replaces`,
+			// so every entry looked human and the creator offered every species'
+			// rows on the human Origin Path.
+			setOriginEntries(docs.map((doc) => originEntryFromDoc(doc)));
 		});
 	});
 }
@@ -110,23 +106,21 @@ function warmHeirlooms(): void {
 			);
 			setHeirloomEntries(
 				docs.map((doc) => {
-					const s = doc.system as unknown as Record<string, unknown>;
-					const range = (s.range ?? {}) as { low?: number; high?: number };
-					const grant = (s.grant ?? {}) as Record<string, unknown>;
+					const s = packSystem(doc);
+					const range = nested(s, "range");
+					const grant = nested(s, "grant");
 					return {
-						key: String(s.key ?? ""),
+						key: str(s, "key"),
 						name: doc.name ?? "",
-						range: [Number(range.low ?? 0), Number(range.high ?? 0)],
-						table: s.table ? String(s.table) : undefined,
+						range: [num(range, "low"), num(range, "high")],
+						table: optionalStr(s, "table"),
 						grant: {
-							kind: String(grant.kind ?? "pack-item") as HeirloomGrantKind,
-							pack: grant.pack ? String(grant.pack) : undefined,
-							item: grant.item ? String(grant.item) : undefined,
-							craftsmanship: grant.craftsmanship
-								? String(grant.craftsmanship)
-								: undefined,
-							rename: grant.rename ? String(grant.rename) : undefined,
-							noteText: grant.noteText ? String(grant.noteText) : undefined,
+							kind: str(grant, "kind", "pack-item") as HeirloomGrantKind,
+							pack: optionalStr(grant, "pack"),
+							item: optionalStr(grant, "item"),
+							craftsmanship: optionalStr(grant, "craftsmanship"),
+							rename: optionalStr(grant, "rename"),
+							noteText: optionalStr(grant, "noteText"),
 						},
 					} satisfies HeirloomEntry;
 				}),
@@ -149,22 +143,18 @@ function warmWarrant(): void {
 			setWarrantEntries(
 				docs
 					.map((doc) => {
-						const s = doc.system as unknown as Record<string, unknown>;
-						const mechanics = (s.mechanics ?? {}) as {
-							shipPoints?: unknown;
-							profitFactor?: unknown;
-							notes?: unknown[];
-						};
+						const s = packSystem(doc);
+						const mechanics = nested(s, "mechanics");
 						return {
-							key: String(s.key ?? ""),
-							row: String(s.row ?? "") as WarrantRow,
-							col: Number(s.col ?? 0),
+							key: str(s, "key"),
+							row: str(s, "row") as WarrantRow,
+							col: num(s, "col"),
 							name: doc.name ?? "",
-							description: String(s.description ?? ""),
+							description: str(s, "description"),
 							mechanics: {
-								shipPoints: Number(mechanics.shipPoints ?? 0),
-								profitFactor: Number(mechanics.profitFactor ?? 0),
-								notes: (mechanics.notes ?? []).map(String),
+								shipPoints: num(mechanics, "shipPoints"),
+								profitFactor: num(mechanics, "profitFactor"),
+								notes: strArray(mechanics, "notes"),
 							},
 						} satisfies WarrantEntry;
 					})
@@ -194,13 +184,13 @@ function warmMadness(): void {
 				(doc) => doc.type === "madnessentry",
 			);
 			madnessRows = madnessDocs.map((doc) => {
-				const s = doc.system as unknown as Record<string, unknown>;
+				const s = packSystem(doc);
 				return {
-					kind: String(s.kind ?? ""),
-					rollMin: Number(s.rollMin ?? 0),
-					rollMax: Number(s.rollMax ?? 999),
-					degree: String(s.degree ?? ""),
-					modifier: Number(s.modifier ?? 0),
+					kind: str(s, "kind"),
+					rollMin: num(s, "rollMin"),
+					rollMax: num(s, "rollMax", 999),
+					degree: str(s, "degree"),
+					modifier: num(s, "modifier"),
 				};
 			});
 		});

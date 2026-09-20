@@ -12,6 +12,7 @@
  */
 import { sheetContext } from "../context";
 import { getPackDocuments } from "../pack-resolve";
+import { CreatorApplication } from "./creator-application";
 import {
 	allowedWarrantColumns,
 	getWarrantEntries,
@@ -23,8 +24,6 @@ import {
 	type WarrantEntry,
 	type WarrantRow,
 } from "../../rules/warrant";
-
-const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
 /** Map a pack document onto the runtime pool entry. */
 function toEntry(doc: {
@@ -58,38 +57,26 @@ function toEntry(doc: {
 	};
 }
 
-export class WarrantCreator extends HandlebarsApplicationMixin(ApplicationV2) {
-	static DEFAULT_OPTIONS = {
+export class WarrantCreator extends CreatorApplication {
+	static DEFAULT_OPTIONS = CreatorApplication.creatorOptions({
 		id: "rogue-trader-warrant-creator",
-		classes: ["rogue-trader", "sheet", "warrant-creator"],
-		position: { width: 700, height: 620 },
-		window: { title: "WARRANT_CREATOR.TITLE", resizable: true },
+		slug: "warrant-creator",
+		titleKey: "WARRANT_CREATOR.TITLE",
+		width: 700,
+		height: 620,
 		actions: {
 			choose: WarrantCreator.#onChoose,
-			prev: WarrantCreator.#onPrev,
-			next: WarrantCreator.#onNext,
 			finish: WarrantCreator.#onFinish,
 		},
-	};
+	});
 
-	name = "";
-
-	/** Wizard step (0..WARRANT_ROWS.length-1). */
-	stepIndex = 0;
+	/** The last chart row. */
+	protected get lastStep(): number {
+		return WARRANT_ROWS.length - 1;
+	}
 
 	/** Row id -> chosen option key. */
 	picks: Record<string, string> = {};
-
-	/** Optional existing Dynasty (context-menu entry): update in place. */
-	targetActor: foundry.documents.Actor | null = null;
-
-	constructor(
-		options: { actor?: foundry.documents.Actor; name?: string } & object = {},
-	) {
-		super(options as never);
-		this.targetActor = options.actor ?? null;
-		this.name = options.name ?? this.targetActor?.name ?? "";
-	}
 
 	static PARTS = {
 		form: {
@@ -156,8 +143,8 @@ export class WarrantCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 	async _prepareContext(_options: object = {}) {
 		await this.#ensurePool();
 		const context = sheetContext(await super._prepareContext(_options as never));
-		const index = Math.max(0, Math.min(this.stepIndex, WARRANT_ROWS.length - 1));
-		this.stepIndex = index;
+		const index = Math.max(0, Math.min(this.step, WARRANT_ROWS.length - 1));
+		this.step = index;
 		const row = WARRANT_ROWS[index];
 		const prevRow = index > 0 ? WARRANT_ROWS[index - 1] : null;
 		const prevCol = prevRow ? this.#colOf(prevRow) : null;
@@ -267,17 +254,6 @@ export class WarrantCreator extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.render({ force: true });
 	}
 
-	static async #onPrev(this: WarrantCreator): Promise<void> {
-		this.stepIndex = Math.max(0, this.stepIndex - 1);
-		this.render({ force: true });
-	}
-
-	static async #onNext(this: WarrantCreator): Promise<void> {
-		this.stepIndex = Math.min(this.stepIndex + 1, WARRANT_ROWS.length - 1);
-		this.render({ force: true });
-	}
-
-	/** Create/update the Dynasty actor with the picks + derived totals. */
 	static async #onFinish(this: WarrantCreator): Promise<void> {
 		const picks = WARRANT_ROWS.filter((r) => this.picks[r]).map((r) => ({
 			row: r,

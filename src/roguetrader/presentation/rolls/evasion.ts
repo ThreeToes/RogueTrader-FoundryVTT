@@ -9,7 +9,6 @@
  * untrained fallback is characteristic-only at -10.
  */
 
-import type { Actor } from "fvtt-types/documents";
 import { systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollBase } from "../../rules/roll-contract";

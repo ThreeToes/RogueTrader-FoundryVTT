@@ -8,7 +8,7 @@
  * creator application.
  */
 
-import { type ResolvedOrigin } from "../origins";
+import { type ResolvedOrigin } from "../rules/origins";
 
 export type { ResolvedOrigin };
 

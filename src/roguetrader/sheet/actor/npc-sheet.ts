@@ -16,7 +16,11 @@ import {
 } from "../npc-inventory";
 import { openPackItemAction } from "../pack-resolve";
 import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
-import { RtActorSheet } from "../context";
+import { sheetContext } from "../context";
+import type { RateOfFire } from "../../data/item/rate-of-fire";
+
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { ActorSheetV2 } = foundry.applications.sheets;
 
 /**
  * GM-facing NPC sheet (bead mqdy, owner spec 2026-09-06): fast at-the-table
@@ -27,7 +31,7 @@ import { RtActorSheet } from "../context";
  * CharacterSheet; this sheet is registered for the npc type only.
  */
 
-export class NpcSheet extends RtActorSheet {
+export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "npc"],
 		position: { width: 560, height: 480 },
@@ -76,10 +80,15 @@ export class NpcSheet extends RtActorSheet {
 	static TABS = {
 		primary: {
 			tabs: [
-				{ id: "main", group: "primary", label: "NPC.TAB_MAIN" },
-				{ id: "inventory", group: "primary", label: "NPC.TAB_INVENTORY" },
-				{ id: "psy", group: "primary", label: "NPC.TAB_PSY" },
-				{ id: "notes", group: "primary", label: "NPC.TAB_NOTES" },
+				{ id: "main", group: "primary", label: "NPC.TAB_MAIN", cssClass: "" },
+				{
+					id: "inventory",
+					group: "primary",
+					label: "NPC.TAB_INVENTORY",
+					cssClass: "",
+				},
+				{ id: "psy", group: "primary", label: "NPC.TAB_PSY", cssClass: "" },
+				{ id: "notes", group: "primary", label: "NPC.TAB_NOTES", cssClass: "" },
 			],
 			initial: "main",
 		},
@@ -132,7 +141,7 @@ export class NpcSheet extends RtActorSheet {
 	}
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const system = systemOf(this.actor);
 		context.system = system;
 
@@ -178,11 +187,7 @@ export class NpcSheet extends RtActorSheet {
 					damage?: string;
 					penetration?: number;
 					clip?: number;
-					rateOfFire?: {
-						singleShot: boolean;
-						burst: number;
-						fullAuto: number;
-					};
+					rateOfFire?: RateOfFire;
 				};
 				const isRanged = i.type === "ranged-weapon";
 				return {

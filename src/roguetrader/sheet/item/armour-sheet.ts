@@ -2,6 +2,7 @@ import { Armour } from "../../data/item/armour";
 import { Battlesuit } from "../../data/item/battlesuit";
 import { bodyLocations } from "../../registry";
 import { effectActions, effectEditorChoices } from "./effect-actions";
+import { ITEM_DATA_TABS } from "../tabs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -9,7 +10,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "armour"],
-		position: { width: 500, height: "auto" },
+		position: { width: 500, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: { ...effectActions },
@@ -30,15 +31,7 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		},
 	};
 
-	static TABS = {
-		primary: {
-			tabs: [
-				{ id: "data", group: "primary", label: "TAB.DATA" },
-				{ id: "notes", group: "primary", label: "TAB.DESCRIPTION" },
-			],
-			initial: "data",
-		},
-	};
+	static TABS = ITEM_DATA_TABS;
 
 	async _prepareContext(options: object = {}) {
 		const context = await super._prepareContext(options);

@@ -52,7 +52,7 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 ) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "ship-component"],
-		position: { width: 520, height: "auto" },
+		position: { width: 520, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: { ...effectActions },

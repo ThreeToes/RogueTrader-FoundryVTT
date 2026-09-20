@@ -90,7 +90,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 			minHeight: 220,
 			resizable: true,
 		},
-		position: { width: 440, height: "auto" },
+		position: { width: 440, height: "auto" as const },
 		actions: {
 			addModifier: TestDialog.#onAdd,
 			removeModifier: TestDialog.#onRemove,

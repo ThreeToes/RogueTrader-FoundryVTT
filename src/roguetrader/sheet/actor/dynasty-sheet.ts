@@ -9,16 +9,23 @@ import {
 	warrantInRow,
 	type WarrantRow,
 } from "../../rules/warrant";
-import { RtActorSheet } from "../context";
+import { sheetContext } from "../context";
+
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { ActorSheetV2 } = foundry.applications.sheets;
 
 /**
  * Dynasty sheet (bead gjvg): the group's Profit Factor and Ship Points
  * record. Minimal editable fields; Ship Points remaining derives 1:1.
+ *
+ * Extends the Foundry bases directly and widens the context locally with
+ * `sheetContext` (bead e2ge): a shared Rt*Sheet base cannot be made
+ * type-correct without making tsc non-terminating — see sheet/context.ts.
  */
-export class DynastySheet extends RtActorSheet {
+export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "dynasty"],
-		position: { width: 520, height: "auto" },
+		position: { width: 520, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
@@ -42,7 +49,7 @@ export class DynastySheet extends RtActorSheet {
 	}
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const system = this.document.system as Dynasty;
 		context.profitFactor = system.profitFactor;
 		context.shipPoints = system.shipPoints;

@@ -21,7 +21,14 @@
  * surfaced to the player at the end of the creator — never silently dropped.
  */
 
-import type { CharacteristicKey } from "./data/actor/character";
+import type { CharacteristicKey } from "../data/actor/character";
+import {
+	nested,
+	num,
+	optionalStr,
+	str,
+} from "../data/pack-fields";
+import { ChartPool } from "../domain/model/chart";
 
 export type OriginRow =
 	| "home-world"
@@ -152,8 +159,33 @@ export const XENO_ORIGIN_ROWS: OriginRow[] = [
 	"competence",
 ];
 
-/** Canonical row order across every path (human first, then xeno rows). */
-const ROW_ORDER: OriginRow[] = [...ORIGIN_ROWS, ...XENO_ORIGIN_ROWS];
+/**
+ * Canonical row order across every path (human first, then xeno rows).
+ *
+ * THIS IS THE VOCABULARY EVERY ROW-AWARE FIELD MUST USE. `ORIGIN_ROWS` is the
+ * HUMAN path only — using it as a whole-chart vocabulary is the bug that made
+ * every xeno entry collapse onto Home World (2026-09-20): the `row` DataModel
+ * field's `choices` was built from `ORIGIN_ROWS`, so Foundry coerced the four
+ * xeno rows to the field's initial and the human chart rendered all 35 entries.
+ */
+export const ORIGIN_ROW_ORDER: OriginRow[] = [
+	...ORIGIN_ROWS,
+	...XENO_ORIGIN_ROWS,
+];
+
+/**
+ * The `choices` vocabulary for the `row` DataModel field: EVERY path's rows.
+ *
+ * Shared with data/item/origin.ts and with the tests ON PURPOSE. Building the
+ * list inline from `ORIGIN_ROWS` is what broke the creator (2026-09-20): a
+ * `choices` list narrower than the data silently coerces every
+ * out-of-vocabulary value to the field's `initial`, so all four xeno rows
+ * became "home-world" and the human chart rendered all 35 entries. The test
+ * asserts this vocabulary covers every row the pack actually uses.
+ */
+export function originRowChoices(): Record<string, string> {
+	return Object.fromEntries(ORIGIN_ROW_ORDER.map((row) => [row, row]));
+}
 
 export const ORIGIN_ROW_LABEL_KEYS: Record<OriginRow, string> = {
 	"home-world": "ORIGIN.ROW_HOME_WORLD",
@@ -175,16 +207,67 @@ export const ORIGIN_ROW_LABEL_KEYS: Record<OriginRow, string> = {
  * 1gb7). Empty until then and in pure unit tests; tests/worlds call
  * setOriginEntries. The pack is the source of truth.
  */
-let originPool: OriginEntry[] = [];
+const originPool = new ChartPool<OriginEntry>(ORIGIN_ROW_ORDER);
 
 /** Replace the runtime chart pool (pack loader / tests). */
 export function setOriginEntries(entries: OriginEntry[]): void {
-	originPool = entries;
+	originPool.set(entries);
 }
 
 /** The current runtime chart pool. */
 export function getOriginEntries(): OriginEntry[] {
-	return originPool;
+	return [...originPool.all()];
+}
+
+/** The loose `system` block of an `origin` pack document. */
+export interface OriginDocSystem {
+	key?: unknown;
+	row?: unknown;
+	col?: unknown;
+	species?: unknown;
+	replaces?: unknown;
+	description?: unknown;
+	effect?: unknown;
+	mechanics?: unknown;
+	variants?: unknown;
+}
+
+/**
+ * Map one `origin` pack document onto the runtime entry (bead ghmn).
+ *
+ * PURE, and shared with the ready-time warmer ON PURPOSE. The warmer used to
+ * build this object inline and silently omitted `species` and `replaces`, so at
+ * runtime every entry looked human — the creator offered every species' rows on
+ * the human Origin Path (bug report 2026-09-20) — and the b03f
+ * alternate-substitution logic was dead. A shared mapper plus a test over the
+ * real pack is what makes that omission impossible.
+ *
+ * Every field the chart logic reads must be carried here; `originEntryFromDoc`
+ * is the only place a pack document becomes an entry.
+ */
+export function originEntryFromDoc(doc: {
+	name?: string;
+	system?: unknown;
+}): OriginEntry {
+	const s = (doc.system ?? {}) as OriginDocSystem;
+	return {
+		key: str(s, "key"),
+		row: str(s, "row", "home-world") as OriginRow,
+		col: num(s, "col"),
+		// Species binding: blank = the human Origin Path (bead ghmn).
+		species: optionalStr(s, "species"),
+		// Alternate substitution (bead b03f): a core key, or an array of them.
+		replaces: Array.isArray(s.replaces)
+			? (s.replaces as string[])
+			: optionalStr(s, "replaces"),
+		name: doc.name ?? "",
+		description: str(s, "description"),
+		effect: optionalStr(s, "effect"),
+		mechanics: nested(s, "mechanics") as OriginMechanics,
+		variants: Array.isArray(s.variants)
+			? (s.variants as OriginVariant[])
+			: undefined,
+	};
 }
 
 /** A path entry's species binding: blank = human. */
@@ -196,7 +279,7 @@ export function speciesKeyOfEntry(entry: {
 
 /** All known rows across every path (validation helper for stored data). */
 export function isOriginRow(value: string): value is OriginRow {
-	return ROW_ORDER.includes(value as OriginRow);
+	return originPool.isRow(value);
 }
 
 /**
@@ -212,11 +295,11 @@ export function isOriginRow(value: string): value is OriginRow {
 export function originRowsForSpecies(speciesKey: string): OriginRow[] {
 	const want = (speciesKey ?? "").trim();
 	const present = new Set<OriginRow>();
-	for (const entry of originPool) {
+	for (const entry of originPool.all()) {
 		if (speciesKeyOfEntry(entry) !== want) continue;
 		present.add(entry.row);
 	}
-	return ROW_ORDER.filter((row) => present.has(row));
+	return ORIGIN_ROW_ORDER.filter((row) => present.has(row));
 }
 
 // Suggested Home Worlds (Core Rulebook Table 1-1, p24) moved onto the Career
@@ -227,7 +310,7 @@ export function originRowsForSpecies(speciesKey: string): OriginRow[] {
 // ---------------------------------------------------------------- Pure helpers
 
 export function originByKey(key: string): OriginEntry | undefined {
-	return originPool.find((entry) => entry.key === key);
+	return originPool.byKey(key);
 }
 
 /** Core origin keys an entry may substitute, normalised to an array. */
@@ -255,9 +338,7 @@ export function entryColumns(entry: OriginEntry): number[] {
 }
 
 export function originsInRow(row: OriginRow): OriginEntry[] {
-	return originPool
-		.filter((entry) => entry.row === row)
-		.sort((a, b) => a.col - b.col);
+	return originPool.inRow(row);
 }
 
 /**
@@ -266,19 +347,11 @@ export function originsInRow(row: OriginRow): OriginEntry[] {
  * first row is completely open.
  */
 export function allowedColumns(row: OriginRow, prevCol: number | null): number[] {
-	// DISTINCT columns (bead b03f): a splatbook alternate reuses a core column
-	// (it "may be taken instead of" that entry), so counting entries would make
-	// a five-column row look like it had six choices and would corrupt the
-	// +/-1 adjacency below.
-	const cols = [...new Set(originsInRow(row).map((entry) => entry.col))].sort(
-		(a, b) => a - b,
-	);
 	// Lineage is NOT part of the constrained chart (Into the Storm p28:
 	// "Lineage choices are free and open, not constrained by the other choices
-	// of the Origin Path"), so every slot is reachable.
-	if (row === "lineage") return cols;
-	if (prevCol === null) return cols;
-	return cols.filter((col) => Math.abs(col - prevCol) <= 1);
+	// of the Origin Path"), so every slot is reachable. The adjacency itself
+	// lives in ChartPool (bead 8hkq).
+	return originPool.allowedColumns(row, prevCol, row === "lineage");
 }
 
 /** Total characteristic modifiers from a mechanics blob (choice already made). */
@@ -428,7 +501,11 @@ export function resolveOrigins(
 		for (const note of m.notes ?? []) resolved.notes.push(`[${label}] ${note}`);
 	};
 
-	for (const row of ORIGIN_ROWS) {
+	// EVERY path's rows, not just the human five: a xeno pick (klan,
+	// know-wotz, competence, kindred) carries mechanics too, and iterating only
+	// ORIGIN_ROWS silently dropped them (bug 2026-09-20, same family as the
+	// `row` choices bug).
+	for (const row of ORIGIN_ROW_ORDER) {
 		const pick = picks[row];
 		if (!pick) continue;
 		const entry = originByKey(pick.key);
@@ -461,62 +538,4 @@ export function resolveOrigins(
 	return resolved;
 }
 
-// ---------------------------------------------------------------------------
-// Table 1-2: Heirloom Items (Core Rulebook p31; epic 1gb7 follow-up). The
-// per-heirloom content (key, 1d100 range, grant payload) now lives in the
-// private `heirlooms` compendium pack; the verbatim prose stays in the
-// `creationtables` RollTable "Table 1-2: Heirloom Items", whose result flags
-// carry the matching `key`. This module keeps the shared types, the runtime
-// pool (warmed from the pack at ready), and the 1d100 lookup.
-//
-// Curation (owner-verify, carried from bead rboc): the book grants a generic
-// Best-Craftsmanship chainsword / carapace set; the packs model them as the
-// Hecate chainsword and Storm Trooper Carapace full set, cloned + renamed.
-// ---------------------------------------------------------------------------
-export type HeirloomGrantKind = "pack-item" | "note-item";
 
-export interface HeirloomGrant {
-	kind: HeirloomGrantKind;
-	/** pack-item: compendium pack id to clone from. */
-	pack?: string;
-	/** pack-item: source item name in that pack. */
-	item?: string;
-	/** pack-item: craftsmanship override (e.g. "best"). */
-	craftsmanship?: string;
-	/** pack-item: rename the clone (the book's own item name). */
-	rename?: string;
-	/** note-item: description for the granted special-ability item. */
-	noteText?: string;
-}
-
-export interface HeirloomEntry {
-	/** Stable slug; matches the source RollTable result's item flag. */
-	key: string;
-	name: string;
-	/** 1d100 range of the source table row. */
-	range: [number, number];
-	/** Source RollTable ("rolltables/Table 1-2: Heirloom Items"). */
-	table?: string;
-	grant: HeirloomGrant;
-}
-
-/** Runtime heirloom pool (warmed from the `heirlooms` pack at ready). */
-let heirloomPool: HeirloomEntry[] = [];
-
-/** Replace the runtime heirloom pool (pack loader / tests). */
-export function setHeirloomEntries(entries: HeirloomEntry[]): void {
-	heirloomPool = entries;
-}
-
-/** The current runtime heirloom pool. */
-export function getHeirloomEntries(): HeirloomEntry[] {
-	return heirloomPool;
-}
-
-/** The heirloom entry for a 1d100 result; loud failure outside 1-100. */
-export function heirloomForRoll(roll: number): HeirloomEntry {
-	const n = Math.floor(roll);
-	const entry = heirloomPool.find((e) => n >= e.range[0] && n <= e.range[1]);
-	if (!entry) throw new Error(`Heirloom roll ${n} outside Table 1-2 (1-100)`);
-	return entry;
-}

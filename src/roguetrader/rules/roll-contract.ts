@@ -6,10 +6,10 @@
  * Types only — no runtime code.
  */
 
-import type { Actor } from "fvtt-types/documents";
 import type { Modifier, TestOutcome } from "../../rules-engine/src/index";
 import type { TestKind } from "../domain/model/test";
 import type { RtMessageFlags } from "./chat-flags";
+import type { StrengthLevel } from "./psychic";
 
 // ---------------------------------------------------------------------------
 // Requests (discriminated union)
@@ -135,8 +135,61 @@ export interface RollContext {
 	skillName?: string;
 }
 
+/**
+ * Per-kind data a handler carries from prepare() to after() (bead ezys).
+ *
+ * This used to be `Record<string, unknown>`, read back with `as` casts, so a
+ * mistyped key was a silent `undefined` rather than a compile error — the same
+ * failure mode as FearRollRequest.modifiers, TestDialogResultLike.flags and
+ * k98i. Typing the payload per kind removes every cast and makes the key set
+ * part of the contract.
+ *
+ * Kinds with nothing to carry map to `undefined` and simply omit kindData.
+ */
+export interface RollKindData {
+	characteristic: undefined;
+	skill: undefined;
+	weapon: undefined;
+	navigator: undefined;
+	/** Rolled Strength + the phenomena triggers (book p157; EA p86). */
+	psychic: {
+		/** Table 6-1 casting strength. */
+		strength: StrengthLevel;
+		pushLevels: number;
+		sustainedCount: number;
+		/** Sorcerer Corruption total, added FIRST to the phenomena roll (EA p86). */
+		corruption: number;
+		/** "psychic" | "sorcery" (epic 0hap). */
+		mode: string;
+	};
+	/** Ship weapon salvo resolution inputs (bead xfta, book pp220-222). */
+	"ship-weapon": {
+		weaponKind: "macrobattery" | "lance";
+		strength: number;
+		damage: string;
+		critRating: number;
+		range: number;
+		rangeBand: "half" | "normal" | "long";
+		weaponUuid?: string;
+	};
+	/** Emergency Repairs target (bead xfta, book p216-218). */
+	"ship-repair": {
+		itemId: string;
+		componentId?: string;
+	};
+	/** Fear Test bookkeeping (bead jpbm, p294-296). */
+	fear: {
+		rating: number;
+		/** Picks the Shock Table vs the -10 concentration note. */
+		situation: "combat" | "non-combat";
+		sourceName: string;
+		/** Set on the Unshakeable Faith re-roll so it happens only once. */
+		rerolled?: boolean;
+	};
+}
+
 /** Everything the shared pipeline needs once the handler has prepared. */
-export interface PreparedRoll {
+export interface PreparedRoll<K extends RollKind = RollKind> {
 	/** Human card/dialog title (actor-qualified). */
 	title: string;
 	/** Unmodified target (characteristic / skill value). */
@@ -165,8 +218,8 @@ export interface PreparedRoll {
 	autoFailRoll?: number | null;
 	/** Profile override (bead jpbm: Fearless auto-passes the Fear Test). */
 	autoPassRoll?: number | null;
-	/** Kind-specific data carried from prepare to after (e.g. psychic strength). */
-	kindData?: Record<string, unknown>;
+	/** Kind-specific data carried from prepare to after (see RollKindData). */
+	kindData?: RollKindData[K];
 }
 
 /**
@@ -179,28 +232,28 @@ export interface RollHandler<K extends RollKind> {
 	/** Validate + resolve the request. Null = bail (warnings already shown). */
 	prepare(
 		request: Extract<RollRequest, { kind: K }>,
-	): Promise<PreparedRoll | null>;
+	): Promise<PreparedRoll<K> | null>;
 	/** Extra TestDialog config (weapon: attack-context selectors). */
 	dialogConfig?(
 		request: Extract<RollRequest, { kind: K }>,
-		prepared: PreparedRoll,
+		prepared: PreparedRoll<K>,
 	): object;
 	/** Post-dialog modifier rows (weapon: Aim / Inaccurate cancellation). */
 	postDialogModifiers?(
 		request: Extract<RollRequest, { kind: K }>,
-		prepared: PreparedRoll,
+		prepared: PreparedRoll<K>,
 		dialog: TestDialogResultLike,
 	): Modifier[];
 	/** Funnel context that depends on the dialog result (weapon: fire mode). */
 	testContext?(
 		request: Extract<RollRequest, { kind: K }>,
-		prepared: PreparedRoll,
+		prepared: PreparedRoll<K>,
 		dialog: TestDialogResultLike | null,
 	): RollContext;
 	/** Post-card follow-up (damage flag, evasion, phenomena, power damage). */
 	after?(
 		request: Extract<RollRequest, { kind: K }>,
-		prepared: PreparedRoll,
+		prepared: PreparedRoll<K>,
 		outcome: TestOutcome,
 		messageId: string | null,
 		/** Resolved test numbers + final modifier list (bead jpbm). */

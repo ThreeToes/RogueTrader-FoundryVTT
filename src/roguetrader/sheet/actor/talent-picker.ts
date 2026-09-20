@@ -42,7 +42,7 @@ export class TalentPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options));
+		const context = sheetContext(await super._prepareContext(_options as never));
 		const owned = new Set(
 			this.actor.items
 				.filter((item) => item.type === "talent")

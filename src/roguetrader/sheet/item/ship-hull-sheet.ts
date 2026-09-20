@@ -13,7 +13,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 export class ShipHullSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "ship-hull"],
-		position: { width: 520, height: "auto" },
+		position: { width: 520, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: { ...effectActions },

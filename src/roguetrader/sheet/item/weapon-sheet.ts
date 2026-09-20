@@ -1,4 +1,5 @@
 import { DamageType } from "../../data/item/damage-types";
+import { ITEM_DATA_TABS } from "../tabs";
 import { RangedWeapon } from "../../data/item/ranged-weapon";
 import {
 	MELEE_CLASSES,
@@ -14,7 +15,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "weapon"],
-		position: { width: 520, height: "auto" },
+		position: { width: 520, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: { ...effectActions },
@@ -35,15 +36,7 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		},
 	};
 
-	static TABS = {
-		primary: {
-			tabs: [
-				{ id: "data", group: "primary", label: "TAB.DATA" },
-				{ id: "notes", group: "primary", label: "TAB.DESCRIPTION" },
-			],
-			initial: "data",
-		},
-	};
+	static TABS = ITEM_DATA_TABS;
 
 	async _prepareContext(options: object = {}) {
 		const context = await super._prepareContext(options);

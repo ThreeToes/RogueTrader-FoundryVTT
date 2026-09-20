@@ -1,4 +1,3 @@
-import type { Actor } from "fvtt-types/documents";
 import { equipStateOf, systemOf } from "../data/accessors";
 import {
 	locationForHit,
@@ -18,7 +17,7 @@ import {
 	collectTargetTraitDamageEffects,
 	targetToughnessMultiplier,
 } from "./talent-effects";
-import type { DamageRollFlag } from "./chat-flags";
+import { postCard, type DamageRollFlag } from "./chat-flags";
 import { type AttackProfile, attackProfileOf } from "../domain/model/attack";
 
 /**
@@ -61,30 +60,40 @@ export type {
  * hit location plus the weapon damage and posts the damage card directly
  * (no to-hit test). Carry gating matches rollWeaponAttack.
  */
+/**
+ * Resolve a uuid stored on a chat flag to a document.
+ *
+ * fvtt-types types `fromUuidSync`'s parameter as a template-literal UUID union,
+ * but a flag carries an arbitrary string, so the cast belongs at this one
+ * boundary rather than at each call site.
+ */
+function documentFromUuid(uuid: string): unknown {
+	return foundry.utils.fromUuidSync(uuid as never);
+}
+
 export async function rollWeaponDamage(
 	actor: Actor,
 	weaponId: string,
 ): Promise<void> {
+	const ports = getPorts();
 	const item = actor.items.get(weaponId);
 	// Bead kam1: a MUTATION with a printed attack block (Corrosive Bile) is an
 	// attack too, so it resolves through the same profile as a weapon.
 	const profile = attackProfileOf(item as never);
-	if (!profile) {
-		ui.notifications?.warn(game.i18n.localize("ROLL.UNKNOWN_SKILL"));
+	if (!item || !profile) {
+		ports.notify.warn("ROLL.UNKNOWN_SKILL");
 		return;
 	}
 	// Carry gating matches the to-hit attack gate; innate attacks (mutations)
 	// are part of the body and are never equipped.
 	if (!profile.innate && equipStateOf(item) !== "carried") {
-		ui.notifications?.warn(
-			game.i18n.format("ROLL.NOT_CARRIED", { weapon: item?.name }),
-		);
+		ports.notify.warn("ROLL.NOT_CARRIED", { weapon: item.name ?? "" });
 		return;
 	}
 	// Hit location needs a d100; a direct damage roll has no to-hit test, so
 	// roll a throwaway d100 purely for the location table.
-	const locationRoll = await getPorts().dice.roll("1d100");
-	const target = getPorts().targets.actor() as Actor | null;
+	const locationRoll = await ports.dice.roll("1d100");
+	const target = ports.targets.actor() as Actor | null;
 	await postWeaponDamage(
 		actor,
 		(target ?? actor) as Actor,
@@ -103,17 +112,15 @@ export async function rollWeaponDamage(
  */
 export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
 	const attacker = data.attackerUuid
-		? (foundry.utils.fromUuidSync(data.attackerUuid) as unknown as Actor | null)
+		? (documentFromUuid(data.attackerUuid) as Actor | null)
 		: null;
 	const weapon = data.weaponUuid
-		? (foundry.utils.fromUuidSync(
-				data.weaponUuid,
-			) as unknown as foundry.documents.Item | null)
+		? (documentFromUuid(data.weaponUuid) as foundry.documents.Item | null)
 		: null;
 	const profile = attackProfileOf(weapon as never);
 	if (!attacker || !profile) return;
 	const target = data.targetUuid
-		? (foundry.utils.fromUuidSync(data.targetUuid) as unknown as Actor | null)
+		? (documentFromUuid(data.targetUuid) as Actor | null)
 		: null;
 	await postWeaponDamage(
 		attacker,
@@ -158,7 +165,7 @@ async function postWeaponDamage(
 	const damageAlternatives = profile.damageTypes.slice(1).filter(Boolean);
 	const damageTypeAlternatives =
 		damageAlternatives.length > 0
-			? `${game.i18n?.localize("CHAT.DAMAGE_TYPE_OR") ?? "or"} ${damageAlternatives.join(" / ")}`
+			? `${getPorts().i18n.t("CHAT.DAMAGE_TYPE_OR")} ${damageAlternatives.join(" / ")}`
 			: "";
 	const { formula } = parsed;
 	const damageRoll = await getPorts().dice.roll(formula);
@@ -190,14 +197,14 @@ async function postWeaponDamage(
 			damageTotal += tearing.added;
 		}
 		qualityNotes.push(
-			game.i18n!.format("CHAT.QUALITY_TEARING", {
+			getPorts().i18n.t("CHAT.QUALITY_TEARING", {
 				discarded: tearing.discarded,
 			}),
 		);
 	}
 	if (mechanics.blast !== null) {
 		qualityNotes.push(
-			game.i18n!.format("CHAT.QUALITY_BLAST", { rating: mechanics.blast }),
+			getPorts().i18n.t("CHAT.QUALITY_BLAST", { rating: mechanics.blast }),
 		);
 	}
 	// Printed attack restrictions (bead kam1). Neither is enforced by the
@@ -205,10 +212,10 @@ async function postWeaponDamage(
 	// be VISIBLE here or the rule would be silently lost: Corrosive Bile
 	// "can be dodged, but not parried" and "Using it is a full action".
 	if (!profile.parryable) {
-		qualityNotes.push(game.i18n!.localize("CHAT.ATTACK_UNPARRYABLE"));
+		qualityNotes.push(getPorts().i18n.t("CHAT.ATTACK_UNPARRYABLE"));
 	}
 	if (profile.action === "full") {
-		qualityNotes.push(game.i18n!.localize("CHAT.ATTACK_FULL_ACTION"));
+		qualityNotes.push(getPorts().i18n.t("CHAT.ATTACK_FULL_ACTION"));
 	}
 	// Toxic is conditional on the hit actually wounding (book: "anyone that
 	// takes Damage from a Toxic weapon, after reduction for Armour and
@@ -303,9 +310,10 @@ async function postWeaponDamage(
 	// Toxic (bead gci0, book wording): the Toughness-test prompt only when
 	// the hit dealt damage after armour + Toughness reduction.
 	if (mechanics.toxic && damage.wounds > 0) {
-		qualityNotes.push(game.i18n!.localize("CHAT.QUALITY_TOXIC"));
+		qualityNotes.push(getPorts().i18n.t("CHAT.QUALITY_TOXIC"));
 	}
-	const content = await foundry.applications.handlebars.renderTemplate(
+	await postCard(
+		attacker,
 		"systems/rogue-trader/template/chat/damage.hbs",
 		{
 			title: `${attacker.name} → ${target.name} — ${profile.name}`,
@@ -322,16 +330,11 @@ async function postWeaponDamage(
 			isCriticalHit: isCritical,
 			targetUuid: target.uuid,
 		},
-	);
-
-	await foundry.documents.ChatMessage.create({
-		speaker: foundry.documents.ChatMessage.getSpeaker({ actor: attacker }),
-		content,
 		// Apply-damage button data (bead ncc): the card stays a data-only
 		// kernel consumer - the flag carries the displayed outcome so the
 		// click handler never recomputes, plus an application marker so the
 		// button cannot fire twice.
-		flags: {
+		{
 			"rogue-trader": {
 				damageApply: {
 					wounds: damage.wounds,
@@ -344,7 +347,7 @@ async function postWeaponDamage(
 				},
 			},
 		},
-	});
+	);
 }
 
 /** Toggle a power in/out of the sustained list (bead sa6, book p157). */

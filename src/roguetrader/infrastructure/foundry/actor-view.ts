@@ -8,7 +8,6 @@
  * Built once per rules operation (per roll) — cheap and always fresh.
  */
 
-import type { Actor } from "fvtt-types/documents";
 import type { ActorView } from "../../domain/model/actor";
 import { buildActorView, type LooseActor } from "../../domain/model/build";
 

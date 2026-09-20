@@ -14,38 +14,17 @@
  * Registries must be populated before the first DataModel schema is built
  * (i.e. during `init`). Schema field `choices` are captured at that point.
  */
-export class EntryRegistry {
-	readonly #entries: Map<string, string>;
+import { Registry } from "./domain/registry";
 
-	constructor(initial: Record<string, string> = {}) {
-		this.#entries = new Map(Object.entries(initial));
-	}
-
-	/** Register an entry. Overwrites any existing entry with the same key. */
-	register(key: string, labelKey: string): this {
-		this.#entries.set(key, labelKey);
-		return this;
-	}
-
-	has(key: string): boolean {
-		return this.#entries.has(key);
-	}
-
-	get(key: string): string | undefined {
-		return this.#entries.get(key);
-	}
-
-	keys(): string[] {
-		return [...this.#entries.keys()];
-	}
-
-	entries(): Array<[string, string]> {
-		return [...this.#entries.entries()];
-	}
-
+/**
+ * A `Registry<string>` of key -> i18n label key, plus the `choices` shape
+ * Foundry's `StringField#choices` and `selectOptions` expect. The generic
+ * registry primitive lives in domain/registry.ts (epic kof0, phase 5).
+ */
+export class EntryRegistry extends Registry<string> {
 	/** Choices shape expected by `StringField#choices` and `selectOptions`. */
 	get choices(): Record<string, string> {
-		return Object.fromEntries(this.#entries);
+		return Object.fromEntries(this.entries());
 	}
 }
 

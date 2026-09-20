@@ -13,6 +13,7 @@
 import type { Modifier } from "../../rules-engine/src/modifier";
 import type { ActorView } from "../domain/model/actor";
 import { collectEffects } from "../domain/effects";
+import { HandlerRegistry } from "../domain/registry";
 import { isWeaponType } from "../data/accessors";
 
 export interface TalentEffectLike {
@@ -37,18 +38,16 @@ export type TalentEffectHandler = (
 	effect: TalentEffectLike,
 ) => unknown;
 
-const handlersByKind = new Map<string, TalentEffectHandler[]>();
+const handlers = new HandlerRegistry<string, TalentEffectHandler>();
 
 export const talentEffectHandlers = {
 	/** Register a handler for an effect kind. Repeat adds to that kind. */
 	register(kind: string, handler: TalentEffectHandler): void {
-		const fns = handlersByKind.get(kind) ?? [];
-		fns.push(handler);
-		handlersByKind.set(kind, fns);
+		handlers.on(kind, handler);
 	},
 	/** Effect kinds with at least one handler. */
 	kinds(): string[] {
-		return [...handlersByKind.keys()];
+		return handlers.keys();
 	},
 	/**
 	 * Run every handler registered for the effect's kind; results aggregated
@@ -56,8 +55,7 @@ export const talentEffectHandlers = {
 	 */
 	run(actor: unknown, talent: TalentLike, effect: TalentEffectLike): unknown[] {
 		const results: unknown[] = [];
-		const kind = effect.kind ?? "";
-		for (const handler of handlersByKind.get(kind) ?? []) {
+		for (const handler of handlers.for(effect.kind ?? "")) {
 			const result = handler(actor, talent, effect);
 			if (result !== undefined && result !== null) results.push(result);
 		}

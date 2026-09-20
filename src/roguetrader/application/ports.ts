@@ -13,6 +13,8 @@
  *   never gates a roll and its absence never produces a broken or silent card.
  */
 
+import type { ActorView } from "../domain/model/actor";
+
 /** Which content the world has installed (cheap to probe; no doc loading). */
 export interface ContentCapabilities {
 	/** The critical-hit RollTables (core + battlesuit) are installed. */
@@ -56,3 +58,116 @@ export const NO_CONTENT_PORT: ContentPort = {
 	documents: async () => [],
 	find: async () => null,
 };
+
+// ---------------------------------------------------------------------------
+// Roll ports (dice / chat / targets / clock)
+// ---------------------------------------------------------------------------
+
+/** One kept die from a roll: its face value and how many sides it had. */
+export interface DiceDie {
+	result: number;
+	faces: number;
+}
+
+/**
+ * One term of a roll (bead k98i): a term is the unit the formula actually
+ * rolled, so "the damage die" and "discard the lowest damage die" can be
+ * answered. The flattened `DiceResult.dice` list cannot: it merges a mixed
+ * formula like 1d10+1d5 into one bag of dice.
+ */
+export interface DiceTerm {
+	/** Foundry term class ("Die" for dice). Absent on hand-built fakes. */
+	class?: string;
+	/** Sides per die in this term (0/absent for non-dice terms). */
+	faces: number;
+	/** Kept (non-discarded) results, in roll order. */
+	results: number[];
+}
+
+/** One evaluated dice roll, in plain numbers. */
+export interface DiceResult {
+	/** The roll total. */
+	total: number;
+	/** Every kept die, flattened (for triggers that scan all dice). */
+	dice: DiceDie[];
+	/** The same dice grouped by the term that rolled them. */
+	terms: DiceTerm[];
+	/** The formula that was rolled (echoed for cards/tests). */
+	formula: string;
+}
+
+/** Roll dice. The only place `foundry.dice.Roll` is allowed to be called. */
+export interface Dice {
+	roll(formula: string): Promise<DiceResult>;
+}
+
+/** Post and amend chat cards. */
+export interface Chat {
+	/** Render a template and post it as the actor's card. */
+	post(
+		actor: { uuid?: string },
+		template: string,
+		vars: Record<string, unknown>,
+		flags?: unknown,
+	): Promise<{ id?: string } | undefined>;
+	/** Post raw HTML content. */
+	postHtml(
+		actor: { uuid?: string },
+		content: string,
+	): Promise<{ id?: string } | undefined>;
+	/** Amend an existing message (e.g. attach a damage-roll flag). */
+	update(messageId: string, data: Record<string, unknown>): Promise<void>;
+}
+
+/** The user's current target. */
+export interface Targets {
+	/** The target's read model, or null. */
+	view(): ActorView | null;
+	/** The target's raw document (for writes), or null. */
+	actor(): unknown;
+}
+
+/** Combat round, or 0 outside combat. */
+export interface Clock {
+	round(): number;
+}
+
+/** Player-facing notifications (localised by the implementation). */
+export interface Notify {
+	warn(key: string, vars?: Record<string, unknown>): void;
+	info(key: string, vars?: Record<string, unknown>): void;
+}
+
+/** Localisation. Domain/application return keys; this resolves them. */
+export interface I18n {
+	t(key: string, vars?: Record<string, unknown>): string;
+}
+
+/** World configuration the rules read (homebrew profile, warmed content). */
+export interface ConfigPort {
+	homebrew(): unknown;
+	originTraits(): unknown[];
+}
+
+/** Document writes the rules perform (never a read — reads use ActorView). */
+export interface Actors {
+	/** Apply an update patch to a document. */
+	update(actor: unknown, patch: Record<string, unknown>): Promise<void>;
+	/** Create embedded ActiveEffects on an actor (token marker + modifiers). */
+	createEffects(actor: unknown, data: Record<string, unknown>[]): Promise<void>;
+	/** Delete embedded ActiveEffects from an actor by id. */
+	deleteEffects(actor: unknown, ids: string[]): Promise<void>;
+}
+
+/** The aggregate every rules operation receives. */
+export interface Ports {
+	dice: Dice;
+	chat: Chat;
+	targets: Targets;
+	clock: Clock;
+	notify: Notify;
+	i18n: I18n;
+	config: ConfigPort;
+	content: ContentPort;
+	actors: Actors;
+}

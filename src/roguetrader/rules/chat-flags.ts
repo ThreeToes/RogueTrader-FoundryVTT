@@ -5,7 +5,18 @@
  * in rules/adapter.ts and sheet/init.ts; both live here now, along with
  * postCard — the one renderTemplate + ChatMessage.create sequence every
  * roll card goes through.
+ *
+ * PLACEMENT (epic kof0, bead xkad): this module deliberately stays in rules/
+ * rather than moving to presentation/ with the roll handlers. It is the only
+ * one that is genuinely shared — the flag INTERFACES are the data contract
+ * between the rules that write them (adapter, criticals) and the presentation
+ * that reads them (chat-actions), and postCard is a two-line wrapper over the
+ * Chat port. Moving it either way would make one side import "upward" for a
+ * data shape. Everything that is purely a handler or a dialog lives in
+ * presentation/.
  */
+
+import { getPorts } from "../infrastructure/foundry/ports";
 
 /** Card button data for the manual damage roll (to-hit card button). */
 export interface DamageRollFlag {
@@ -62,14 +73,5 @@ export async function postCard(
 	vars: Record<string, unknown>,
 	flags?: RtMessageFlags,
 ): Promise<{ id?: string } | undefined> {
-	const content = await foundry.applications.handlebars.renderTemplate(
-		template,
-		vars,
-	);
-	const message = (await foundry.documents.ChatMessage.create({
-		speaker: foundry.documents.ChatMessage.getSpeaker({ actor }),
-		content,
-		...(flags ? { flags } : {}),
-	})) as { id?: string } | undefined;
-	return message;
+	return getPorts().chat.post(actor, template, vars, flags);
 }

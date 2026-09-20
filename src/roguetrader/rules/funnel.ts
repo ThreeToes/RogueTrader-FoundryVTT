@@ -2,6 +2,7 @@ import type { Modifier } from "../../rules-engine/src/modifier";
 import type { ActorView } from "../domain/model/actor";
 import type { TestKind } from "../domain/model/test";
 import { collectEffects } from "../domain/effects";
+import { HandlerRegistry } from "../domain/registry";
 import {
 	resolveFireModeBonus,
 	type HomebrewProfile,
@@ -56,27 +57,23 @@ export type TestContributor = (
 	context: TestModifierContext,
 ) => Modifier[];
 
-const contributorsByType = new Map<string, TestContributor[]>();
+const contributors = new HandlerRegistry<string, TestContributor>();
 
 export const testContributors = {
 	/** Register a contributor for a source type. Repeat adds to that type. */
 	register(type: string, fn: TestContributor): void {
-		const fns = contributorsByType.get(type) ?? [];
-		fns.push(fn);
-		contributorsByType.set(type, fns);
+		contributors.on(type, fn);
 	},
 	/** Source types with at least one contributor (newest last). */
 	types(): string[] {
-		return [...contributorsByType.keys()];
+		return contributors.keys();
 	},
 	/** Run every registered contributor; malformed results are ignored. */
 	run(view: ActorView, context: TestModifierContext): Modifier[] {
 		const out: Modifier[] = [];
-		for (const fns of contributorsByType.values()) {
-			for (const fn of fns) {
-				const mods = fn(view, context) ?? [];
-				if (Array.isArray(mods)) out.push(...mods);
-			}
+		for (const fn of contributors.all()) {
+			const mods = fn(view, context) ?? [];
+			if (Array.isArray(mods)) out.push(...mods);
 		}
 		return out;
 	},

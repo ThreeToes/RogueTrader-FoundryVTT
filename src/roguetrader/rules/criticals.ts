@@ -30,12 +30,10 @@ import {
 	selectCriticalResult,
 	splitWoundDamage,
 } from "../../rules-engine/src/index";
+import { ROLLTABLES_PACK } from "../application/packs";
 import { postCard } from "./chat-flags";
 import type { ContentPort } from "../application/ports";
-import { foundryContent } from "../infrastructure/foundry/content";
-
-/** Compendium pack holding the critical RollTables (bead j9pg consolidation). */
-export const CRITICAL_ROLLTABLES_PACK = "rogue-trader.rolltables";
+import { getPorts } from "../infrastructure/foundry/ports";
 
 /** One suffered critical effect; stored on the actor until something clears it. */
 export interface CriticalEffectRow {
@@ -116,8 +114,7 @@ export function wornBattlesuit(actor: unknown): ItemLike | undefined {
  * both pull it in) and unit tests run with no `game` at all.
  */
 export function currentRound(): number {
-	const g = (globalThis as { game?: { combat?: { round?: number } } }).game;
-	return Number(g?.combat?.round ?? 0) || 0;
+	return getPorts().clock.round();
 }
 
 /**
@@ -157,26 +154,18 @@ export function totalCriticalDamage(actor: unknown): number {
 /** Find a RollTable in the rolltables pack by name. */
 export async function findCriticalTable(
 	name: string,
-	content: ContentPort = foundryContent,
+	content: ContentPort = getPorts().content,
 ): Promise<TableLike | undefined> {
-	const table = await content.find(CRITICAL_ROLLTABLES_PACK, name);
+	const table = await content.find(ROLLTABLES_PACK, name);
 	// Content-optional: a missing pack is NOT an error. The caller records the
 	// critical from the kernel's severity/location and asks the player to apply
 	// the table effect manually.
 	return table ? (table as TableLike) : undefined;
 }
 
-/** Roll 1d100 (or the table's own formula) through the Foundry Roll API. */
+/** Roll a formula through the dice port. */
 async function rollDie(formula: string): Promise<number> {
-	const RollCtor = (
-		globalThis as unknown as {
-			Roll?: new (formula: string) => { evaluate: () => Promise<unknown>; total?: number };
-		}
-	).Roll;
-	if (!RollCtor) return 0;
-	const roll = new RollCtor(formula);
-	await roll.evaluate();
-	return Number(roll.total ?? 0);
+	return (await getPorts().dice.roll(formula)).total;
 }
 
 let effectCounter = 0;

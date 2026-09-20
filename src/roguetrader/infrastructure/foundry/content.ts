@@ -11,9 +11,7 @@ import type {
 	ContentPort,
 	ContentTable,
 } from "../../application/ports";
-
-/** The RollTable pack the critical + phenomena tables live in. */
-export const ROLLTABLES_PACK = "rogue-trader.rolltables";
+import { ROLLTABLES_PACK } from "../../application/packs";
 
 interface PackLike {
 	getDocuments(): Promise<unknown[]>;

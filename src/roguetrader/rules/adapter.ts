@@ -8,6 +8,8 @@ import {
 } from "../../rules-engine/src/index";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
 import { actorView } from "../infrastructure/foundry/actor-view";
+import { getPorts } from "../infrastructure/foundry/ports";
+import * as damageDice from "../application/damage-dice";
 import { bodyLocationLabelKey } from "./labels";
 import {
 	applyTearing,
@@ -81,20 +83,13 @@ export async function rollWeaponDamage(
 	}
 	// Hit location needs a d100; a direct damage roll has no to-hit test, so
 	// roll a throwaway d100 purely for the location table.
-	const locationRoll = new foundry.dice.Roll("1d100");
-	await locationRoll.evaluate();
-	const target = (
-		game as unknown as {
-			user?: { targets?: Set<{ actor?: Actor }> };
-		}
-	).user?.targets
-		?.values()
-		?.next()?.value?.actor;
+	const locationRoll = await getPorts().dice.roll("1d100");
+	const target = getPorts().targets.actor() as Actor | null;
 	await postWeaponDamage(
 		actor,
 		(target ?? actor) as Actor,
 		profile,
-		locationRoll.total ?? 0,
+		locationRoll.total,
 	);
 }
 
@@ -166,29 +161,13 @@ async function postWeaponDamage(
 			? `${game.i18n?.localize("CHAT.DAMAGE_TYPE_OR") ?? "or"} ${damageAlternatives.join(" / ")}`
 			: "";
 	const { formula } = parsed;
-	const damageRoll = new foundry.dice.Roll(formula);
-	await damageRoll.evaluate();
-	let damageTotal = damageRoll.total ?? 0;
+	const damageRoll = await getPorts().dice.roll(formula);
+	let damageTotal = damageRoll.total;
 
 	// Righteous Fury trigger (RT core, VERIFY wording): a natural 10 on a
-	// damage die. Inspect the rolled dice terms - the kernel cannot see the
-	// Foundry roll, so the trigger is reported as a boolean flag.
-	const dieTerms =
-		(
-			damageRoll as unknown as {
-				terms?: Array<{
-					class?: string;
-					faces?: number;
-					results?: Array<{ result: number; discarded?: boolean }>;
-				}>;
-			}
-		).terms ?? [];
-	const righteousFuryTriggered = dieTerms.some(
-		(term) =>
-			term.class === "Die" &&
-			term.faces === 10 &&
-			(term.results ?? []).some((r) => !r.discarded && r.result === 10),
-	);
+	// damage die. The dice port reports the terms, so the kernel need not see
+	// a Foundry roll (bead k98i).
+	const righteousFuryTriggered = damageDice.righteousFuryTriggered(damageRoll);
 
 	// Roll-mechanic weapon qualities (bead gci0): Tearing rolls one extra
 	// damage die (lowest result discarded — book wording, NOT roll-twice);
@@ -202,16 +181,10 @@ async function postWeaponDamage(
 	});
 	const qualityNotes: string[] = [];
 	if (mechanics.tearing) {
-		const dieTerm = dieTerms.find(
-			(term) => term.class === "Die" && (term.faces ?? 0) > 0,
-		);
-		const faces = dieTerm?.faces ?? 10;
-		const baseResults = (dieTerm?.results ?? [])
-			.filter((r) => !r.discarded)
-			.map((r) => r.result);
-		const extraRoll = new foundry.dice.Roll(`1d${faces}`);
-		await extraRoll.evaluate();
-		const extra = extraRoll.total ?? 0;
+		// The DAMAGE die's results only (bead k98i): a mixed formula's other
+		// terms are not damage dice, so Tearing must not discard one of them.
+		const { faces, results: baseResults } = damageDice.tearingBase(damageRoll);
+		const extra = (await getPorts().dice.roll(`1d${faces}`)).total;
 		const tearing = applyTearing(baseResults, extra, faces);
 		if (tearing.added > 0) {
 			damageTotal += tearing.added;

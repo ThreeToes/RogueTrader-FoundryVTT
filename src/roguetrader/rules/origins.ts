@@ -425,6 +425,116 @@ export interface OriginPick {
 	alternate?: number;
 }
 
+/** One pick as it is STORED on the actor (bead 58js). */
+export interface StoredOriginPick {
+	/** Chart row key (klan, know-wotz, competence, kindred). */
+	row: string;
+	/** Chart entry key. */
+	key: string;
+	variantKey?: string;
+}
+
+/** `Character.system.origins`, as far as the chart cares. */
+export interface StoredOrigins {
+	homeWorld?: string;
+	birthright?: string;
+	lure?: string;
+	trials?: string;
+	motivation?: string;
+	/** Species-path picks; the five fields above are the fixed human shape. */
+	path?: StoredOriginPick[];
+}
+
+/** The stored shape `storedOriginsFromPicks` produces. */
+export interface StoredOriginsPayload {
+	homeWorld: string;
+	birthright: string;
+	lure: string;
+	trials: string;
+	motivation: string;
+	path: Array<{ row: string; key: string; variantKey: string }>;
+}
+
+/** The five fixed human fields, in chart order. */
+const STORED_HUMAN_FIELDS: ReadonlyArray<
+	readonly [keyof StoredOriginsPayload, OriginRow]
+> = [
+	["homeWorld", "home-world"],
+	["birthright", "birthright"],
+	["lure", "lure"],
+	["trials", "trials"],
+	["motivation", "motivation"],
+];
+
+/**
+ * Read `system.origins` as a picks map, whichever half a pick lives in.
+ *
+ * THE single reader for stored picks (bead 58js). A human character's picks are
+ * the five named fields; a species path's are the `path` array. Callers must
+ * not read either half directly: reading only the five named fields is exactly
+ * how a xeno's picks were invisible to the resolver, to trait resolution and to
+ * the creator's own reconcile.
+ */
+export function storedOriginPicks(
+	origins: StoredOrigins | undefined | null,
+): Partial<Record<OriginRow, OriginPick>> {
+	const picks: Partial<Record<OriginRow, OriginPick>> = {};
+	if (!origins) return picks;
+	for (const [field, row] of STORED_HUMAN_FIELDS) {
+		const stored = origins[field];
+		if (typeof stored !== "string" || !stored) continue;
+		// The five fields carry variants as "key|variantKey" (bead ay0).
+		const [key, variantKey] = stored.split("|");
+		picks[row] = { key, ...(variantKey ? { variantKey } : {}) };
+	}
+	for (const pick of origins.path ?? []) {
+		if (!pick?.key || !isOriginRow(pick.row)) continue;
+		picks[pick.row] = {
+			key: pick.key,
+			...(pick.variantKey ? { variantKey: pick.variantKey } : {}),
+		};
+	}
+	return picks;
+}
+
+/**
+ * Write a picks map back to the stored shape: the five named human fields (with
+ * their existing "key|variantKey" convention) plus `path` for every other row.
+ */
+export function storedOriginsFromPicks(
+	picks: Partial<Record<OriginRow, OriginPick>>,
+): StoredOriginsPayload {
+	const stored: StoredOriginsPayload = {
+		homeWorld: "",
+		birthright: "",
+		lure: "",
+		trials: "",
+		motivation: "",
+		path: [],
+	};
+	const humanField = new Map<OriginRow, keyof StoredOriginsPayload>(
+		STORED_HUMAN_FIELDS.map(([field, row]) => [row, field]),
+	);
+	for (const [row, pick] of Object.entries(picks) as Array<
+		[OriginRow, OriginPick]
+	>) {
+		if (!pick?.key) continue;
+		const field = humanField.get(row);
+		if (field) {
+			stored[field] = pick.variantKey
+				? `${pick.key}|${pick.variantKey}`
+				: pick.key;
+			continue;
+		}
+		stored.path.push({
+			row,
+			key: pick.key,
+			variantKey: pick.variantKey ?? "",
+		});
+	}
+	return stored;
+}
+
 /** Fully merged mechanics across all five rows (choices already made). */
 export interface ResolvedOrigin {
 	characteristics: Partial<Record<CharacteristicKey, number>>;

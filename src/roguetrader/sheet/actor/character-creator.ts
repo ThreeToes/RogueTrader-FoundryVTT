@@ -15,6 +15,8 @@ import {
 	originByKey,
 	originRowsForSpecies,
 	originsInRow,
+	storedOriginPicks,
+	storedOriginsFromPicks,
 	type ResolvedOrigin,
 	resolveOrigins,
 } from "../../rules/origins";
@@ -49,7 +51,6 @@ import {
 import {
 	GRANTED_BY_CREATOR,
 	type GrantPayload,
-	originRowFromStoredKey,
 	reconcileForCreator,
 	skillGrantPayload,
 } from "../../rules/grants";
@@ -1194,20 +1195,16 @@ export class CharacterCreator extends CreatorApplication {
 			psyRating: state.careerKey === "astropath-transcendent" ? 2 : 0,
 			careerKey: state.careerKey,
 			rank: 1,
-			// Persist the Origin Path picks (bead ay0): the consolidated
-			// Background tab reads these; the summary card is not the record.
-			// Chosen variants append as "key|variantKey".
-			origins: {
-				homeWorld: state.picks["home-world"]?.key ?? "",
-				birthright: state.picks.birthright?.key ?? "",
-				lure: state.picks.lure
-					? state.picks.lure.variantKey
-						? `${state.picks.lure.key}|${state.picks.lure.variantKey}`
-						: state.picks.lure.key
-					: "",
-				trials: state.picks.trials?.key ?? "",
-				motivation: state.picks.motivation?.key ?? "",
-			},
+			// Persist the Origin Path picks (bead ay0; species paths bead 58js):
+			// the consolidated Background tab reads these; the summary card is not
+			// the record.
+			//
+			// Built by the SHARED helper rather than by hand: a hand-written list
+			// of the five human fields is exactly how a xeno's picks were silently
+			// discarded. The helper writes the five named fields (keeping the
+			// existing "key|variantKey" convention) and puts every other row in
+			// `path`.
+			origins: storedOriginsFromPicks(state.picks),
 		};
 
 		if (this.targetActor) {
@@ -1411,18 +1408,11 @@ export class CharacterCreator extends CreatorApplication {
 			}
 		).origins;
 		if (oldOrigins) {
-			const oldPicks: Partial<Record<OriginRow, OriginPick>> = {};
-			for (const [storedKey, value] of Object.entries(oldOrigins)) {
-				// Bead h7wl: stored keys are camelCase (homeWorld); map them to
-				// the kebab-case OriginRow keys before validating.
-				const row = originRowFromStoredKey(storedKey);
-				if (!value || !row || !isOriginRow(row)) continue;
-				const [base, variant] = value.split("|");
-				oldPicks[row as OriginRow] = {
-					key: base,
-					...(variant ? { variantKey: variant } : {}),
-				};
-			}
+			// Bead 58js: read BOTH halves of the stored picks through the shared
+			// helper. The hand-rolled loop here mapped only the five camelCase
+			// human keys, so a xeno character's species-path picks were invisible
+			// to its own reconcile as well as to the resolver.
+			const oldPicks = storedOriginPicks(oldOrigins);
 			if (Object.keys(oldPicks).length > 0) {
 				const legacyResolved = resolveOrigins(oldPicks);
 				for (const name of [

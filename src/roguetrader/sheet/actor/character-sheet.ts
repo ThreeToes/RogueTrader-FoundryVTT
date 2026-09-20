@@ -18,7 +18,13 @@ import { actorView } from "../../infrastructure/foundry/actor-view";
 import { criticalSheetContext } from "../../rules/criticals";
 import { rollBattlesuitRepair } from "../../rules/battlesuit-repair";
 import { effectiveSorceryRank } from "../../rules/casting";
-import { effectiveMechanics, originByKey } from "../../rules/origins";
+import {
+	effectiveMechanics,
+	originByKey,
+	ORIGIN_ROW_LABEL_KEYS,
+	ORIGIN_ROW_ORDER,
+	storedOriginPicks,
+} from "../../rules/origins";
 import {
 	resolveOriginTraits,
 } from "../../rules/origin-traits";
@@ -1023,16 +1029,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 		// Origins: persisted picks (creator) resolved against the origin chart;
 		// tooltip carries the verbatim book effect text.
-		const originPicks = system.origins ?? {} as {
-			homeWorld?: string;
-			birthright?: string;
-			lure?: string;
-			trials?: string;
-			motivation?: string;
-		};
-		const splitPick = (stored?: string) => {
-			if (!stored) return null;
-			const [key, variantKey] = stored.split("|");
+		//
+		// Driven by storedOriginPicks + ORIGIN_ROW_LABEL_KEYS rather than a
+		// hand-written list of the five human fields (bead 58js): a xeno's
+		// species-path picks live in `origins.path`, so a fixed list would omit
+		// them from the sheet as silently as it omitted them from the save.
+		const splitPick = (key: string, variantKey?: string) => {
 			const entry = originByKey(key);
 			if (!entry) return null;
 			const variant = variantKey
@@ -1042,26 +1044,21 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			return {
 				name: variant ? `${entry.name}: ${variant.name}` : entry.name,
 				tooltip: variant?.effect ?? entry.effect ?? "",
-				mods: mods.map((m) => `${m.value > 0 ? "+" : ""}${m.value} ${m.key.toUpperCase()}`),
+				mods: mods.map(
+					(m) => `${m.value > 0 ? "+" : ""}${m.value} ${m.key.toUpperCase()}`,
+				),
 			};
 		};
+		const storedPicks = storedOriginPicks(system.origins as never);
 		const originRows: Array<{
 			labelKey: string;
 			pick: { name: string; tooltip: string; mods: string[] } | null;
-		}> = (
-			[
-				["homeWorld", "ORIGIN.ROW_HOME_WORLD"],
-				["birthright", "ORIGIN.ROW_BIRTHRIGHT"],
-				["lure", "ORIGIN.ROW_LURE"],
-				["trials", "ORIGIN.ROW_TRIALS"],
-				["motivation", "ORIGIN.ROW_MOTIVATION"],
-			] as Array<[string, string]>
-		)
-			.map(([field, labelKey]) => ({
-				field,
-				labelKey,
+		}> = ORIGIN_ROW_ORDER.filter((row) => Boolean(storedPicks[row]?.key))
+			.map((row) => ({
+				labelKey: ORIGIN_ROW_LABEL_KEYS[row],
 				pick: splitPick(
-					(originPicks as Record<string, string | undefined>)[field],
+					storedPicks[row]?.key ?? "",
+					storedPicks[row]?.variantKey,
 				),
 			}))
 			.filter((row) => row.pick !== null);
@@ -1098,7 +1095,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			}
 		).ROGUE_TRADER?.originTraits?.getDefs?.() ?? [];
 		const traitResolution = resolveOriginTraits(
-			originPicks as never,
+			// The STORED shape, both halves: resolveOriginTraits reads it through
+			// storedOriginPicks, so a xeno's path picks contribute their traits.
+			system.origins as never,
 			traitDefs as never,
 		);
 		context.traitModifiers = traitResolution.modifiers.map((t) => ({

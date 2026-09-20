@@ -96,6 +96,8 @@ export class Character extends foundry.abstract.TypeDataModel<
 		lure: string;
 		trials: string;
 		motivation: string;
+		/** Species-path picks (bead 58js); read via `storedOriginPicks()`. */
+		path?: Array<{ row: string; key: string; variantKey?: string }>;
 		claims?: Record<string, boolean>;
 	};
 	/** Stage 4 free-text (bead ay0, Core Rulebook p31-34). */
@@ -291,6 +293,28 @@ export class Character extends foundry.abstract.TypeDataModel<
 				lure: new foundry.data.fields.StringField({ initial: "" }),
 				trials: new foundry.data.fields.StringField({ initial: "" }),
 				motivation: new foundry.data.fields.StringField({ initial: "" }),
+				/**
+				 * Species-path picks (bead ghmn/58js): the rows OUTSIDE the five human
+				 * ones — klan + know-wotz (ork), competence (tau), kindred (kroot).
+				 *
+				 * The five named fields above are a fixed human shape and stay exactly
+				 * as they were, so every existing reader and every stored actor keeps
+				 * working; a variable row set gets a variable-length record instead of
+				 * four more named fields that a future species would outgrow anyway.
+				 * `storedOriginPicks()` (rules/origins.ts) reads both halves as one
+				 * picks map, which is the only way callers should read this.
+				 */
+				path: new foundry.data.fields.ArrayField(
+					new foundry.data.fields.SchemaField({
+						/** Chart row key (klan, know-wotz, competence, kindred). */
+						row: new foundry.data.fields.StringField({ initial: "" }),
+						/** Chart entry key (klan-bad-moons, …). */
+						key: new foundry.data.fields.StringField({ initial: "" }),
+						/** Chosen variant key, when the entry offers variants. */
+						variantKey: new foundry.data.fields.StringField({ initial: "" }),
+					}),
+					{ initial: () => [] },
+				),
 				/** Claimed pending grants (bead tgq9): traitDefKey -> true. */
 				claims: new foundry.data.fields.TypedObjectField(
 					new foundry.data.fields.BooleanField({ initial: false }),

@@ -18,6 +18,8 @@ import {
 	resolveOrigins,
 	setOriginEntries,
 	speciesKeyOfEntry,
+	storedOriginPicks,
+	storedOriginsFromPicks,
 } from "./origins";
 
 // Epic 1gb7: the chart content lives in the PRIVATE `origins` compendium pack.
@@ -535,5 +537,86 @@ packDescribe("species origin paths (bead ghmn)", () => {
 				`${entry.name} should span its own column plus its core's`,
 			).toBeLessThanOrEqual(6);
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Stored picks (bead 58js). The actor's `system.origins` has two halves — the
+// five fixed human fields and `path` for every other row — and these helpers
+// are the only place that knows it.
+// ---------------------------------------------------------------------------
+describe("stored origin picks (bead 58js)", () => {
+	test("human picks keep the five named fields and their key|variant form", () => {
+		const stored = storedOriginsFromPicks({
+			"home-world": { key: "death-world" },
+			lure: { key: "tainted", variantKey: "criminal" },
+		});
+		expect(stored.homeWorld).toBe("death-world");
+		expect(stored.lure).toBe("tainted|criminal");
+		expect(stored.birthright).toBe("");
+		// Nothing spills into path: the human five are not species rows.
+		expect(stored.path).toEqual([]);
+	});
+
+	test("xeno picks land in path, keyed by their own row", () => {
+		// An ork uses TWO rows (klan + know-wotz), which is the multi-row case a
+		// hand-written list of five could never express.
+		const stored = storedOriginsFromPicks({
+			klan: { key: "klan-bad-moons" },
+			"know-wotz": { key: "know-wotz-mekboy" },
+		});
+		expect(stored.homeWorld).toBe("");
+		expect(stored.path).toEqual([
+			{ row: "klan", key: "klan-bad-moons", variantKey: "" },
+			{ row: "know-wotz", key: "know-wotz-mekboy", variantKey: "" },
+		]);
+	});
+
+	test("the two halves round-trip through the stored shape", () => {
+		const picks = {
+			"home-world": { key: "void-born" },
+			trials: { key: "darkness" },
+			klan: { key: "klan-goffs" },
+			competence: { key: "tau-driva", variantKey: "scout" },
+		} as const;
+		expect(storedOriginPicks(storedOriginsFromPicks({ ...picks }))).toEqual({
+			"home-world": { key: "void-born" },
+			trials: { key: "darkness" },
+			klan: { key: "klan-goffs" },
+			competence: { key: "tau-driva", variantKey: "scout" },
+		});
+	});
+
+	test("a human actor stored before this field existed still reads", () => {
+		// The pre-58js shape has no `path` at all.
+		expect(
+			storedOriginPicks({
+				homeWorld: "death-world",
+				birthright: "scavenger",
+				lure: "",
+				trials: "darkness",
+				motivation: "fear",
+			}),
+		).toEqual({
+			"home-world": { key: "death-world" },
+			birthright: { key: "scavenger" },
+			trials: { key: "darkness" },
+			motivation: { key: "fear" },
+		});
+	});
+
+	test("a malformed path entry is ignored rather than trusted", () => {
+		// An unknown row would otherwise land in the picks map under a key
+		// resolveOrigins never iterates, and an empty key would shadow a real
+		// pick for the same row.
+		expect(
+			storedOriginPicks({
+				path: [
+					{ row: "not-a-row", key: "whatever" },
+					{ row: "klan", key: "" },
+					{ row: "klan", key: "klan-bad-moons" },
+				],
+			}),
+		).toEqual({ klan: { key: "klan-bad-moons" } });
 	});
 });

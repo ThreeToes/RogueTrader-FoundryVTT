@@ -12,6 +12,8 @@
  * - Notes never disappear: they render on the Background tab.
  */
 
+import { storedOriginPicks, type StoredOrigins } from "./origins";
+
 export interface OriginTraitDef {
 	name: string;
 	originKey: string;
@@ -28,13 +30,8 @@ export function traitDefKey(def: Pick<OriginTraitDef, "originKey" | "traitKey">)
 	return `${def.originKey}.${def.traitKey}`;
 }
 
-/** Minimal shape of Character.system.origins. */
-export interface OriginsRecord {
-	homeWorld?: string;
-	birthright?: string;
-	lure?: string;
-	trials?: string;
-	motivation?: string;
+/** Minimal shape of Character.system.origins (both halves; bead 58js). */
+export interface OriginsRecord extends StoredOrigins {
 	claims?: Record<string, boolean>;
 }
 
@@ -67,15 +64,10 @@ export function resolveOriginTraits(
 	};
 	if (!origins) return out;
 	const activeKeys = new Set(
-		[
-			origins.homeWorld,
-			origins.birthright,
-			origins.lure,
-			origins.trials,
-			origins.motivation,
-		]
-			.map(pickOriginKey)
-			.filter((k): k is string => Boolean(k)),
+		// BOTH halves of the stored picks (bead 58js): a species path's entries
+		// live in `path`, and reading only the five named human fields made a
+		// xeno's traits invisible.
+		Object.values(storedOriginPicks(origins)).map((pick) => pick.key),
 	);
 	const claims = origins.claims ?? {};
 	for (const def of defs) {

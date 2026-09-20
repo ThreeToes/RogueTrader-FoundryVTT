@@ -35,10 +35,13 @@ const QUALITY_KEY_MAP: Record<string, string> = {
 	Defensive: "defensive",
 	Flexible: "flexible",
 	Flame: "flame",
+	Felling: "felling",
 	Inaccurate: "inaccurate",
+	Overcharge: "overcharge",
 	Overheat: "overheats",
 	"Power Field": "powerField",
 	Primitive: "primitive",
+	Proven: "proven",
 	Recharge: "recharge",
 	Reliable: "reliable",
 	Scatter: "scatter",
@@ -50,7 +53,27 @@ const QUALITY_KEY_MAP: Record<string, string> = {
 	Toxic: "toxic",
 	Unbalanced: "unbalanced",
 	Unreliable: "unreliable",
+	Unstable: "unstable",
 	Unwieldy: "unwieldy",
+};
+
+/**
+ * Qualities the book prints with a rating in parentheses, authored in the
+ * packs as "<key>-<rating>" (the registry's own convention: "crippling-1d5",
+ * "felling-1", "proven-3"). Previously only Blast was handled here, so every
+ * other rated quality threw as unmapped even though the registry defines it —
+ * the Tau battlesuit weapon systems (bead 61rb) are what exposed that, since
+ * Overcharge, Proven and Felling are all rated there.
+ *
+ * The rating is passed through verbatim: it is not always a number
+ * (Crippling is 1d5).
+ */
+const RATED_QUALITIES: Record<string, string> = {
+	Blast: "blast",
+	Crippling: "crippling",
+	Felling: "felling",
+	Overcharge: "overcharge",
+	Proven: "proven",
 };
 
 /** Book notation "S/3/10" -> schema rateOfFire record. */
@@ -75,9 +98,9 @@ export function parseQualities(special: string): string[] {
 		const name = raw.replace(/†+$/, "").trim();
 		if (!name || name === "—" || name.startsWith("Varies with ammunition"))
 			continue;
-		const blast = name.match(/^Blast \((\d+)\)$/);
-		if (blast) {
-			out.push(`blast-${blast[1]}`);
+		const rated = name.match(/^([A-Za-z ]+) \(([^)]+)\)$/);
+		if (rated && RATED_QUALITIES[rated[1]]) {
+			out.push(`${RATED_QUALITIES[rated[1]]}-${rated[2]}`);
 			continue;
 		}
 		const key = QUALITY_KEY_MAP[name];

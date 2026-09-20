@@ -11,6 +11,14 @@
  *      mirrored from Foundry core (client/applications/handlebars.mjs) and
  *      a permissive context (Proxy returning safe empties for anything).
  *      A render throw (missing helper, bad expression) fails loudly.
+ *   2b. HELPER CALLS (static, bead 7tjo) — every helper invocation is
+ *      checked against a known helper set and its arity, by walking the
+ *      compiled AST. This runs INDEPENDENTLY of the render pass, which is
+ *      the point: the render uses an empty context, so a body inside an
+ *      `{{#each}}` over an absent list never executes and its errors are
+ *      invisible to it. `{{#if ../picked.has o.uuid}}` (two params —
+ *      Handlebars' #if requires exactly one) shipped to a live world
+ *      precisely because verify passed on the non-executing loop.
  *   3. TABS — every template using `data-tab=` sections must belong to a
  *      sheet class that declares `static TABS`. Foundry 14 core CSS hides
  *      `.tab[data-tab]:not(.active)`; a section with a data-tab but no tab
@@ -84,6 +92,21 @@ const stubs = {
 };
 
 Handlebars.registerHelper(stubs);
+
+// Static helper-call analysis (bead 7tjo) lives in utils/template-helpers.ts so
+// it can be unit-tested; see that file for why the check is static rather than
+// a deeper render context.
+import { checkHelperCalls } from "./template-helpers";
+
+// ---------------------------------------------------------------------------
+// Static helper-call analysis (bead 7tjo) is imported from
+// utils/template-helpers.ts and run per template in the loop below. It runs
+// INDEPENDENTLY of the render pass, which is the point: the render uses an
+// empty context, so a body inside an `{{#each}}` over an absent list never
+// executes and its errors are invisible to it. `{{#if ../picked.has o.uuid}}`
+// (two params — handlebars' #if requires exactly one) shipped to a live world
+// precisely because verify passed on the non-executing loop.
+// ---------------------------------------------------------------------------
 
 // Mirror src/roguetrader/sheet/partials.ts (consolidation beads bef7/9v7c/
 // 7c1y/201f): register template/shared/parts/*.hbs as `rt/<name>` partials
@@ -211,6 +234,22 @@ for (const file of templates) {
 	} catch (error) {
 		failures++;
 		console.error(`✗ render  ${rel}: ${error.message}`);
+	}
+	// 2b. Static helper-call check. Deliberately NOT inside the render try:
+	// it must run even when the render passed, because passing is exactly the
+	// failure mode (an unexecuted loop body hides its own errors).
+	try {
+		for (const failure of checkHelperCalls(source, rel)) {
+			failures++;
+			console.error(`✗ helper  ${failure}`);
+		}
+	} catch (error) {
+		// Handlebars.parse throws on syntax errors, which the compile pass
+		// above has already reported; do not double-count them.
+		if (!/Parse error/.test(error.message)) {
+			failures++;
+			console.error(`✗ helper  ${rel}: ${error.message}`);
+		}
 	}
 }
 

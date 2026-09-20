@@ -18,6 +18,8 @@ export abstract class Weapon extends Gear {
 	static LOCALIZATION_PREFIXES = ["WEAPON"];
 
 	declare primitive: boolean;
+	/** Hard Points this weapon consumes on a battlesuit (0 = not one). */
+	declare hardPointCost: number;
 
 	static override defineSchema() {
 		return {
@@ -40,6 +42,25 @@ export abstract class Weapon extends Gear {
 			 * emit mapping's loud failures.
 			 */
 			weaponFamily: new foundry.data.fields.StringField({ initial: "" }),
+			/**
+			 * Hard Points consumed when mounted on a Tau battlesuit (bead 61rb).
+			 * Tau Character Guide printed p30: "A battlesuit can typically only be
+			 * equipped with as many Support Systems and/or Weapons Systems as it
+			 * has Hard Points" — so a Weapon System costs 1, exactly like a Support
+			 * System, and there is no separate twin-linked discount in the book.
+			 *
+			 * Initial 0, which is the correct value for every weapon that is not a
+			 * battlesuit Weapon System — that is almost all of them — so the field
+			 * costs the rest of the armoury nothing. It lives on the shared Weapon
+			 * base rather than on the Tau entries so a suit's loadout can total it
+			 * without knowing which book a weapon came from.
+			 */
+			hardPointCost: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 0,
+				required: true,
+			}),
 			/** Effective range: metres ("90"), formula ("SBx3"), or "—". */
 			range: new foundry.data.fields.StringField({
 				required: true,

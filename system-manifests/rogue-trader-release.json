@@ -2,7 +2,7 @@
   "id": "rogue-trader",
   "title": "Rogue Trader",
   "description": "Unofficial Foundry VTT System for Rogue Trader.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minimumCoreVersion": 13,
   "compatibility": {
     "minimum": 13,
@@ -243,5 +243,5 @@
   "socket": true,
   "license": "LICENSE.md",
   "manifest": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/raw/branch/master/system-manifests/rogue-trader-release.json",
-  "download": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/releases/download/v0.1.0/rogue-trader.zip"
+  "download": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/releases/download/v0.2.0/rogue-trader.zip"
 }

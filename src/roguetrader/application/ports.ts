@@ -143,6 +143,25 @@ export interface I18n {
 	t(key: string, vars?: Record<string, unknown>): string;
 }
 
+/**
+ * Who is acting and what they may do (bead qiuo).
+ *
+ * The roll pipeline needs this because a roll must be refused for an entity the
+ * requester does not own — including from a chat-card button, which every user
+ * can see and click.
+ */
+export interface Permissions {
+	/**
+	 * May the CURRENT user roll for this actor?
+	 *
+	 * Implementations must fold the GM case in. In Foundry a GM holds OWNER on
+	 * every document, so `isOwner` is already true for them; a separate
+	 * "or is the GM" branch here would be redundant and would rot if the GM
+	 * permission model is ever tuned.
+	 */
+	canRoll(actor: unknown): boolean;
+}
+
 /** World configuration the rules read (homebrew profile, warmed content). */
 export interface ConfigPort {
 	homebrew(): unknown;
@@ -170,4 +189,5 @@ export interface Ports {
 	config: ConfigPort;
 	content: ContentPort;
 	actors: Actors;
+	permissions: Permissions;
 }

@@ -70,6 +70,7 @@ export const ACTOR_MODELS: Record<string, ModelEntry> = {
 	dynasty: { spec: "../roguetrader/data/actor/dynasty", className: "Dynasty" },
 	starship: { spec: "../roguetrader/data/actor/starship-actor", className: "StarshipActor" },
 	planet: { spec: "../roguetrader/data/actor/planet-actor", className: "PlanetActor" },
+	cache: { spec: "../roguetrader/data/actor/cache", className: "CacheActor" },
 };
 
 type Field = { fields?: Record<string, Field> };

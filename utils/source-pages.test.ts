@@ -9,11 +9,14 @@
  * 118 — and re-running the backfill would have undone its 36 hand corrections.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import {
+	findMakerWrappedPage,
+	findNicknamePage,
 	findPage,
 	isAdvanceRow,
 	isCellMatch,
+	isStatRow,
 	isWrappedCellMatch,
 	normalise,
 	PASS_ORDER,
@@ -190,6 +193,110 @@ describe("isWrappedCellMatch", () => {
 	});
 });
 
+describe("isStatRow", () => {
+	test("accepts a weapon stat row", () => {
+		expect(isStatRow("   Boltgun   Basic  80m  S/3/– 1d10+4 X 2   18  Full")).toBe(
+			true,
+		);
+	});
+
+	test("rejects prose that mentions damage", () => {
+		expect(isStatRow("Boltguns deal 1d10+4 damage at close range.")).toBe(false);
+	});
+});
+
+describe("findMakerWrappedPage (bead r8rx)", () => {
+	// The armoury tables render a made-up weapon as: name line, stat line, then
+	// the maker in parentheses on its OWN line. Two entries can share a base
+	// name and differ only by that maker, so the maker line is what tells them
+	// apart — a name match alone cannot.
+	const pages = makePages({
+		50: [
+			"   Boltgun",
+			"      Basic  80m  S/3/– 1d10+4 X 2   18  Full  Tearing",
+			"   (Footfall)",
+			"   Boltgun",
+			"      Basic  120m  S/3/– 1d10+9 X 4   30  Full  Reliable",
+			"   (Archeotech)",
+		],
+	});
+
+	test("distinguishes two entries that share a base name", () => {
+		// Both are on the SAME page here, so the assertion that matters is that
+		// each resolves at all rather than to null/ambiguous.
+		expect(findMakerWrappedPage(pages, "Boltgun", "Footfall")).toBe(49);
+		expect(findMakerWrappedPage(pages, "Boltgun", "Archeotech")).toBe(49);
+	});
+
+	test("a maker that appears on the wrong page does not match", () => {
+		expect(findMakerWrappedPage(pages, "Boltgun", "Mars-pattern")).toBe(null);
+	});
+
+	test("returns null when the name and maker never sit in that order", () => {
+		const wrongOrder = makePages({
+			50: ["   (Footfall)", "   Boltgun", "      Basic  80m  1d10+4 X"],
+		});
+		expect(findMakerWrappedPage(wrongOrder, "Boltgun", "Footfall")).toBe(null);
+	});
+
+	test("returns null on ambiguity rather than guessing", () => {
+		// Two pages both carry the name/stat/maker shape.
+		const twice = makePages({
+			50: ["   Boltgun", "      Basic  80m  1d10+4 X", "   (Footfall)"],
+			60: ["   Boltgun", "      Basic  80m  1d10+4 X", "   (Footfall)"],
+		});
+		expect(findMakerWrappedPage(twice, "Boltgun", "Footfall")).toBe(null);
+	});
+
+	test("short names and makers are refused", () => {
+		expect(findMakerWrappedPage(pages, "Ab", "Footfall")).toBe(null);
+		expect(findMakerWrappedPage(pages, "Boltgun", "Ab")).toBe(null);
+	});
+});
+
+describe("findNicknamePage (bead r8rx)", () => {
+	// The books name a signature weapon maker + model + quoted nickname while
+	// the table prints a shortened label. The quoted word is the distinctive
+	// token; the type word keeps it from matching an unrelated weapon.
+	const pages = makePages({
+		82: [
+			"   Clovis Twist Pistol   Pistol  20m  S/–/– 1d10+4 E  0  1  Full",
+			"   Clovis Mark IV Plasma Gun   Basic  90m  S/2/4  2d10+4 E  10",
+		],
+	});
+
+	test("matches the shortened table label via the quoted nickname", () => {
+		expect(findNicknamePage(pages, 'Clovis FP-14 "Twist" Pistol')).toBe(81);
+	});
+
+	test("the type word disambiguates a shared nickname", () => {
+		// Same nickname, different weapon: only the type word separates them.
+		const shared = makePages({
+			82: [
+				"   Clovis Twist Pistol   Pistol  20m  1d10+4 E",
+				"   Clovis Twist Cannon   Heavy  60m  2d10+4 E",
+			],
+		});
+		expect(findNicknamePage(shared, 'Clovis FP-14 "Twist" Pistol')).toBe(81);
+	});
+
+	test("returns null when the name has no quoted nickname", () => {
+		expect(findNicknamePage(pages, "Clovis Twist Pistol")).toBe(null);
+	});
+
+	test("returns null when the nickname appears nowhere", () => {
+		expect(findNicknamePage(pages, 'Clovis FP-14 "Absolution" Rifle')).toBe(null);
+	});
+
+	test("returns null on ambiguity rather than guessing", () => {
+		const twice = makePages({
+			82: ["   Clovis Twist Pistol   Pistol  20m  1d10+4 E"],
+			92: ["   Clovis Twist Pistol   Pistol  20m  1d10+4 E"],
+		});
+		expect(findNicknamePage(twice, 'Clovis FP-14 "Twist" Pistol')).toBe(null);
+	});
+});
+
 // ---------------------------------------------------------------------------
 // Real-dump assertions. These run only where the private book dumps are
 // staged (they are gitignored in both repos), so the public tree still passes.
@@ -268,5 +375,117 @@ describe.skipIf(!HAS_DUMPS)("against the real Core Rulebook dumps", () => {
 			"Smoke",
 			"Virus",
 		]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Maker/nickname matchers against the real dumps (bead r8rx).
+//
+// These pin the ELEVEN corrections the new strategies produced. Each is a row
+// the name-only matcher could not resolve at all, so without these the fix
+// would rest on a one-off script run.
+// ---------------------------------------------------------------------------
+const MULTI_BOOKS = [
+	"faith_and_coin",
+	"hostile_acquisitions",
+	"into_the_storm",
+	"soul_reaver",
+] as const;
+
+const HAS_MULTI = MULTI_BOOKS.every((book) =>
+	existsSync(`src/packs/extracted-text/${book}`),
+);
+
+/** Pages of a book, indexed by FILE page (index 0 unused). */
+function loadBook(book: string): PageLines[] {
+	const dir = `src/packs/extracted-text/${book}`;
+	const numbers = readdirSync(dir)
+		.filter((f) => /^page-\d+\.layout\.txt$/.test(f))
+		.map((f) => Number(f.match(/\d+/)![0]));
+	const max = Math.max(...numbers);
+	const pages: PageLines[] = [[]];
+	for (let p = 1; p <= max; p++) {
+		const file = `${dir}/page-${String(p).padStart(4, "0")}.layout.txt`;
+		pages[p] = existsSync(file) ? readFileSync(file, "utf8").split("\n") : [];
+	}
+	return pages;
+}
+
+/** Printed page for a file page, read from that page's own footer. */
+function footerPrinted(
+	pages: readonly PageLines[],
+	filePage: number,
+): number | null {
+	let printed: number | null = null;
+	for (const line of pages[filePage] ?? []) {
+		const m = line.trim().match(/^(\d{1,3})$/);
+		if (m) printed = Number(m[1]);
+	}
+	return printed;
+}
+
+describe.skipIf(!HAS_MULTI)("maker/nickname matchers against the real dumps", () => {
+	const books = new Map<string, PageLines[]>();
+	if (HAS_MULTI) for (const b of MULTI_BOOKS) books.set(b, loadBook(b));
+
+	test("the maker-on-its-own-line shape resolves the two Boltguns", () => {
+		const pages = books.get("hostile_acquisitions")!;
+		// Both entries share the base name "Boltgun" and differ only by the
+		// maker line after the stat row. The pack cited 50 and 51; the rows are
+		// both on printed 49.
+		expect(findMakerWrappedPage(pages, "Boltgun", "Footfall")).toBe(49);		expect(findMakerWrappedPage(pages, "Boltgun", "Archeotech")).toBe(49);
+		expect(findMakerWrappedPage(pages, "Bolt Pistol", "Footfall")).toBe(49);
+		expect(findMakerWrappedPage(pages, "Bolt Carbine", "Ceres")).toBe(49);
+		expect(findMakerWrappedPage(pages, "Shotgun", "Persecutor")).toBe(49);
+	});
+
+	test("the quoted nickname resolves the maker-named signature weapons", () => {
+		const fc = books.get("faith_and_coin")!;
+		expect(findNicknamePage(fc, 'Clovis FP-14 "Twist" Pistol')).toBe(81);
+		expect(findNicknamePage(fc, 'Merovech Model 481 "Persuader" Lasgun')).toBe(81);
+		expect(findNicknamePage(fc, 'Mars-pattern MkII "Scourge" Boltgun')).toBe(81);
+
+		const its = books.get("into_the_storm")!;
+		expect(findNicknamePage(its, 'Perinetus-pattern "Solo" Mark II Boltgun')).toBe(
+			113,
+		);
+		expect(findNicknamePage(its, 'Zepherus Mark I "Beamer" Meltagun')).toBe(113);
+		expect(findNicknamePage(its, 'Ryza-pattern "Wrath" Plasma Pistol')).toBe(113);
+	});
+
+	test("the derived pages agree with the page FOOTERS", () => {
+		// The point of the whole exercise: not that the matcher returns a
+		// number, but that the number is the page the row is actually printed
+		// on. Where the book prints a footer, the two must agree.
+		const cases: Array<[string, number | null, number]> = [
+			[
+				"hostile_acquisitions",
+				findMakerWrappedPage(books.get("hostile_acquisitions")!, "Boltgun", "Footfall"),
+				49,
+			],
+			[
+				"into_the_storm",
+				findNicknamePage(
+					books.get("into_the_storm")!,
+					'Perinetus-pattern "Solo" Mark II Boltgun',
+				),
+				113,
+			],
+		];
+		for (const [book, derived, expected] of cases) {
+			expect(derived, book).toBe(expected);
+			// The stat row sits on FILE page (printed + 1); its footer confirms it.
+			const printed = footerPrinted(books.get(book)!, expected + 1);
+			if (printed !== null) expect(printed, `${book} footer`).toBe(expected);
+		}
+	});
+
+	test("neither matcher invents an answer where there is none", () => {
+		// These must stay null: a fabricated page is worse than an admitted gap.
+		const fc = books.get("faith_and_coin")!;
+		const sr = books.get("soul_reaver")!;
+		expect(findNicknamePage(fc, "Lucius-pattern Mk22c Shotgun")).toBe(null);
+		expect(findNicknamePage(sr, "Splinter Cannon")).toBe(null);
+		expect(findMakerWrappedPage(fc, "No Such Weapon", "Nowhere")).toBe(null);
 	});
 });

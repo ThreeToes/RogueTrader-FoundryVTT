@@ -13,6 +13,7 @@
  */
 
 import { vehicleClasses, vehicleFacings, vehicleTraits } from "../../registry";
+import { sourceField } from "../item/source";
 
 export class Vehicle extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,
@@ -31,6 +32,12 @@ export class Vehicle extends foundry.abstract.TypeDataModel<
 	declare crew: string[];
 	declare mountedWeapons: Array<{ uuid: string; facing: string }>;
 	declare description: string;
+	/**
+	 * Book + printed page (bead r8rx audit). The Vehicle actor model never
+	 * declared this, so the 18 vehicles whose provenance is written into the
+	 * description prose could not be given a machine-readable cite without it.
+	 */
+	declare source: { book: string; page: number };
 
 	static override defineSchema() {
 		return {
@@ -122,6 +129,7 @@ export class Vehicle extends foundry.abstract.TypeDataModel<
 				{ initial: () => [] },
 			),
 			description: new foundry.data.fields.HTMLField(),
+			source: sourceField(),
 		};
 	}
 

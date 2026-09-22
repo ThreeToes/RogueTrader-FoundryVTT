@@ -10,6 +10,7 @@
  */
 
 import { Character } from "../data/actor/character";
+import { CacheActor } from "../data/actor/cache";
 import { Dynasty } from "../data/actor/dynasty";
 import { PlanetActor } from "../data/actor/planet-actor";
 import { StarshipActor } from "../data/actor/starship-actor";
@@ -43,6 +44,7 @@ import { Trait } from "../data/item/trait";
 import { WarrantOption } from "../data/item/warrant-option";
 import { WeaponModification } from "../data/item/weapon-modification";
 import { CharacterSheet } from "../sheet/actor/character-sheet";
+import { CacheSheet } from "../sheet/actor/cache-sheet";
 import { DynastySheet } from "../sheet/actor/dynasty-sheet";
 import { NpcSheet } from "../sheet/actor/npc-sheet";
 import { PlanetSheet } from "../sheet/actor/planet-sheet";
@@ -275,6 +277,14 @@ export const SHEET_REGISTRY: Record<
 			model: PlanetActor,
 			sheet: PlanetSheet,
 			label: "TYPES.Actor.planet",
+		},
+		// Cache actor (bead wlx9): a lootable container on the map — a crate,
+		// a corpse's kit, a smuggler's stash. Mechanic-free by design: no
+		// characteristics, no derived stats, and no roll action anywhere.
+		cache: {
+			model: CacheActor,
+			sheet: CacheSheet,
+			label: "TYPES.Actor.cache",
 		},
 	},
 };

@@ -78,3 +78,54 @@ export interface CarriedItemLike {
 export function carriedWeight(items: CarriedItemLike[]): number {
 	return items.reduce((sum, item) => sum + Math.max(0, item.weight ?? 0), 0);
 }
+
+/**
+ * Owned-item types that count toward carried weight.
+ *
+ * ONE definition, shared by every surface that shows a load (the character
+ * sheet's bar and the cache sheet's take-check). Two copies of this list is
+ * exactly how the two would drift apart.
+ */
+export const CARRIED_ITEM_TYPES = [
+	"melee-weapon",
+	"ranged-weapon",
+	"armour",
+	"gear",
+] as const;
+
+/**
+ * Minimal owned-item shape: its type and its system data.
+ *
+ * `system` is `unknown` rather than `{ weight?: unknown }` on purpose: a real
+ * Foundry Item's `system` is typed as `UnknownSourceData` by fvtt-types, which
+ * is not assignable to an object-with-optional-weight, so a narrower shape
+ * makes every call site cast. The weight is read defensively below instead.
+ */
+export interface OwnedItemLike {
+	type?: string;
+	system?: unknown;
+}
+
+/**
+ * Encumbrance for an actor's owned items and Strength Bonus.
+ *
+ * The type filter lives here rather than at each call site. Note this counts
+ * STOWED items too — owner decision 2026-09-08, bead xhcc, which superseded
+ * bead yar's READY-only rule (a fully stowed load still weighs).
+ */
+export function actorEncumbrance(
+	items: Iterable<OwnedItemLike>,
+	strengthBonus: number,
+): EncumbranceOutcome {
+	const carried: CarriedItemLike[] = [];
+	for (const item of items) {
+		if (!(CARRIED_ITEM_TYPES as readonly string[]).includes(item.type ?? "")) {
+			continue;
+		}
+		const weight = Number(
+			(item.system as { weight?: unknown } | undefined)?.weight ?? 0,
+		);
+		carried.push({ type: item.type, weight });
+	}
+	return resolveEncumbrance(carriedWeight(carried), deriveCapacity(strengthBonus));
+}

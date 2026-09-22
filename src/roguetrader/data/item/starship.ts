@@ -3,6 +3,7 @@
  * The hull defines the ship's base characteristics; components are a later
  * pass (bead follow-up). All values verbatim from the hull statlines.
  */
+import { sourceField } from "./source";
 export class Starship extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,
 	foundry.documents.Item
@@ -25,6 +26,11 @@ export class Starship extends foundry.abstract.TypeDataModel<
 	declare weaponCapacity: string;
 	declare specialRules: string;
 	declare description: string;
+	/**
+	 * Book + printed page (bead r8rx audit). ships.yaml sets this on every hull
+	 * and complication; the model did not declare it, so Foundry dropped it.
+	 */
+	declare source: { book: string; page: number };
 	/** Complete NPC / quick-start vessel (gjn6, book pp209-211): has a full
 	 * statline and pre-installed components, not an empty hull for refit. */
 	declare npc: boolean;
@@ -56,6 +62,9 @@ export class Starship extends foundry.abstract.TypeDataModel<
 			/** Named hull special rules, verbatim ("Cargo Hauler: ..."). */
 			specialRules: new foundry.data.fields.HTMLField({ initial: "" }),
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
+			// Declared late (bead r8rx audit): the packs carried this and the
+			// schema silently discarded it.
+			source: sourceField(),
 			// NPC vessels (gjn6, book pp209-211): complete ships with
 			// pre-installed components, listed by pack-component name so the
 			// ship creator can instantiate them with loud failures.
@@ -86,6 +95,8 @@ export class ShipComplication extends foundry.abstract.TypeDataModel<
 	declare kind: string;
 	declare roll: number;
 	declare effect: string;
+	/** Book + printed page (bead r8rx audit): ships.yaml sets it; the schema dropped it. */
+	declare source: { book: string; page: number };
 
 	static override defineSchema() {
 		return {
@@ -94,6 +105,7 @@ export class ShipComplication extends foundry.abstract.TypeDataModel<
 			/** 1d10 roll on the table. */
 			roll: new foundry.data.fields.NumberField({ min: 1, max: 10, integer: true, initial: 1 }),
 			effect: new foundry.data.fields.HTMLField({ initial: "" }),
+			source: sourceField(),
 		};
 	}
 }

@@ -32,6 +32,7 @@
 import type { Character } from "./data/actor/character";
 import type { Dynasty } from "./data/actor/dynasty";
 import type { PlanetActor } from "./data/actor/planet-actor";
+import type { CacheActor } from "./data/actor/cache";
 import type { StarshipActor } from "./data/actor/starship-actor";
 import type { Vehicle } from "./data/actor/vehicle";
 import type { Ammunition } from "./data/item/ammunition";
@@ -115,6 +116,7 @@ declare module "fvtt-types/configuration" {
 			dynasty: typeof Dynasty;
 			starship: typeof StarshipActor;
 			planet: typeof PlanetActor;
+			cache: typeof CacheActor;
 		};
 	}
 }

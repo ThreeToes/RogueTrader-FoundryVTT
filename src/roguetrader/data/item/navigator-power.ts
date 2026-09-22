@@ -25,6 +25,22 @@ export class NavigatorPower extends foundry.abstract.TypeDataModel<
 	declare levels: { novice: string; adept: string; master: string };
 	declare description: string;
 	declare shortDescription: string;
+	/**
+	 * What a character must be to take this power (the pack authors "Navigator
+	 * gene" on all 23). Declared late: the pack set it from the start and the
+	 * schema dropped it silently, so no sheet could ever have shown it.
+	 */
+	declare prerequisite: string;
+	/**
+	 * Extraction note on which Characteristic the power actually tests.
+	 *
+	 * The model's own header already says "per-power characteristic comes from
+	 * the extraction's per-power note" — the note existed but was never a schema
+	 * field, so it was dropped on load and that sentence described something no
+	 * reader could reach. Book p178: Willpower and Perception are the common
+	 * choices, and the specific one comes from the power's own description.
+	 */
+	declare characteristicNote: string;
 
 	/** Mastery levels with their book test bonuses (book p178). */
 	static masteryBonus: Record<string, number> = {
@@ -71,6 +87,12 @@ export class NavigatorPower extends foundry.abstract.TypeDataModel<
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
 			/** Short free-text description shown in pickers. */
 			shortDescription: new foundry.data.fields.StringField({
+				initial: "",
+			}),
+			/** Requirement to take the power (pack authors "Navigator gene"). */
+			prerequisite: new foundry.data.fields.StringField({ initial: "" }),
+			/** Per-power Characteristic note (see the declare above). */
+			characteristicNote: new foundry.data.fields.StringField({
 				initial: "",
 			}),
 			// Source attribution (bead zzlq): books.yaml slug + printed page.

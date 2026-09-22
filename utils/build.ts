@@ -42,8 +42,14 @@ async function copyStaticFiles() {
 	const manifestText = await packManifest(manifestSourceText, packs, requiresPacks);
 	await writeFile("./release/rogue_trader/system.json", manifestText);
 	await cp("./lang", "./release/rogue_trader/lang", { recursive: true, force: true });
-	// template.json (document type declarations) ships with the system; the
-	// create-dialog type lists read it, so a stale copy breaks new types.
+	// template.json ships with the system and is kept TRUTHFUL, but it is NOT
+	// the creation gate: the Create Actor dialog reads game.documentTypes,
+	// which comes from this manifest's `documentTypes` (bead vnz3). That is why
+	// a type can be deliberately absent from template.json's `types` and still
+	// be offered — `planet` is (created by planet-creator.ts), and `pc` is
+	// excluded from documentTypes for the opposite reason. An earlier version
+	// of this comment said the dialog read template.json, which sent a reader
+	// hunting for a "missing" type that was never missing.
 	await cp("./template.json", "./release/rogue_trader/template.json", {
 		force: true,
 	});

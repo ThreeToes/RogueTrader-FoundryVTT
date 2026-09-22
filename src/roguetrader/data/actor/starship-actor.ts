@@ -13,6 +13,7 @@ import {
 	type CrewQuality,
 	crewQualityEffects,
 } from "../../rules/ship-crew";
+import { sourceField } from "../item/source";
 
 export { CREW_QUALITIES, type CrewQuality, crewQualityEffects };
 
@@ -58,6 +59,16 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 	static override defineSchema() {
 		return {
 			hullName: new foundry.data.fields.StringField({ initial: "" }),
+			/**
+			 * Hull class (transport / raider / frigate / ...). Declared as a TS
+			 * field since the model was written but NEVER added to the schema
+			 * (bead r8rx audit), so Foundry dropped it on load while the ship sheet
+			 * happily read `system.hullClass` and always got undefined.
+			 */
+			hullClass: new foundry.data.fields.StringField({ initial: "" }),
+			// Book + printed page (bead r8rx audit): starships.yaml sets this on
+			// every entry and the schema discarded it.
+			source: sourceField(),
 			dimensions: new foundry.data.fields.StringField({ initial: "" }),
 			mass: new foundry.data.fields.StringField({ initial: "" }),
 			crew: new foundry.data.fields.StringField({ initial: "" }),

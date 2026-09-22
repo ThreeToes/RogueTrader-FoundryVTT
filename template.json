@@ -5,7 +5,8 @@
             "npc",
             "dynasty",
             "starship",
-            "vehicle"
+            "vehicle",
+            "cache"
         ],
         "npc": {
             "prototypeToken": {
@@ -56,6 +57,13 @@
                 "actorLink": true,
                 "bar1": {
                     "attribute": "wounds"
+                }
+            }
+        },
+        "cache": {
+            "prototypeToken": {
+                "sight": {
+                    "enabled": false
                 }
             }
         }

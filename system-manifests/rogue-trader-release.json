@@ -71,6 +71,11 @@
           "notes"
         ]
       },
+      "cache": {
+        "htmlFields": [
+          "notes"
+        ]
+      },
       "starship": {
         "htmlFields": [
           "notes"

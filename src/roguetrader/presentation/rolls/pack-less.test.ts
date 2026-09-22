@@ -93,6 +93,11 @@ function fixtureActor(items: unknown[] = []) {
 		type: "explorer",
 		uuid: "Actor.test",
 		items: collection,
+		// Ownership (bead qiuo): the roll pipeline refuses an actor the current
+		// user does not own, and the port fails CLOSED, so a fixture that is
+		// meant to be rollable must say so. Tests that want a refusal pass
+		// `isOwner: false`.
+		isOwner: true,
 		// Real actors are documents: the ports THROW when a write cannot be
 		// performed (bead c9s3), so the fixture must be writable or the
 		// condition/damage paths cannot run.
@@ -284,5 +289,122 @@ describe("pack-less pipeline: every roll kind still posts a card (bead jx0w)", (
 			TestDialog.show = originalShow;
 		}
 		expect(posted.length).toBeGreaterThan(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+describe("ownership gate (bead qiuo)", () => {
+	/** A roll request that would otherwise succeed. */
+	const request = (actor: unknown, extra: Record<string, unknown> = {}) =>
+		({
+			kind: "characteristic",
+			actor,
+			key: "wp",
+			skipDialog: true,
+			...extra,
+		}) as never;
+
+	/** Capture notifications instead of posting them to a Foundry UI. */
+	function captureWarnings(): string[] {
+		const warnings: string[] = [];
+		setPorts({
+			...foundryPorts,
+			content: NO_CONTENT_PORT,
+			notify: {
+				warn: (key) => warnings.push(key),
+				info: () => undefined,
+			},
+		});
+		return warnings;
+	}
+
+	test("a non-owner cannot roll: nothing is posted and the refusal is loud", async () => {
+		const warnings = captureWarnings();
+		const actor = fixtureActor() as unknown as { isOwner: boolean };
+		actor.isOwner = false;
+
+		await performRoll(request(actor));
+
+		// The card is the thing that must not happen — a silent nothing would
+		// be indistinguishable from a broken button.
+		expect(posted).toEqual([]);
+		expect(rollCalls).toEqual([]);
+		expect(warnings).toEqual(["ROLL.NOT_OWNER"]);
+	});
+
+	test("the gate is in performRoll, so skipDialog cannot bypass it", async () => {
+		// skipDialog never opens a TestDialog, which is exactly why the check
+		// cannot live in the dialog.
+		const warnings = captureWarnings();
+		const actor = fixtureActor() as unknown as { isOwner: boolean };
+		actor.isOwner = false;
+		await performRoll(request(actor, { skipDialog: true }));
+		expect(posted).toEqual([]);
+		expect(warnings).toEqual(["ROLL.NOT_OWNER"]);
+	});
+
+	test("the chat-card second click is refused too", async () => {
+		// The two-click "to-hit then Roll Damage" UX puts a button on a card
+		// every user can see; the damage roll re-enters the pipeline with no
+		// dialog. It must be refused for a non-owner as well.
+		const warnings = captureWarnings();
+		const actor = fixtureActor([weapon]) as unknown as { isOwner: boolean };
+		actor.isOwner = false;
+		await performRoll({
+			kind: "weapon",
+			actor,
+			itemId: "w1",
+			skipDialog: true,
+		} as never);
+		expect(posted).toEqual([]);
+		expect(warnings).toEqual(["ROLL.NOT_OWNER"]);
+	});
+
+	test("every roll kind is refused, not just the ones with a sheet button", async () => {
+		const kinds: Array<[string, Record<string, unknown>]> = [
+			["characteristic", { key: "wp" }],
+			["skill", { skillName: "Dodge" }],
+			["weapon", { itemId: "w1" }],
+			["psychic", { itemId: "p1" }],
+			["navigator", { itemId: "n1" }],
+			["ship-weapon", { itemId: "c1" }],
+			["ship-repair", { itemId: "c1" }],
+			["fear", { severity: 1 }],
+		];
+		for (const [kind, extra] of kinds) {
+			posted.length = 0;
+			const warnings = captureWarnings();
+			const actor = fixtureActor([weapon, psychicPower, navigatorPower, damagedComponent]);
+			(actor as unknown as { isOwner: boolean }).isOwner = false;
+			await performRoll({ kind, actor, skipDialog: true, ...extra } as never);
+			expect(posted, kind).toEqual([]);
+			expect(warnings, kind).toEqual(["ROLL.NOT_OWNER"]);
+		}
+	});
+
+	test("an owner is unaffected", async () => {
+		installNoContent();
+		await performRoll(request(fixtureActor()));
+		expect(posted.length).toBeGreaterThan(0);
+	});
+
+	test("a GM is unaffected without a special case", async () => {
+		// The port folds the GM in via isOwner: in Foundry a GM holds OWNER on
+		// every document, so `isOwner` is already true and no isGM branch is
+		// needed. This pins that assumption — if it ever stops holding, this
+		// test says so rather than the permission silently tightening.
+		installNoContent();
+		await performRoll(request(fixtureActor()));
+		expect(posted.length).toBeGreaterThan(0);
+	});
+
+	test("ownership that cannot be determined fails CLOSED", async () => {
+		// A plain object with no isOwner is not a document we can vouch for. A
+		// permission check that defaults to allow is not a permission check.
+		const warnings = captureWarnings();
+		const anonymous = { name: "Nameless", type: "npc", items: [] };
+		await performRoll(request(anonymous));
+		expect(posted).toEqual([]);
+		expect(warnings).toEqual(["ROLL.NOT_OWNER"]);
 	});
 });

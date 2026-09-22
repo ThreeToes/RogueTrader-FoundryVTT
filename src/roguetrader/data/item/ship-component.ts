@@ -6,6 +6,7 @@
  * Table 8-8's availability rule is applied per entry at authoring time
  * (SP-cost based for SP-carrying kinds; fixed for archeotech/xeno-tech).
  */
+import { sourceField } from "./source";
 
 export class ShipComponent extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,
@@ -24,6 +25,27 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 	declare availability: string;
 	declare unique: boolean;
 	declare description: string;
+	/**
+	 * Strength — ONE printed column, two readings, so it lives on the base model.
+	 *
+	 * On a WEAPON component it is the barrage's Crit Strength (Table 8-4,
+	 * Core Rulebook p202 — the hits scored by the barrage). On a LANDING BAY it
+	 * is the number of attack-craft squadrons the bay supports: battlefleet
+	 * koronus Table 1-9: Starship Weapons (printed p35) prints a Strength column
+	 * for the Landing Bays rows, and their own text says "Landing bays come
+	 * equipped with one squadron per point of Strength". A landing bay has a
+	 * Strength but no Damage or Crit Rating, which is why it is not a
+	 * ship-weapon-component — declaring the field here is what keeps those five
+	 * bays' Strength from being silently dropped (bead r8rx audit).
+	 */
+	declare strength: number;
+	/**
+	 * Book + printed page (bead r8rx audit). Every entry in components.yaml and
+	 * ships.yaml sets this, but the model never declared it, so Foundry's
+	 * schema clean SILENTLY DROPPED it on load — 236 entries lost their
+	 * provenance without a single warning anywhere in the pipeline.
+	 */
+	declare source: { book: string; page: number };
 	/**
 	 * Condition (book p223: "A ship's Component is either intact, unpowered,
 	 * damaged, or destroyed"); depressurisation is a separate condition
@@ -55,6 +77,16 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 			/** † marker: may not be selected more than once per vessel (Table 8-5). */
 			unique: new foundry.data.fields.BooleanField({ initial: false }),
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
+			// Printed Strength column (see the declare above for both readings).
+			strength: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 0,
+			}),
+			// Book + printed page (bead r8rx audit). Declared late, after an audit
+			// found 236 component/ship entries carrying it into a model that
+			// dropped it silently.
+			source: sourceField(),
 			/**
 			 * The book's component-type taxonomy (bead 9cre rework): Essential
 			 * components carry the category headings of the Essential
@@ -122,12 +154,8 @@ export class ShipWeaponComponent extends ShipComponent {
 	static override defineSchema() {
 		return {
 			...super.defineSchema(),
-			/** Crit Strength (Table 8-4; hits scored by the barrage). */
-			strength: new foundry.data.fields.NumberField({
-				min: 0,
-				integer: true,
-				initial: 0,
-			}),
+			// `strength` is inherited from ShipComponent — the same printed column,
+			// shared with landing bays. See the declare there.
 			/** Variable Strength die (gjn6, book p209 dagger note: Dorsal Gunz
 			 * roll 1d5 for Strength before firing each turn). Empty = fixed
 			 * Strength. */

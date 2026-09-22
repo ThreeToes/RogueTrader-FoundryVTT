@@ -124,6 +124,98 @@ export interface FindPageOptions {
 }
 
 /**
+ * Does this line look like a weapon stat row? Used by the maker/nickname
+ * matchers below, which cannot rely on the name being at the START of the row
+ * (in the maker shape the name is on its own line; in the nickname shape the
+ * row begins with the maker).
+ *
+ * Requires a damage die AND a range token, which is what separates a stat row
+ * from the prose that surrounds it in the same dump.
+ */
+export function isStatRow(line: string): boolean {
+	return /[0-9]+d[0-9]+/.test(line) && /(\d+m|SBx|–|—)/.test(line);
+}
+
+/**
+ * Match the "name, stat row, then (maker) on its own line" layout (bead r8rx).
+ *
+ * This is how the armoury tables render a made-up weapon whose maker does not
+ * fit the name column:
+ *
+ *     Boltgun
+ *                        Basic  80m  S/3/–  1d10+4 X ...
+ *     (Footfall)
+ *
+ * The pack calls that entry "Boltgun (Footfall)", so a name-at-line-start
+ * match finds the name line but never a stat row on it, and the two Boltguns
+ * (Footfall and Archeotech) are indistinguishable by name alone. Requiring the
+ * maker on the line AFTER the stat row is what tells them apart.
+ */
+export function findMakerWrappedPage(
+	pages: readonly PageLines[],
+	base: string,
+	maker: string,
+	opts: FindPageOptions = {},
+): number | null {
+	const target = normalise(base);
+	const want = normalise(maker).replace(/[()]/g, "");
+	if (target.length < 3 || want.length < 3) return null;
+	const minPage = opts.minPage ?? 1;
+	const hits: number[] = [];
+	for (let idx = 1; idx < pages.length; idx++) {
+		if (idx < minPage) continue;
+		const lines = pages[idx] ?? [];
+		for (let i = 0; i + 2 < lines.length; i++) {
+			if (normalise(lines[i]) !== target) continue;
+			if (!isStatRow(lines[i + 1])) continue;
+			if (!normalise(lines[i + 2]).includes(want)) continue;
+			hits.push(idx);
+			break;
+		}
+	}
+	return hits.length === 1 ? (hits[0] - 1) : null;
+}
+
+/**
+ * Match a stat row by the NICKNAME the pack name quotes plus the weapon type
+ * word (bead r8rx).
+ *
+ * The books name a signature weapon by maker + model + quoted nickname
+ * ("Clovis FP-14 "Twist" Pistol") while the table prints a shortened label
+ * ("Clovis Twist Pistol"). The quoted word is the distinctive token; the type
+ * word keeps it from matching a different weapon that happens to share it.
+ *
+ * Returns null unless exactly one page matches — ambiguity is never resolved
+ * by guessing.
+ */
+export function findNicknamePage(
+	pages: readonly PageLines[],
+	name: string,
+	opts: FindPageOptions = {},
+): number | null {
+	const quoted = name.match(/"([^"]+)"/);
+	if (!quoted) return null;
+	const nickname = normalise(quoted[1]);
+	const after = name.slice(name.indexOf(quoted[0]) + quoted[0].length).trim();
+	const typeWord = normalise(after.split(/\s+/).pop() ?? "");
+	if (nickname.length < 3) return null;
+	const minPage = opts.minPage ?? 1;
+	const hits: number[] = [];
+	for (let idx = 1; idx < pages.length; idx++) {
+		if (idx < minPage) continue;
+		for (const line of pages[idx] ?? []) {
+			if (!isStatRow(line)) continue;
+			const n = normalise(line);
+			if (!n.includes(nickname)) continue;
+			if (typeWord && !n.includes(typeWord)) continue;
+			hits.push(idx);
+			break;
+		}
+	}
+	return hits.length === 1 ? (hits[0] - 1) : null;
+}
+
+/**
  * First printed page where `name` appears, using the pass order for `mode`.
  * Returns null when nothing matches — callers report that loudly rather than
  * falling back to a guess.

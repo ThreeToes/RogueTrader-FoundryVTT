@@ -32,6 +32,12 @@ describe("ship component schema (bead f5xu)", () => {
 				// Component condition (bead xfta, book p223).
 				"state",
 				"depressurised",
+				// Book + printed page (bead r8rx audit): the packs set this on every
+				// component and the schema used to discard it.
+				"source",
+				// Printed Strength column (bead r8rx audit): shared with landing
+				// bays, which have a Strength but no Damage/Crit Rating.
+				"strength",
 			].sort(),
 		);
 	});

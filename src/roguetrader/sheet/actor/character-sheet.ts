@@ -54,7 +54,7 @@ import { postCard } from "../../rules/chat-flags";
 import type { MutationRow } from "../../data/item/mutation-roll";
 import type { EffectData } from "../../data/item/effects";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
-import { deriveCapacity, resolveEncumbrance, carriedWeight } from "../../rules/encumbrance";
+import { actorEncumbrance } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
 import {
 	buildCharacteristicViews,
@@ -1157,13 +1157,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Encumbrance: carried weight vs capacity derived from Strength Bonus
 		// (rules/encumbrance.ts deriveCapacity, VERIFY book rule). Only READY
 		// items count (bead yar): carried weapons/gear, worn armour.
-		const carried = carriedWeight([
-			...byType(["melee-weapon", "ranged-weapon"]),
-			...byType(["armour"]),
-			...byType(["gear"]),
-		]);
-		const capacity = deriveCapacity(system.characteristicBonus("s"));
-		context.encumbrance = resolveEncumbrance(carried, capacity);
+		// Carried load (rules/encumbrance.ts): one shared definition of which
+		// items count — STOWED counts too (owner decision 2026-09-08, bead xhcc,
+		// which superseded yar's READY-only rule).
+		context.encumbrance = actorEncumbrance(
+			this.actor.items,
+			system.characteristicBonus("s"),
+		);
 		// Derived values (read-only): definitional + rules-layer, no writeback.
 		context.derived = {
 			...system.movement(),

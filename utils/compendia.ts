@@ -1250,6 +1250,74 @@ async function readYamlEntries(
  * - anything else is a loud THROW — a silently-unlinked statblock item is a
  *   bug, not a warning.
  */
+/**
+ * Authored statblock items with NO pack entry yet (bead r8rx audit).
+ *
+ * These are real entries — RT core traits and talents, plus Speak Language
+ * specialisations the book lists as skill groups — that the packs simply do
+ * not carry. The NPCs that use them declare `fromPack`, so the resolver
+ * correctly THROWS, which is how 21 NPCs came to ship with an empty loadout
+ * before the legacy-section support above landed.
+ *
+ * Rather than leave the build broken or quietly soften the link check, the
+ * names are recorded HERE and packed as standalone items carrying their own
+ * authored data. This is a WORK LIST, not an amnesty: adding the real pack
+ * entry means deleting the line, and any name NOT on it still fails loudly.
+ *
+ * "Improved Natural Weapons" is listed with its `(Claws)` variant because the
+ * pack carries the base "Natural Weapons" trait, which is a DIFFERENT entry
+ * (the improved form is stronger) — linking to it would be wrong data.
+ */
+const KNOWN_MISSING_PACK_ENTRIES = new Set([
+	// Resolved by the owner supplying the verbatim book text (2026-09-22): the
+	// traits and talents below are now REAL pack entries, so only the GM-only
+	// Speak Language forms remain here. Kept in the set so the packer still
+	// packs them as standalone instead of failing — that is their intended end
+	// state, not a gap.
+	"Speak Language (Kroot)",
+	"Speak Language (Daemonic)",
+	"Speak Language (Daemonic Tongues)",
+]);
+
+/**
+ * Punctuation-insensitive name key: lowercase, alphanumerics only.
+ *
+ * Exists because the authored statblocks and the packs spell the same entry
+ * differently — the pack holds "Dark-sight" and "Tech-Use", the NPCs say
+ * "Dark Sight" and "Tech Use". Both refer to one entry, and a hyphen is not a
+ * rules distinction.
+ */
+function nameKey(name: string): string {
+	return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Normalised lookup over an ItemSourceIndex, cached per index.
+ *
+ * A WeakMap rather than a rebuild per item: the resolver runs once per
+ * embedded item and there are over a thousand of them.
+ */
+const normalisedIndexCache = new WeakMap<
+	ItemSourceIndex,
+	Map<string, ItemSourceIndexEntry[]>
+>();
+
+function normalisedLookup(
+	index: ItemSourceIndex,
+	name: string,
+): ItemSourceIndexEntry[] {
+	let map = normalisedIndexCache.get(index);
+	if (!map) {
+		map = new Map();
+		for (const [key, entries] of index) {
+			const k = nameKey(key);
+			map.set(k, [...(map.get(k) ?? []), ...entries]);
+		}
+		normalisedIndexCache.set(index, map);
+	}
+	return map.get(nameKey(name)) ?? [];
+}
+
 export function toEmbeddedItemDocument(
 	entry: Record<string, unknown>,
 	index: ItemSourceIndex,
@@ -1269,21 +1337,95 @@ export function toEmbeddedItemDocument(
 			? entry.fromPack
 			: null;
 	const standalone = entry.standalone === true;
-	const candidates = index.get(sourceName) ?? [];
+	// Specialisation / ladder fallback (bead r8rx audit).
+	//
+	// An authored statblock names the item as the SHEET shows it — "Common Lore
+	// (Imperium)", "Acrobatics (+20)", "Fear (2)" — while the pack holds the
+	// base entry ("Common Lore", "Acrobatics", "Fear"). The resolver already
+	// documents `sourceName` as the link for exactly this, but 21 NPCs never set
+	// it, and the packer then THREW on every one of them — which is how those 21
+	// came to ship with `items: []` and no loadout at all (the throw predates the
+	// loud-failure guard that now catches it).
+	//
+	// Rather than hand-edit 21 statblocks (and have the next one drift back), the
+	// base name is DERIVED as a fallback: strip a trailing "(+N)" ladder and a
+	// trailing parenthetical specialisation, and retry. This is a fallback only —
+	// it runs when the authored name resolves to nothing, and if the stripped
+	// name resolves to nothing either, the loud failure below still fires.
+	const baseNameCandidates: string[] = [];
+	{
+		let base = sourceName;
+		for (let i = 0; i < 2; i++) {
+			const next = base
+				.replace(/\s*\(\+?\d+\)\s*$/, "")
+				.replace(/\s*\([^)]*\)\s*$/, "")
+				.trim();
+			if (next === base || !next) break;
+			base = next;
+			baseNameCandidates.push(base);
+		}
+	}
+	const lookup = (key: string) => index.get(key) ?? [];
+	let candidates = lookup(sourceName);
+	let usedSourceName = sourceName;
+	// `standalone: true` means the author has said "this item exists in no pack".
+	// The fallbacks below exist to FIND a pack entry, so running them for a
+	// standalone item is wrong — it turned a deliberate opt-out into an
+	// "ambiguous across packs" throw (Hatred (Psykers) matched the bare
+	// "Hatred" in two packs). Skip them entirely.
+	if (!standalone && candidates.length === 0) {
+		for (const base of baseNameCandidates) {
+			const found = lookup(base);
+			if (found.length > 0) {
+				candidates = found;
+				usedSourceName = base;
+				break;
+			}
+		}
+	}
+	// Last resort: the same name spelled with different punctuation
+	// ("Dark Sight" vs the pack's "Dark-sight", "Tech Use" vs "Tech-Use").
+	if (!standalone && candidates.length === 0) {
+		for (const variant of [sourceName, ...baseNameCandidates]) {
+			const found = normalisedLookup(index, variant);
+			if (found.length > 0) {
+				candidates = found;
+				usedSourceName = variant;
+				break;
+			}
+		}
+	}
 	let resolved: ItemSourceIndexEntry | null = null;
-	if (fromPack) {
+	// A recorded content gap behaves like `standalone`: pack the authored item
+	// with its own data instead of failing. See KNOWN_MISSING_PACK_ENTRIES.
+	const knownMissing =
+		KNOWN_MISSING_PACK_ENTRIES.has(name) ||
+		// An explicit `sourceName` already strips the ladder suffix, so it is
+		// the most likely member of the list ("Speak Language (Eldar) (+10)"
+		// declares sourceName "Speak Language (Eldar)").
+		KNOWN_MISSING_PACK_ENTRIES.has(sourceName) ||
+		baseNameCandidates.some((b) => KNOWN_MISSING_PACK_ENTRIES.has(b));
+	if (standalone) {
+		// Link NOTHING. Every branch below exists to FIND a pack entry, so none
+		// of them may run — including the ambiguity check, which is meaningless
+		// for an item that links to nothing. Running it anyway made two NPCs'
+		// standalone `Fieldcraft` trait items throw "ambiguous across packs"
+		// once the traits pack gained a Fieldcraft that collides with the
+		// APTITUDE of the same name.
+		resolved = null;
+	} else if (fromPack) {
 		// `fromPack` names the SOURCE file key (the historical pack name), so a
 		// concept pack can pin an item without rewriting every reference. A
 		// miss is a loud failure (bead szgv): the old fallback fabricated a
 		// dataless `gear` item — the exact silent-degradation bug this
 		// resolver exists to prevent (z4aa).
 		const match = candidates.find((c) => (c.source ?? c.pack) === fromPack);
-		if (!match) {
+		if (!match && !knownMissing) {
 			throw new Error(
-				`compendia: embedded item "${name}" declares fromPack: ${fromPack}, but "${sourceName}" is not in that source — correct fromPack, add the item to a pack, or mark standalone: true`,
+				`compendia: embedded item "${name}" declares fromPack: ${fromPack}, but "${usedSourceName}" is not in that source — correct fromPack, add the item to a pack, or mark standalone: true`,
 			);
 		}
-		resolved = match;
+		resolved = match ?? null;
 	} else if (candidates.length === 1) {
 		resolved = candidates[0];
 	} else if (candidates.length > 1) {
@@ -1292,7 +1434,7 @@ export function toEmbeddedItemDocument(
 		);
 	} else if (!standalone) {
 		throw new Error(
-			`compendia: embedded item "${sourceName}" matches no compendium pack — add it to a pack, declare fromPack, or mark standalone: true`,
+			`compendia: embedded item "${usedSourceName}" matches no compendium pack — add it to a pack, declare fromPack, or mark standalone: true`,
 		);
 	}
 
@@ -1431,6 +1573,44 @@ function equipNpcInventoryItem(doc: Record<string, unknown>): void {
 	doc.system = system;
 }
 
+/**
+ * Legacy authoring sections (bead r8rx audit).
+ *
+ * 21 NPCs in npcs.yaml author their loadout as `system.skills` /
+ * `system.talents` / `system.traits` / `system.weapons` / `system.armour` /
+ * `system.gear` instead of a top-level `items` array. This packer only ever
+ * read `entry.items`, so those entries packed `items: []` — verified in the
+ * built LevelDB — and Foundry's schema clean then dropped the `system.*`
+ * copies as undeclared, because Character declares none of those keys. The NPC
+ * imported with NO skills, talents, traits, weapons or armour at all.
+ *
+ * Rather than migrate 21 hand-authored statblocks (error-prone, and the shape
+ * would drift back), the legacy location is accepted here as an alias and the
+ * consumed keys are REMOVED from the packed `system` so the compendium stops
+ * shipping dead authoring data.
+ *
+ * NPC ONLY, deliberately: `system.armour` is an armour ITEM on an npc but the
+ * FACING NUMBERS on a vehicle, and `system.traits` is a string array on a
+ * vehicle too. Reading those as loadout sections on any other type would turn
+ * a tank's armour plating into an embedded Item.
+ *
+ * NOW DEAD CODE (2026-09-22): src/packs/.extraction-src/convert-npc-loadouts.mjs
+ * migrated all 21 entries to a top-level `items` array, so no pack entry
+ * carries these keys in `system` any more. Kept because the owner said to deal
+ * with the transform later — DELETE THIS BLOCK (and the npc loadout keys from
+ * the pack-schema guard's allowlist) when that happens; the guard
+ * "every actor entry with an authored loadout packs real items" covers the
+ * behaviour either way.
+ */
+const LEGACY_LOADOUT_SECTIONS = [
+	"skills",
+	"talents",
+	"traits",
+	"weapons",
+	"armour",
+	"gear",
+] as const;
+
 export function toActorSourceDocument(
 	entry: Record<string, unknown>,
 	index: ItemSourceIndex,
@@ -1438,15 +1618,29 @@ export function toActorSourceDocument(
 ): { actor: Record<string, unknown>; embedded: Array<Record<string, unknown>> } {
 	const name = String(entry.name ?? "unnamed");
 	const seenIds = new Set<string>();
-	const embedded = (Array.isArray(entry.items) ? entry.items : []).map(
-		(raw) => {
-			const itemEntry =
-				typeof raw === "string" ? { name: raw } : (raw as Record<string, unknown>);
-			return toEmbeddedItemDocument(itemEntry, index, seenIds);
-		},
-	);
 	const actorType =
 		typeof entry.type === "string" && entry.type ? entry.type : "npc";
+	const system = { ...((entry.system as Record<string, unknown>) ?? {}) };
+
+	// Authored loadout: the modern top-level `items` array, plus (npc only) the
+	// legacy `system.*` sections. See LEGACY_LOADOUT_SECTIONS.
+	const authored: unknown[] = Array.isArray(entry.items) ? [...entry.items] : [];
+	if (actorType === "npc") {
+		for (const section of LEGACY_LOADOUT_SECTIONS) {
+			const value = system[section];
+			if (value === undefined || value === null) continue;
+			delete system[section];
+			// `armour` is a single object; the rest are arrays.
+			if (Array.isArray(value)) authored.push(...value);
+			else authored.push(value);
+		}
+	}
+
+	const embedded = authored.map((raw) => {
+		const itemEntry =
+			typeof raw === "string" ? { name: raw } : (raw as Record<string, unknown>);
+		return toEmbeddedItemDocument(itemEntry, index, seenIds);
+	});
 	if (actorType === "npc") {
 		for (const doc of embedded) equipNpcInventoryItem(doc);
 	}
@@ -1454,7 +1648,7 @@ export function toActorSourceDocument(
 		_id: documentId(name, entry._id as string | undefined),
 		name,
 		type: actorType,
-		system: entry.system ?? {},
+		system,
 		// Embedded collections are stored as ids; records live in sublevels.
 		items: embedded.map((d) => String(d._id)),
 		effects: [],

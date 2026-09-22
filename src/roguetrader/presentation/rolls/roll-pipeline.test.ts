@@ -102,6 +102,9 @@ function fixtureActor(items: unknown[] = []) {
 		type: "explorer",
 		uuid: "Actor.test",
 		items: collection,
+		// The roll pipeline refuses an actor the current user does not own and
+		// the port fails CLOSED (bead qiuo), so a rollable fixture must say so.
+		isOwner: true,
 		system: {
 			characteristics: {
 				ws: { value: 40, unnatural: 1 },
@@ -546,6 +549,9 @@ function shipFixture(items: unknown[], crewQuality = "competent") {
 		name: "Sabre",
 		type: "starship",
 		uuid: "Actor.sabre",
+		// Owned (bead qiuo): the roll pipeline refuses a non-owner and the port
+		// fails closed.
+		isOwner: true,
 		items: Object.assign([...items], {
 			get: (id: string) => items.find((i) => (i as { id?: string }).id === id),
 		}),

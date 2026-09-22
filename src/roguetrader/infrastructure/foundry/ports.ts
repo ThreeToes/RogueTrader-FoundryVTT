@@ -15,6 +15,7 @@ import type {
 	DiceResult,
 	I18n,
 	Notify,
+	Permissions,
 	Ports,
 	Targets,
 } from "../../application/ports";
@@ -227,6 +228,22 @@ const actors: Actors = {
 	},
 };
 
+/**
+ * Ownership check (bead qiuo).
+ *
+ * Fails CLOSED: when the document cannot tell us who owns it, the roll is
+ * refused. A permission check that defaults to "allow" is not a permission
+ * check — the whole point is that the caller could not previously be trusted.
+ *
+ * `isOwner` already answers "true" for a GM, so no GM branch is needed.
+ */
+const permissions: Permissions = {
+	canRoll(actor) {
+		const doc = actor as { isOwner?: unknown } | null | undefined;
+		return doc?.isOwner === true;
+	},
+};
+
 /** The Foundry port set (the production default). */
 export const foundryPorts: Ports = {
 	dice,
@@ -238,6 +255,7 @@ export const foundryPorts: Ports = {
 	config,
 	content: foundryContent,
 	actors,
+	permissions,
 };
 
 let current: Ports = foundryPorts;

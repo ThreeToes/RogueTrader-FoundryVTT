@@ -56,6 +56,24 @@ export const rollHandlers: {
 // ---------------------------------------------------------------------------
 
 export async function performRoll(request: RollRequest): Promise<void> {
+	// OWNERSHIP GATE (bead qiuo). First, before any handler runs, before the
+	// dialog, and before anything is written to chat.
+	//
+	// It lives HERE rather than in a sheet action or the TestDialog because
+	// every roll kind funnels through this function, including the two paths
+	// that bypass the sheet: the chat card's second "Roll Damage" click, which
+	// every user can see and press, and `skipDialog` callers, which never open
+	// a dialog at all. A check anywhere else would miss one of them.
+	//
+	// The refusal is LOUD. A silent return would look like a broken button, and
+	// silent no-ops are bugs in this repo (see the ports work, where swallowed
+	// writes were made to throw).
+	if (!getPorts().permissions.canRoll(request.actor)) {
+		const name = (request.actor as { name?: string } | null | undefined)?.name;
+		getPorts().notify.warn("ROLL.NOT_OWNER", { actor: name ?? "?" });
+		return;
+	}
+
 	// The registry is exhaustive over RollKind, so indexing with the union's
 	// discriminant yields a union of handlers; widening to the union-typed
 	// handler keeps the per-kind hooks callable with the union request (their

@@ -1,0 +1,50 @@
+<section class="cache-content">
+    {{!-- Cache (bead wlx9): a lootable container. No tabs — there is nothing
+         to tab between, and a sheet with one tab reads as broken. --}}
+    <header class="cache-head border">
+        <h1>{{localize "CACHE.HEADER"}}</h1>
+        <div class="cache-summary">
+            <span class="chip-label">{{localize "CACHE.CONTENTS"}}</span>
+            <span class="cache-count">{{items.length}}</span>
+            <span class="chip-label">{{localize "CACHE.WEIGHT"}}</span>
+            <span class="cache-weight">{{totalWeight}} kg</span>
+        </div>
+        {{#if canTake}}
+        <button type="button" class="ladder-option cache-take-all" data-action="takeAll">
+            <i class="fas fa-hand-holding"></i> {{localize "CACHE.TAKE_ALL"}}
+        </button>
+        {{else}}
+        <p class="method-hint">{{localize "CACHE.NO_TAKER"}}</p>
+        {{/if}}
+    </header>
+
+    <div class="inventory border">
+        {{#if hasItems}}
+        <div class="inv-list">
+            {{#each items as |item|}}
+            {{!-- The shared inventory row (template/shared/parts/inv-row.hbs):
+                 one definition for every sheet that lists owned items. A cache
+                 row is draggable and openable; it has no equip toggle (a cache
+                 does not wear anything), and the delete anchor is GM-only
+                 because the sheet is not editable for a player. --}}
+            {{#> "rt/inv-row" id=item.id uuid=item.uuid name=item.name draggable=true gripVertical=true
+                openItem=true openItemTooltip=(localize "GEAR.OPEN_SHEET")
+                weight=(concat item.weight " kg") weightTooltip=(localize "GEAR.WEIGHT")
+                deleteAction=item.deleteAction deleteTooltip=(localize "GEAR.DELETE")}}
+            {{#if ../canTake}}
+            <a class="cache-take" data-action="takeItem" data-item-uuid="{{item.uuid}}"
+                data-tooltip="{{localize 'CACHE.TAKE'}}"><i class="fas fa-hand-holding"></i></a>
+            {{/if}}
+            {{/"rt/inv-row"}}
+            {{/each}}
+        </div>
+        {{else}}
+        <p class="method-hint">{{localize "CACHE.EMPTY"}}</p>
+        {{/if}}
+    </div>
+
+    <div class="stats border">
+        <h1>{{localize "CACHE.NOTES"}}</h1>
+        {{> "rt/rich-text" name="system.notes" value=source.system.notes html=notesHTML editable=editable readonlyClass="cache-notes"}}
+    </div>
+</section>

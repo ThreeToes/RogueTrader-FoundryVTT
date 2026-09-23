@@ -6,6 +6,7 @@
  * ships start Competent; Incompetent grants +5 SP, Crack costs 5 SP,
  * Veteran 15 SP) and free-text notes.
  */
+import { textField } from "../fields";
 // Crew-quality table moved to rules/ship-crew.ts (bead xfta) so the roll
 // handlers can use it without loading this foundry-extended DataModel.
 import {
@@ -58,21 +59,21 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 
 	static override defineSchema() {
 		return {
-			hullName: new foundry.data.fields.StringField({ initial: "" }),
+			hullName: textField(),
 			/**
 			 * Hull class (transport / raider / frigate / ...). Declared as a TS
 			 * field since the model was written but NEVER added to the schema
 			 * (bead r8rx audit), so Foundry dropped it on load while the ship sheet
 			 * happily read `system.hullClass` and always got undefined.
 			 */
-			hullClass: new foundry.data.fields.StringField({ initial: "" }),
+			hullClass: textField(),
 			// Book + printed page (bead r8rx audit): starships.yaml sets this on
 			// every entry and the schema discarded it.
 			source: sourceField(),
-			dimensions: new foundry.data.fields.StringField({ initial: "" }),
-			mass: new foundry.data.fields.StringField({ initial: "" }),
-			crew: new foundry.data.fields.StringField({ initial: "" }),
-			accel: new foundry.data.fields.StringField({ initial: "" }),
+			dimensions: textField(),
+			mass: textField(),
+			crew: textField(),
+			accel: textField(),
 			speed: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
 			manoeuvrability: new foundry.data.fields.NumberField({ integer: true, initial: 0 }),
 			detection: new foundry.data.fields.NumberField({ integer: true, initial: 0 }),
@@ -90,7 +91,7 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 				total: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
 				spent: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
 			}),
-			weaponCapacity: new foundry.data.fields.StringField({ initial: "" }),
+			weaponCapacity: textField(),
 			/** Void shields remaining (bead om4j, Table 8-3 book p201). */
 			voidShields: new foundry.data.fields.NumberField({
 				min: 0,
@@ -115,8 +116,8 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 				choices: Object.keys(CREW_QUALITIES),
 				initial: "competent",
 			}),
-			machineSpiritOddity: new foundry.data.fields.StringField({ initial: "" }),
-			pastHistory: new foundry.data.fields.StringField({ initial: "" }),
+			machineSpiritOddity: textField(),
+			pastHistory: textField(),
 			notes: new foundry.data.fields.HTMLField({ initial: "" }),
 		};
 	}

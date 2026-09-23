@@ -3,6 +3,7 @@
  * The hull defines the ship's base characteristics; components are a later
  * pass (bead follow-up). All values verbatim from the hull statlines.
  */
+import { textField } from "../fields";
 import { sourceField } from "./source";
 export class Starship extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,
@@ -45,10 +46,10 @@ export class Starship extends foundry.abstract.TypeDataModel<
 		return {
 			/** Transport / Raider / Frigate / Light Cruiser / Cruiser. */
 			hullClass: new foundry.data.fields.StringField({ initial: "transport" }),
-			dimensions: new foundry.data.fields.StringField({ initial: "" }),
-			mass: new foundry.data.fields.StringField({ initial: "" }),
-			crew: new foundry.data.fields.StringField({ initial: "" }),
-			accel: new foundry.data.fields.StringField({ initial: "" }),
+			dimensions: textField(),
+			mass: textField(),
+			crew: textField(),
+			accel: textField(),
 			speed: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
 			manoeuvrability: new foundry.data.fields.NumberField({ integer: true, initial: 0 }),
 			detection: new foundry.data.fields.NumberField({ integer: true, initial: 0 }),
@@ -58,7 +59,7 @@ export class Starship extends foundry.abstract.TypeDataModel<
 			space: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
 			/** Ship Points (hull cost). */
 			sp: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
-			weaponCapacity: new foundry.data.fields.StringField({ initial: "" }),
+			weaponCapacity: textField(),
 			/** Named hull special rules, verbatim ("Cargo Hauler: ..."). */
 			specialRules: new foundry.data.fields.HTMLField({ initial: "" }),
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
@@ -70,13 +71,13 @@ export class Starship extends foundry.abstract.TypeDataModel<
 			// ship creator can instantiate them with loud failures.
 			npc: new foundry.data.fields.BooleanField({ initial: false }),
 			essentialComponents: new foundry.data.fields.ArrayField(
-				new foundry.data.fields.StringField({ initial: "" }),
+				textField(),
 			),
 			supplementalComponents: new foundry.data.fields.ArrayField(
-				new foundry.data.fields.StringField({ initial: "" }),
+				textField(),
 			),
 			complications: new foundry.data.fields.ArrayField(
-				new foundry.data.fields.StringField({ initial: "" }),
+				textField(),
 			),
 		};
 	}

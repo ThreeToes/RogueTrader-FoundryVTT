@@ -1,4 +1,6 @@
 import { effectActions } from "./effect-actions";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -11,13 +13,12 @@ const { ItemSheetV2 } = foundry.applications.sheets;
  * ship creator instantiates them by name with loud failures).
  */
 export class ShipHullSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "ship-hull"],
-		position: { width: 520, height: "auto" as const },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "ship-hull",
+		width: 520,
+		height: "auto",
 		actions: { ...effectActions },
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -46,14 +47,16 @@ export class ShipHullSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.supplementalComponents = sys.supplementalComponents ?? [];
 		context.complications = sys.complications ?? [];
 		context.specialRulesHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				String(sys.specialRules ?? ""),
-				{ secrets: this.document.isOwner, relativeTo: this.document },
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				String(this.document.system.description ?? ""),
-				{ secrets: this.document.isOwner, relativeTo: this.document },
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

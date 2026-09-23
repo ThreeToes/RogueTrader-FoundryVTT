@@ -1,5 +1,6 @@
-import { CHARACTERISTIC_KEYS } from "../actor/character";
+import { characteristics } from "../../registry";
 import { sourceField } from "./source";
+import { textField } from "../fields";
 
 /**
  * Skills as Items (content-as-data): the RT core catalog ships as a
@@ -16,13 +17,9 @@ export class Skill extends foundry.abstract.TypeDataModel<
 	declare characteristic: string;
 	declare ladder: number;
 
+	/** Short-form characteristic labels, from the registry. */
 	static get characteristicChoices(): Record<string, string> {
-		return Object.fromEntries([
-			...CHARACTERISTIC_KEYS.map((key) => [
-				key,
-				`CHARACTERISTIC.${key.toUpperCase()}`,
-			]),
-		] as Array<[string, string]>);
+		return characteristics.choices;
 	}
 
 	static override defineSchema() {
@@ -59,9 +56,7 @@ export class Skill extends foundry.abstract.TypeDataModel<
 			 * creator granted this item — a creator re-run wipes and re-grants
 			 * flagged items, manual additions (empty) are kept.
 			 */
-			grantedBy: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			grantedBy: textField(),
 			// Source attribution (bead zzlq): books.yaml slug + printed page.
 			source: sourceField(),
 		};

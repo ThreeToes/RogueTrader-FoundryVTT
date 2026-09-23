@@ -1,4 +1,5 @@
 import { Gear } from "./gear";
+import { textField } from "../fields";
 
 /**
  * Weapon modification: an upgrade attached to a weapon (sights, scopes,
@@ -13,9 +14,7 @@ export class WeaponModification extends Gear {
 	static override defineSchema() {
 		return {
 			...super.defineSchema(),
-			upgrades: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			upgrades: textField(),
 		};
 	}
 }

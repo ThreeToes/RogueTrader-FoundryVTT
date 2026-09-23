@@ -11,6 +11,7 @@
  * (CONFIG.ROGUE_TRADER.vehicle*), so modules extend them at init the same
  * way they extend weapon qualities.
  */
+import { textField } from "../fields";
 
 import { vehicleClasses, vehicleFacings, vehicleTraits } from "../../registry";
 import { sourceField } from "../item/source";
@@ -80,7 +81,7 @@ export class Vehicle extends foundry.abstract.TypeDataModel<
 				initial: 0,
 			}),
 			/** Vehicle size category (free text, e.g. "Enormous"). */
-			size: new foundry.data.fields.StringField({ initial: "" }),
+			size: textField(),
 			/** Vehicle class, choices from the vehicleClasses registry. */
 			vehicleClass: new foundry.data.fields.StringField({
 				choices: vehicleClasses.choices,
@@ -109,7 +110,7 @@ export class Vehicle extends foundry.abstract.TypeDataModel<
 			),
 			/** Crew/passenger Actor UUIDs (reference list, not embedded docs). */
 			crew: new foundry.data.fields.ArrayField(
-				new foundry.data.fields.StringField({ initial: "" }),
+				textField(),
 				{ initial: () => [] },
 			),
 			/** Mounted weapons: {uuid, facing} references, facing from vehicleFacings. */

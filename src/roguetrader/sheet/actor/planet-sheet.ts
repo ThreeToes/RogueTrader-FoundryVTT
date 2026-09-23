@@ -1,5 +1,6 @@
 import { PlanetActor } from "../../data/actor/planet-actor";
 import { sheetContext } from "../context";
+import { enrichText } from "../rich-text";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -124,10 +125,7 @@ export class PlanetSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			label,
 			tables,
 		}));
-		context.notesHTML = await foundry.applications.ux.TextEditor.enrichHTML(
-			system.notes ?? "",
-			{ relativeTo: this.document },
-		);
+		context.notesHTML = await enrichText(system.notes ?? "", this.document);
 		return context;
 	}
 

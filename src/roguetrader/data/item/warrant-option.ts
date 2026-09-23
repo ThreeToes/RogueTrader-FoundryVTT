@@ -1,3 +1,4 @@
+import { textField } from "../fields";
 import { Gear } from "./gear";
 
 /**
@@ -30,16 +31,15 @@ export class WarrantOption extends Gear {
 		return {
 			...super.defineSchema(),
 			/** Chart key (e.g. "age-of-redemption"); stored in the actor's picks. */
-			key: new fields.StringField({ initial: "" }),
-			row: new fields.StringField({ initial: "" }),
+			key: textField(),
+			row: textField(),
 			col: new fields.NumberField({ min: 0, integer: true, initial: 0 }),
 			mechanics: new fields.SchemaField({
 				shipPoints: new fields.NumberField({ integer: true, initial: 0 }),
 				profitFactor: new fields.NumberField({ integer: true, initial: 0 }),
-				notes: new fields.ArrayField(
-					new fields.StringField({ initial: "" }),
-					{ initial: () => [] },
-				),
+				notes: new fields.ArrayField(textField(), {
+					initial: () => [],
+				}),
 			}),
 		};
 	}

@@ -12,7 +12,12 @@ import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
 import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { derivedRank, totalSpent } from "../../rules/advancement";
-import { careers, equipStates, sorceryRanks } from "../../registry";
+import {
+	BODY_LOCATION_ORDER,
+	careers,
+	equipStates,
+	sorceryRanks,
+} from "../../registry";
 import { collectSorceryRank } from "../../rules/talent-effects";
 import { actorView } from "../../infrastructure/foundry/actor-view";
 import { criticalSheetContext } from "../../rules/criticals";
@@ -70,6 +75,7 @@ import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
 import { TalentPicker } from "./talent-picker";
+import { enrichText } from "../rich-text";
 
 // (CharacteristicView, MAX_UNNATURAL_STEPS moved to sheet/skills-domain — bead 6l90)
 
@@ -950,16 +956,8 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			(item) =>
 				(item.type as string) === "armour" && equipStateOf(item) === "worn",
 		);
-		const LOCATIONS = [
-			"head",
-			"left-arm",
-			"body",
-			"right-arm",
-			"left-leg",
-			"right-leg",
-		] as const;
 		context.armourLocations = Object.fromEntries(
-			LOCATIONS.map((loc) => {
+			BODY_LOCATION_ORDER.map((loc) => {
 				const ap = Math.max(
 					0,
 					...armourItems.map((item) =>
@@ -1188,10 +1186,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		);
 
 		const enrich = (text: string) =>
-			foundry.applications.ux.TextEditor.enrichHTML(text, {
-				secrets: this.actor.isOwner,
-				relativeTo: this.actor,
-			});
+			enrichText(text, this.document, { secrets: this.document.isOwner });
 		context.descriptionHTML = await enrich(system.description);
 		// Notes tab: motivation is rich text (owner request; appearance was
 		// culled — the description field covers it).

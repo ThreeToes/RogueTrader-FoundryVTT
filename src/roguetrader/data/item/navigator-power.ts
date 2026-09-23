@@ -1,5 +1,6 @@
-import { CHARACTERISTIC_KEYS } from "../actor/character";
+import { characteristics } from "../../registry";
 import { sourceField } from "./source";
+import { textField } from "../fields";
 
 /**
  * Navigator powers (bead sa6, Core Rulebook Ch. VII book pp178-181). Distinct
@@ -53,12 +54,7 @@ export class NavigatorPower extends foundry.abstract.TypeDataModel<
 		// Navigator powers test Characteristics directly (book p178: Willpower
 		// and Perception are most common; per-power characteristic comes from
 		// the extraction's per-power note).
-		return Object.fromEntries(
-			CHARACTERISTIC_KEYS.map((key) => [
-				key,
-				`CHARACTERISTIC.${key.toUpperCase()}`,
-			]),
-		);
+		return characteristics.choices;
 	}
 
 	static override defineSchema() {
@@ -86,15 +82,11 @@ export class NavigatorPower extends foundry.abstract.TypeDataModel<
 			/** Intro prose (power description above the level paragraphs). */
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
 			/** Short free-text description shown in pickers. */
-			shortDescription: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			shortDescription: textField(),
 			/** Requirement to take the power (pack authors "Navigator gene"). */
-			prerequisite: new foundry.data.fields.StringField({ initial: "" }),
+			prerequisite: textField(),
 			/** Per-power Characteristic note (see the declare above). */
-			characteristicNote: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			characteristicNote: textField(),
 			// Source attribution (bead zzlq): books.yaml slug + printed page.
 			source: sourceField(),
 		};

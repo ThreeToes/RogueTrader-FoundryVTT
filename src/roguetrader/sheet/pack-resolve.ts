@@ -6,6 +6,7 @@
  * "Compendium.<pack>.<type>.<id>" -> game.packs.get("<pack>").getDocument(id).
  * fromUuid stays the fallback for non-compendium uuid shapes.
  */
+import { packDocuments } from "../infrastructure/foundry/content";
 export async function resolvePackDocument(
 	uuid: string,
 ): Promise<unknown | null> {
@@ -32,18 +33,19 @@ export async function resolvePackDocument(
 }
 
 /**
- * Fetch a compendium pack's documents (bead ku1i consolidation): one loud
- * missing-pack warning per fetch instead of 22 silent no-ops. Empty list
- * means "pack missing or empty" — callers that distinguish can check the
- * pack's existence separately.
+ * Fetch a compendium pack's documents (bead ku1i consolidation, routed
+ * through the infrastructure primitive in bead s4lu): one loud missing-pack
+ * warning per fetch instead of 22 silent no-ops. Empty list means "pack
+ * missing or empty" — callers that distinguish can check the pack's
+ * existence separately.
  */
 export async function getPackDocuments(packId: string): Promise<unknown[]> {
-	const pack = game.packs?.get(packId);
-	if (!pack) {
+	const docs = await packDocuments(packId);
+	if (docs === null) {
 		console.warn(`rogue-trader | compendium pack ${packId} not installed`);
 		return [];
 	}
-	return (await pack.getDocuments()) as unknown[];
+	return docs;
 }
 
 /** Concept pack holding the character-option Items (bead 4tj1). */

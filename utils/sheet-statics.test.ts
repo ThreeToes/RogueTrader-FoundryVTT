@@ -5,8 +5,11 @@
  * class's static side against fvtt-types, producing TS2417 on every sheet that
  * has them:
  *
- *   1. `position: { height: "auto" }` — the literal widens to `string`, but
- *      fvtt-types wants `number | "auto" | undefined`. Needs `as const`.
+ *   1. a bare `position: { ... height: "auto" ... }` object literal — the
+ *      literal widens to `string`, but fvtt-types wants
+ *      `number | "auto" | undefined`. Needs `as const`. (Item sheets are
+ *      covered by `itemSheetOptions()`'s parameter type instead; see bead
+ *      9dma.)
  *   2. a tab entry without `cssClass` — fvtt-types' `Tab` requires it.
  *
  * Neither is visible without tsc, and tsc cannot be run over the sheet layer
@@ -32,10 +35,13 @@ function sourceFiles(dir: string): string[] {
 
 describe("sheet static config (bead rt9z)", () => {
 	test("no sheet widens position.height", () => {
+		// Guards a bare `position: { ... height: "auto" ... }` object literal
+		// (bead 9dma moved the item sheets onto itemSheetOptions(), whose
+		// parameter type covers their `height: "auto"` arguments instead).
 		const bad: string[] = [];
 		for (const file of sourceFiles(SRC)) {
 			const source = readFileSync(file, "utf8");
-			for (const match of source.matchAll(/height:\s*"auto"\s*[,}]/g)) {
+			for (const match of source.matchAll(/position:\s*\{[^}]*height:\s*"auto"\s*[,}]/g)) {
 				const line = source.slice(0, match.index).split("\n").length;
 				bad.push(`${file}:${line} — needs \`"auto" as const\``);
 			}
@@ -65,5 +71,13 @@ describe("sheet static config (bead rt9z)", () => {
 			readFileSync(file, "utf8").includes("static TABS"),
 		);
 		expect(withTabs.length).toBeGreaterThanOrEqual(5);
+	});
+
+	test("the item-sheet options helper types height as number | \"auto\"", () => {
+		// Bead 9dma moved the item sheets onto itemSheetOptions(); their
+		// `height: "auto"` call-site arguments are only safe because this
+		// parameter keeps the literal from widening to `string`.
+		const source = readFileSync("src/roguetrader/sheet/sheet-options.ts", "utf8");
+		expect(source).toMatch(/height:\s*number\s*\|\s*"auto"/);
 	});
 });

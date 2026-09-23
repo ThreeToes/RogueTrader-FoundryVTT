@@ -1,4 +1,5 @@
 import { effectsField } from "../item/effects";
+import { textField } from "../fields";
 
 /**
  * Group record (bead gjvg, owner decision 2026-09-05): a dedicated
@@ -61,7 +62,7 @@ export class Dynasty extends foundry.abstract.TypeDataModel<
 			 */
 			warrant: new foundry.data.fields.SchemaField({
 				picks: new foundry.data.fields.TypedObjectField(
-					new foundry.data.fields.StringField({ initial: "" }),
+					textField(),
 					{ initial: () => ({}) },
 				),
 				shipPoints: new foundry.data.fields.NumberField({

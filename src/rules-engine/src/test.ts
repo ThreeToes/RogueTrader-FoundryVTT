@@ -40,6 +40,22 @@ function isDouble(roll: number): boolean {
 	return tens === units;
 }
 
+/**
+ * Degrees of success: one degree at roll exactly equal to target, plus one
+ * per additional full 10 under. The success-side half of the degrees rule.
+ */
+export function degreesOfSuccess(target: number, roll: number): number {
+	return Math.floor(Math.max(0, target - roll) / 10) + 1;
+}
+
+/**
+ * Degrees of failure: the mirror-image failure-side half of the degrees
+ * rule. Must not drift from `degreesOfSuccess`.
+ */
+export function degreesOfFailure(target: number, roll: number): number {
+	return Math.floor(Math.max(0, roll - target) / 10) + 1;
+}
+
 export function resolveTest(request: TestRequest): TestOutcome {
 	const { target, roll, profile } = request;
 
@@ -51,7 +67,7 @@ export function resolveTest(request: TestRequest): TestOutcome {
 		success = false;
 	}
 
-	const degrees = success ? Math.floor(Math.max(0, target - roll) / 10) + 1 : 0;
+	const degrees = success ? degreesOfSuccess(target, roll) : 0;
 	const double = isDouble(roll);
 
 	return {

@@ -1,4 +1,6 @@
 import { effectActions } from "./effect-actions";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -17,13 +19,12 @@ const KIND_LABELS: Readonly<Record<string, string>> = {
 export class ShipComplicationSheet extends HandlebarsApplicationMixin(
 	ItemSheetV2,
 ) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "ship-complication"],
-		position: { width: 520, height: "auto" as const },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "ship-complication",
+		width: 520,
+		height: "auto",
 		actions: { ...effectActions },
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -49,9 +50,10 @@ export class ShipComplicationSheet extends HandlebarsApplicationMixin(
 			label: game.i18n.localize(key),
 		}));
 		context.effectHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				String(sys.effect ?? ""),
-				{ secrets: this.document.isOwner, relativeTo: this.document },
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

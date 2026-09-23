@@ -2,6 +2,8 @@ import { talentCategories } from "../../registry";
 import { findPackTalentDoc } from "../actor/grant-helpers";
 import { isBareTalent, talentBackfillPatch } from "../../rules/talent-backfill";
 import { effectActions, effectEditorChoices } from "./effect-actions";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -12,13 +14,12 @@ const { ItemSheetV2 } = foundry.applications.sheets;
  * not editable ({{#if editable}} in the templates).
  */
 export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "talent"],
-		position: { width: 500, height: "auto" as const },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "talent",
+		width: 500,
+		height: "auto",
 		actions: { ...effectActions },
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -71,12 +72,10 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
 		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
 		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				this.document.system.description,
-				{
-					secrets: this.document.isOwner,
-					relativeTo: this.document,
-				},
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

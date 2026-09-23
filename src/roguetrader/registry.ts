@@ -28,6 +28,41 @@ export class EntryRegistry extends Registry<string> {
 	}
 }
 
+/**
+ * Characteristic labels in the SHORT form ("CHARACTERISTIC.WS"), which is
+ * what the skill/power pickers render. The vocabulary itself is
+ * CHARACTERISTIC_KEYS (domain/model/taxonomy).
+ */
+const CHARACTERISTIC_LABELS = {
+	ws: "CHARACTERISTIC.WS",
+	bs: "CHARACTERISTIC.BS",
+	s: "CHARACTERISTIC.S",
+	t: "CHARACTERISTIC.T",
+	ag: "CHARACTERISTIC.AG",
+	int: "CHARACTERISTIC.INT",
+	per: "CHARACTERISTIC.PER",
+	wp: "CHARACTERISTIC.WP",
+	fel: "CHARACTERISTIC.FEL",
+} as const;
+
+/**
+ * The same characteristics in the DESCRIPTIVE form
+ * ("CHARACTERISTIC.WEAPON_SKILL"), used by the item effect editor's
+ * test-key dropdown. Deliberately a separate registry: the short and long
+ * forms are different translations in es/fr/pl, so they must not be merged.
+ */
+const CHARACTERISTIC_LONG_LABELS = {
+	ws: "CHARACTERISTIC.WEAPON_SKILL",
+	bs: "CHARACTERISTIC.BALLISTIC_SKILL",
+	s: "CHARACTERISTIC.STRENGTH",
+	t: "CHARACTERISTIC.TOUGHNESS",
+	ag: "CHARACTERISTIC.AGILITY",
+	int: "CHARACTERISTIC.INTELLIGENCE",
+	per: "CHARACTERISTIC.PERCEPTION",
+	wp: "CHARACTERISTIC.WILLPOWER",
+	fel: "CHARACTERISTIC.FELLOWSHIP",
+} as const;
+
 const BODY_LOCATIONS = {
 	head: "BODY_LOCATION.HEAD",
 	body: "BODY_LOCATION.BODY",
@@ -36,6 +71,20 @@ const BODY_LOCATIONS = {
 	"left-leg": "BODY_LOCATION.LEFT_LEG",
 	"right-leg": "BODY_LOCATION.RIGHT_LEG",
 } as const;
+
+/**
+ * Body locations in the armour panels' display order (head first, then the
+ * symmetric limb/body pairs). The vocabulary itself is BODY_LOCATIONS;
+ * this is the rendering order the PC and NPC armour panels use.
+ */
+export const BODY_LOCATION_ORDER = [
+	"head",
+	"left-arm",
+	"body",
+	"right-arm",
+	"left-leg",
+	"right-leg",
+] as const;
 
 /**
  * Core weapon qualities. Extend freely via the registry; this seed is not
@@ -227,6 +276,10 @@ const TALENTS = {
 	pistolTraining: "TALENT.PISTOL_TRAINING",
 } as const;
 
+export const characteristics = new EntryRegistry(CHARACTERISTIC_LABELS);
+export const characteristicLongLabels = new EntryRegistry(
+	CHARACTERISTIC_LONG_LABELS,
+);
 export const bodyLocations = new EntryRegistry(BODY_LOCATIONS);
 export const qualities = new EntryRegistry(QUALITIES);
 export const protectionTypes = new EntryRegistry(PROTECTION_TYPES);
@@ -343,6 +396,8 @@ const SORCERY_RANKS = {
 export const sorceryRanks = new EntryRegistry(SORCERY_RANKS);
 
 type RogueTraderRegistries = {
+	characteristics: EntryRegistry;
+	characteristicLongLabels: EntryRegistry;
 	bodyLocations: EntryRegistry;
 	qualities: EntryRegistry;
 	protectionTypes: EntryRegistry;
@@ -374,6 +429,8 @@ export function attachRegistriesToConfig() {
 		ROGUE_TRADER?: Partial<RogueTraderRegistries>;
 	};
 	const rt = (config.ROGUE_TRADER ??= {});
+	rt.characteristics = characteristics;
+	rt.characteristicLongLabels = characteristicLongLabels;
 	rt.bodyLocations = bodyLocations;
 	rt.qualities = qualities;
 	rt.protectionTypes = protectionTypes;

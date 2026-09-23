@@ -1,6 +1,7 @@
 import { talentCategories } from "../../registry";
 import { effectsField, type EffectData } from "./effects";
 import { sourceField } from "./source";
+import { textField } from "../fields";
 
 /**
  * Talents as Items (content-as-data, mirroring Skill): actors own `talent`
@@ -58,16 +59,12 @@ export class Talent extends foundry.abstract.TypeDataModel<
 				integer: true,
 				initial: 1,
 			}),
-			prereqTalent: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			prereqTalent: textField(),
 			effects: effectsField(),
 			// Source attribution (bead zzlq): books.yaml slug + printed page.
 			source: sourceField(),
 			/** Short free-text description shown in pickers. */
-			shortDescription: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			shortDescription: textField(),
 			/**
 			 * Long prose description (bead 707 decision: talents carry BOTH the
 			 * terse table benefit AND the full rulebook prose). HTML so the
@@ -80,9 +77,7 @@ export class Talent extends foundry.abstract.TypeDataModel<
 			 * creator granted this item — a creator re-run wipes and re-grants
 			 * flagged items, manual additions (empty) are kept.
 			 */
-			grantedBy: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			grantedBy: textField(),
 		};
 	}
 

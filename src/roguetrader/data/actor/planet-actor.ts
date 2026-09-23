@@ -1,4 +1,5 @@
 import { effectsField } from "../item/effects";
+import { textField } from "../fields";
 
 /**
  * Planet actor (owner ask, planet tables): a dedicated Actor type for
@@ -33,23 +34,23 @@ export class PlanetActor extends foundry.abstract.TypeDataModel<
 	static override defineSchema() {
 		return {
 			/** Table 1-6: Body draw (e.g. "Rocky 2-3 Small"). */
-			body: new foundry.data.fields.StringField({ initial: "" }),
+			body: textField(),
 			/** Table 1-7: Gravity draw. */
-			gravity: new foundry.data.fields.StringField({ initial: "" }),
+			gravity: textField(),
 			/** Table 1-8: Orbital Features draw. */
-			orbitalFeature: new foundry.data.fields.StringField({ initial: "" }),
+			orbitalFeature: textField(),
 			/** Table 1-9/1-10: Atmospheric Presence + Composition draw. */
-			atmosphere: new foundry.data.fields.StringField({ initial: "" }),
+			atmosphere: textField(),
 			/** Table 1-11: Climate draw. */
-			climate: new foundry.data.fields.StringField({ initial: "" }),
+			climate: textField(),
 			/** Table 1-12: Habitability draw. */
-			habitability: new foundry.data.fields.StringField({ initial: "" }),
+			habitability: textField(),
 			/** Table 1-26: Inhabitants draw. */
-			inhabitants: new foundry.data.fields.StringField({ initial: "" }),
+			inhabitants: textField(),
 			/** Table 1-27: Development draw. */
-			development: new foundry.data.fields.StringField({ initial: "" }),
+			development: textField(),
 			/** Territories/terrain summary (Table 1-13/1-14 draws). */
-			territories: new foundry.data.fields.StringField({ initial: "" }),
+			territories: textField(),
 			/** Free-text GM notes. */
 			notes: new foundry.data.fields.HTMLField({ initial: "" }),
 			effects: effectsField(),

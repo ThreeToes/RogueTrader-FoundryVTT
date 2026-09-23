@@ -18,6 +18,7 @@ import {
 } from "../../rules/adapter";
 import { cloneItemFromDrop, cloneItemIntoActor } from "../drop-clone";
 import { sheetContext } from "../context";
+import { enrichText } from "../rich-text";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -199,10 +200,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			),
 		}));
 		// Shared rich-text partial (bead bef7) renders notes via prose-mirror.
-		context.notesHTML = await foundry.applications.ux.TextEditor.enrichHTML(
-			system.notes ?? "",
-			{ relativeTo: this.document },
-		);
+		context.notesHTML = await enrichText(system.notes ?? "", this.document);
 		// Combat tab (bead xfta): weapons with fire buttons, hull + crew
 		// status, crippled-state effects (book p221), component conditions
 		// (book p223) and the repairs column.

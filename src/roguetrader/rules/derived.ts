@@ -20,10 +20,6 @@ export interface OwnedItemLike {
 
 export interface CharacterSystemLike {
 	characteristics: Record<string, { value: number; unnatural: number }>;
-}
-
-export interface CharacterSystemLike {
-	characteristics: Record<string, { value: number; unnatural: number }>;
 	/** Stored maximum wounds (set at character creation per the Home World
 	 *  formula; bead hbu). Undefined in raw test data = no base available. */
 	wounds?: { max?: number };

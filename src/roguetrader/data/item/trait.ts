@@ -1,5 +1,6 @@
 import { effectsField, type EffectData } from "./effects";
 import { sourceField } from "./source";
+import { textField } from "../fields";
 
 /**
  * Rulebook traits (bead 25ii): innate creature features from the Core
@@ -32,9 +33,7 @@ export class Trait extends foundry.abstract.TypeDataModel<
 		return {
 			/** Terse verbatim statblock phrasing (parameterized traits carry the
 			 * parameter here, e.g. Machine (6) -> "6"). */
-			benefit: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			benefit: textField(),
 			/**
 			 * Effect list: {kind, testKey, value, label, condition} — the shared
 			 * shape (data/item/effects.ts). Mechanical traits (Machine, Fear,
@@ -45,9 +44,7 @@ export class Trait extends foundry.abstract.TypeDataModel<
 			// Source attribution (bead zzlq): books.yaml slug + printed page.
 			source: sourceField(),
 			/** Short free-text summary (pickers/list display). */
-			shortDescription: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			shortDescription: textField(),
 			/** Long book prose (HTML). */
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
 		};

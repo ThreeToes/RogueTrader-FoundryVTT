@@ -3,18 +3,19 @@ import { Battlesuit } from "../../data/item/battlesuit";
 import { bodyLocations } from "../../registry";
 import { effectActions, effectEditorChoices } from "./effect-actions";
 import { ITEM_DATA_TABS } from "../tabs";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "armour"],
-		position: { width: 500, height: "auto" as const },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "armour",
+		width: 500,
+		height: "auto",
 		actions: { ...effectActions },
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -84,12 +85,10 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		// Description tab: enriched HTML from the system description
 		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).
 		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				this.document.system.description,
-				{
-					secrets: this.document.isOwner,
-					relativeTo: this.document,
-				},
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

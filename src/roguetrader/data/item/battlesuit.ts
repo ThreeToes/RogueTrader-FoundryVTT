@@ -1,4 +1,5 @@
 import { Armour } from "./armour";
+import { textField } from "../fields";
 
 /**
  * Tau battlesuits (Tau Character Guide Ch II).
@@ -51,7 +52,7 @@ export class Battlesuit extends Armour {
 			 * The Size Trait applied to the WEARER (p38, "Size: The Size Trait
 			 * applied to the wearer of the battlesuit"), not the suit's own.
 			 */
-			size: new foundry.data.fields.StringField({ initial: "" }),
+			size: textField(),
 			/** The battlesuit's Strength Characteristic (p38). */
 			strength: new foundry.data.fields.NumberField({
 				min: 0,
@@ -70,7 +71,7 @@ export class Battlesuit extends Armour {
 				{ initial: () => [] },
 			),
 			/** Chassis-specific Special Rules prose (profiles, pp39-42). */
-			specialRules: new foundry.data.fields.StringField({ initial: "" }),
+			specialRules: textField(),
 		};
 	}
 }

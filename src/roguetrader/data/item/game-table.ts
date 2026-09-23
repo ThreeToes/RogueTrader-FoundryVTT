@@ -1,4 +1,5 @@
 import { sourceField } from "./source";
+import { textField } from "../fields";
 
 /**
  * Game reference table (bead hkc5/planet-actor owner ask): the gametables
@@ -45,9 +46,9 @@ export class GameTable extends foundry.abstract.TypeDataModel<
 	static override defineSchema() {
 		return {
 			/** Grouping key (GAME_TABLE_GROUPS kind → compendium folder). */
-			kind: new foundry.data.fields.StringField({ initial: "" }),
+			kind: textField(),
 			/** Raw roll range as printed, e.g. "2-3 (Rocky)" or "1-5". */
-			roll: new foundry.data.fields.StringField({ initial: "" }),
+			roll: textField(),
 			/** NPC crew skill/characteristic rating (ship tables, Table 8-9). */
 			rating: new foundry.data.fields.NumberField({
 				min: 0,
@@ -55,25 +56,25 @@ export class GameTable extends foundry.abstract.TypeDataModel<
 				initial: 0,
 			}),
 			/** Named difficulty for ladder tables, e.g. "Challenging". */
-			difficulty: new foundry.data.fields.StringField({ initial: "" }),
+			difficulty: textField(),
 			/** Named complexity for exploration/investigation tables. */
-			complexity: new foundry.data.fields.StringField({ initial: "" }),
+			complexity: textField(),
 			/** Benchmark durations, e.g. "72 hours" / "1d5 years". */
-			time: new foundry.data.fields.StringField({ initial: "" }),
+			time: textField(),
 			/** Vehicle criticals: affected zone label. */
-			zone: new foundry.data.fields.StringField({ initial: "" }),
+			zone: textField(),
 			/** Vehicle criticals: affected hull section. */
-			hullSection: new foundry.data.fields.StringField({ initial: "" }),
+			hullSection: textField(),
 			/** Familiar/availability ladder text. */
-			availability: new foundry.data.fields.StringField({ initial: "" }),
+			availability: textField(),
 			/** Dispositions-table skill columns (Core Rulebook p279). */
-			charm: new foundry.data.fields.StringField({ initial: "" }),
-			command: new foundry.data.fields.StringField({ initial: "" }),
-			deceive: new foundry.data.fields.StringField({ initial: "" }),
-			intimidate: new foundry.data.fields.StringField({ initial: "" }),
-			size: new foundry.data.fields.StringField({ initial: "" }),
-			concealment: new foundry.data.fields.StringField({ initial: "" }),
-			movement: new foundry.data.fields.StringField({ initial: "" }),
+			charm: textField(),
+			command: textField(),
+			deceive: textField(),
+			intimidate: textField(),
+			size: textField(),
+			concealment: textField(),
+			movement: textField(),
 			/** Numeric modifier, e.g. test-difficulty +20. */
 			modifier: new foundry.data.fields.NumberField({
 				integer: true,
@@ -86,14 +87,14 @@ export class GameTable extends foundry.abstract.TypeDataModel<
 				initial: 0,
 			}),
 			/** Threshold expressions kept raw (book varies, e.g. "91+"). */
-			threshold: new foundry.data.fields.StringField({ initial: "" }),
+			threshold: textField(),
 			/** Encounter-difficulty XP award. */
 			xp: new foundry.data.fields.NumberField({
 				min: 0,
 				integer: true,
 				initial: 0,
 			}),
-			shortDescription: new foundry.data.fields.StringField({ initial: "" }),
+			shortDescription: textField(),
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
 			source: sourceField(),
 		};

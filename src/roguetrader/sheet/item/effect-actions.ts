@@ -6,9 +6,7 @@
  * (submitOnChange keeps the sheet in sync).
  */
 
-import {
-	CHARACTERISTIC_KEYS,
-} from "../../data/actor/character";
+import { characteristicLongLabels } from "../../registry";
 import { withAddedEffect, withoutEffectAt } from "../../data/item/effects";
 import { talentEffectHandlers } from "../../rules/talent-effects";
 
@@ -51,19 +49,6 @@ export const effectActions = {
 // so authors never type slugs or characteristic keys by hand.
 // ---------------------------------------------------------------------------
 
-/** Characteristic key -> i18n suffix under CHARACTERISTIC.*. */
-const CHARACTERISTIC_LABEL_SUFFIX: Record<string, string> = {
-	ws: "WEAPON_SKILL",
-	bs: "BALLISTIC_SKILL",
-	s: "STRENGTH",
-	t: "TOUGHNESS",
-	ag: "AGILITY",
-	int: "INTELLIGENCE",
-	per: "PERCEPTION",
-	wp: "WILLPOWER",
-	fel: "FELLOWSHIP",
-};
-
 /** Known effect kinds -> i18n key under EFFECT_KIND.*. */
 const EFFECT_KIND_LABEL_KEYS: Record<string, string> = {
 	"test-modifier": "EFFECT_KIND.TEST_MODIFIER",
@@ -103,9 +88,8 @@ export function effectEditorChoices(localize: (key: string) => string): {
 	const testKeyChoices: Record<string, string> = {
 		"": localize("EFFECTS.ALL_TESTS"),
 	};
-	for (const key of CHARACTERISTIC_KEYS) {
-		const suffix = CHARACTERISTIC_LABEL_SUFFIX[key];
-		if (suffix) testKeyChoices[key] = localize(`CHARACTERISTIC.${suffix}`);
+	for (const [key, labelKey] of characteristicLongLabels.entries()) {
+		testKeyChoices[key] = localize(labelKey);
 	}
 	return { kindChoices, testKeyChoices };
 }

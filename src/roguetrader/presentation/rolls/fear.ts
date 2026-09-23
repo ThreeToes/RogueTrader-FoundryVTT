@@ -14,6 +14,7 @@
  */
 
 import { systemOf } from "../../data/accessors";
+import { adjustTrack } from "../../application/tracks";
 import { actorView } from "../../infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { postCard } from "../../rules/chat-flags";
@@ -94,10 +95,7 @@ async function applyCondition(
 	if (condition.insanity && condition.insanity !== "0") {
 		const gain = await rollInsanityGain(condition.insanity);
 		if (gain > 0) {
-			const system = systemOf(actor) as unknown as { insanity?: number };
-			await ports.actors.update(actor, {
-				"system.insanity": (system.insanity ?? 0) + gain,
-			});
+			await adjustTrack(ports.actors, actor, "insanity", gain);
 		}
 	}
 }

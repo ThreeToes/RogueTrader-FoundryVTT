@@ -1,4 +1,5 @@
 import { Vehicle } from "../../data/actor/vehicle";
+import { enrichText } from "../rich-text";
 import { isWeaponType } from "../../data/accessors";
 import { tokenFootprintLabel } from "../../rules/vehicle-tokens";
 import {
@@ -89,11 +90,9 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			(system.traits ?? []).map((t) => [t, true]),
 		);
 		context.facingChoices = Object.fromEntries(vehicleFacings.entries());
-		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(system.description, {
-				secrets: this.actor.isOwner,
-				relativeTo: this.actor,
-			});
+		context.descriptionHTML = await enrichText(system.description, this.document, {
+			secrets: this.document.isOwner,
+		});
 
 		// Crew rows (resolved names from Actor UUIDs - references, not embedded).
 		context.crewRows = (system.crew ?? []).map((uuid) => ({

@@ -1,4 +1,5 @@
-import { CHARACTERISTIC_KEYS, Character } from "../../data/actor/character";
+import { Character } from "../../data/actor/character";
+import { characteristics } from "../../registry";
 import { sheetContext } from "../context";
 import { getCharacterOptionDocs } from "../pack-resolve";
 
@@ -61,14 +62,11 @@ export class SkillPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 		context.catalog = catalog.map((entry) => ({
 			...entry,
 			owned: owned.has(entry.name),
-			charLabel: `CHARACTERISTIC.${entry.characteristic.toUpperCase()}`,
+			charLabel:
+				characteristics.choices[entry.characteristic] ??
+				"CHARACTERISTIC.".concat(entry.characteristic.toUpperCase()),
 		}));
-		context.characteristicChoices = Object.fromEntries(
-			CHARACTERISTIC_KEYS.map((key) => [
-				key,
-				`CHARACTERISTIC.${key.toUpperCase()}`,
-			]),
-		);
+		context.characteristicChoices = characteristics.choices;
 		return context;
 	}
 

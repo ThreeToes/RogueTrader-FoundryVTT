@@ -1,17 +1,17 @@
 import { Skill } from "../../data/item/skill";
 import { LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
+import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 export class SkillSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "skill"],
-		position: { width: 420, height: 260 },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
-	};
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "skill",
+		width: 420,
+		height: 260,
+	});
 
 	static PARTS = {
 		form: {

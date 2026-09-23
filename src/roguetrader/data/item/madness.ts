@@ -4,6 +4,7 @@
  * (p296-298), and Table 10-7 (Corruption Track). All verbatim; mechanics
  * stay in text until effect machinery consumes them (epic 1g2t).
  */
+import { textField } from "../fields";
 import { Gear } from "./gear";
 
 export class MadnessEntry extends Gear {
@@ -36,7 +37,7 @@ export class MadnessEntry extends Gear {
 				initial: 999,
 			}),
 			/** Degree of Madness / Corruption label. */
-			degree: new foundry.data.fields.StringField({ initial: "" }),
+			degree: textField(),
 			/** Test modifier the degree applies (0 = none). */
 			modifier: new foundry.data.fields.NumberField({
 				min: -100,
@@ -44,13 +45,13 @@ export class MadnessEntry extends Gear {
 				initial: 0,
 			}),
 			/** Disorder severity (minor | severe | acute | severe-acute). */
-			severity: new foundry.data.fields.StringField({ initial: "" }),
+			severity: textField(),
 			/**
 			 * Severity this copy was GAINED at (Minor/Severe/Acute), resolved from
 			 * the insanity track when the disorder was added (epic nt8k). Blank on
 			 * the pack templates, whose `severity` lists the eligible severities.
 			 */
-			acquiredSeverity: new foundry.data.fields.StringField({ initial: "" }),
+			acquiredSeverity: textField(),
 		};
 	}
 }

@@ -2,6 +2,7 @@ import { DamageType } from "./damage-types";
 import { effectsField, type EffectData } from "./effects";
 import { sourceField } from "./source";
 import { psychicDisciplines } from "../../registry";
+import { textField } from "../fields";
 
 /** Psychic power sub-types (RT core, VERIFY against the book when seeding). */
 export const psychicPowerSubtypes = [
@@ -51,9 +52,7 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 	static override defineSchema() {
 		return {
 			/** Free-text prerequisite (e.g. "WP 40, Discipline (Telepathy)"). */
-			prerequisite: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			prerequisite: textField(),
 			/** Bound vs unbound discipline. */
 			powerClass: new foundry.data.fields.StringField({
 				choices: psychicPowerClasses,
@@ -89,13 +88,9 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 				initial: 0,
 			}),
 			/** Range expression, e.g. "10 x PR m" (free text, book varies). */
-			range: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			range: textField(),
 			/** Damage expression, e.g. "1d10+5 E". */
-			damage: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			damage: textField(),
 			damageType: new foundry.data.fields.StringField({
 				choices: Object.values(DamageType),
 				initial: DamageType.Energy,
@@ -113,7 +108,7 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 			 * Rating). Set to "sorcery" when a Sorcery talent grants the
 			 * technique, so psyker/sorcerer hybrids cast each power correctly.
 			 */
-			castAs: new foundry.data.fields.StringField({ initial: "" }),
+			castAs: textField(),
 			/**
 			 * Restricted technique (epic 0hap): the Psykana Malifica powers
 			 * (Edge of the Abyss p82) "cannot be taken by Astropaths as part of
@@ -122,9 +117,7 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 			 */
 			restricted: new foundry.data.fields.BooleanField({ initial: false }),
 			/** Short free-text description shown in pickers. */
-			shortDescription: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			shortDescription: textField(),
 			/**
 			 * Full rulebook prose (bead qbha: both flavours — terse table
 			 * data lives in the fields above, effect prose here).
@@ -142,17 +135,11 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 			// Source attribution (bead zzlq): books.yaml slug + printed page.
 			source: sourceField(),
 			/** Focus Power Test characteristic/skill (e.g. "Willpower"). */
-			focusTest: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			focusTest: textField(),
 			/** Focus time, e.g. "Half Action" (Core Rulebook Tables 6-4..6-15). */
-			focusTime: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			focusTime: textField(),
 			/** Technique tree ("telepathic-communication", ...). */
-			tree: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			tree: textField(),
 		};
 	}
 }

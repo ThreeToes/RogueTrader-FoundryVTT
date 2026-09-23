@@ -45,6 +45,8 @@ export {
 	rangeModifier,
 } from "./ship-combat";
 export {
+	degreesOfFailure,
+	degreesOfSuccess,
 	locationForHit,
 	resolveTest,
 	type TestOutcome,

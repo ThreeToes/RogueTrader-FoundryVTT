@@ -1,3 +1,4 @@
+import { textField } from "../fields";
 import { Gear } from "./gear";
 
 /**
@@ -39,9 +40,9 @@ export class Heirloom extends Gear {
 		return {
 			...super.defineSchema(),
 			/** Stable slug; matches the source RollTable result's item flag. */
-			key: new fields.StringField({ initial: "" }),
+			key: textField(),
 			/** Source RollTable ("rolltables/Table 1-2: Heirloom Items"). */
-			table: new fields.StringField({ initial: "" }),
+			table: textField(),
 			/** 1d100 range of the source table row (drift-guarded by a test). */
 			range: new fields.SchemaField({
 				low: new fields.NumberField({ min: 1, integer: true, initial: 1 }),
@@ -56,15 +57,15 @@ export class Heirloom extends Gear {
 					nullable: false,
 				}),
 				/** pack-item: compendium pack id to clone from. */
-				pack: new fields.StringField({ initial: "" }),
+				pack: textField(),
 				/** pack-item: source item name in that pack. */
-				item: new fields.StringField({ initial: "" }),
+				item: textField(),
 				/** pack-item: craftsmanship override (e.g. "best"). */
-				craftsmanship: new fields.StringField({ initial: "" }),
+				craftsmanship: textField(),
 				/** pack-item: rename the clone (book's own item name). */
-				rename: new fields.StringField({ initial: "" }),
+				rename: textField(),
 				/** note-item: description for the granted special-ability item. */
-				noteText: new fields.StringField({ initial: "" }),
+				noteText: textField(),
 			}),
 		};
 	}

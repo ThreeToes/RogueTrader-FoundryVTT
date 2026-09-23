@@ -1,5 +1,6 @@
 import { originRowChoices } from "../../rules/origins";
 import { CHARACTERISTIC_KEYS } from "../actor/character";
+import { textField } from "../fields";
 import { Gear } from "./gear";
 
 /**
@@ -57,7 +58,7 @@ export class Origin extends Gear {
 				value: new fields.NumberField({ integer: true, initial: 0 }),
 			});
 		const stringList = () =>
-			new fields.ArrayField(new fields.StringField({ initial: "" }), {
+			new fields.ArrayField(textField(), {
 				initial: () => [],
 			});
 
@@ -75,15 +76,15 @@ export class Origin extends Gear {
 			skills: stringList(),
 			talents: stringList(),
 			optionChoice: stringList(),
-			woundsDice: new fields.StringField({ initial: "" }),
+			woundsDice: textField(),
 			woundBonus: new fields.NumberField({ integer: true, initial: 0 }),
 			fateTable: new fields.ArrayField(fateBand(), { initial: () => [] }),
 			fateDelta: new fields.NumberField({ integer: true, initial: 0 }),
 			insanity: new fields.NumberField({ integer: true, initial: 0 }),
-			insanityDice: new fields.StringField({ initial: "" }),
+			insanityDice: textField(),
 			corruption: new fields.NumberField({ integer: true, initial: 0 }),
-			corruptionDice: new fields.StringField({ initial: "" }),
-			corruptionOrInsanityDice: new fields.StringField({ initial: "" }),
+			corruptionDice: textField(),
+			corruptionOrInsanityDice: textField(),
 			initiativeBonus: new fields.NumberField({ integer: true, initial: 0 }),
 			profitFactor: new fields.NumberField({ integer: true, initial: 0 }),
 			notes: stringList(),
@@ -92,7 +93,7 @@ export class Origin extends Gear {
 			...leafMechanicsFields(),
 			alternateChoice: new fields.ArrayField(
 				new fields.SchemaField({
-					label: new fields.StringField({ initial: "" }),
+					label: textField(),
 					mechanics: new fields.SchemaField(leafMechanicsFields()),
 				}),
 				{ initial: () => [] },
@@ -102,7 +103,7 @@ export class Origin extends Gear {
 		return {
 			...super.defineSchema(),
 			/** Chart key (e.g. "death-world"); referenced by system.origins picks. */
-			key: new fields.StringField({ initial: "" }),
+			key: textField(),
 			/** Chart row (p16): home-world | birthright | lure | trials | motivation | lineage,
 			 *  plus the xeno paths' rows (kindred | klan | know-wotz | competence).
 			 *
@@ -122,19 +123,19 @@ export class Origin extends Gear {
 			 * entry as an alternative AT that column rather than as a new column,
 			 * because the chart's reachability is column adjacency.
 			 */
-			replaces: new fields.StringField({ initial: "" }),
+			replaces: textField(),
 			/** Species path binding (bead ghmn); blank = the human Origin Path. */
-			species: new fields.StringField({ initial: "" }),
+			species: textField(),
 			/** Verbatim effect text for options without variants. */
-			effect: new fields.StringField({ initial: "" }),
+			effect: textField(),
 			/** Machine-applicable mechanics (see rules/origins.ts OriginMechanics). */
 			mechanics: new fields.SchemaField(mechanicsFields()),
 			/** Choose-one sub-results (Criminal, Renegade, Tainted, Zealot...). */
 			variants: new fields.ArrayField(
 				new fields.SchemaField({
-					key: new fields.StringField({ initial: "" }),
-					name: new fields.StringField({ initial: "" }),
-					effect: new fields.StringField({ initial: "" }),
+					key: textField(),
+					name: textField(),
+					effect: textField(),
 					mechanics: new fields.SchemaField(mechanicsFields()),
 				}),
 				{ initial: () => [] },

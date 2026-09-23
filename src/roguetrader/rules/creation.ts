@@ -8,19 +8,13 @@
  * creator application.
  */
 
-import { type ResolvedOrigin } from "../rules/origins";
+import {
+	CHARACTERISTIC_KEYS,
+	type CharacteristicKey,
+} from "../domain/model/taxonomy";
+import { type ResolvedOrigin } from "./origins";
 
 export type { ResolvedOrigin };
-
-/**
- * Mirrors data/actor/character.ts CHARACTERISTIC_KEYS without importing the
- * DataModel (which requires the Foundry global at module load).
- */
-const CHARACTERISTIC_KEYS = [
-	"ws", "bs", "s", "t", "ag", "int", "per", "wp", "fel",
-] as const;
-
-type CharacteristicKey = (typeof CHARACTERISTIC_KEYS)[number];
 
 /** Base characteristic value before allocation (both methods, p14). */
 export const CHARACTERISTIC_BASE = 25;

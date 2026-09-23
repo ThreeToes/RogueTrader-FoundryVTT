@@ -1,4 +1,5 @@
 import { Gear } from "./gear";
+import { textField } from "../fields";
 
 /**
  * Origin trait definitions (bead h64a/tgq9): data-driven rules attached to
@@ -23,9 +24,9 @@ export class OriginTrait extends Gear {
 		return {
 			...super.defineSchema(),
 			/** Owning origin chart entry key (e.g. "death-world"). */
-			originKey: new foundry.data.fields.StringField({ initial: "" }),
+			originKey: textField(),
 			/** Trait slug within the origin (e.g. "paranoid"). */
-			traitKey: new foundry.data.fields.StringField({ initial: "" }),
+			traitKey: textField(),
 			/** modifier | grant | note. */
 			kind: new foundry.data.fields.StringField({
 				choices: { modifier: "ORIGIN_TRAIT.KIND_MODIFIER", grant: "ORIGIN_TRAIT.KIND_GRANT", note: "ORIGIN_TRAIT.KIND_NOTE" },
@@ -34,7 +35,7 @@ export class OriginTrait extends Gear {
 				nullable: false,
 			}),
 			/** Test key the modifier applies to ("" = all tests; "fel" = Fel-keyed). */
-			testKey: new foundry.data.fields.StringField({ initial: "" }),
+			testKey: textField(),
 			/** Signed modifier value (kind "modifier"). */
 			value: new foundry.data.fields.NumberField({
 				min: -100,
@@ -42,7 +43,7 @@ export class OriginTrait extends Gear {
 				initial: 0,
 			}),
 			/** Grant kind (kind "grant"): free-skill | extra-common-lore | bionic | heirloom. */
-			grantKind: new foundry.data.fields.StringField({ initial: "" }),
+			grantKind: textField(),
 		};
 	}
 }

@@ -10,6 +10,7 @@ import {
 	type WarrantRow,
 } from "../../rules/warrant";
 import { sheetContext } from "../context";
+import { enrichText } from "../rich-text";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -55,10 +56,7 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.shipPoints = system.shipPoints;
 		context.shipPointsRemaining = system.shipPointsRemaining;
 		// Shared rich-text partial (bead bef7) renders notes via prose-mirror.
-		context.notesHTML = await foundry.applications.ux.TextEditor.enrichHTML(
-			system.notes ?? "",
-			{ relativeTo: this.document },
-		);
+		context.notesHTML = await enrichText(system.notes ?? "", this.document);
 		// Ship & Warrant Path section (bead mrsb): the six rows with their
 		// current pick, the derived totals and the manual-application notes.
 		// Content comes from the `warrant` pack pool; the sheet holds only the

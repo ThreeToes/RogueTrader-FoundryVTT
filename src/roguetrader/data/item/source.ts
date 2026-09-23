@@ -6,10 +6,11 @@
  * number. Extraction convention (no silent drops): every extracted entry
  * carries it; hand-curated values keep their page+line curation comments.
  */
+import { textField } from "../fields";
 export function sourceField() {
 	return new foundry.data.fields.SchemaField({
 		/** books.yaml slug (e.g. "rt_core"); "" = unattributed (pre-zzlq). */
-		book: new foundry.data.fields.StringField({ initial: "" }),
+		book: textField(),
 		/** Printed page number in that book; 0 = unattributed. */
 		page: new foundry.data.fields.NumberField({
 			integer: true,

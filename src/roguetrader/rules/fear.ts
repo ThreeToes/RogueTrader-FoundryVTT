@@ -77,10 +77,7 @@ export function resolveFearRating(actor: unknown): number | null {
 	return best;
 }
 
-/** Mirror of the kernel's degrees-of-success rule, on the failure side. */
-export function degreesOfFailure(target: number, roll: number): number {
-	return Math.floor(Math.max(0, roll - target) / 10) + 1;
-}
+export { degreesOfFailure } from "../../rules-engine/src/index";
 
 /**
  * Table 10-4: The Shock Table (Core Rulebook p294, VERBATIM book text kept

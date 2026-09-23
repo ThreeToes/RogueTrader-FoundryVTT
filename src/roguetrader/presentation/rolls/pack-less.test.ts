@@ -69,6 +69,8 @@ const { foundryPorts, resetPorts, setPorts } = await import(
 
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 
+import { actorFixture } from "../../../test-helpers/actor-fixture";
+
 afterAll(() => {
 	for (const [key, value] of Object.entries(originalGlobals)) {
 		if (value === undefined) delete (globalThis as Record<string, unknown>)[key];
@@ -84,39 +86,8 @@ afterEach(() => {
 
 // --- Fixtures -------------------------------------------------------------
 
-function fixtureActor(items: unknown[] = []) {
-	const collection = Object.assign([...items], {
-		get: (id: string) => items.find((i) => (i as { id?: string }).id === id),
-	});
-	return {
-		name: "Tester",
-		type: "explorer",
-		uuid: "Actor.test",
-		items: collection,
-		// Ownership (bead qiuo): the roll pipeline refuses an actor the current
-		// user does not own, and the port fails CLOSED, so a fixture that is
-		// meant to be rollable must say so. Tests that want a refusal pass
-		// `isOwner: false`.
-		isOwner: true,
-		// Real actors are documents: the ports THROW when a write cannot be
-		// performed (bead c9s3), so the fixture must be writable or the
-		// condition/damage paths cannot run.
-		update: async () => undefined,
-		createEmbeddedDocuments: async () => [],
-		deleteEmbeddedDocuments: async () => [],
-		system: {
-			characteristics: {
-				ws: { value: 40, unnatural: 1 },
-				bs: { value: 50, unnatural: 1 },
-				wp: { value: 45, unnatural: 1 },
-				ag: { value: 35, unnatural: 1 },
-				per: { value: 30, unnatural: 1 },
-				int: { value: 55, unnatural: 1 },
-			},
-			wounds: { value: 0, max: 14 },
-		},
-	} as never;
-}
+const fixtureActor = (items: unknown[] = []) =>
+	actorFixture({ items, writable: true });
 
 const weapon = {
 	id: "w1",

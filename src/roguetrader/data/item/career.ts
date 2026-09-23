@@ -1,5 +1,6 @@
 import { CHARACTERISTIC_KEYS } from "../actor/character";
 import { sourceField } from "./source";
+import { textField } from "../fields";
 
 /**
  * Careers as Items (content-as-data, mirroring Talent/Skill): actors pick a
@@ -74,9 +75,7 @@ declare startingSkills: string[];
 				nullable: false,
 			}),
 			/** Terse line from Table 2-1 (verbatim book text). */
-			shortDescription: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			shortDescription: textField(),
 			/** Long prose description (career section, HTML for prose-mirror). */
 			description: new foundry.data.fields.HTMLField({ initial: "" }),
 			/**
@@ -85,7 +84,7 @@ declare startingSkills: string[];
 			 * with. The creator highlights the matching career chips.
 			 */
 			suggestedHomeWorlds: new foundry.data.fields.ArrayField(
-				new foundry.data.fields.StringField({ initial: "" }),
+				textField(),
 				{ initial: () => [] },
 			),
 			/** Citation: which book/page this career (or alt-rank set) came from.
@@ -153,8 +152,8 @@ declare startingSkills: string[];
 			 * for starting Fate, which a single number cannot hold).
 			 */
 			species: new foundry.data.fields.SchemaField({
-				key: new foundry.data.fields.StringField({ initial: "" }),
-				label: new foundry.data.fields.StringField({ initial: "" }),
+				key: textField(),
+				label: textField(),
 				baseCharacteristics: new foundry.data.fields.TypedObjectField(
 					new foundry.data.fields.NumberField({
 						integer: true,
@@ -168,8 +167,8 @@ declare startingSkills: string[];
 					initial: 0,
 				}),
 				/** Verbatim starting-Fate roll, when not a fixed value. */
-				fateFormula: new foundry.data.fields.StringField({ initial: "" }),
-				woundsFormula: new foundry.data.fields.StringField({ initial: "" }),
+				fateFormula: textField(),
+				woundsFormula: textField(),
 				/** Structured starter-Fate bands (bead g45s). */
 				fateBands: new foundry.data.fields.ArrayField(
 					new foundry.data.fields.SchemaField({
@@ -188,7 +187,7 @@ declare startingSkills: string[];
 				),
 				/** Structured starter-Wounds spec (bead g45s). */
 				wounds: new foundry.data.fields.SchemaField({
-					dice: new foundry.data.fields.StringField({ initial: "" }),
+					dice: textField(),
 					flat: new foundry.data.fields.NumberField({
 						integer: true,
 						min: 0,
@@ -209,11 +208,11 @@ declare startingSkills: string[];
 			 * "Required Career(s):" / "Alternate Rank:" / "Requirements:" /
 			 * "Other Requirements:" lines. Blank on the core-8.
 			 */
-			requiredCareer: new foundry.data.fields.StringField({ initial: "" }),
-			requiredRace: new foundry.data.fields.StringField({ initial: "" }),
-			alternateRank: new foundry.data.fields.StringField({ initial: "" }),
-			requirements: new foundry.data.fields.StringField({ initial: "" }),
-			otherRequirements: new foundry.data.fields.StringField({ initial: "" }),
+			requiredCareer: textField(),
+			requiredRace: textField(),
+			alternateRank: textField(),
+			requirements: textField(),
+			otherRequirements: textField(),
 			ranks: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.SchemaField({
 					rank: new foundry.data.fields.NumberField({
@@ -230,9 +229,9 @@ declare startingSkills: string[];
 					advances: new foundry.data.fields.ArrayField(
 						new foundry.data.fields.SchemaField({
 							/** Key into the skills/talents pack, when resolvable. */
-							key: new foundry.data.fields.StringField({ initial: "" }),
+							key: textField(),
 							/** Verbatim name fallback ("Performer (Choose One)"). */
-							name: new foundry.data.fields.StringField({ initial: "" }),
+							name: textField(),
 							type: new foundry.data.fields.StringField({
 								choices: {
 									skill: "CAREER.TYPE_SKILL",

@@ -4,15 +4,16 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 import { effectActions, effectEditorChoices } from "./effect-actions";
 import { ITEM_DATA_TABS } from "../tabs";
 import { sheetContext } from "../context";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 
 export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "gear"],
-		position: { width: 500, height: "auto" as const },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "gear",
+		width: 500,
+		height: "auto",
 		actions: { ...effectActions },
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -55,12 +56,10 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		}
 
 		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				this.document.system.description,
-				{
-					secrets: this.document.isOwner,
-					relativeTo: this.document,
-				},
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

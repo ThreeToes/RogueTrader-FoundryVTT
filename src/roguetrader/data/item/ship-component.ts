@@ -6,6 +6,7 @@
  * Table 8-8's availability rule is applied per entry at authoring time
  * (SP-cost based for SP-carrying kinds; fixed for archeotech/xeno-tech).
  */
+import { textField } from "../fields";
 import { sourceField } from "./source";
 
 export class ShipComponent extends foundry.abstract.TypeDataModel<
@@ -60,9 +61,9 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 			/** "essential" | "supplemental" | "archeotech" | "xenotech" (Tables 8-3/8-5/8-6/8-7). */
 			category: new foundry.data.fields.StringField({ initial: "supplemental" }),
 			/** Verbatim hull-type list from the table ("All Ships", "Transports, Raiders, Frigates"). */
-			hullTypes: new foundry.data.fields.StringField({ initial: "" }),
+			hullTypes: textField(),
 			/** Power draw; drives are "N Generated", others a plain number (StringField for "35 Generated"). */
-			power: new foundry.data.fields.StringField({ initial: "" }),
+			power: textField(),
 			space: new foundry.data.fields.NumberField({
 				min: 0,
 				integer: true,
@@ -71,7 +72,7 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 			/** Ship Point cost ("-", "+1", "+2", "1".."3") — verbatim table token. */
 			sp: new foundry.data.fields.StringField({ initial: "-" }),
 			/** Special-rule notes (e.g. "External: ...", named qualities). */
-			special: new foundry.data.fields.StringField({ initial: "" }),
+			special: textField(),
 			/** Availability per Table 8-8 (book p207), applied at authoring time. */
 			availability: new foundry.data.fields.StringField({ initial: "scarce" }),
 			/** † marker: may not be selected more than once per vessel (Table 8-5). */
@@ -159,8 +160,8 @@ export class ShipWeaponComponent extends ShipComponent {
 			/** Variable Strength die (gjn6, book p209 dagger note: Dorsal Gunz
 			 * roll 1d5 for Strength before firing each turn). Empty = fixed
 			 * Strength. */
-			strengthRoll: new foundry.data.fields.StringField({ initial: "" }),
-			damage: new foundry.data.fields.StringField({ initial: "" }),
+			strengthRoll: textField(),
+			damage: textField(),
 			critRating: new foundry.data.fields.NumberField({
 				min: 0,
 				integer: true,

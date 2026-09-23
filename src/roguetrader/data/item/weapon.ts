@@ -1,6 +1,7 @@
 import { DamageType } from "./damage-types";
 import { Gear } from "./gear";
 import { WeaponClass } from "./weapon-class";
+import { textField } from "../fields";
 
 /**
  * Placeholder for weapon qualities (e.g. Accurate, Tearing).
@@ -41,7 +42,7 @@ export abstract class Weapon extends Gear {
 			 * validate; pack completeness is enforced by the pack tests + the
 			 * emit mapping's loud failures.
 			 */
-			weaponFamily: new foundry.data.fields.StringField({ initial: "" }),
+			weaponFamily: textField(),
 			/**
 			 * Hard Points consumed when mounted on a Tau battlesuit (bead 61rb).
 			 * Tau Character Guide printed p30: "A battlesuit can typically only be

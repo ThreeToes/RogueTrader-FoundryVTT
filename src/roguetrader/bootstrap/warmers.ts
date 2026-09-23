@@ -50,26 +50,46 @@ export function getCommonSkillCatalog(): SkillSourceLike[] {
 	return commonSkillCatalog;
 }
 
+/**
+ * Warm one compendium-backed pool at `ready` (bead r8rb): the load -> keep
+ * -> map -> set shape every warmer below repeats. A missing pack leaves the
+ * pool empty and the rule degrades to manual entry (content-optional).
+ */
+function warmPool<TDoc, TEntry>(options: {
+	load: () => Promise<TDoc[]>;
+	keep?: (doc: TDoc) => boolean;
+	map: (doc: TDoc) => TEntry;
+	set: (entries: TEntry[]) => void;
+}): void {
+	Hooks.once("ready", () => {
+		options.load().then((raw) => {
+			const docs = options.keep ? raw.filter(options.keep) : raw;
+			options.set(docs.map(options.map));
+		});
+	});
+}
+
 /** Origin traits cache (bead tgq9): the funnel contributor is sync. */
 function warmOriginTraits(): void {
 	let originTraitDefs: OriginTraitDef[] = [];
-	Hooks.once("ready", () => {
-		getCharacterOptionDocs("origintrait").then((rawDocs) => {
-			const docs = rawDocs as Array<foundry.documents.Item>;
-			originTraitDefs = docs.map((doc) => {
-				const s = packSystem(doc);
-				return {
-					name: doc.name ?? "",
-					originKey: str(s, "originKey"),
-					traitKey: str(s, "traitKey"),
-					kind: str(s, "kind", "note") as OriginTraitDef["kind"],
-					testKey: str(s, "testKey"),
-					value: num(s, "value"),
-					grantKind: str(s, "grantKind"),
-					text: firstStr(s, "description", "shortDescription"),
-				};
-			});
-		});
+	warmPool({
+		load: () => getCharacterOptionDocs("origintrait"),
+		map: (doc: foundry.documents.Item) => {
+			const s = packSystem(doc);
+			return {
+				name: doc.name ?? "",
+				originKey: str(s, "originKey"),
+				traitKey: str(s, "traitKey"),
+				kind: str(s, "kind", "note") as OriginTraitDef["kind"],
+				testKey: str(s, "testKey"),
+				value: num(s, "value"),
+				grantKind: str(s, "grantKind"),
+				text: firstStr(s, "description", "shortDescription"),
+			};
+		},
+		set: (entries) => {
+			originTraitDefs = entries;
+		},
 	});
 	rogueTraderConfig().originTraits = { getDefs: () => originTraitDefs };
 }
@@ -80,15 +100,14 @@ function warmOriginTraits(): void {
  * sheet resolve entries synchronously.
  */
 function warmOrigins(): void {
-	Hooks.once("ready", () => {
-		getCharacterOptionDocs("origin").then((rawDocs) => {
-			const docs = rawDocs as Array<foundry.documents.Item>;
-			// The mapping is SHARED with the rules module (bead ghmn bug fix):
-			// building it inline here silently dropped `species` and `replaces`,
-			// so every entry looked human and the creator offered every species'
-			// rows on the human Origin Path.
-			setOriginEntries(docs.map((doc) => originEntryFromDoc(doc)));
-		});
+	// The mapping is SHARED with the rules module (bead ghmn bug fix):
+	// building it inline here silently dropped `species` and `replaces`,
+	// so every entry looked human and the creator offered every species'
+	// rows on the human Origin Path.
+	warmPool({
+		load: () => getCharacterOptionDocs("origin"),
+		map: (doc: foundry.documents.Item) => originEntryFromDoc(doc),
+		set: (entries) => setOriginEntries(entries),
 	});
 }
 
@@ -98,34 +117,30 @@ function warmOrigins(): void {
  * module's pool at ready.
  */
 function warmHeirlooms(): void {
-	Hooks.once("ready", () => {
-		getPackDocuments("rogue-trader.equipment").then((rawDocs) => {
-			// The equipment pack also holds arms/gear; keep the heirloom types.
-			const docs = (rawDocs as Array<foundry.documents.Item>).filter(
-				(doc) => doc.type === "heirloom",
-			);
-			setHeirloomEntries(
-				docs.map((doc) => {
-					const s = packSystem(doc);
-					const range = nested(s, "range");
-					const grant = nested(s, "grant");
-					return {
-						key: str(s, "key"),
-						name: doc.name ?? "",
-						range: [num(range, "low"), num(range, "high")],
-						table: optionalStr(s, "table"),
-						grant: {
-							kind: str(grant, "kind", "pack-item") as HeirloomGrantKind,
-							pack: optionalStr(grant, "pack"),
-							item: optionalStr(grant, "item"),
-							craftsmanship: optionalStr(grant, "craftsmanship"),
-							rename: optionalStr(grant, "rename"),
-							noteText: optionalStr(grant, "noteText"),
-						},
-					} satisfies HeirloomEntry;
-				}),
-			);
-		});
+	warmPool({
+		load: () => getPackDocuments("rogue-trader.equipment"),
+		// The equipment pack also holds arms/gear; keep the heirloom types.
+		keep: (doc: foundry.documents.Item) => doc.type === "heirloom",
+		map: (doc: foundry.documents.Item): HeirloomEntry => {
+			const s = packSystem(doc);
+			const range = nested(s, "range");
+			const grant = nested(s, "grant");
+			return {
+				key: str(s, "key"),
+				name: doc.name ?? "",
+				range: [num(range, "low"), num(range, "high")],
+				table: optionalStr(s, "table"),
+				grant: {
+					kind: str(grant, "kind", "pack-item") as HeirloomGrantKind,
+					pack: optionalStr(grant, "pack"),
+					item: optionalStr(grant, "item"),
+					craftsmanship: optionalStr(grant, "craftsmanship"),
+					rename: optionalStr(grant, "rename"),
+					noteText: optionalStr(grant, "noteText"),
+				},
+			};
+		},
+		set: (entries) => setHeirloomEntries(entries),
 	});
 }
 
@@ -135,32 +150,29 @@ function warmHeirlooms(): void {
  * Dynasty sheet resolve options synchronously.
  */
 function warmWarrant(): void {
-	Hooks.once("ready", () => {
-		getPackDocuments("rogue-trader.warrant").then((rawDocs) => {
-			const docs = (rawDocs as Array<foundry.documents.Item>).filter(
-				(doc) => doc.type === "warrant-option",
-			);
+	warmPool({
+		load: () => getPackDocuments("rogue-trader.warrant"),
+		keep: (doc: foundry.documents.Item) => doc.type === "warrant-option",
+		map: (doc: foundry.documents.Item): WarrantEntry => {
+			const s = packSystem(doc);
+			const mechanics = nested(s, "mechanics");
+			return {
+				key: str(s, "key"),
+				row: str(s, "row") as WarrantRow,
+				col: num(s, "col"),
+				name: doc.name ?? "",
+				description: str(s, "description"),
+				mechanics: {
+					shipPoints: num(mechanics, "shipPoints"),
+					profitFactor: num(mechanics, "profitFactor"),
+					notes: strArray(mechanics, "notes"),
+				},
+			};
+		},
+		set: (entries) =>
 			setWarrantEntries(
-				docs
-					.map((doc) => {
-						const s = packSystem(doc);
-						const mechanics = nested(s, "mechanics");
-						return {
-							key: str(s, "key"),
-							row: str(s, "row") as WarrantRow,
-							col: num(s, "col"),
-							name: doc.name ?? "",
-							description: str(s, "description"),
-							mechanics: {
-								shipPoints: num(mechanics, "shipPoints"),
-								profitFactor: num(mechanics, "profitFactor"),
-								notes: strArray(mechanics, "notes"),
-							},
-						} satisfies WarrantEntry;
-					})
-					.filter((entry) => entry.key && isWarrantRow(entry.row)),
-			);
-		});
+				entries.filter((entry) => entry.key && isWarrantRow(entry.row)),
+			),
 	});
 }
 
@@ -177,36 +189,35 @@ function warmMadness(): void {
 		degree: string;
 		modifier: number;
 	}> = [];
-	Hooks.once("ready", () => {
-		getPackDocuments("rogue-trader.afflictions").then((madnessRaw) => {
-			// The afflictions pack also holds mutations; keep the madness rows.
-			const madnessDocs = (madnessRaw as Array<foundry.documents.Item>).filter(
-				(doc) => doc.type === "madnessentry",
-			);
-			madnessRows = madnessDocs.map((doc) => {
-				const s = packSystem(doc);
-				return {
-					kind: str(s, "kind"),
-					rollMin: num(s, "rollMin"),
-					rollMax: num(s, "rollMax", 999),
-					degree: str(s, "degree"),
-					modifier: num(s, "modifier"),
-				};
-			});
-		});
+	warmPool({
+		load: () => getPackDocuments("rogue-trader.afflictions"),
+		// The afflictions pack also holds mutations; keep the madness rows.
+		keep: (doc: foundry.documents.Item) => doc.type === "madnessentry",
+		map: (doc: foundry.documents.Item) => {
+			const s = packSystem(doc);
+			return {
+				kind: str(s, "kind"),
+				rollMin: num(s, "rollMin"),
+				rollMax: num(s, "rollMax", 999),
+				degree: str(s, "degree"),
+				modifier: num(s, "modifier"),
+			};
+		},
+		set: (entries) => {
+			madnessRows = entries;
+		},
 	});
 	rogueTraderConfig().madness = { getRows: () => madnessRows };
 }
 
 /** Warm the skills pack for the createActor grant hook. */
 function warmSkillCatalog(): void {
-	Hooks.once("ready", () => {
-		getCharacterOptionDocs("skill").then((rawDocs) => {
-			const docs = rawDocs as Array<foundry.documents.Item>;
-			commonSkillCatalog = docs.map(
-				(doc) => doc.toObject() as SkillSourceLike,
-			);
-		});
+	warmPool({
+		load: () => getCharacterOptionDocs("skill"),
+		map: (doc: foundry.documents.Item) => doc.toObject() as SkillSourceLike,
+		set: (entries) => {
+			commonSkillCatalog = entries;
+		},
 	});
 }
 

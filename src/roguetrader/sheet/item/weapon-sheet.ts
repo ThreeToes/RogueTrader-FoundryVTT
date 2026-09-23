@@ -8,18 +8,19 @@ import {
 } from "../../data/item/weapon-class";
 import { weaponFamilies } from "../../registry";
 import { effectActions, effectEditorChoices } from "./effect-actions";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "weapon"],
-		position: { width: 520, height: "auto" as const },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "weapon",
+		width: 520,
+		height: "auto",
 		actions: { ...effectActions },
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -89,12 +90,10 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		// Description tab: enriched HTML from the system description
 		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).
 		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				this.document.system.description,
-				{
-					secrets: this.document.isOwner,
-					relativeTo: this.document,
-				},
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

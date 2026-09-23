@@ -15,8 +15,10 @@ import {
 	npcInventoryGroups,
 } from "../npc-inventory";
 import { openPackItemAction } from "../pack-resolve";
+import { BODY_LOCATION_ORDER } from "../../registry";
 import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
+import { enrichText } from "../rich-text";
 import type { RateOfFire } from "../../data/item/rate-of-fire";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -207,19 +209,12 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			}) as never;
 
 		// Inventory tab: armour stats (left) + minimal item list (right).
-		const LOCATIONS = [
-			"head",
-			"left-arm",
-			"body",
-			"right-arm",
-			"left-leg",
-			"right-leg",
-		] as const;
+
 		const wornArmour = this.actor.items.filter(
 			(item) =>
 				(item.type as string) === "armour" && equipStateOf(item) === "worn",
 		);
-		context.armourTotals = LOCATIONS.map((loc) => ({
+		context.armourTotals = BODY_LOCATION_ORDER.map((loc) => ({
 			loc,
 			label: `BODY_LOCATION.${loc.toUpperCase().replace(/-/g, "_")}`,
 			ap: Math.max(
@@ -259,10 +254,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.isPsyker =
 			system.psyker === true || (system.psyRating ?? 0) >= 1;
 		// Shared rich-text partial (bead bef7) renders notes via prose-mirror.
-		context.notesHTML = await foundry.applications.ux.TextEditor.enrichHTML(
-			system.notes ?? "",
-			{ relativeTo: this.actor },
-		);
+		context.notesHTML = await enrichText(system.notes ?? "", this.actor);
 		return context;
 	}
 

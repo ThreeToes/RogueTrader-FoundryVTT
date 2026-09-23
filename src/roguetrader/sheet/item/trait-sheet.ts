@@ -2,6 +2,8 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 import { sheetContext } from "../context";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 import { effectActions, effectEditorChoices } from "./effect-actions";
 
 /**
@@ -11,13 +13,12 @@ import { effectActions, effectEditorChoices } from "./effect-actions";
  * NPC-innate; no equip-state UI (always live, see data/item/effects.ts).
  */
 export class TraitSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "trait"],
-		position: { width: 500, height: "auto" as const },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "trait",
+		width: 500,
+		height: "auto",
 		actions: { ...effectActions },
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -38,12 +39,10 @@ export class TraitSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		));
 
 		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				(this.document.system as { description?: string }).description ?? "",
-				{
-					secrets: this.document.isOwner,
-					relativeTo: this.document,
-				},
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

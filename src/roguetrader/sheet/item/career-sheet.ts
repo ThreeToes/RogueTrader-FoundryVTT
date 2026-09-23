@@ -1,6 +1,8 @@
 import { careers } from "../../registry";
 import type { CareerRank } from "../../data/item/career";
 import { ITEM_DESCRIPTION_TABS } from "../tabs";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -81,15 +83,14 @@ async function openAdvance(
  * the sheet is not editable (bead 2n5).
  */
 export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "career"],
-		position: { width: 560, height: 480 },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "career",
+		width: 560,
+		height: 480,
 		actions: {
 			openAdvance,
 		},
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -153,12 +154,10 @@ export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.startingTalents = system.startingTalents ?? [];
 		context.startingGear = system.startingGear ?? [];
 		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				system.description ?? "",
-				{
-					secrets: this.document.isOwner,
-					relativeTo: this.document,
-				},
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

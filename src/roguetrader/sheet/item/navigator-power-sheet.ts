@@ -1,5 +1,7 @@
 import { effectActions } from "./effect-actions";
 import { NavigatorPower } from "../../data/item/navigator-power";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -11,13 +13,12 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 export class NavigatorPowerSheet extends HandlebarsApplicationMixin(
 	ItemSheetV2,
 ) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "navigator-power"],
-		position: { width: 500, height: "auto" as const },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "navigator-power",
+		width: 500,
+		height: "auto",
 		actions: { ...effectActions },
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -51,12 +52,10 @@ export class NavigatorPowerSheet extends HandlebarsApplicationMixin(
 			master: "",
 		};
 		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				this.document.system.description,
-				{
-					secrets: this.document.isOwner,
-					relativeTo: this.document,
-				},
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

@@ -7,25 +7,17 @@
  * here are characteristic bonuses, which are definitional (bonus = value/10,
  * effective bonus = bonus x unnatural multiplier).
  */
+import { textField } from "../fields";
 
 import { effectsAreLive } from "../item/effects";
 import { sourceField } from "../item/source";
 import { careers, sorceryRanks } from "../../registry";
 import { MAX_CRITICAL_SEVERITY } from "../../../rules-engine/src/index";
 
-export const CHARACTERISTIC_KEYS = [
-	"ws",
-	"bs",
-	"s",
-	"t",
-	"ag",
-	"int",
-	"per",
-	"wp",
-	"fel",
-] as const;
-
-export type CharacteristicKey = (typeof CHARACTERISTIC_KEYS)[number];
+export {
+	CHARACTERISTIC_KEYS,
+	type CharacteristicKey,
+} from "../../domain/model/taxonomy";
 
 export class Character extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,
@@ -183,7 +175,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 			/** Suffered critical effects, kept until something removes them. */
 			criticalEffects: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.SchemaField({
-					id: new foundry.data.fields.StringField({ initial: "" }),
+					id: textField(),
 					location: new foundry.data.fields.StringField({ initial: "body" }),
 					severity: new foundry.data.fields.NumberField({
 						min: 1,
@@ -191,7 +183,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 						integer: true,
 						initial: 1,
 					}),
-					table: new foundry.data.fields.StringField({ initial: "" }),
+					table: textField(),
 					roll: new foundry.data.fields.NumberField({
 						min: 0,
 						integer: true,
@@ -199,7 +191,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 					}),
 					/** "core" for a Critical Hit table, "battlesuit" for Table 1-5. */
 					source: new foundry.data.fields.StringField({ initial: "core" }),
-					text: new foundry.data.fields.StringField({ initial: "" }),
+					text: textField(),
 				}),
 				{ initial: () => [] },
 			),
@@ -277,8 +269,8 @@ export class Character extends foundry.abstract.TypeDataModel<
 			 */
 			sustainedPowers: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.SchemaField({
-					itemUuid: new foundry.data.fields.StringField({ initial: "" }),
-					name: new foundry.data.fields.StringField({ initial: "" }),
+					itemUuid: textField(),
+					name: textField(),
 				}),
 				{ initial: () => [] },
 			),
@@ -288,11 +280,11 @@ export class Character extends foundry.abstract.TypeDataModel<
 			 * origin chart in rules/origins data (rules/origins.ts).
 			 */
 			origins: new foundry.data.fields.SchemaField({
-				homeWorld: new foundry.data.fields.StringField({ initial: "" }),
-				birthright: new foundry.data.fields.StringField({ initial: "" }),
-				lure: new foundry.data.fields.StringField({ initial: "" }),
-				trials: new foundry.data.fields.StringField({ initial: "" }),
-				motivation: new foundry.data.fields.StringField({ initial: "" }),
+				homeWorld: textField(),
+				birthright: textField(),
+				lure: textField(),
+				trials: textField(),
+				motivation: textField(),
 				/**
 				 * Species-path picks (bead ghmn/58js): the rows OUTSIDE the five human
 				 * ones — klan + know-wotz (ork), competence (tau), kindred (kroot).
@@ -307,11 +299,11 @@ export class Character extends foundry.abstract.TypeDataModel<
 				path: new foundry.data.fields.ArrayField(
 					new foundry.data.fields.SchemaField({
 						/** Chart row key (klan, know-wotz, competence, kindred). */
-						row: new foundry.data.fields.StringField({ initial: "" }),
+						row: textField(),
 						/** Chart entry key (klan-bad-moons, …). */
-						key: new foundry.data.fields.StringField({ initial: "" }),
+						key: textField(),
 						/** Chosen variant key, when the entry offers variants. */
-						variantKey: new foundry.data.fields.StringField({ initial: "" }),
+						variantKey: textField(),
 					}),
 					{ initial: () => [] },
 				),
@@ -333,7 +325,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 			 * Linked dynasty actor uuid (owner redesign): characters attach
 			 * to the group's dynasty record; the PF/SP live there, not here.
 			 */
-			dynastyUuid: new foundry.data.fields.StringField({ initial: "" }),
+			dynastyUuid: textField(),
 			/**
 			 * XP purchase ledger (bead g7k): every advance bought, the audit
 			 * trail behind xp.spent (total = 4,500 creation baseline + ledger
@@ -348,9 +340,9 @@ export class Character extends foundry.abstract.TypeDataModel<
 						required: true,
 						nullable: false,
 					}),
-					key: new foundry.data.fields.StringField({ initial: "" }),
-					name: new foundry.data.fields.StringField({ initial: "" }),
-					characteristic: new foundry.data.fields.StringField({ initial: "" }),
+					key: textField(),
+					name: textField(),
+					characteristic: textField(),
 					cost: new foundry.data.fields.NumberField({
 						min: 0,
 						integer: true,
@@ -361,16 +353,14 @@ export class Character extends foundry.abstract.TypeDataModel<
 						integer: true,
 						initial: 1,
 					}),
-					tier: new foundry.data.fields.StringField({ initial: "" }),
-					source: new foundry.data.fields.StringField({ initial: "" }),
+					tier: textField(),
+					source: textField(),
 					elite: new foundry.data.fields.BooleanField({ initial: false }),
 				}),
 				{ initial: () => [] },
 			),
 			/** NPC threat level (e.g. "Trivial", or a descriptive rating). */
-			threatLevel: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			threatLevel: textField(),
 			/**
 			 * NPC-only identity fields (bead lib6, k4z0 GAP 1): the
 			 * template.json npc block carried faction/subfaction/type/size but
@@ -380,14 +370,12 @@ export class Character extends foundry.abstract.TypeDataModel<
 			 * actor type); size is a string — the book labels statblocks with
 			 * words, and the old numeric 4 was never schema-backed.
 			 */
-			faction: new foundry.data.fields.StringField({ initial: "" }),
-			subfaction: new foundry.data.fields.StringField({ initial: "" }),
-			npcType: new foundry.data.fields.StringField({ initial: "" }),
-			size: new foundry.data.fields.StringField({ initial: "" }),
+			faction: textField(),
+			subfaction: textField(),
+			npcType: textField(),
+			size: textField(),
 			/** NPC short description (GM sheet header, bead mqdy). */
-			shortDescription: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			shortDescription: textField(),
 			/**
 			 * Long-form notes (NPC sheet Notes tab; template.json npc block
 			 * carries notes but the schema never declared it — bead d7js

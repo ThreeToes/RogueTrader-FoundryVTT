@@ -1,4 +1,6 @@
 import { effectActions, effectEditorChoices } from "./effect-actions";
+import { enrichText } from "../rich-text";
+import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -50,13 +52,12 @@ const STATE_LABELS: Readonly<Record<string, string>> = {
 export class ShipComponentSheet extends HandlebarsApplicationMixin(
 	ItemSheetV2,
 ) {
-	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "ship-component"],
-		position: { width: 520, height: "auto" as const },
-		window: { resizable: true },
-		form: { submitOnChange: true, closeOnSubmit: false },
+	static DEFAULT_OPTIONS = itemSheetOptions({
+		slug: "ship-component",
+		width: 520,
+		height: "auto",
 		actions: { ...effectActions },
-	};
+	});
 
 	static PARTS = {
 		header: {
@@ -111,14 +112,16 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 		);
 		context.stateLabel = localize(STATE_LABELS[String(sys.state ?? "")] ?? "");
 		context.specialHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				String(sys.special ?? ""),
-				{ secrets: this.document.isOwner, relativeTo: this.document },
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		context.descriptionHTML =
-			await foundry.applications.ux.TextEditor.enrichHTML(
+			await enrichText(
 				String(this.document.system.description ?? ""),
-				{ secrets: this.document.isOwner, relativeTo: this.document },
+				this.document,
+				{ secrets: this.document.isOwner },
 			);
 		return context;
 	}

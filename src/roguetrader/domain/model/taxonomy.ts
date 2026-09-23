@@ -37,6 +37,17 @@ export function equipStateOf(item: EquipableLike): EquipState {
 }
 
 /**
+ * The FFG 40k characteristic vocabulary, in book order. Pure data so the
+ * rules layer can read it without importing the Foundry-coupled Character
+ * DataModel; data/actor/character.ts re-exports it for compatibility.
+ */
+export const CHARACTERISTIC_KEYS = [
+	"ws", "bs", "s", "t", "ag", "int", "per", "wp", "fel",
+] as const;
+
+export type CharacteristicKey = (typeof CHARACTERISTIC_KEYS)[number];
+
+/**
  * Ready-state semantics: weapons and gear are ready when CARRIED; armour is
  * ready (contributing) when WORN. Matches the carried-weight filter in
  * rules/encumbrance.ts and the attack equip gate.

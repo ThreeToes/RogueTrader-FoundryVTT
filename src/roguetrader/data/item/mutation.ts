@@ -4,6 +4,7 @@
  * d100 roll (corruption-track rolls, Tainted birthright). Text is verbatim;
  * mechanical hooks stay in `text` until effect kinds exist for them.
  */
+import { textField } from "../fields";
 import { afflictionProcedures } from "../../registry";
 import { Gear } from "./gear";
 
@@ -84,17 +85,17 @@ export class Mutation extends Gear {
 			 * renders no Attack action, and `damage` is the discriminator.
 			 */
 			attack: new foundry.data.fields.SchemaField({
-				characteristic: new foundry.data.fields.StringField({ initial: "" }),
-				damage: new foundry.data.fields.StringField({ initial: "" }),
+				characteristic: textField(),
+				damage: textField(),
 				damageTypes: new foundry.data.fields.ArrayField(
-					new foundry.data.fields.StringField({ initial: "" }),
+					textField(),
 					{ initial: () => [] },
 				),
 				qualities: new foundry.data.fields.ArrayField(
-					new foundry.data.fields.StringField({ initial: "" }),
+					textField(),
 					{ initial: () => [] },
 				),
-				action: new foundry.data.fields.StringField({ initial: "" }),
+				action: textField(),
 				dodgeable: new foundry.data.fields.BooleanField({ initial: true }),
 				parryable: new foundry.data.fields.BooleanField({ initial: false }),
 			}),

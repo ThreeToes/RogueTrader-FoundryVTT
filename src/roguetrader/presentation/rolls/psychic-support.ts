@@ -8,7 +8,7 @@
  * Every side effect goes through a port: dice, chat, content and actor writes.
  */
 
-import { systemOf } from "../../data/accessors";
+import { adjustTrack } from "../../application/tracks";
 import type { EffectData } from "../../domain/model/effect";
 import { corruptionExpressions } from "../../domain/model/effect";
 import { ROLLTABLES_PACK } from "../../application/packs";
@@ -94,10 +94,7 @@ export async function applyPowerCorruption(
 		gained += (await ports.dice.roll(expression)).total;
 	}
 	if (gained === 0) return;
-	const system = systemOf(actor) as unknown as { corruption?: number };
-	await ports.actors.update(actor, {
-		"system.corruption": Math.max(0, (system.corruption ?? 0) + gained),
-	});
+	await adjustTrack(ports.actors, actor, "corruption", gained);
 	const label = ports.i18n.t("PSYCHIC_POWER.CORRUPTION_GAIN", {
 		power: item.name ?? "",
 	});

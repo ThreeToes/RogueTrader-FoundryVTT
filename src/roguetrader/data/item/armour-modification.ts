@@ -1,4 +1,5 @@
 import { Gear } from "./gear";
+import { textField } from "../fields";
 
 /**
  * Armour modification: an upgrade fitted to a suit of armour (Hostile
@@ -15,9 +16,7 @@ export class ArmourModification extends Gear {
 	static override defineSchema() {
 		return {
 			...super.defineSchema(),
-			upgrades: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			upgrades: textField(),
 		};
 	}
 }

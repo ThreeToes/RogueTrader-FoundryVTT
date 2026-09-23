@@ -8,6 +8,7 @@
  * domain model (`domain/model/effect.ts`) in phase 1 and are re-exported here
  * for compatibility. This module now holds only the Foundry schema factory.
  */
+import { textField } from "../fields";
 
 export {
 	blankEffect,
@@ -28,9 +29,7 @@ export function effectsField() {
 				required: true,
 				nullable: false,
 			}),
-			testKey: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			testKey: textField(),
 			value: new foundry.data.fields.NumberField({
 				integer: true,
 				initial: 0,
@@ -38,15 +37,9 @@ export function effectsField() {
 			/** Dice expression (epic 0hap): used by dice-valued kinds like
 			 * "corruption" where the book prints "1d10+4" rather than a flat
 			 * number. Empty = fall back to `value`. */
-			dice: new foundry.data.fields.StringField({
-				initial: "",
-			}),
-			label: new foundry.data.fields.StringField({
-				initial: "",
-			}),
-			condition: new foundry.data.fields.StringField({
-				initial: "",
-			}),
+			dice: textField(),
+			label: textField(),
+			condition: textField(),
 		}),
 		{ initial: () => [] },
 	);

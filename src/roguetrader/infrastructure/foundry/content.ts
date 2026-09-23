@@ -26,6 +26,20 @@ function packGet(packId: string): PackLike | undefined {
 	return packs?.get(packId);
 }
 
+/**
+ * Every document in a pack, or null when the pack is not installed.
+ *
+ * The ONE compendium list-fetch primitive (bead s4lu): both the ContentPort
+ * and sheet/pack-resolve.ts read packs through it, so the `game.packs`
+ * lookup lives in exactly one place. Callers that want a loud
+ * missing-pack warning (pack-resolve) distinguish null from an empty pack;
+ * the rules-facing ContentPort collapses null to [].
+ */
+export async function packDocuments(packId: string): Promise<unknown[] | null> {
+	const pack = packGet(packId);
+	return pack ? await pack.getDocuments() : null;
+}
+
 function asTable(doc: unknown): ContentTable {
 	return doc as ContentTable;
 }
@@ -43,8 +57,7 @@ export const foundryContent: ContentPort = {
 		};
 	},
 	async documents(packId: string): Promise<unknown[]> {
-		const pack = packGet(packId);
-		return pack ? pack.getDocuments() : [];
+		return (await packDocuments(packId)) ?? [];
 	},
 	async find(packId: string, name: string): Promise<ContentTable | null> {
 		const docs = await foundryContent.documents(packId);

@@ -89,37 +89,11 @@ afterAll(() => {
 
 import { afterAll, describe, expect, it } from "bun:test";
 
+import { actorFixture } from "../../../test-helpers/actor-fixture";
+
 // --- Fixtures -------------------------------------------------------------
 
-function fixtureActor(items: unknown[] = []) {
-	// `items` must be iterable (the funnel's item-effects contributor iterates
-	// it) AND support .get(id) like a Foundry Collection.
-	const collection = Object.assign([...items], {
-		get: (id: string) => items.find((i) => (i as { id?: string }).id === id),
-	});
-	return {
-		name: "Tester",
-		type: "explorer",
-		uuid: "Actor.test",
-		items: collection,
-		// The roll pipeline refuses an actor the current user does not own and
-		// the port fails CLOSED (bead qiuo), so a rollable fixture must say so.
-		isOwner: true,
-		system: {
-			characteristics: {
-				ws: { value: 40, unnatural: 1 },
-				bs: { value: 50, unnatural: 1 },
-				wp: { value: 45, unnatural: 1 },
-				ag: { value: 35, unnatural: 1 },
-				per: { value: 30, unnatural: 1 },
-				fel: { value: 30, unnatural: 1 },
-				int: { value: 55, unnatural: 1 },
-				t: { value: 40, unnatural: 1 },
-			},
-			wounds: { value: 0, max: 14 },
-		},
-	} as never;
-}
+const fixtureActor = (items: unknown[] = []) => actorFixture({ items });
 
 const weaponItem = {
 	id: "w1",

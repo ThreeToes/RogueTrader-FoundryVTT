@@ -1,6 +1,7 @@
 import { CacheActor } from "../../data/actor/cache";
 import { actorEncumbrance } from "../../rules/encumbrance";
 import { sheetContext } from "../context";
+import { enrichText } from "../rich-text";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -98,10 +99,7 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// buttons can be disabled with a reason instead of failing on click.
 		context.takerName = CacheSheet.#taker()?.name ?? "";
 		context.canTake = Boolean(context.takerName);
-		context.notesHTML = await foundry.applications.ux.TextEditor.enrichHTML(
-			system.notes ?? "",
-			{ relativeTo: this.document },
-		);
+		context.notesHTML = await enrichText(system.notes ?? "", this.document);
 		return context;
 	}
 

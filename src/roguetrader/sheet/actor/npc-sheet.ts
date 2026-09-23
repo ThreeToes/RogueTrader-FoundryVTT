@@ -5,7 +5,6 @@ import {
 import type { CharacteristicKey as Key } from "../../data/actor/character";
 import {
 	equipStateOf,
-	isWeaponType,
 	systemOf,
 } from "../../data/accessors";
 import { cloneItemFromDrop, npcEquipDefaultSystemOverrides } from "../drop-clone";
@@ -15,13 +14,12 @@ import {
 	npcInventoryGroups,
 } from "../npc-inventory";
 import { openPackItemAction } from "../pack-resolve";
-import { BODY_LOCATION_ORDER } from "../../registry";
+import { armourLocations, weaponRows } from "./view-models";
 import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
 import { actorView } from "../../infrastructure/foundry/actor-view";
 import { isPsykerLike } from "../../rules/psyker";
 import { enrichText } from "../rich-text";
-import type { RateOfFire } from "../../data/item/rate-of-fire";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -174,50 +172,21 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// ranged RoF/clip. equipState drives the drop defaults (owner spec:
 		// NPCs are HOLDING their listed weapons — see #onDrop); the equip
 		// toggle is not part of the combat-row anatomy.
-		context.weapons = this.actor.items
-			.filter((i) => isWeaponType(i.type as string))
-			.map((i) => {
-				const sys = i.system as unknown as {
-					class: string;
-					damage?: string;
-					penetration?: number;
-					clip?: number;
-					rateOfFire?: RateOfFire;
-				};
-				const isRanged = i.type === "ranged-weapon";
-				return {
-					id: i.id ?? "",
-					name: i.name ?? "",
-					classLabel: `CLASS.${(sys.class ?? "melee").toUpperCase()}`,
-					damage: sys.damage || "\u2013",
-					penetration: sys.penetration ?? 0,
-					isRanged,
-					rof: {
-						singleShot: sys.rateOfFire?.singleShot ? "S" : "\u2013",
-						burst: sys.rateOfFire?.burst || "\u2013",
-						fullAuto: sys.rateOfFire?.fullAuto || "\u2013",
-					},
-					clip: sys.clip ?? 0,
-				};
-			}) as never;
+		// Shared rows (bead v2ll): canonical build; NPC keeps item order
+		// (the PC sheet is the one that sorts by name).
+		context.weapons = weaponRows(
+			this.actor.items as unknown as Parameters<typeof weaponRows>[0],
+		) as never;
 
 		// Inventory tab: armour stats (left) + minimal item list (right).
 
-		const wornArmour = this.actor.items.filter(
-			(item) =>
-				(item.type as string) === "armour" && equipStateOf(item) === "worn",
-		);
-		context.armourTotals = BODY_LOCATION_ORDER.map((loc) => ({
+		// Shared canonical rows (bead v2ll), adapted to the NPC row shape.
+		context.armourTotals = armourLocations(
+			this.actor.items as unknown as Parameters<typeof armourLocations>[0],
+		).map(({ loc, ap }) => ({
 			loc,
 			label: `BODY_LOCATION.${loc.toUpperCase().replace(/-/g, "_")}`,
-			ap: Math.max(
-				0,
-				...wornArmour.map((item) =>
-					(
-						item.system as unknown as { armourAt(loc: string): number }
-					).armourAt(loc),
-				),
-			),
+			ap,
 		}));
 		context.armourItems = this.actor.items
 			.filter((item) => (item.type as string) === "armour")

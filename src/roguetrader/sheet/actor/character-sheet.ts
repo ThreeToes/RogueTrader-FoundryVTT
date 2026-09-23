@@ -13,7 +13,6 @@ import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { derivedRank, totalSpent } from "../../rules/advancement";
 import {
-	BODY_LOCATION_ORDER,
 	careers,
 	equipStates,
 	sorceryRanks,
@@ -62,6 +61,7 @@ import type { EffectData } from "../../data/item/effects";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { actorEncumbrance } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
+import { armourLocations, weaponRows } from "./view-models";
 import {
 	buildCharacteristicViews,
 	mergeOwnedAndCatalogRows,
@@ -938,53 +938,20 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Armour: highest AP per body location across WORN armour items (bead
 		// yb6 equip-state model: stowed armour contributes nothing, matching
 		// the adapter's wornArmour filter in the damage pipeline).
-		const armourItems = this.actor.items.filter(
-			(item) =>
-				(item.type as string) === "armour" && equipStateOf(item) === "worn",
-		);
+		// Shared canonical rows (bead v2ll), adapted to the PC record shape
+		// keyed by loc.
 		context.armourLocations = Object.fromEntries(
-			BODY_LOCATION_ORDER.map((loc) => {
-				const ap = Math.max(
-					0,
-					...armourItems.map((item) =>
-						(
-							item.system as unknown as { armourAt(loc: string): number }
-						).armourAt(loc),
-					),
-				);
-				return [loc, { ap }];
-			}),
+			armourLocations(
+				this.actor.items as unknown as Parameters<typeof armourLocations>[0],
+			).map(({ loc, ap }) => [loc, { ap }]),
 		);
 
 		// Combat tab: weapons from inventory with visible stats (display only;
 		// roll buttons land with the roll-damage adapter work).
-		context.weapons = this.actor.items
-			.filter((item) => isWeaponType(item.type as string))
-			.map((item) => {
-				const sys = item.system as unknown as {
-					class: string;
-					damage?: string;
-					penetration?: number;
-					clip?: number;
-					rateOfFire?: RateOfFire;
-				};
-				const isRanged = item.type === "ranged-weapon";
-				return {
-					id: item.id,
-					name: item.name,
-					classLabel: `CLASS.${(sys.class ?? "melee").toUpperCase()}`,
-					damage: sys.damage || "\u2013",
-					penetration: sys.penetration ?? 0,
-					isRanged,
-					rof: {
-						singleShot: sys.rateOfFire?.singleShot ? "S" : "\u2013",
-						burst: sys.rateOfFire?.burst || "\u2013",
-						fullAuto: sys.rateOfFire?.fullAuto || "\u2013",
-					},
-					clip: sys.clip ?? 0,
-				};
-			})
-			.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+		// Combat tab: shared weapon rows (bead v2ll), PC sorts by name.
+		context.weapons = weaponRows(
+			this.actor.items as unknown as Parameters<typeof weaponRows>[0],
+		).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
 
 		context.inventory = inventory;
 

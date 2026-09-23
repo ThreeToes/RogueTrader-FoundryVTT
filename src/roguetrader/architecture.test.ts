@@ -11,7 +11,11 @@
  *   domain         -> kernel, domain; no Foundry, no data/sheet/rules
  *   application    -> kernel, domain, application; no Foundry
  *   infrastructure -> anything below + Foundry (it implements the ports)
- *   presentation   -> anything below + Foundry
+ *   presentation   -> anything below + Foundry (sheet/** is not yet classified;
+ *                     tracked by the separate follow-up bead)
+ *   rules          -> anything below + Foundry, except that rules files outside
+ *                     the FOUNDRY_COUPLED_RULES allowlist (4 files) must stay
+ *                     Foundry-free
  *   bootstrap      -> everything + Foundry (the composition root)
  *
  * Layers that do not exist yet are simply not scanned, so this test is green
@@ -27,6 +31,7 @@ type Layer =
 	| "application"
 	| "infrastructure"
 	| "presentation"
+	| "rules"
 	| "bootstrap"
 	| "other";
 
@@ -37,6 +42,9 @@ const LAYER_DIRS: ReadonlyArray<readonly [Layer, string]> = [
 	["application", "src/roguetrader/application"],
 	["infrastructure", "src/roguetrader/infrastructure"],
 	["presentation", "src/roguetrader/presentation"],
+	["rules", "src/roguetrader/rules"],
+	// sheet/** is still unclassified (the sheet/init.ts shim is unresolved);
+	// a separate follow-up bead will classify it as presentation.
 	["bootstrap", "src/roguetrader/bootstrap"],
 ];
 
@@ -58,6 +66,19 @@ const ALLOWED: Readonly<Record<Layer, readonly Layer[]>> = {
 		"application",
 		"infrastructure",
 		"presentation",
+		"rules",
+		"other",
+	],
+	// rules -> presentation is a known inversion: rules/roll-system.ts is a
+	// re-export shim over presentation/rolls. The pure-rules guarantee is
+	// enforced by the Foundry-global check with FOUNDRY_COUPLED_RULES instead.
+	rules: [
+		"kernel",
+		"domain",
+		"application",
+		"infrastructure",
+		"presentation",
+		"rules",
 		"other",
 	],
 	bootstrap: [
@@ -66,6 +87,7 @@ const ALLOWED: Readonly<Record<Layer, readonly Layer[]>> = {
 		"application",
 		"infrastructure",
 		"presentation",
+		"rules",
 		"bootstrap",
 		"other",
 	],
@@ -75,6 +97,7 @@ const ALLOWED: Readonly<Record<Layer, readonly Layer[]>> = {
 		"application",
 		"infrastructure",
 		"presentation",
+		"rules",
 		"bootstrap",
 		"other",
 	],
@@ -82,6 +105,17 @@ const ALLOWED: Readonly<Record<Layer, readonly Layer[]>> = {
 
 /** Layers that must stay Foundry-free and self-contained. */
 const INNER: readonly Layer[] = ["kernel", "domain", "application"];
+
+/**
+ * rules/ files that are legitimately Foundry-coupled: the adapter edge.
+ * Everything else under rules/ must stay Foundry-free (bead 5xue).
+ */
+const FOUNDRY_COUPLED_RULES: ReadonlySet<string> = new Set([
+	"src/roguetrader/rules/adapter.ts",
+	"src/roguetrader/rules/battlesuit-repair.ts",
+	"src/roguetrader/rules/roll-system.ts",
+	"src/roguetrader/rules/test-dialog.ts",
+]);
 
 /** Foundry globals an inner layer may never touch (identifier + access). */
 const FOUNDRY_GLOBAL =
@@ -181,6 +215,7 @@ function importSpecs(source: string): Array<{ spec: string; line: number }> {
 
 /** Every architecture violation in one file (empty = clean). */
 export function violationsFor(file: string, source: string): string[] {
+	const rel = path.relative(process.cwd(), file).replaceAll("\\", "/");
 	const layer = classify(file);
 	const allowed = ALLOWED[layer];
 	const violations: string[] = [];
@@ -200,7 +235,7 @@ export function violationsFor(file: string, source: string): string[] {
 		}
 	}
 
-	if (INNER.includes(layer)) {
+	if (INNER.includes(layer) || (layer === "rules" && !FOUNDRY_COUPLED_RULES.has(rel))) {
 		const stripped = stripCommentsAndStrings(source);
 		const match = FOUNDRY_GLOBAL.exec(stripped);
 		if (match) {
@@ -258,6 +293,22 @@ describe("architecture boundaries (epic kof0)", () => {
 		const violations = violationsFor(
 			"src/rules-engine/src/damage.ts",
 			'import type { RuleProfile } from "./profile";\n',
+		);
+		expect(violations).toEqual([]);
+	});
+
+	test("the scanner flags a Foundry global in a non-allowlisted rules file", () => {
+		const violations = violationsFor(
+			"src/roguetrader/rules/x.ts",
+			'export const name = game.i18n.localize("X");\n',
+		);
+		expect(violations.some((v) => v.includes("Foundry global"))).toBe(true);
+	});
+
+	test("the scanner allows an allowlisted rules file to use Foundry", () => {
+		const violations = violationsFor(
+			"src/roguetrader/rules/adapter.ts",
+			'export const doc = foundry.utils.fromUuidSync(uuid);\n',
 		);
 		expect(violations).toEqual([]);
 	});

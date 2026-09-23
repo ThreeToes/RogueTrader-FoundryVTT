@@ -20,6 +20,7 @@ import {
 } from "../../registry";
 import { collectSorceryRank } from "../../rules/talent-effects";
 import { actorView } from "../../infrastructure/foundry/actor-view";
+import { isPsykerLike } from "../../rules/psyker";
 import { criticalSheetContext } from "../../rules/criticals";
 import { rollBattlesuitRepair } from "../../rules/battlesuit-repair";
 import { effectiveSorceryRank } from "../../rules/casting";
@@ -651,21 +652,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
 		const tabs = super._prepareTabs(group);
-		const system = systemOf(this.actor);
-		const hasPowers = this.actor.items.some(
-			(i) =>
-				(i.type as string) === "psychicpower" ||
-				(i.type as string) === "navigatorpower",
-		);
-		if (
-			!(
-				system.psyker === true ||
-				(system.psyRating ?? 0) >= 1 ||
-				(system.sorceryRank ?? "") !== "" ||
-				collectSorceryRank(actorView(this.actor)) > 0 ||
-				hasPowers
-			)
-		) {
+		if (!isPsykerLike(actorView(this.actor))) {
 			delete tabs.psychic;
 		}
 		return tabs;
@@ -839,8 +826,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 		// Psychic tab (bead m4me): owned powers + psyker status; the tab nav
 		// itself is gated in _prepareTabs.
-		context.isPsyker =
-			system.psyker === true || (system.psyRating ?? 0) >= 1;
+		context.isPsyker = isPsykerLike(actorView(this.actor));
 		context.psyRating = system.psyRating ?? 0;
 		// Sorcery (epic 0hap): the rank select + the Table 6-1 sanctioned
 		// toggle. Owned Sorcery talents win; the field is the manual fallback.

@@ -1,0 +1,21 @@
+{
+    "//": "Type-check the non-UI layers (bead hleh).",
+    "//why": [
+        "tsconfig.pure.json covers only rules-engine/domain/application, so a",
+        "wrong import shipped unnoticed (bead hleh). This adds rules/, data/ and",
+        "registry.ts. It deliberately EXCLUDES sheet/, presentation/,",
+        "infrastructure/ and bootstrap/: the ApplicationV2 sheet classes blow up",
+        "the type graph (TS2589 + OOM, see tsconfig.pure.json)."
+    ],
+    "extends": "./tsconfig.json",
+    "compilerOptions": { "noEmit": true },
+    "include": [
+        "src/rules-engine/src/**/*.ts",
+        "src/roguetrader/domain/**/*.ts",
+        "src/roguetrader/application/**/*.ts",
+        "src/roguetrader/rules/**/*.ts",
+        "src/roguetrader/data/**/*.ts",
+        "src/roguetrader/registry.ts"
+    ],
+    "exclude": ["node_modules", "release", "packs", "utils", "**/*.test.ts"]
+}

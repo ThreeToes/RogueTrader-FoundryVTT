@@ -27,6 +27,7 @@ import {
 	num,
 	optionalStr,
 	str,
+	type PackSystem,
 } from "../data/pack-fields";
 import { ChartPool } from "../domain/model/chart";
 
@@ -249,7 +250,7 @@ export function originEntryFromDoc(doc: {
 	name?: string;
 	system?: unknown;
 }): OriginEntry {
-	const s = (doc.system ?? {}) as OriginDocSystem;
+	const s = (doc.system ?? {}) as OriginDocSystem & PackSystem;
 	return {
 		key: str(s, "key"),
 		row: str(s, "row", "home-world") as OriginRow,
@@ -455,9 +456,17 @@ export interface StoredOriginsPayload {
 	path: Array<{ row: string; key: string; variantKey: string }>;
 }
 
+/** The five string fields of `StoredOriginsPayload`/`StoredOrigins` (everything but `path`). */
+type StoredHumanField =
+	| "homeWorld"
+	| "birthright"
+	| "lure"
+	| "trials"
+	| "motivation";
+
 /** The five fixed human fields, in chart order. */
 const STORED_HUMAN_FIELDS: ReadonlyArray<
-	readonly [keyof StoredOriginsPayload, OriginRow]
+	readonly [StoredHumanField, OriginRow]
 > = [
 	["homeWorld", "home-world"],
 	["birthright", "birthright"],
@@ -512,7 +521,7 @@ export function storedOriginsFromPicks(
 		motivation: "",
 		path: [],
 	};
-	const humanField = new Map<OriginRow, keyof StoredOriginsPayload>(
+	const humanField = new Map<OriginRow, StoredHumanField>(
 		STORED_HUMAN_FIELDS.map(([field, row]) => [row, field]),
 	);
 	for (const [row, pick] of Object.entries(picks) as Array<

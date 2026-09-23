@@ -18,6 +18,8 @@ import { openPackItemAction } from "../pack-resolve";
 import { BODY_LOCATION_ORDER } from "../../registry";
 import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
+import { actorView } from "../../infrastructure/foundry/actor-view";
+import { isPsykerLike } from "../../rules/psyker";
 import { enrichText } from "../rich-text";
 import type { RateOfFire } from "../../data/item/rate-of-fire";
 
@@ -101,16 +103,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
 		const tabs = super._prepareTabs(group);
-		const system = systemOf(this.actor);
-		const powers = this.actor.items.filter(
-			(i) =>
-				(i.type as string) === "psychicpower" ||
-				(i.type as string) === "navigatorpower",
-		);
-		if (
-			!(system.psyker === true || (system.psyRating ?? 0) >= 1) &&
-			powers.length === 0
-		) {
+		if (!isPsykerLike(actorView(this.actor))) {
 			delete tabs.psy;
 		}
 		return tabs;
@@ -251,8 +244,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				uuid: compendiumSourceOf(i),
 			})) as never;
 
-		context.isPsyker =
-			system.psyker === true || (system.psyRating ?? 0) >= 1;
+		context.isPsyker = isPsykerLike(actorView(this.actor));
 		// Shared rich-text partial (bead bef7) renders notes via prose-mirror.
 		context.notesHTML = await enrichText(system.notes ?? "", this.actor);
 		return context;

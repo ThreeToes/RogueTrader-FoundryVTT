@@ -164,7 +164,10 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	#finish(result: TestDialogResult | null): void {
 		this.#resolve?.(result);
 		this.#resolve = null;
-		super.close({ force: true });
+		// ApplicationV2#close has no "force" option (ClosingOptions are
+		// animate/closeKey/submitted) and always closes unconditionally — the
+		// old {force: true} argument was silently ignored at runtime.
+		super.close();
 	}
 
 	/** Current difficulty value: DOM select wins, state is the fallback. */
@@ -223,7 +226,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 			out.push({
 				id: "difficulty",
 				source: { type: "dialog" as const, label: "ROLL.DIALOG" },
-				label: game.i18n.localize(
+				label: game.i18n!.localize(
 					`ROLL.DIFFICULTY_${step?.key ?? "CUSTOM"}`),
 				value: difficulty,
 			});
@@ -257,7 +260,9 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		el.textContent = String(target);
 	}
 
-	async _prepareContext(options: object = {}) {
+	override async _prepareContext(
+		options: Parameters<InstanceType<typeof ApplicationV2>["_prepareContext"]>[0],
+	) {
 		const context = (await super._prepareContext(options)) as Record<
 			string,
 			unknown
@@ -270,7 +275,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		}));
 		context.conditions = this.#conditions.map((key) => ({
 			key,
-			label: game.i18n.localize(talentConditions.get(key) ?? key),
+			label: game.i18n!.localize(talentConditions.get(key) ?? key),
 			checked: this.#conditionState[key] ?? false,
 		}));
 		context.customModifiers = this.#custom;
@@ -278,7 +283,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		context.difficulty = DIFFICULTY_LADDER.map((d) => ({
 			key: d.key,
 			value: d.value,
-			label: game.i18n.localize(`ROLL.DIFFICULTY_${d.key}`),
+			label: game.i18n!.localize(`ROLL.DIFFICULTY_${d.key}`),
 		}));
 		context.difficultyValue = this.#difficultyValue;
 		context.previewTarget = Math.min(
@@ -288,8 +293,11 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		return context;
 	}
 
-	_onRender() {
-		super._onRender();
+	override async _onRender(
+		context: Parameters<InstanceType<typeof ApplicationV2>["_onRender"]>[0],
+		options: Parameters<InstanceType<typeof ApplicationV2>["_onRender"]>[1],
+	): Promise<void> {
+		await super._onRender(context, options);
 		this.#updatePreview();
 		// Foundry action delegation is unreliable on change events (see the
 		// difficulty select); listen natively so a guard toggle refreshes the
@@ -328,9 +336,12 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	static #onDifficulty(
 		this: TestDialog,
 		_event: unknown,
-		target: HTMLSelectElement,
+		target: HTMLElement,
 	): void {
-		const raw = target.value;
+		// Foundry action delegation hands us the bare HTMLElement; the select
+		// carries the value (narrowed here, once, at the boundary).
+		const select = target as HTMLSelectElement;
+		const raw = select.value;
 		this.#difficultyValue = raw === "" ? null : Number(raw);
 		this.#updatePreview();
 	}
@@ -365,14 +376,16 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.#finish(null);
 	}
 
-	override async close(options: { force?: boolean } = {}): Promise<void> {
+	override async close(
+		options: Parameters<InstanceType<typeof ApplicationV2>["close"]>[0] = {},
+	): Promise<this> {
 		// Delegate exactly once: a pending promise resolves to null (cancel)
-		// and #finish performs the forced close itself (bead uc5).
+		// and #finish performs the close itself (bead uc5).
 		if (this.#resolve) {
 			this.#finish(null);
-			return;
+			return this;
 		}
-		await super.close(options);
+		return super.close(options);
 	}
 }
 

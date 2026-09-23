@@ -37,31 +37,37 @@ from `application/ports.ts`.
 
 ```ts
 interface Ports {
-  dice:    { roll(formula: string): Promise<DiceResult> };
-  chat:    { post(template, vars, flags?): Promise<{ id?: string } | undefined>;
-             update(id, flags): Promise<void> };
-  targets: { current(): ActorView | null };
-  packs:   { capabilities(): PackCapabilities;
-             documents(packId): Promise<unknown[]>;
-             find(packId, name): Promise<unknown | null> };
-  notify:  { warn(key, vars?): void; info(key, vars?): void };
-  i18n:    { t(key, vars?): string };
-  config:  { homebrew(): HomebrewProfile | null;
-             originTraits(): OriginTraitDef[] };
-  clock:   { round(): number };
-  actors:  { update(actorId, patch): Promise<void>;
-             addEffects(actorId, data): Promise<void>;
-             removeEffects(actorId, ids): Promise<void> };
+  dice:        { roll(formula): Promise<DiceResult> };
+  chat:        { post(actor, template, vars, flags?): Promise<{ id? } | undefined>;
+                 postHtml(actor, content): Promise<{ id? } | undefined>;
+                 update(messageId, data): Promise<void> };
+  targets:     { view(): ActorView | null; actor(): unknown | null };
+  clock:       { round(): number };
+  notify:      { warn(key, vars?): void; info(key, vars?): void };
+  i18n:        { t(key, vars?): string };
+  config:      { homebrew(): unknown; originTraits(): unknown[] };
+  content:     { capabilities(): ContentCapabilities;
+                 documents(packId): Promise<unknown[]>;
+                 find(packId, name): Promise<ContentTable | null> };
+  actors:      { update(actor, patch): Promise<void>;
+                 createEffects(actor, data): Promise<void>;
+                 deleteEffects(actor, ids): Promise<void> };
+  permissions: { canRoll(actor): boolean };
 }
 ```
+
+(`content` is the `ContentPort` — capability probe, pack documents, find-by-name.)
 
 Domain and application return **i18n keys**, not localized strings; presentation
 localizes. That is what makes the rules runnable headlessly in tests.
 
 ## The read model
 
-Rules never take a Foundry `Actor`. They take an `ActorView` — a plain, typed
-snapshot built once per roll by `infrastructure/foundry/actor-view.ts`:
+`domain/` and `application/` never take a Foundry `Actor`. They take an
+`ActorView` — a plain, typed snapshot built once per roll by
+`infrastructure/foundry/actor-view.ts`. (The `rules/` layer is still
+Foundry-coupled here: `rules/adapter.ts` and `rules/roll-contract.ts` accept
+Foundry `Actor` documents; see bead `foundryvtt-rogue-trader-5xue`.)
 
 ```ts
 interface ActorView {
@@ -118,12 +124,18 @@ single registration — not a new collector.
 | --- | --- |
 | an effect kind | one registration in `domain/effects/registry.ts` |
 | a roll kind | one `RollDefinition` (exhaustive map → compile error if missing) |
-| a new FFG system (DH2, BC…) | a `RuleProfile` + a `bootstrap` wiring; kernel unchanged |
+| a new FFG system (DH2, BC…) | a `RuleProfile`/`SystemProfile` + registries + a `bootstrap` wiring, **plus** hoisting the system-neutral layers (`domain`, `application`, `presentation/rolls`, `rules/funnel`, `infrastructure`) out of `src/roguetrader/` — the current `RuleProfile` is far too thin to express another system. See epic `foundryvtt-rogue-trader-hr6r` and its children |
 | an item type | its DataModel + the `ActorView` builder mapping |
 | a house rule | homebrew profile data, read through `ports.config` |
 
 ## Enforcement
 
-`src/roguetrader/architecture.test.ts` scans the source and fails on any import or
-Foundry-global use that breaks the table above. Run `bun test` after a structural
-change — it is the guard rail that keeps this document true.
+`src/roguetrader/architecture.test.ts` scans the six directories in its
+`LAYER_DIRS` table — kernel (`src/rules-engine/src`), domain, application,
+infrastructure, presentation and bootstrap — and fails on any import or
+Foundry-global use that breaks the table above. Everything else (notably
+`src/roguetrader/rules/**` and `src/roguetrader/sheet/**`) falls into an
+unchecked `other` bucket and is **not** scanned; bead
+`foundryvtt-rogue-trader-5xue` tracks bringing those directories under
+enforcement. Run `bun test` after a structural change — it is the guard rail
+that keeps this document true.

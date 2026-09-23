@@ -49,11 +49,11 @@ export const skillHandler: RollHandler<"skill"> = {
 
 async function prepareTrainedSkill(
 	request: Extract<RollRequest, { kind: "skill" }>,
-): Promise<PreparedRoll | null> {
+): Promise<PreparedRoll<"skill"> | null> {
 	const ports = getPorts();
 	const actor = request.actor;
 	const item = actor.items.get(request.itemId ?? "");
-	if (!item || item.type !== "skill") {
+	if (!item || (item.type as string) !== "skill") {
 		ports.notify.warn("ROLL.UNKNOWN_SKILL");
 		return null;
 	}
@@ -86,7 +86,7 @@ async function prepareTrainedSkill(
 
 async function prepareUntrainedSkill(
 	request: Extract<RollRequest, { kind: "skill" }>,
-): Promise<PreparedRoll | null> {
+): Promise<PreparedRoll<"skill"> | null> {
 	const ports = getPorts();
 	const actor = request.actor;
 	const characteristicKey = request.characteristicKey ?? "";

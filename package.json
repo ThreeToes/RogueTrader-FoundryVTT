@@ -11,6 +11,7 @@
         "watch": "bun utils/build.ts --watch",
         "lint": "biome lint",
         "typecheck:pure": "tsc -p tsconfig.pure.json",
+        "typecheck:scoped": "tsc -p tsconfig.scoped.json",
         "format": "biome format --write",
         "check": "biome check"
     },

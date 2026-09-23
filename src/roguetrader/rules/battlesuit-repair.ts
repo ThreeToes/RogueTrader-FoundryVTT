@@ -34,7 +34,10 @@ export async function rollBattlesuitRepair(actor: unknown): Promise<{
 	}
 	const modifier: Modifier = {
 		id: "battlesuit-repair-hard",
-		source: "battlesuit-repair",
+		source: {
+			type: "macro",
+			label: game.i18n!.localize("CRITICAL.REPAIR_MODIFIER"),
+		},
 		label: game.i18n!.localize("CRITICAL.REPAIR_MODIFIER"),
 		value: REPAIR_TEST_MODIFIER,
 	};
@@ -51,7 +54,7 @@ export async function rollBattlesuitRepair(actor: unknown): Promise<{
 		degrees,
 	);
 	ui.notifications?.info(
-		game.i18n!.format("CRITICAL.REPAIRED", { count: removed }),
+		game.i18n!.format("CRITICAL.REPAIRED", { count: String(removed) }),
 	);
 	return { removed, remaining, degrees };
 }

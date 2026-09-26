@@ -7,9 +7,9 @@
  * kernel. Functions NEVER mutate documents - callers render or decide.
  */
 
-import type { ActorView } from "../domain/model/actor";
-import { collectEffects } from "../domain/effects";
-import type { EffectData } from "../domain/model/effect";
+import type { ActorView } from "../../ffg/domain/model/actor";
+import { collectEffects } from "../../ffg/domain/effects";
+import type { EffectData } from "../../ffg/domain/model/effect";
 
 /** Minimal shape of an owned item whose effects feed derived values. */
 export interface OwnedItemLike {

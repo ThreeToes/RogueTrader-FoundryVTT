@@ -17,7 +17,7 @@ import { MAX_CRITICAL_SEVERITY } from "../../../rules-engine/src/index";
 export {
 	CHARACTERISTIC_KEYS,
 	type CharacteristicKey,
-} from "../../domain/model/taxonomy";
+} from "../../../ffg/domain/model/taxonomy";
 
 export class Character extends foundry.abstract.TypeDataModel<
 	foundry.data.fields.DataSchema,

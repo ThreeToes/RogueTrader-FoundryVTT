@@ -19,14 +19,23 @@ so a violation fails `bun test` instead of quietly rotting the design.
 `infrastructure/` sits beside `application`/`domain` and is the **only** place that
 implements the ports with real Foundry APIs. `bootstrap/` is the composition root.
 
+Some layers are already hoisted into the system-neutral `src/ffg/` tree; the
+rest still live under `src/roguetrader/` and are pending the system
+parameterisation (epic `foundryvtt-rogue-trader-hr6r`).
+
 | Layer | Path | May import |
 | --- | --- | --- |
 | Kernel | `src/rules-engine/src/**` | other kernel files only |
-| Domain | `src/roguetrader/domain/**` | kernel, `domain/**` |
-| Application | `src/roguetrader/application/**` | kernel, domain, `application/ports` |
-| Infrastructure | `src/roguetrader/infrastructure/**` | everything below + Foundry |
+| Domain | `src/ffg/domain/**` | kernel, `domain/**` |
+| Application | `src/ffg/application/**` | kernel, domain, `application/ports` |
+| Infrastructure | `src/ffg/infrastructure/**`, `src/roguetrader/infrastructure/**` | everything below + Foundry |
 | Presentation | `src/roguetrader/presentation/**`, `sheet/**` | everything below + Foundry |
 | Bootstrap | `src/roguetrader/bootstrap/**` | everything + Foundry |
+
+Still under `src/roguetrader/` (pending the hoist): `rules/**`, `data/**`,
+`sheet/**`, `bootstrap/**`, `presentation/rolls/**`, `registry.ts`, and the
+`infrastructure/foundry/` content + ports adapters (`content.ts`, `ports.ts`,
+`profile-port.ts`).
 
 **Never allowed below `infrastructure`:** the globals `foundry`, `game`, `CONFIG`,
 `ui`, `Hooks`, `canvas`, or an import from `fvtt-types`. If a rule needs a die, a
@@ -65,7 +74,7 @@ localizes. That is what makes the rules runnable headlessly in tests.
 
 `domain/` and `application/` never take a Foundry `Actor`. They take an
 `ActorView` — a plain, typed snapshot built once per roll by
-`infrastructure/foundry/actor-view.ts`. (The `rules/` layer is still
+`infrastructure/foundry/actor-view.ts` (`src/ffg/infrastructure/foundry/`). (The `rules/` layer is still
 Foundry-coupled here: `rules/adapter.ts` and `rules/roll-contract.ts` accept
 Foundry `Actor` documents; see bead `foundryvtt-rogue-trader-5xue`.)
 
@@ -96,7 +105,7 @@ ships zero compendium packs, so:
   configure**: packs are auto-detected at call time.
 
 Every content dependency goes through the `ContentPort` (`application/ports.ts`);
-its Foundry implementation (`infrastructure/foundry/content.ts`) returns `[]`/`null`
+its Foundry implementation (`src/roguetrader/infrastructure/foundry/content.ts`) returns `[]`/`null`
 rather than throwing, and each consumer has a documented fallback:
 
 | Content missing | Fallback |
@@ -122,9 +131,9 @@ single registration — not a new collector.
 
 | To add… | You touch |
 | --- | --- |
-| an effect kind | one registration in `domain/effects/registry.ts` |
+| an effect kind | one registration in `src/ffg/domain/effects/registry.ts` |
 | a roll kind | one `RollDefinition` (exhaustive map → compile error if missing) |
-| a new FFG system (DH2, BC…) | a `RuleProfile`/`SystemProfile` + registries + a `bootstrap` wiring, **plus** hoisting the system-neutral layers (`domain`, `application`, `presentation/rolls`, `rules/funnel`, `infrastructure`) out of `src/roguetrader/` — the current `RuleProfile` is far too thin to express another system. See epic `foundryvtt-rogue-trader-hr6r` and its children |
+| a new FFG system (DH2, BC…) | a `RuleProfile`/`SystemProfile` + registries + a `bootstrap` wiring — the current `RuleProfile` is far too thin to express another system. The system-neutral layers (`domain`, `application`, `infrastructure/foundry/actor-view`) already live in `src/ffg/`; hoisting the rest (`presentation/rolls`, `rules`, `data`, the Foundry content/ports adapters) is tracked under epic `foundryvtt-rogue-trader-hr6r` and its children |
 | an item type | its DataModel + the `ActorView` builder mapping |
 | a house rule | homebrew profile data, read through `ports.config` |
 

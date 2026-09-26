@@ -17,7 +17,7 @@ import { openPackItemAction } from "../pack-resolve";
 import { armourLocations, weaponRows } from "./view-models";
 import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
-import { actorView } from "../../infrastructure/foundry/actor-view";
+import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { isPsykerLike } from "../../rules/psyker";
 import { enrichText } from "../rich-text";
 

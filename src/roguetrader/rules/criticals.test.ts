@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	NO_CONTENT_PORT,
 	type ContentPort,
-} from "../application/ports";
+} from "../../ffg/application/ports";
 import {
 	criticalSheetContext,
 	criticalsOf,

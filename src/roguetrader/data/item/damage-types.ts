@@ -4,4 +4,4 @@
  * keep working during the migration; new code should import from
  * `domain/model` directly.
  */
-export { DamageType, normaliseDamageType } from "../../domain/model/damage";
+export { DamageType, normaliseDamageType } from "../../../ffg/domain/model/damage";

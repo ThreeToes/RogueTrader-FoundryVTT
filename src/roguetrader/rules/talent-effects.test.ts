@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildActorView, type LooseActor } from "../domain/model/build";
+import { buildActorView, type LooseActor } from "../../ffg/domain/model/build";
 import {
 	applyTearing,
 	collectRollMechanicEffects as collectRollMechanicEffectsView,

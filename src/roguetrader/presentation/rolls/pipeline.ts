@@ -10,11 +10,10 @@
 import {
 	type Modifier,
 	resolveTest,
-	rtCore,
 	sumModifiers,
 	type TestOutcome,
 } from "../../../rules-engine/src/index";
-import type { ActorView } from "../../domain/model/actor";
+import type { ActorView } from "../../../ffg/domain/model/actor";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { postCard } from "../../rules/chat-flags";
 import {
@@ -58,6 +57,9 @@ export async function runTest(
 	context: RollContext,
 ): Promise<{ outcome: TestOutcome; messageId: string | null; target: number }> {
 	const ports = getPorts();
+	// Bead yojf: the kernel profile resolves through ports.config.profile()
+	// instead of a direct rtCore import, so a sibling module swaps one binding.
+	const ruleProfile = ports.config.profile();
 	const collected = collectTestModifiers(
 		view,
 		{
@@ -79,7 +81,7 @@ export async function runTest(
 		profile:
 			prepared.autoFailRoll !== undefined || prepared.autoPassRoll !== undefined
 				? {
-						...rtCore,
+						...ruleProfile,
 						...(prepared.autoFailRoll !== undefined
 							? { autoFailRoll: prepared.autoFailRoll }
 							: {}),
@@ -87,7 +89,7 @@ export async function runTest(
 							? { autoPassRoll: prepared.autoPassRoll }
 							: {}),
 					}
-				: rtCore,
+				: ruleProfile,
 	});
 	const outcomeLabel = outcome.success
 		? `${ports.i18n.t("ROLL.SUCCESS")} (+${outcome.degrees} ${ports.i18n.t("ROLL.DEGREES")})`

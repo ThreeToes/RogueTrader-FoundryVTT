@@ -39,6 +39,55 @@ export interface RuleProfile {
 	 * VERIFY against the book.)
 	 */
 	hitLocations: Record<string, string>;
+
+	// ------------------------------------------------------------------
+	// Extension points for sibling systems (bead yojf). Optional so a
+	// profile need only carry what differs; rtCore keeps the values that
+	// exist in the repo today and leaves null where content ports or the
+	// packs resolve the data (no fabricated values).
+	// ------------------------------------------------------------------
+
+	/**
+	 * Characteristic vocabulary in book order, plus the i18n label-key prefix
+	 * used for characteristic names (RT: "CHARACTERISTIC.WS" etc.). DH2/OW/BC
+	 * share the FFG nine; the prefix lets a localisation set differ.
+	 */
+	characteristics?: { keys: readonly string[]; labelPrefix: string };
+	/**
+	 * Skill catalog source. RT resolves skills through the content port
+	 * (compendium), so there is no static catalog in the profile; a sibling
+	 * system may name a pack id instead.
+	 */
+	skillCatalogPack?: string | null;
+	/**
+	 * xp/advancement model discriminator. RT records advances in a spent
+	 * ledger (advancement.ts); DH2 uses aptitudes, Only War a regiment
+	 * structure — those are sibling values.
+	 */
+	advancement?: { xpModel: "spent-ledger" | "aptitudes" | "regiment" | string };
+	/**
+	 * Starter Wounds as data (the SpeciesWoundsSpec shape at the rules layer:
+	 * multiplier x TB + dice + flat; RT human = 2xTB, dice/wound bonus come
+	 * from the origin, Core Rulebook p13). Omitted values fall back to the
+	 * rules layer's own defaults.
+	 */
+	startingWounds?: { toughnessMultiplier: number; dice: string; flat: number };
+	/**
+	 * Starting Fate model. RT rolls 1d10 against printed bands
+	 * (fateFromBands); a table-driven system names "table".
+	 */
+	startingFate?: { model: "bands" | "table" };
+	/**
+	 * Psychic/phenomena model: the Perils of the Warp table source. RT
+	 * resolves phenomena tables through the content port by name, so the
+	 * profile stays null; a sibling system may pin a pack id.
+	 */
+	psychic?: { phenomenaTablePack: string | null };
+	/**
+	 * Critical-hit table sources (core + vehicle/battlesuit). Null = resolved
+	 * through the content port; a sibling system may pin pack ids.
+	 */
+	criticalTables?: { core: string | null; vehicle: string | null };
 }
 
 /** Rogue Trader core profile. */
@@ -49,6 +98,26 @@ export const rtCore: RuleProfile = {
 	autoPassRoll: null,
 	primitiveArmourDouble: true,
 	righteousFury: { enabled: true, trigger: "damaging-hit" },
+	characteristics: {
+		keys: [
+			"ws",
+			"bs",
+			"s",
+			"t",
+			"ag",
+			"int",
+			"per",
+			"wp",
+			"fel",
+		],
+		labelPrefix: "CHARACTERISTIC",
+	},
+	skillCatalogPack: null,
+	advancement: { xpModel: "spent-ledger" },
+	startingWounds: { toughnessMultiplier: 2, dice: "", flat: 0 },
+	startingFate: { model: "bands" },
+	psychic: { phenomenaTablePack: null },
+	criticalTables: { core: null, vehicle: null },
 	// tens digit of the to-hit roll -> body location (VERIFY against book)
 	hitLocations: {
 		"0": "left-leg",

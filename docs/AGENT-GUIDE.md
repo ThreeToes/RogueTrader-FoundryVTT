@@ -190,7 +190,7 @@ to confirm every call site supplies them.
 Session-earned map of where things live (beads fjw/yb6/r1k/bpd/ay0/g7k/tfk/9if):
 
 - **Effect kinds**: registry + handlers = `src/roguetrader/rules/talent-effects.ts`
-  (`talentEffectHandlers` seam, CONFIG-attached in `sheet/init.ts`); test-modifier
+  (`talentEffectHandlers` seam, CONFIG-attached in `bootstrap/config.ts`); test-modifier
   collection = `rules/funnel.ts` (`collectTestModifiers`, contributor registry
   `testContributors`); damage pipeline = `rules/adapter.ts` +
   `collectTalentDamageEffects` (weapon-scoped since 2k5: the attacking weapon's

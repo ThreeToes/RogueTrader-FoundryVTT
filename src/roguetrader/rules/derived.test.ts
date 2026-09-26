@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildActorView } from "../domain/model/build";
+import { buildActorView } from "../../ffg/domain/model/build";
 import {
 	corruptionThreshold,
 	fatigueThreshold,

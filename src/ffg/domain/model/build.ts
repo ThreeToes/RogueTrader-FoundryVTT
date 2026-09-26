@@ -7,14 +7,15 @@
  * definition of how an item/effect becomes a view.
  */
 
-import { attackProfileOf } from "./attack";
 import type {
 	ActorSystemView,
 	ActorView,
 	CharacteristicView,
 	EffectView,
 	ItemView,
+	SystemViewBase,
 } from "./actor";
+import { attackProfileOf } from "./attack";
 import type { EffectData } from "./effect";
 import { equipStateOf } from "./taxonomy";
 
@@ -86,16 +87,19 @@ export function effectView(effect: LooseEffect): EffectView {
 }
 
 /** Snapshot loose document-shaped input into the typed read model. */
-export function buildActorView(input: LooseActor): ActorView {
-	const system = (input.system ?? {}) as ActorSystemView;
+export function buildActorView<S extends SystemViewBase = ActorSystemView>(
+	input: LooseActor,
+): ActorView<S> {
+	const system = (input.system ?? {}) as S;
 	return {
 		id: input.id ?? "",
 		uuid: input.uuid ?? "",
 		name: input.name ?? "",
 		type: String(input.type ?? ""),
 		system,
-		characteristics: (system.characteristics ??
-			{}) as Readonly<Record<string, CharacteristicView>>,
+		characteristics: (system.characteristics ?? {}) as Readonly<
+			Record<string, CharacteristicView>
+		>,
 		items: toArray<LooseItem>(input.items).map(itemView),
 		effects: toArray<LooseEffect>(input.effects).map(effectView),
 		appliedEffects: toArray<LooseEffect>(

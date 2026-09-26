@@ -11,8 +11,8 @@
     "compilerOptions": { "noEmit": true },
     "include": [
         "src/rules-engine/src/**/*.ts",
-        "src/roguetrader/domain/**/*.ts",
-        "src/roguetrader/application/**/*.ts",
+        "src/ffg/domain/**/*.ts",
+        "src/ffg/application/**/*.ts",
         "src/roguetrader/rules/**/*.ts",
         "src/roguetrader/data/**/*.ts",
         "src/roguetrader/registry.ts"

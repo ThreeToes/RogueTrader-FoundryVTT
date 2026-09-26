@@ -19,7 +19,7 @@
  * only).
  */
 
-import { ChartPool } from "../domain/model/chart";
+import { ChartPool } from "../../ffg/domain/model/chart";
 
 export type WarrantRow =
 	| "warrant-age"

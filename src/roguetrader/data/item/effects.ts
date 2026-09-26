@@ -17,7 +17,7 @@ export {
 	effectsAreLive,
 	withAddedEffect,
 	withoutEffectAt,
-} from "../../domain/model/effect";
+} from "../../../ffg/domain/model/effect";
 
 /** Schema factory for the effect list; identical shape across item types. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- matches Talent's inferred field type

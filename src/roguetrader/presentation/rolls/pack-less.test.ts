@@ -62,7 +62,7 @@ for (const key of ["game", "ui", "foundry"]) {
 
 const { performRoll } = await import("./perform");
 const { TestDialog } = await import("../../rules/test-dialog");
-const { NO_CONTENT_PORT } = await import("../../application/ports");
+const { NO_CONTENT_PORT } = await import("../../../ffg/application/ports");
 const { foundryPorts, resetPorts, setPorts } = await import(
 	"../../infrastructure/foundry/ports"
 );

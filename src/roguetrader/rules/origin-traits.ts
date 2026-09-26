@@ -13,6 +13,8 @@
  */
 
 import { storedOriginPicks, type StoredOrigins } from "./origins";
+import { testContributors } from "../../ffg/application/funnel";
+import { getPorts } from "../infrastructure/foundry/ports";
 
 export interface OriginTraitDef {
 	name: string;
@@ -87,3 +89,28 @@ export function resolveOriginTraits(
 export function traitModifierId(def: OriginTraitDef): string {
 	return `origin-trait:${traitDefKey(def)}:${def.testKey || "any"}:${def.value}`;
 }
+
+// ---------------------------------------------------------------------------
+// Built-in funnel contributor (bead tgq9), hoisted out of the (now
+// system-neutral) funnel into the RT module that owns the data (bead 8ycd).
+// Traits derive at runtime from Character.system.origins -> cached pack
+// definitions. Modifier-kind traits contribute test modifiers with stable ids
+// (additive); grants/notes render on the Background tab and never contribute
+// here. Definitions come through the config seam (ports.config.originTraits()),
+// so this file stays Foundry-free.
+testContributors.register("origin-traits", (view, context) => {
+	const defs = getPorts().config.originTraits() as OriginTraitDef[];
+	if (defs.length === 0) return [];
+	const origins = view.system.origins as never;
+	if (!origins) return [];
+	// Pure resolution (above; no import cycle — it does not import the funnel).
+	const { modifiers } = resolveOriginTraits(origins, defs);
+	return modifiers
+		.filter((m) => m.def.testKey === "" || m.def.testKey === context.key)
+		.map((m) => ({
+			id: traitModifierId(m.def),
+			source: { type: "item", label: "BACKGROUND.ORIGINS" },
+			label: m.def.name,
+			value: m.def.value,
+		}));
+});

@@ -7,10 +7,14 @@ export {
 	type ActorSystemView,
 	type ActorView,
 	type CharacteristicView,
+	type CharacterSystemView,
 	type EffectView,
-	itemById,
 	type ItemView,
+	itemById,
 	itemsOfType,
+	type ShipSystemView,
+	type SystemViewBase,
+	type VehicleSystemView,
 } from "./actor";
 export {
 	type AttackProfile,
@@ -40,6 +44,6 @@ export {
 	equipStateOf,
 	isReady,
 	isWeaponType,
-	type WeaponItemType,
 	WEAPON_ITEM_TYPES,
+	type WeaponItemType,
 } from "./taxonomy";

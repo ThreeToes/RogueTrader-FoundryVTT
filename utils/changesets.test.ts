@@ -185,6 +185,7 @@ describe("isPackReference", () => {
 	it("flags src/packs paths", () => {
 		expect(isPackReference("Added data under src/packs")).toBe(true);
 		expect(isPackReference("Added src/packs/rogue_trader/x.yaml")).toBe(true);
+		expect(isPackReference("moved to src/packs npcs")).toBe(true);
 	});
 
 	it("ignores prose that merely says packs or packer", () => {

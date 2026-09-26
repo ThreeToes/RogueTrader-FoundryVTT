@@ -21,7 +21,7 @@ export {
 	isWeaponType,
 	type WeaponItemType,
 	WEAPON_ITEM_TYPES,
-} from "../domain/model/taxonomy";
+} from "../../ffg/domain/model/taxonomy";
 
 /**
  * The unified pc/npc character system model. Every CharacterData-carrying

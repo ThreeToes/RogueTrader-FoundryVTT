@@ -1,6 +1,6 @@
 import { effectiveSorceryRank } from "./casting";
 import { collectSorceryRank } from "./talent-effects";
-import type { ActorView } from "../domain/model/actor";
+import type { ActorView } from "../../ffg/domain/model/actor";
 
 /**
  * Is this actor a psyker for UI purposes (bead n9x7)?

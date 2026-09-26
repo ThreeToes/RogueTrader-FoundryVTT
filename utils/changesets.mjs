@@ -118,5 +118,5 @@ export function renderReleaseNotes(system, version, changesets) {
 
 /** True when text names src/packs or a src/packs/... path. */
 export function isPackReference(text) {
-	return /(^|[\s`(])src\/packs(\/|$)/.test(String(text));
+	return /src\/packs/.test(String(text));
 }

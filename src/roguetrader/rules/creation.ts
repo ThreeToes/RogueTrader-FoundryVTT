@@ -11,16 +11,28 @@
 import {
 	CHARACTERISTIC_KEYS,
 	type CharacteristicKey,
-} from "../domain/model/taxonomy";
+} from "../../ffg/domain/model/taxonomy";
 import { type ResolvedOrigin } from "./origins";
+import {
+	DEFAULT_SYSTEM_PROFILE,
+	rtCore,
+	type SystemProfile,
+} from "../../ffg/domain/system-profile";
 
-export type { ResolvedOrigin };
+export type { ResolvedOrigin, SystemProfile };
+export { DEFAULT_SYSTEM_PROFILE, rtCore };
 
-/** Base characteristic value before allocation (both methods, p14). */
-export const CHARACTERISTIC_BASE = 25;
+/**
+ * Base characteristic value before allocation (both methods, p14).
+ *
+ * RT profile data (bead yszf) — a sibling system supplies its own
+ * SystemProfile to the resolvers; these re-exports keep the RT values
+ * working for the sheet layer and tests.
+ */
+export const CHARACTERISTIC_BASE: number = rtCore.characteristicBase;
 /** Point-buy budget and per-characteristic cap (p14 "Allocating Points"). */
-export const POINT_BUY_BUDGET = 100;
-export const POINT_BUY_MAX = 20;
+export const POINT_BUY_BUDGET: number = rtCore.pointBuyBudget;
+export const POINT_BUY_MAX: number = rtCore.pointBuyMax;
 
 export interface PointBuyValidation {
 	total: number;
@@ -29,21 +41,23 @@ export interface PointBuyValidation {
 	overCap: CharacteristicKey[];
 }
 
-/** Validate a point-buy allocation against the p14 budget/cap rules. */
+/** Validate a point-buy allocation against the profile's budget/cap rules. */
 export function validatePointBuy(
 	allocated: Partial<Record<CharacteristicKey, number>>,
+	profile: SystemProfile = DEFAULT_SYSTEM_PROFILE,
 ): PointBuyValidation {
 	const total = Object.values(allocated).reduce<number>(
 		(sum, value) => sum + (value ?? 0),
 		0,
 	);
 	const overCap = CHARACTERISTIC_KEYS.filter(
-		(key) => (allocated[key] ?? 0) > POINT_BUY_MAX,
+		(key) => (allocated[key] ?? 0) > profile.pointBuyMax,
 	);
 	return {
 		total,
-		remaining: POINT_BUY_BUDGET - total,
-		valid: total <= POINT_BUY_BUDGET && overCap.length === 0,
+		remaining: profile.pointBuyBudget - total,
+		valid:
+			total <= profile.pointBuyBudget && overCap.length === 0,
 		overCap,
 	};
 }
@@ -56,16 +70,21 @@ export function validatePointBuy(
  * `canCreate` (which is `step === 3 && ...`) disabled Next on every earlier
  * step. Pure + testable.
  */
-export function creatorCanAdvance(step: number, canCreate: boolean): boolean {
-	return step !== CREATOR_LAST_STEP || canCreate;
+export function creatorCanAdvance(
+	step: number,
+	canCreate: boolean,
+	profile: SystemProfile = DEFAULT_SYSTEM_PROFILE,
+): boolean {
+	return step !== profile.creatorLastStep || canCreate;
 }
 
 /**
  * The creator's final step index (bead ghmn added a Species step at 0, so the
  * wizard is now 0 species, 1 characteristics, 2 origin, 3 career/review,
  * 4 equipment). Keep the creator's step bounds and this constant in sync.
+ * Profile data (bead yszf) — see system-profile.ts.
  */
-export const CREATOR_LAST_STEP = 4;
+export const CREATOR_LAST_STEP: number = rtCore.creatorLastStep;
 
 /**
  * Final characteristics: base (or rolled values) plus origin deltas,
@@ -204,7 +223,7 @@ function humanBaseMap(humanBase: number): Record<CharacteristicKey, number> {
  */
 export function speciesOptions(
 	sources: Array<SpeciesSource | undefined> | undefined,
-	humanBase = CHARACTERISTIC_BASE,
+	humanBase: number = DEFAULT_SYSTEM_PROFILE.characteristicBase,
 ): SpeciesOption[] {
 	const human: SpeciesOption = {
 		key: HUMAN_SPECIES_KEY,

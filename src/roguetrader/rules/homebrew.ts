@@ -12,7 +12,54 @@
  * Full Auto +20 — the owner's motivating example for tuning).
  */
 
-import { pushCap } from "./psychic";
+import {
+	DEFAULT_SYSTEM_PROFILE,
+	rtCore,
+	type SystemProfile,
+} from "../../ffg/domain/system-profile";
+import type { Modifier } from "../../rules-engine/src/modifier";
+import { testContributors } from "../../ffg/application/funnel";
+import { getPorts } from "../infrastructure/foundry/ports";
+
+// ---------------------------------------------------------------------------
+// Built-in funnel contributor: attack action modifiers (bead hyv), hoisted out
+// of the (now system-neutral) funnel into the RT module that owns the data
+// (bead 8ycd). Values VERIFIED against the core action table (p237):
+//   Semi-Auto Burst: "+10 to BS, additional hit for every two degrees"
+//   Full Auto Burst: "+20 to BS, additional hit for every degree"
+// Additional hits are out of scope here (to-hit modifier only). The core
+// bonuses come from the profile seam (ports.config.profile()); the homebrew
+// override comes from ports.config.homebrew() — data-driven house rules, no
+// core-code edits (bead 9if).
+// ---------------------------------------------------------------------------
+testContributors.register("attack-context", (_view, context) => {
+	if (context.kind !== "attack") return [];
+	const homebrew = getPorts().config.homebrew() as HomebrewProfile | null;
+	const mods: Modifier[] = [];
+	if (context.fireMode === "burst") {
+		const burst = resolveFireModeBonus(homebrew, "burst");
+		if (burst !== null) {
+			mods.push({
+				id: "attack:fire-mode:burst",
+				source: { type: "item", label: "ROLL.FIRE_MODE_BURST" },
+				label: "Semi-Auto Burst",
+				value: burst,
+			});
+		}
+	}
+	if (context.fireMode === "full") {
+		const full = resolveFireModeBonus(homebrew, "full");
+		if (full !== null) {
+			mods.push({
+				id: "attack:fire-mode:full",
+				source: { type: "item", label: "ROLL.FIRE_MODE_FULL" },
+				label: "Full Auto Burst",
+				value: full,
+			});
+		}
+	}
+	return mods;
+});
 
 /** Homebrew overrides. Every field optional; absent = core rule applies. */
 export interface HomebrewProfile {
@@ -27,14 +74,11 @@ export interface HomebrewProfile {
 	pushCap?: { sanctioned: number; other: number };
 }
 
-/** Core book values (Core Rulebook p237, verified in the attack-context contributor). */
-export const CORE_FIRE_MODE_BONUS = { burst: 10, full: 20 } as const;
+/** Core book values (Core Rulebook p237) — RT profile data (bead yszf). */
+export const CORE_FIRE_MODE_BONUS = rtCore.fireModeBonus;
 
-/** Core Push caps (Table 6-1, Core Rulebook p157): sanctioned +3, others +4. */
-export const CORE_PUSH_CAP = {
-	sanctioned: pushCap(true),
-	other: pushCap(false),
-} as const;
+/** Core Push caps (Table 6-1, Core Rulebook p157) — RT profile data. */
+export const CORE_PUSH_CAP = rtCore.pushCap;
 
 /** No homebrew active. */
 export const NO_HOMEBREW: HomebrewProfile = { id: "rt-core" };
@@ -46,6 +90,7 @@ export const NO_HOMEBREW: HomebrewProfile = { id: "rt-core" };
 export function resolveFireModeBonus(
 	profile: HomebrewProfile | null | undefined,
 	mode: "burst" | "full" | "single" | undefined,
+	system: SystemProfile = DEFAULT_SYSTEM_PROFILE,
 ): number | null {
 	if (mode !== "burst" && mode !== "full") return null;
 	if (profile?.fireModeBonus) {
@@ -53,7 +98,7 @@ export function resolveFireModeBonus(
 			? profile.fireModeBonus.burst
 			: profile.fireModeBonus.full;
 	}
-	return mode === "burst" ? CORE_FIRE_MODE_BONUS.burst : CORE_FIRE_MODE_BONUS.full;
+	return mode === "burst" ? system.fireModeBonus.burst : system.fireModeBonus.full;
 }
 
 /**
@@ -64,8 +109,9 @@ export function resolveFireModeBonus(
 export function resolvePushCap(
 	profile: HomebrewProfile | null | undefined,
 	sanctioned: boolean,
+	system: SystemProfile = DEFAULT_SYSTEM_PROFILE,
 ): number {
-	const core = sanctioned ? CORE_PUSH_CAP.sanctioned : CORE_PUSH_CAP.other;
+	const core = sanctioned ? system.pushCap.sanctioned : system.pushCap.other;
 	const override = profile?.pushCap;
 	if (!override) return core;
 	const value = sanctioned ? override.sanctioned : override.other;

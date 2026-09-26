@@ -3,12 +3,11 @@ import {
 	locationForHit,
 	parseDamageFormula,
 	resolveDamage,
-	rtCore,
 } from "../../rules-engine/src/index";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
-import { actorView } from "../infrastructure/foundry/actor-view";
+import { actorView } from "../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../infrastructure/foundry/ports";
-import * as damageDice from "../application/damage-dice";
+import * as damageDice from "../../ffg/application/damage-dice";
 import { bodyLocationLabelKey } from "./labels";
 import {
 	applyTearing,
@@ -18,7 +17,7 @@ import {
 	targetToughnessMultiplier,
 } from "./talent-effects";
 import { postCard, type DamageRollFlag } from "./chat-flags";
-import { type AttackProfile, attackProfileOf } from "../domain/model/attack";
+import { type AttackProfile, attackProfileOf } from "../../ffg/domain/model/attack";
 
 /**
  * Thin Foundry adapter: the ONLY runtime Foundry-coupled rolling code.
@@ -221,7 +220,10 @@ async function postWeaponDamage(
 	// takes Damage from a Toxic weapon, after reduction for Armour and
 	// Toughness Bonus"); the note is added after resolveDamage below.
 
-	const location = locationForHit(hitRoll ?? 0, rtCore);
+	// Bead yojf: the kernel profile resolves through ports.config.profile()
+	// instead of a direct rtCore import, so a sibling module swaps one binding.
+	const ruleProfile = getPorts().config.profile();
+	const location = locationForHit(hitRoll ?? 0, ruleProfile);
 	const wornArmour = target.items.filter(
 		(i) =>
 			(i.type as string) === "armour" &&
@@ -303,7 +305,7 @@ async function postWeaponDamage(
 		),
 		isCritical,
 		righteousFuryTriggered,
-		profile: rtCore,
+		profile: ruleProfile,
 	});
 
 	const locationLabelKey = bodyLocationLabelKey(location);

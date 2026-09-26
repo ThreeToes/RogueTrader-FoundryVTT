@@ -29,7 +29,7 @@ import {
 	str,
 	type PackSystem,
 } from "../data/pack-fields";
-import { ChartPool } from "../domain/model/chart";
+import { ChartPool } from "../../ffg/domain/model/chart";
 
 export type OriginRow =
 	| "home-world"

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { buildActorView } from "../../../ffg/domain/model/build";
 import { actorView } from "./actor-view";
 
 // The builder is the one place that reads Foundry document shape for the rules
@@ -92,5 +93,59 @@ describe("actorView builder (epic kof0, phase 1)", () => {
 		expect(view.effects).toEqual([]);
 		expect(view.appliedEffects).toEqual([]);
 		expect(view.characteristics).toEqual({});
+	});
+});
+
+describe("actorView per-system instantiation (h2uo)", () => {
+	test("default instantiation keeps the full RT system view", () => {
+		const view = actorView(
+			fakeActor({
+				system: {
+					characteristics: {},
+					psyRating: 3,
+					voidShields: 2,
+					size: "colossal",
+				},
+			}),
+		);
+		expect(view.system.psyRating).toBe(3);
+		expect(view.system.voidShields).toBe(2);
+		expect(view.system.size).toBe("colossal");
+	});
+
+	test("narrows to a system-supplied SystemView at compile time", () => {
+		type Dh2System = {
+			characteristics: Record<string, { value: number; unnatural: number }>;
+			fateReserve?: number;
+		};
+		const view = actorView<Dh2System>(
+			fakeActor({
+				system: {
+					characteristics: { ws: { value: 35, unnatural: 0 } },
+					fateReserve: 3,
+				},
+			}),
+		);
+		expect(view.system.fateReserve).toBe(3);
+		// RT-only fields do not exist on the narrow view (compile-time check).
+		const leak =
+			// @ts-expect-error ship fields leak nothing into sibling systems
+			view.system.voidShields;
+		expect(leak).toBeUndefined();
+	});
+
+	test("buildActorView is generic the same way", () => {
+		type ShipSystem = {
+			characteristics: Record<string, never>;
+			hullIntegrity?: { value?: number; max?: number };
+		};
+		const view = buildActorView<ShipSystem>({
+			system: { characteristics: {}, hullIntegrity: { value: 30, max: 30 } },
+		});
+		expect(view.system.hullIntegrity?.value).toBe(30);
+		const leak =
+			// @ts-expect-error psyRating is RT-character, not part of the ship view
+			view.system.psyRating;
+		expect(leak).toBeUndefined();
 	});
 });

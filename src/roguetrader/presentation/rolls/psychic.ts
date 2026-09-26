@@ -10,7 +10,7 @@
 
 import type { Modifier } from "../../../rules-engine/src/index";
 import { systemOf } from "../../data/accessors";
-import { actorView } from "../../infrastructure/foundry/actor-view";
+import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import {
 	effectiveSorceryRank,

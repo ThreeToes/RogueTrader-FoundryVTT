@@ -1,3 +1,3 @@
-import { sheetInit } from "./sheet/init";
+import { sheetInit } from "./bootstrap";
 
 sheetInit();

@@ -11,8 +11,7 @@
  *   domain         -> kernel, domain; no Foundry, no data/sheet/rules
  *   application    -> kernel, domain, application; no Foundry
  *   infrastructure -> anything below + Foundry (it implements the ports)
- *   presentation   -> anything below + Foundry (sheet/** is not yet classified;
- *                     tracked by the separate follow-up bead)
+ *   presentation   -> anything below + Foundry
  *   rules          -> anything below + Foundry, except that rules files outside
  *                     the FOUNDRY_COUPLED_RULES allowlist (4 files) must stay
  *                     Foundry-free
@@ -38,13 +37,13 @@ type Layer =
 /** Directory -> layer. Order matters: first match wins. */
 const LAYER_DIRS: ReadonlyArray<readonly [Layer, string]> = [
 	["kernel", "src/rules-engine/src"],
-	["domain", "src/roguetrader/domain"],
-	["application", "src/roguetrader/application"],
+	["domain", "src/ffg/domain"],
+	["application", "src/ffg/application"],
+	["infrastructure", "src/ffg/infrastructure"],
 	["infrastructure", "src/roguetrader/infrastructure"],
 	["presentation", "src/roguetrader/presentation"],
+	["presentation", "src/roguetrader/sheet"],
 	["rules", "src/roguetrader/rules"],
-	// sheet/** is still unclassified (the sheet/init.ts shim is unresolved);
-	// a separate follow-up bead will classify it as presentation.
 	["bootstrap", "src/roguetrader/bootstrap"],
 ];
 
@@ -259,7 +258,7 @@ describe("architecture boundaries (epic kof0)", () => {
 
 	test("the scanner flags a Foundry import in domain", () => {
 		const violations = violationsFor(
-			"src/roguetrader/domain/x.ts",
+			"src/ffg/domain/x.ts",
 			'import type { Actor } from "fvtt-types";\n',
 		);
 		expect(violations.length).toBeGreaterThan(0);
@@ -283,8 +282,8 @@ describe("architecture boundaries (epic kof0)", () => {
 
 	test("the scanner flags domain importing application", () => {
 		const violations = violationsFor(
-			"src/roguetrader/domain/x.ts",
-			'import { performRoll } from "../application/rolls";\n',
+			"src/ffg/domain/x.ts",
+			'import { performRoll } from "../../application/rolls";\n',
 		);
 		expect(violations.some((v) => v.includes("may not depend on"))).toBe(true);
 	});

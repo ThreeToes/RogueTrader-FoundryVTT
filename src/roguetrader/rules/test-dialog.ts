@@ -1,6 +1,5 @@
 import { sumModifiers } from "../../rules-engine/src/index";
 import type { Modifier } from "../../rules-engine/src/modifier";
-import { talentConditions } from "../registry";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -46,6 +45,13 @@ export interface TestDialogRequest {
 	 * affliction/talent modifier is visible and optional rather than silent.
 	 */
 	conditions?: string[];
+	/**
+	 * Label resolver for the guarded-effect condition keys (bead 8ycd registry
+	 * seam): the dialog no longer reads the RT talentConditions registry
+	 * directly — the system caller supplies the lookup, the dialog stays
+	 * registry-neutral. Defaults to the raw key.
+	 */
+	conditionLabel?: (key: string) => string;
 	/**
 	 * Re-collect the fixed contributor rows for the current condition flags,
 	 * so the live target preview reflects a toggled guard. Without it the
@@ -116,6 +122,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 	#collectForConditions:
 		| ((flags: Record<string, boolean>) => Modifier[])
 		| null;
+	#conditionLabel: ((key: string) => string) | null;
 	#custom: modifiersRow[];
 	// Bead wqt3: selected difficulty modifier (null = no selection).
 	// Kept for rerender persistence; the authoritative value at roll/preview
@@ -137,6 +144,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.#attackContext = request.attackContext ?? null;
 		this.#conditions = request.conditions ?? [];
 		this.#collectForConditions = request.collectForConditions ?? null;
+	this.#conditionLabel = request.conditionLabel ?? null;
 		// Full modifiers kept so ids survive #collectModifiers — postTest's
 		// funnel merge then dedupes these against a fresh collection instead
 		// of double-counting (bead bpd follow-up).
@@ -275,7 +283,7 @@ export class TestDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 		}));
 		context.conditions = this.#conditions.map((key) => ({
 			key,
-			label: game.i18n!.localize(talentConditions.get(key) ?? key),
+			label: game.i18n!.localize(this.#conditionLabel?.(key) ?? key),
 			checked: this.#conditionState[key] ?? false,
 		}));
 		context.customModifiers = this.#custom;

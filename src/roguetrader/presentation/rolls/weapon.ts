@@ -8,7 +8,7 @@
  * Inaccurate cancellation come back as post-dialog rows.
  */
 
-import { attackProfileOf } from "../../domain/model/attack";
+import { attackProfileOf } from "../../../ffg/domain/model/attack";
 import { equipStateOf, systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollHandler } from "../../rules/roll-contract";

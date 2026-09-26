@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { NO_CONTENT } from "../../application/ports";
+import { NO_CONTENT } from "../../../ffg/application/ports";
 import { currentRound, resolveCritical } from "../../rules/criticals";
 import { foundryPorts, getPorts, resetPorts, setPorts } from "./ports";
 

@@ -9,7 +9,7 @@
  * weaponRows is deliberately UNSORTED so each sheet keeps its ordering).
  */
 
-import { equipStateOf, isWeaponType } from "../../domain/model/taxonomy";
+import { equipStateOf, isWeaponType } from "../../../ffg/domain/model/taxonomy";
 import { BODY_LOCATION_ORDER } from "../../registry";
 
 /** Structural shape of an owned weapon item doc. */

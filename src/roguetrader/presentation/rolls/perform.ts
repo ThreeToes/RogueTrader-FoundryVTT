@@ -11,10 +11,11 @@
 
 import { type Modifier, type TestOutcome } from "../../../rules-engine/src/index";
 import { systemOf } from "../../data/accessors";
-import { actorView } from "../../infrastructure/foundry/actor-view";
+import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { postCard } from "../../rules/chat-flags";
 import { carriedConditions, snapOutReady } from "../../rules/conditions";
+import { talentConditions } from "../../registry";
 import { collectConditionKeys, collectTestModifiers } from "../../rules/funnel";
 import type {
 	RollHandler,
@@ -33,6 +34,9 @@ import { navigatorHandler } from "./navigator";
 import { dialogContributors, runTest } from "./pipeline";
 import { psychicHandler } from "./psychic";
 import { weaponHandler } from "./weapon";
+
+/** Registry-seam label lookup for the TestDialog's condition toggles (8ycd). */
+const conditionLabel = (key: string): string => talentConditions.get(key) ?? key;
 
 /**
  * The handler registry: exhaustive over RollKind. Adding a kind requires a
@@ -116,6 +120,7 @@ export async function performRoll(request: RollRequest): Promise<void> {
 			...conditions.length > 0
 				? {
 						conditions,
+						conditionLabel,
 						collectForConditions: (flags: Record<string, boolean>) =>
 							collectTestModifiers(
 								view,
@@ -388,6 +393,7 @@ export async function rollSnapOut(
 			...conditions.length > 0
 				? {
 						conditions,
+						conditionLabel,
 						collectForConditions: (flags: Record<string, boolean>) =>
 							collectTestModifiers(
 								view,

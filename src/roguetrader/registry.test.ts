@@ -5,6 +5,8 @@ import {
 	protectionTypes,
 	qualities,
 	talentCategories,
+	talentConditions,
+	afflictionProcedures,
 	talents,
 	vehicleClasses,
 	vehicleFacings,
@@ -12,6 +14,8 @@ import {
 	vehicleTraits,
 	weaponFamilies,
 	psychicDisciplines,
+	attachRegistriesToConfig,
+	createRegistries,
 } from "./registry";
 
 describe("EntryRegistry", () => {
@@ -120,5 +124,60 @@ describe("EntryRegistry", () => {
 		for (const key of talentCategories.keys()) {
 			expect(talentCategories.get(key)).toMatch(/^TALENT_CATEGORY\./);
 		}
+	});
+});
+
+describe("registry factory (bead hazf)", () => {
+	test("talentConditions and afflictionProcedures are seeded", () => {
+		// Bead hazf: these registries existed but were never attached to
+		// CONFIG; now they ride the seed table with everything else.
+		expect(talentConditions.has("charging")).toBe(true);
+		expect(talentConditions.get("charging")).toMatch(/^CONDITION\./);
+		expect(afflictionProcedures.has("degenerate-mind")).toBe(true);
+		expect(afflictionProcedures.get("degenerate-mind")).toMatch(
+			/^PROCEDURE\./,
+		);
+	});
+
+	test("createRegistries builds one EntryRegistry per seed entry", () => {
+		const set = createRegistries(
+			{ things: { a: "THING.A" }, moods: { b: "MOOD.B" } },
+			"NO_CONFIG_HERE",
+		);
+		expect(set.things).toBeInstanceOf(EntryRegistry);
+		expect(set.things.get("a")).toBe("THING.A");
+		expect(set.moods.choices).toEqual({ b: "MOOD.B" });
+	});
+
+	test("createRegistries attaches under a custom CONFIG namespace", () => {
+		const g = globalThis as unknown as {
+			CONFIG?: Record<string, Record<string, unknown>>;
+		};
+		g.CONFIG = {};
+		const set = createRegistries(
+			{ qualities: { overload: "QUALITY.OVERLOAD" } },
+			"MY_SYSTEM",
+		);
+		expect(g.CONFIG.MY_SYSTEM?.qualities).toBe(set.qualities);
+		// And a module can extend it through the namespace.
+		(set.qualities as EntryRegistry).register("extra", "QUALITY.EXTRA");
+		expect(
+			(g.CONFIG.MY_SYSTEM!.qualities as EntryRegistry).has("extra"),
+		).toBe(true);
+		delete g.CONFIG;
+	});
+
+	test("attachRegistriesToConfig attaches the RT set incl. conditions", () => {
+		const g = globalThis as unknown as {
+			CONFIG?: Record<string, Record<string, unknown>>;
+		};
+		g.CONFIG = {};
+		attachRegistriesToConfig();
+		const rt = g.CONFIG.ROGUE_TRADER!;
+		expect(rt.qualities).toBe(qualities);
+		expect(rt.talentConditions).toBe(talentConditions);
+		expect(rt.afflictionProcedures).toBe(afflictionProcedures);
+		expect(rt.careers).toBeDefined();
+		delete g.CONFIG;
 	});
 });

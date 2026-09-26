@@ -9,8 +9,8 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import type { ContentPort } from "../../application/ports";
-import { NO_CONTENT_PORT } from "../../application/ports";
+import type { ContentPort } from "../../../ffg/application/ports";
+import { NO_CONTENT_PORT } from "../../../ffg/application/ports";
 import {
 	foundryPorts,
 	resetPorts,

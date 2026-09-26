@@ -8,9 +8,9 @@
  * Every side effect goes through a port: dice, chat, content and actor writes.
  */
 
-import { adjustTrack } from "../../application/tracks";
-import type { EffectData } from "../../domain/model/effect";
-import { corruptionExpressions } from "../../domain/model/effect";
+import { adjustTrack } from "../../../ffg/application/tracks";
+import type { EffectData } from "../../../ffg/domain/model/effect";
+import { corruptionExpressions } from "../../../ffg/domain/model/effect";
 import { ROLLTABLES_PACK } from "../../application/packs";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { phenomenaRollModifier, phenomenaTableName } from "../../rules/psychic";

@@ -17,9 +17,9 @@
  * "1d10" and therefore ADDED, the opposite of the book — do not regress.)
  */
 
-import type { ActorView } from "../domain/model/actor";
-import { collectEffects } from "../domain/effects";
-import type { EffectData } from "../domain/model/effect";
+import type { ActorView } from "../../ffg/domain/model/actor";
+import { collectEffects } from "../../ffg/domain/effects";
+import type { EffectData } from "../../ffg/domain/model/effect";
 import { type MutationRow, rollRavagedBody } from "../data/item/mutation-roll";
 
 /** One trait/talent/skill grant carried by an owned affliction. */

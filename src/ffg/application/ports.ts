@@ -13,7 +13,8 @@
  *   never gates a roll and its absence never produces a broken or silent card.
  */
 
-import type { ActorView } from "../domain/model/actor";
+import type { ActorView } from "../../ffg/domain/model/actor";
+import type { RuleProfile } from "../../rules-engine/src/index";
 
 /** Which content the world has installed (cheap to probe; no doc loading). */
 export interface ContentCapabilities {
@@ -166,6 +167,20 @@ export interface Permissions {
 export interface ConfigPort {
 	homebrew(): unknown;
 	originTraits(): unknown[];
+	/**
+	 * Compendium pack ids the content port probes (bead 8ycd). System-specific
+	 * DATA: the default returns null (no packs installed) and a sibling system
+	 * overrides it via the config-override seam so the infrastructure content
+	 * module stays system-neutral.
+	 */
+	packIds(): { rolltables: string | null };
+	/**
+	 * The active RuleProfile/SystemProfile (bead yojf): the kernel profile for
+	 * crit handling, hit locations and the sibling-system extension points.
+	 * presentation/rolls/pipeline.ts and rules/adapter.ts resolve through this
+	 * instead of importing rtCore, so a sibling module swaps one binding here.
+	 */
+	profile(): RuleProfile;
 }
 
 /** Document writes the rules perform (never a read — reads use ActorView). */

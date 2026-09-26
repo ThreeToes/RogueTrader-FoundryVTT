@@ -14,8 +14,8 @@
  */
 
 import { systemOf } from "../../data/accessors";
-import { adjustTrack } from "../../application/tracks";
-import { actorView } from "../../infrastructure/foundry/actor-view";
+import { adjustTrack } from "../../../ffg/application/tracks";
+import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { postCard } from "../../rules/chat-flags";
 import {

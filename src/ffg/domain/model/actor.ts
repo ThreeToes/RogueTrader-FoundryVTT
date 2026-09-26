@@ -48,11 +48,20 @@ export interface EffectView {
  * contract grows on purpose. The builder is the one place that maps the real
  * document onto this shape.
  */
-export interface ActorSystemView {
+/**
+ * System-agnostic part of the actor system data every system reads.
+ * Deliberately enumerated (not an index signature) so a typo is a compile
+ * error and the contract grows on purpose. The builder is the one place that
+ * maps the real document onto this shape.
+ */
+export interface SystemViewBase {
 	characteristics: Readonly<Record<string, CharacteristicView>>;
 	/** Effective characteristic bonus (owned-item modifiers applied). */
 	characteristicBonus?: (key: string) => number;
-	// Character
+}
+
+/** RT/DH2-style character system data. */
+export interface CharacterSystemView extends SystemViewBase {
 	origins?: Record<string, unknown>;
 	wounds?: { value?: number; max?: number };
 	psyker?: boolean;
@@ -65,24 +74,40 @@ export interface ActorSystemView {
 	criticals?: Record<string, number>;
 	criticalEffects?: readonly unknown[];
 	criticalOverrideRound?: number;
-	// Ship
+}
+
+/** RT ship system data. */
+export interface ShipSystemView extends SystemViewBase {
 	crewQuality?: string;
 	armour?: number;
 	voidShields?: number;
 	hullIntegrity?: { value?: number; max?: number };
 	crewPopulation?: number;
 	crewMorale?: number;
-	// Vehicle
+}
+
+/** RT vehicle system data. */
+export interface VehicleSystemView extends SystemViewBase {
 	size?: string;
 }
 
+/**
+ * The full RT view: union of every actor family's system fields. This is the
+ * default instantiation of `ActorView`/`buildActorView` so existing RT call
+ * sites do not churn; sibling systems (DH2, Only War…) instantiate with just
+ * the `SystemViewBase`-extending type they support.
+ */
+export type ActorSystemView = CharacterSystemView &
+	ShipSystemView &
+	VehicleSystemView;
+
 /** A plain, Foundry-free snapshot of an actor for one rules operation. */
-export interface ActorView {
+export interface ActorView<S extends SystemViewBase = ActorSystemView> {
 	readonly id: string;
 	readonly uuid: string;
 	readonly name: string;
 	readonly type: string;
-	readonly system: ActorSystemView;
+	readonly system: S;
 	readonly characteristics: Readonly<Record<string, CharacteristicView>>;
 	readonly items: readonly ItemView[];
 	/** ActiveEffects OWNED by the actor (conditions, snap-out). */

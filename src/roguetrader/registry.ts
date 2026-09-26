@@ -14,7 +14,7 @@
  * Registries must be populated before the first DataModel schema is built
  * (i.e. during `init`). Schema field `choices` are captured at that point.
  */
-import { Registry } from "./domain/registry";
+import { Registry } from "../ffg/domain/registry";
 
 /**
  * A `Registry<string>` of key -> i18n label key, plus the `choices` shape
@@ -276,21 +276,6 @@ const TALENTS = {
 	pistolTraining: "TALENT.PISTOL_TRAINING",
 } as const;
 
-export const characteristics = new EntryRegistry(CHARACTERISTIC_LABELS);
-export const characteristicLongLabels = new EntryRegistry(
-	CHARACTERISTIC_LONG_LABELS,
-);
-export const bodyLocations = new EntryRegistry(BODY_LOCATIONS);
-export const qualities = new EntryRegistry(QUALITIES);
-export const protectionTypes = new EntryRegistry(PROTECTION_TYPES);
-export const battlesuitSystemCategories = new EntryRegistry(
-	BATTLESUIT_SYSTEM_CATEGORIES,
-);
-export const vehicleClasses = new EntryRegistry(VEHICLE_CLASSES);
-export const weaponFamilies = new EntryRegistry(WEAPON_FAMILIES);
-export const vehicleFacings = new EntryRegistry(VEHICLE_FACINGS);
-export const vehicleTraits = new EntryRegistry(VEHICLE_TRAITS);
-export const vehicleSystems = new EntryRegistry(VEHICLE_SYSTEMS);
 /**
  * Guarded test-modifier conditions (bead czx): keys a talent effect's
  * `condition` field can reference; the funnel evaluates them against the
@@ -334,12 +319,6 @@ const AFFLICTION_PROCEDURES = {
 	"ravaged-body": "PROCEDURE.RAVAGED_BODY",
 } as const;
 
-export const talentCategories = new EntryRegistry(TALENT_CATEGORIES);
-export const talents = new EntryRegistry(TALENTS);
-export const talentConditions = new EntryRegistry(TALENT_CONDITIONS);
-export const afflictionProcedures = new EntryRegistry(AFFLICTION_PROCEDURES);
-export const equipStates = new EntryRegistry(EQUIP_STATES);
-
 /**
  * Core careers (Table 2-1, Core Rulebook p37). Labels are the career names
  * themselves (proper nouns, not localized). Splat books and homebrew
@@ -355,8 +334,6 @@ const CAREERS = {
 	seneschal: "Seneschal",
 	"void-master": "Void-master",
 } as const;
-
-export const careers = new EntryRegistry(CAREERS);
 
 /**
  * Psychic disciplines (bead hkc5 schema prerequisite): the disciplines a
@@ -380,43 +357,48 @@ const PSYCHIC_DISCIPLINES = {
 	waaagh: "PSYCHIC_DISCIPLINE.WAAAGH",
 } as const;
 
-export const psychicDisciplines = new EntryRegistry(PSYCHIC_DISCIPLINES);
-
-/**
- * Sorcery ranks (epic 0hap, Edge of the Abyss pp85-86): the Sorcerer talents a
- * character can hold. Content-as-data like careers/disciplines. The rank sets
- * the Intelligence-Bonus Psy Rating factor (Sorcerer half, Master full) and
- * the Table 6-1 "Sorcerers" row (non-sanctioned, push +4).
- */
 const SORCERY_RANKS = {
 	sorcerer: "SORCERY_RANK.SORCERER",
 	"master-sorcerer": "SORCERY_RANK.MASTER_SORCERER",
 } as const;
 
-export const sorceryRanks = new EntryRegistry(SORCERY_RANKS);
-
-type RogueTraderRegistries = {
-	characteristics: EntryRegistry;
-	characteristicLongLabels: EntryRegistry;
-	bodyLocations: EntryRegistry;
-	qualities: EntryRegistry;
-	protectionTypes: EntryRegistry;
-	battlesuitSystemCategories: EntryRegistry;
-	vehicleClasses: EntryRegistry;
-	vehicleFacings: EntryRegistry;
-	vehicleTraits: EntryRegistry;
-	vehicleSystems: EntryRegistry;
-	talentCategories: EntryRegistry;
-	talents: EntryRegistry;
-	equipStates: EntryRegistry;
-	careers: EntryRegistry;
-	weaponFamilies: EntryRegistry;
-	psychicDisciplines: EntryRegistry;
-	sorceryRanks: EntryRegistry;
+/**
+ * The RT registry seed: registry name -> key -> i18n label. The seeds are
+ * the RT wiring; the FACTORY (createRegistries) is generic, so a sibling
+ * 40k system module can build its own registry set under its own CONFIG
+ * key from its own seeds (epic hr6r).
+ */
+const ROGUE_TRADER_SEEDS: RegistrySeeds = {
+	characteristics: CHARACTERISTIC_LABELS,
+	characteristicLongLabels: CHARACTERISTIC_LONG_LABELS,
+	bodyLocations: BODY_LOCATIONS,
+	qualities: QUALITIES,
+	protectionTypes: PROTECTION_TYPES,
+	battlesuitSystemCategories: BATTLESUIT_SYSTEM_CATEGORIES,
+	vehicleClasses: VEHICLE_CLASSES,
+	weaponFamilies: WEAPON_FAMILIES,
+	vehicleFacings: VEHICLE_FACINGS,
+	vehicleTraits: VEHICLE_TRAITS,
+	vehicleSystems: VEHICLE_SYSTEMS,
+	talentCategories: TALENT_CATEGORIES,
+	talents: TALENTS,
+	talentConditions: TALENT_CONDITIONS,
+	afflictionProcedures: AFFLICTION_PROCEDURES,
+	equipStates: EQUIP_STATES,
+	careers: CAREERS,
+	psychicDisciplines: PSYCHIC_DISCIPLINES,
+	sorceryRanks: SORCERY_RANKS,
 };
 
+/** Registry name -> seed map (key -> i18n label). */
+export type RegistrySeeds = Record<string, Record<string, string>>;
+
+/** Registry name -> live registry. */
+export type RegistrySet = Record<string, EntryRegistry>;
+
 /**
- * Expose registries through CONFIG so other packages can register entries:
+ * Attach a set of registries under one CONFIG namespace so other packages
+ * can register entries:
  *
  * ```js
  * Hooks.once("init", () => {
@@ -424,26 +406,69 @@ type RogueTraderRegistries = {
  * });
  * ```
  */
-export function attachRegistriesToConfig() {
-	const config = CONFIG as unknown as {
-		ROGUE_TRADER?: Partial<RogueTraderRegistries>;
+export function attachRegistries(
+	registries: RegistrySet,
+	namespace: string,
+): void {
+	const global = globalThis as unknown as {
+		CONFIG?: Record<string, Record<string, unknown>>;
 	};
-	const rt = (config.ROGUE_TRADER ??= {});
-	rt.characteristics = characteristics;
-	rt.characteristicLongLabels = characteristicLongLabels;
-	rt.bodyLocations = bodyLocations;
-	rt.qualities = qualities;
-	rt.protectionTypes = protectionTypes;
-	rt.battlesuitSystemCategories = battlesuitSystemCategories;
-	rt.vehicleClasses = vehicleClasses;
-	rt.vehicleFacings = vehicleFacings;
-	rt.vehicleTraits = vehicleTraits;
-	rt.vehicleSystems = vehicleSystems;
-	rt.talentCategories = talentCategories;
-	rt.talents = talents;
-	rt.equipStates = equipStates;
-	rt.careers = careers;
-	rt.weaponFamilies = weaponFamilies;
-	rt.psychicDisciplines = psychicDisciplines;
-	rt.sorceryRanks = sorceryRanks;
+	if (!global.CONFIG) return; // pre-Foundry window (e.g. unit tests)
+	const ns = (global.CONFIG[namespace] ??= {});
+	Object.assign(ns, registries);
+}
+
+/**
+ * Build a set of EntryRegistries from a seed table and attach them under one
+ * CONFIG namespace (created on first use). Generic — the RT wiring below is
+ * just `createRegistries(ROGUE_TRADER_SEEDS, "ROGUE_TRADER")`; a sibling
+ * system module calls the same factory with its own seed and namespace.
+ *
+ * Attach is skipped when CONFIG does not exist yet (unit tests, pre-Foundry
+ * imports); the system's init hook re-attaches via attachRegistriesToConfig.
+ */
+export function createRegistries(
+	seed: RegistrySeeds,
+	namespace: string,
+): RegistrySet {
+	const registries: RegistrySet = {};
+	for (const [name, entries] of Object.entries(seed)) {
+		registries[name] = new EntryRegistry(entries);
+	}
+	attachRegistries(registries, namespace);
+	return registries;
+}
+
+/** The RT registry set, seeded above and attached to CONFIG.ROGUE_TRADER. */
+const RT_REGISTRIES = createRegistries(ROGUE_TRADER_SEEDS, "ROGUE_TRADER");
+
+export const characteristics = RT_REGISTRIES.characteristics;
+export const characteristicLongLabels = RT_REGISTRIES.characteristicLongLabels;
+export const bodyLocations = RT_REGISTRIES.bodyLocations;
+export const qualities = RT_REGISTRIES.qualities;
+export const protectionTypes = RT_REGISTRIES.protectionTypes;
+export const battlesuitSystemCategories =
+	RT_REGISTRIES.battlesuitSystemCategories;
+export const vehicleClasses = RT_REGISTRIES.vehicleClasses;
+export const weaponFamilies = RT_REGISTRIES.weaponFamilies;
+export const vehicleFacings = RT_REGISTRIES.vehicleFacings;
+export const vehicleTraits = RT_REGISTRIES.vehicleTraits;
+export const vehicleSystems = RT_REGISTRIES.vehicleSystems;
+export const talentCategories = RT_REGISTRIES.talentCategories;
+export const talents = RT_REGISTRIES.talents;
+export const talentConditions = RT_REGISTRIES.talentConditions;
+export const afflictionProcedures = RT_REGISTRIES.afflictionProcedures;
+export const equipStates = RT_REGISTRIES.equipStates;
+export const careers = RT_REGISTRIES.careers;
+export const psychicDisciplines = RT_REGISTRIES.psychicDisciplines;
+export const sorceryRanks = RT_REGISTRIES.sorceryRanks;
+
+/**
+ * Re-attach the RT registries to CONFIG.ROGUE_TRADER during init. Module
+ * import order decides when createRegistries ran; if CONFIG existed then,
+ * this is a re-assign of the same live instances (extra entries registered
+ * by modules survive — only the set is refreshed).
+ */
+export function attachRegistriesToConfig(): void {
+	attachRegistries(RT_REGISTRIES, "ROGUE_TRADER");
 }

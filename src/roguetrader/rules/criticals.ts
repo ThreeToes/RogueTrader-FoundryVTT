@@ -32,7 +32,7 @@ import {
 } from "../../rules-engine/src/index";
 import { ROLLTABLES_PACK } from "../application/packs";
 import { postCard } from "./chat-flags";
-import type { ContentPort } from "../application/ports";
+import type { ContentPort } from "../../ffg/application/ports";
 import { getPorts } from "../infrastructure/foundry/ports";
 
 /** One suffered critical effect; stored on the actor until something clears it. */

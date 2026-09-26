@@ -18,7 +18,7 @@ import {
 	sorceryRanks,
 } from "../../registry";
 import { collectSorceryRank } from "../../rules/talent-effects";
-import { actorView } from "../../infrastructure/foundry/actor-view";
+import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { isPsykerLike } from "../../rules/psyker";
 import { criticalSheetContext } from "../../rules/criticals";
 import { rollBattlesuitRepair } from "../../rules/battlesuit-repair";

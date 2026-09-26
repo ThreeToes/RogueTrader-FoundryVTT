@@ -26,9 +26,17 @@
 
 import type { CharacteristicKey } from "../data/actor/character";
 import { evaluatePrerequisites, parsePrerequisites } from "./prereq";
+import {
+	DEFAULT_SYSTEM_PROFILE,
+	rtCore,
+	type SystemProfile,
+} from "../../ffg/domain/system-profile";
 
-/** xp considered already spent at character creation (Core Rulebook p13). */
-export const PRE_SPENT_BASELINE = 4500;
+/**
+ * xp considered already spent at character creation (Core Rulebook p13).
+ * Profile data (bead yszf) — DH2 starts at 1,000 xp, OW at 600, etc.
+ */
+export const PRE_SPENT_BASELINE: number = rtCore.preSpentBaseline;
 
 export type AdvanceType = "skill" | "talent" | "characteristic";
 
@@ -90,9 +98,13 @@ export const SCHEME_TIERS: SchemeTier[] = [
 // ---------------------------------------------------------------- Ledger math
 
 /** Total xp spent = creation baseline + sum of ledger entries (p13). */
-export function totalSpent(ledger: AdvanceLedgerEntry[]): number {
+export function totalSpent(
+	ledger: AdvanceLedgerEntry[],
+	profile: SystemProfile = DEFAULT_SYSTEM_PROFILE,
+): number {
 	return (
-		PRE_SPENT_BASELINE + ledger.reduce((sum, entry) => sum + entry.cost, 0)
+		profile.preSpentBaseline +
+		ledger.reduce((sum, entry) => sum + entry.cost, 0)
 	);
 }
 

@@ -8,10 +8,16 @@
  * Built once per rules operation (per roll) — cheap and always fresh.
  */
 
-import type { ActorView } from "../../domain/model/actor";
-import { buildActorView, type LooseActor } from "../../domain/model/build";
+import type {
+	ActorSystemView,
+	ActorView,
+	SystemViewBase,
+} from "../../../ffg/domain/model/actor";
+import { buildActorView, type LooseActor } from "../../../ffg/domain/model/build";
 
 /** Snapshot a Foundry Actor into the typed, Foundry-free read model. */
-export function actorView(actor: Actor): ActorView {
-	return buildActorView(actor as unknown as LooseActor);
+export function actorView<S extends SystemViewBase = ActorSystemView>(
+	actor: Actor,
+): ActorView<S> {
+	return buildActorView<S>(actor as unknown as LooseActor);
 }

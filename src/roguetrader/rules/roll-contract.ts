@@ -7,7 +7,7 @@
  */
 
 import type { Modifier, TestOutcome } from "../../rules-engine/src/index";
-import type { TestKind } from "../domain/model/test";
+import type { TestKind } from "../../ffg/domain/model/test";
 import type { RtMessageFlags } from "./chat-flags";
 import type { StrengthLevel } from "./psychic";
 

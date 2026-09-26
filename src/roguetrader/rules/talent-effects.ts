@@ -11,9 +11,9 @@
  */
 
 import type { Modifier } from "../../rules-engine/src/modifier";
-import type { ActorView } from "../domain/model/actor";
-import { collectEffects } from "../domain/effects";
-import { HandlerRegistry } from "../domain/registry";
+import type { ActorView } from "../../ffg/domain/model/actor";
+import { collectEffects } from "../../ffg/domain/effects";
+import { HandlerRegistry } from "../../ffg/domain/registry";
 import { isWeaponType } from "../data/accessors";
 
 export interface TalentEffectLike {

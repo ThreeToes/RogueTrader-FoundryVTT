@@ -129,6 +129,47 @@ This project uses **bd (beads)** for issue tracking. Review available tools for 
 
 - Use beads for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
 
+## Changesets
+
+Every user-visible change ships with a changeset in `.changeset/` — the
+release page is the only changelog, so omitting one means the change never
+appears in the release notes.
+
+### When to create one
+
+- **One changeset per feature or bugfix, NOT per commit.** Create the
+  changeset with the first commit of that feature/bugfix; subsequent commits
+  on the same work REUSE the same file (edit its body or level if the change
+  grew) instead of adding another. A new changeset is only for separate
+  user-visible work.
+- Add one for any change a user can notice: system code, sheets, rules,
+  build/release tooling. Omit one only for pure refactors with no
+  user-visible effect — and adding one is cheap.
+- The changeset is deleted at release time, so the record lives on the
+  release page, not in the repo.
+
+### Format
+
+`.changeset/<descriptive-kebab-case>.md` (e.g. `shared-psyker-gate.md`):
+
+```md
+---
+"rogue-trader": minor
+---
+
+- Shared the psyker gate into one predicate.
+```
+
+- Frontmatter: the system slug, valued `major` | `minor` | `patch`. Literal
+  semver; the largest level in flight wins; one version covers all
+  in-flight changesets.
+- Body: bullets written as the sentence you want on the release page.
+- A changeset must NEVER describe `src/packs` content — the release body is
+  mirrored verbatim to the public release, which ships no packs.
+
+See [.agents/skills/changesets/SKILL.md](.agents/skills/changesets/SKILL.md)
+and [.changeset/README.md](.changeset/README.md) for the full convention.
+
 ## Agent Context Profiles
 
 Agent onboarding: see [docs/AGENT-GUIDE.md](docs/AGENT-GUIDE.md) and the visual

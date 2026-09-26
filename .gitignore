@@ -205,3 +205,6 @@ src/packs/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Release-time artifact produced by utils/bump-release-manifest.mjs
+release-notes.md

@@ -25,7 +25,7 @@ export {
 
 /**
  * The unified pc/npc character system model. Every CharacterData-carrying
- * actor type (pc, explorer, npc — all mapped to Character in sheet/init)
+ * actor type (pc, explorer, npc — all mapped to Character in bootstrap/sheets.ts)
  * passes through here; fvtt-types cannot express that, so the single
  * assertion lives in this module.
  */

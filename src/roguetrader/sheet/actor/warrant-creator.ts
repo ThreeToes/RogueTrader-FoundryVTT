@@ -86,7 +86,7 @@ export class WarrantCreator extends CreatorApplication {
 	};
 
 	/**
-	 * Ensure the chart pool is loaded. Normally warmed at ready (sheet/init);
+	 * Ensure the chart pool is loaded. Normally warmed at ready (bootstrap/warmers);
 	 * if the wizard opens before the pack resolves, load it here — loudly
 	 * empty is a bug, not a feature.
 	 */

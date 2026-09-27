@@ -2,8 +2,8 @@
  * Chat-card actions (epic kof0, phase 5): the delegated click handlers for the
  * to-hit "Roll Damage" button and the damage "Apply" button.
  *
- * Extracted from the composition root (sheet/init.ts) so that file stays a
- * bootstrap module and this cohesive presentation concern lives on its own. It
+ * Extracted from the former sheet/init.ts composition root; this cohesive
+ * presentation concern lives on its own. It
  * is Foundry-facing by design (chat DOM, ownership, notifications).
  */
 

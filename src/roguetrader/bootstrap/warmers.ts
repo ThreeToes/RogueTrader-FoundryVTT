@@ -6,7 +6,7 @@
  * roll. Every warmer is tolerant of a missing pack (content-optional): an
  * absent pack leaves the pool empty and the rule degrades to manual entry.
  *
- * Split out of the sheet/init.ts composition root.
+ * Split out of the former sheet/init.ts composition root.
  */
 
 import { migrateLegacyActors, withoutLegacyCharacterTypes } from "../migrations";

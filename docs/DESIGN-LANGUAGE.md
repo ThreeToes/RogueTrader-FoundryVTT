@@ -2,7 +2,9 @@
 
 Canonical visual conventions for Rogue Trader system UIs. When building or restyling
 any sheet/component, match these tokens. Canonical implementations:
-`less/less/sheet/*.less` (imported by `less/rogue-trader.less`).
+`css/sheet-gear.css` + `css/sheet-character.css` + `css/chat-roll.css`,
+concatenated in that order by `utils/css.ts` into
+`release/rogue_trader/css/rogue-trader.css` (plain CSS, no preprocessor).
 
 ## Color palette
 
@@ -20,15 +22,23 @@ token, never the raw hex:
 | `--rt-danger` | `#8b5e52` | Destructive actions (`skill-delete`, `inv-delete`) |
 | `--rt-danger-deep` | `#c0392b` | Over-encumbered state, negative modifiers |
 | `--rt-danger-alarm` | `#b71c1c` | Chat-card failure values |
-| `--rt-success` | `#7ca860` | Encumbrance OK fill, positive modifiers |
+| `--rt-success` | `#7ca860` | Encumbrance OK fill, positive modifiers, chat-card success values |
+| `--rt-warn` | `#c25b3f` | Amber warnings (starship `damaged` state, battery `warn` banner, capacity/method hints, no-slot cards) |
+| `--rt-on-gold` | `#fff` | Text on gold fills (checked chips, active ladder option) |
 | `--rt-border-solid` | `rgba(122, 106, 83, 0.9)` | Sustain-active borders |
 | `--rt-border-strong` | `rgba(122, 106, 83, 0.5)` | Container/panel borders |
 | `--rt-border` | `rgba(122, 106, 83, 0.4)` | Footer strips, pick chips, acq headers |
 | `--rt-border-mid` | `rgba(122, 106, 83, 0.35)` | Short-description underline |
 | `--rt-border-soft` | `rgba(122, 106, 83, 0.3)` | NPC armour table rows |
 | `--rt-border-dim` / `--rt-border-faint` | `rgba(122, 106, 83, 0.25 / 0.2)` | Sustain fill, subtle rows |
-| Panel fill | `rgba(0, 0, 0, 0.2)` | Slight inset background inside bordered groups (literal) |
-| Pips lit glow | `0 0 3px rgba(184, 134, 11, 0.8)` | Lit unnatural pip (literal) |
+| `--rt-gold-alpha-faint` | `rgba(184, 134, 11, 0.15)` | Checked-chip / condition-chip gold fill |
+| `--rt-gold-alpha-soft` | `rgba(184, 134, 11, 0.25)` | Career-table row underline |
+| `--rt-gold-alpha-strong` | `rgba(184, 134, 11, 0.6)` | Fire-button hover glow (`0 0 6px`) |
+| `--rt-white-alpha` | `rgba(255, 255, 255, 0.65)` | Dimmed secondary text on career content (prereqs, attributions, source line) |
+| `--rt-panel-shade` | `rgba(0, 0, 0, 0.25)` | Deeper panel fill (readonly description blocks, ship-creator panels) |
+| `--rt-panel-shadow` | `rgba(0, 0, 0, 0.3)` | Deepest panel fill (starship vitals strip) |
+| Panel fill | `rgba(0, 0, 0, 0.2)` | Slight inset background inside bordered groups (blessed literal) |
+| Pips lit glow | `0 0 3px rgba(184, 134, 11, 0.8)` | Lit unnatural pip / shield pips (literal; the one gold-alpha step with two sites kept as a rare one-off) |
 
 ## Typography
 
@@ -80,7 +90,7 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
 - Every sheet: `window: { resizable: true }` in DEFAULT_OPTIONS, **plus** CSS
   `min-width`/`min-height` on the sheet class — ApplicationV2 clamps resize to the
   app element's computed `minWidth`/`minHeight` (core `application.mjs:1124–1153`).
-  Current: `.sheet.character` 500×400, `.sheet.weapon` 500×420.
+  Current: `.sheet.character` 500×800, `.sheet.weapon` 500×420.
 - Fixed-width inputs: value inputs `3.5em`, bonus `2.5em`, weights `4em`, centered.
 
 ## i18n

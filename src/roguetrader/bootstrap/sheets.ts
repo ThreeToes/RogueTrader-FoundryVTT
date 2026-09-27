@@ -5,7 +5,7 @@
  * CONFIG.*.dataModels plus the DocumentSheetConfig registrations. Adding a
  * document type is one line in the table.
  *
- * Split out of the sheet/init.ts composition root.
+ * Split out of the former sheet/init.ts composition root.
  */
 
 import { registerConfigHelper } from "../sheet/handlebars";

@@ -260,8 +260,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				: "",
 			message: game.i18n.localize(
 				// The kind carries hyphens ("unknown-slot"); the i18n keys use
-				// underscores (ISSUE_UNKNOWN_SLOT) — the raw key leaked onto the
-				// sheet until this (owner round 7).
+				// underscores (ISSUE_UNKNOWN_SLOT).
 				`STARSHIP.ISSUE_${issue.kind.toUpperCase().replaceAll("-", "_")}`,
 			),
 		}));

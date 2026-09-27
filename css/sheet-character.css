@@ -60,11 +60,11 @@
 }
 
 .rogue-trader.sheet.character .char-delta.pos {
-    color: var(--rt-success, #3fb950);
+    color: var(--rt-success);
 }
 
 .rogue-trader.sheet.character .char-delta.neg {
-    color: var(--rt-danger, #f85149);
+    color: var(--rt-danger);
 }
 
 .rogue-trader.sheet.character .encumbrance-progress {
@@ -75,28 +75,10 @@
     min-width: 10em;
 }
 
-.rogue-trader.sheet.character .encumbrance-progress .bar {
-    flex: 1;
-    height: 10px;
-    border: 1px solid var(--rt-border-strong);
-    border-radius: var(--rt-radius-sm);
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.3);
-}
-
-.rogue-trader.sheet.character .encumbrance-progress .fill {
-    height: 100%;
-    background: var(--rt-success);
-}
-
-.rogue-trader.sheet.character .state-encumbered .fill {
-    background: var(--rt-gold);
-}
-
-.rogue-trader.sheet.character .state-over .fill {
-    background: var(--rt-danger-deep);
-}
-
+/* Meter anatomy (bead tye1): the track/fill uses the shared cb-track/cb-fill
+   family in css/sheet-gear.css (cb-* vocabulary, one rule for the starship
+   capacity bars and this meter); the state ramp (.state-encumbered → gold,
+   .state-over → rt-danger-deep) also lives there. */
 .rogue-trader.sheet.character .state-over .encumbrance-text {
     color: var(--rt-danger-deep);
 }
@@ -185,7 +167,7 @@
 
 .rogue-trader.sheet.character .ladder-option.active {
     background: var(--rt-gold);
-    color: #fff;
+    color: var(--rt-on-gold);
 }
 
 .rogue-trader.sheet.character .skill-roll {
@@ -230,7 +212,7 @@
 }
 
 /* Ship & Warrant Path creator (bead d7a9): mirrors the character creator's
-   chip selection pattern (chips + selected-detail below). The body must
+   chip selection pattern. The body must
    scroll: a row's verbatim prose exceeds the fixed window height, and the
    window is resizable (AGENTS.md rule). */
 .rogue-trader.warrant-creator {
@@ -243,31 +225,39 @@
 	overflow-y: auto;
 }
 
-.rogue-trader .warrant-creator .origin-options {
+/* Origin chip selection, shared by the character creator and the warrant
+   creator (both carry .sheet via creatorOptions; bead ah2c consolidated
+   the per-creator duplicates here). */
+.rogue-trader.sheet .origin-options {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 4px;
 }
 
-.rogue-trader .warrant-creator .origin-chip {
+.rogue-trader.sheet .origin-chip {
 	border: 1px solid var(--rt-border-strong);
 	border-radius: var(--rt-radius);
 	padding: 2px 8px;
 	cursor: pointer;
 }
 
-.rogue-trader .warrant-creator .origin-chip.selected {
+.rogue-trader.sheet .origin-chip.selected {
 	background: var(--rt-border);
 	color: var(--color-text-light-highlight, var(--rt-gold-soft));
 }
 
-.rogue-trader .warrant-creator .origin-detail {
+.rogue-trader.sheet .origin-chip.disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.rogue-trader.sheet .origin-detail {
 	border-left: 2px solid var(--rt-border-strong);
 	margin: 4px 0 0 8px;
 	padding: 2px 0 2px 10px;
 }
 
-.rogue-trader .warrant-creator .origin-effect {
+.rogue-trader.sheet .origin-effect {
 	font-size: var(--rt-fs-md);
 	margin: 4px 0;
 }
@@ -358,31 +348,8 @@
 	opacity: 0.8;
 }
 
-/* Bead a2rd: collapsible acquisition groups (Stage 6). */
-.rogue-trader .character-creator .acq-group {
-	margin: 6px 0;
-}
-
-.rogue-trader .character-creator .acq-group-header {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	width: 100%;
-	background: none;
-	border: none;
-	border-bottom: 1px solid var(--rt-border);
-	padding: 4px 2px;
-	cursor: pointer;
-	font-weight: bold;
-	text-align: left;
-	color: inherit;
-}
-
-.rogue-trader .character-creator .acq-group-count {
-	font-weight: normal;
-	opacity: 0.7;
-	font-size: var(--rt-fs-md);
-}
+/* Bead a2rd: collapsible acquisition groups (Stage 6). Styling lives in
+   the global sheet layer (sheet-gear.css, bead ah2c). */
 
 .rogue-trader .character-creator .char-rolls {
 	list-style: none;
@@ -445,7 +412,7 @@
 }
 
 .rogue-trader .character-creator .points-remaining.bad {
-	color: #d66;
+	color: var(--rt-danger-deep);
 }
 
 .rogue-trader .character-creator .origin-row {
@@ -459,65 +426,8 @@
 	color: var(--rt-muted);
 }
 
-.rogue-trader .character-creator .origin-options {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-}
-
-.rogue-trader .character-creator .origin-chip {
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	padding: 2px 8px;
-	cursor: pointer;
-}
-
-.rogue-trader .character-creator .origin-chip.selected {
-	background: var(--rt-border);
-	color: var(--color-text-light-highlight, var(--rt-gold-soft));
-}
-
-.rogue-trader .character-creator .origin-chip.disabled {
-	opacity: 0.35;
-	cursor: default;
-}
-
-.rogue-trader .character-creator .origin-detail {
-	border-left: 2px solid var(--rt-border-strong);
-	margin: 4px 0 0 8px;
-	padding: 2px 0 2px 10px;
-}
-
-.rogue-trader .character-creator .origin-effect {
-	font-size: var(--rt-fs-md);
-	margin: 4px 0;
-}
-
-.rogue-trader .character-creator .pick-chips {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	gap: 4px;
-	margin: 4px 0;
-}
-
-.rogue-trader .character-creator .pick-label {
-	font-size: var(--rt-fs-md);
-	color: var(--rt-muted);
-}
-
-.rogue-trader .character-creator .pick-chip {
-	border: 1px solid var(--rt-border);
-	border-radius: var(--rt-radius);
-	padding: 1px 8px;
-	font-size: var(--rt-fs-md);
-	cursor: pointer;
-}
-
-.rogue-trader .character-creator .pick-chip.selected {
-	background: var(--rt-border);
-	color: var(--color-text-light-highlight, var(--rt-gold-soft));
-}
+/* pick-chips/pick-label/pick-chip styling lives in the global sheet layer
+   (sheet-gear.css, bead ah2c). */
 
 .rogue-trader .character-creator .mini-list {
 	font-size: var(--rt-fs-md);
@@ -558,11 +468,8 @@
 	padding: 0;
 }
 
-.rogue-trader .character-creator .creator-nav {
-	display: flex;
-	justify-content: space-between;
-	gap: 8px;
-}
+/* creator-nav styling lives on .rt-creator-nav below — the creator footers
+   wrap the rt/creator-nav partial (bead ah2c). */
 
 .rogue-trader .character-creator .creator-name {
 	display: flex;
@@ -821,20 +728,8 @@
 	margin: 4px 0 8px;
 }
 
-.rogue-trader .background .traits-row {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	gap: 4px;
-}
-
-.rogue-trader .background .traits-row .chip {
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	padding: 1px 8px;
-	font-size: var(--rt-fs-md);
-	cursor: help;
-}
+/* .traits-row base styling lives in the global sheet layer (sheet-gear.css,
+   bead ah2c); the grant/claimed variants below are character-only. */
 
 .rogue-trader .background .traits-row .chip.grant-resolve,
 .rogue-trader .background .traits-row .chip.grant-ack {
@@ -890,42 +785,11 @@
     margin: 4px 0 0;
 }
 
-/* Three-stat strip: base · modifiers · target, small gold label over the
-   number, a simple vertical rule between the cells (no box — bead z132
-   round 4). */
-.test-dialog-app .test-dialog .target-strip {
-    display: flex;
-    align-items: stretch;
-}
-
-.test-dialog-app .test-dialog .target-strip .stat {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    padding: 2px 8px;
-}
-
-.test-dialog-app .test-dialog .target-strip .stat + .stat {
-    border-left: 1px solid var(--rt-border-dim, rgba(122, 106, 83, 0.25));
-}
-
-.test-dialog-app .test-dialog .target-strip .stat > label {
-    font-size: var(--rt-fs-xs, 0.75em);
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--rt-gold, #b8860b);
-}
-
+/* Three-stat strip: base · modifiers · target. The strip ANATOMY (label /
+   big value / vertical rules) is the shared family in css/sheet-gear.css
+   (bead tye1) — the selector group there covers .target-strip; only the
+   dialog-specific bits stay here. */
 /* All three values the same size; Target keeps the gold-soft emphasis. */
-.test-dialog-app .test-dialog .target-strip .stat .value {
-    font-size: 1.9em;
-    font-weight: bold;
-    line-height: 1.1;
-}
-
 .test-dialog-app .test-dialog .target-strip .stat .preview-value {
     color: var(--rt-gold-soft, #d9c38a);
 }
@@ -1062,23 +926,31 @@
     padding: 0;
 }
 
-/* Difficulty chips are buttons: default look is the Foundry button reset
-   plus the chip chrome; .checked is the gold lit state. */
-.test-dialog-app .test-dialog button.difficulty-chip {
+/* Shared chip anatomy (bead 628o): difficulty (button) and condition
+   (label+hidden input) chips share the chrome; the genuinely different
+   bits live in the rules below. */
+.test-dialog-app .test-dialog .difficulty-chip,
+.test-dialog-app .test-dialog .condition-chip {
     display: inline-flex;
     align-items: baseline;
     gap: 5px;
     padding: 2px 10px;
     font-size: var(--rt-fs-md, 0.85em);
-    font-family: inherit;
-    color: inherit;
-    background: none;
     border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
     border-radius: var(--rt-radius-sm, 3px);
     cursor: pointer;
 }
 
-.test-dialog-app .test-dialog button.difficulty-chip:hover {
+/* Difficulty chips are buttons: Foundry's button reset would leak through
+   without these (bead z132 round 2); .checked is the gold lit state. */
+.test-dialog-app .test-dialog button.difficulty-chip {
+    font-family: inherit;
+    color: inherit;
+    background: none;
+}
+
+.test-dialog-app .test-dialog button.difficulty-chip:hover,
+.test-dialog-app .test-dialog .condition-chip:hover {
     border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
 }
 
@@ -1094,12 +966,7 @@
 
 .test-dialog-app .test-dialog button.difficulty-chip.checked {
     border-color: var(--rt-gold, #b8860b);
-    background: rgba(184, 134, 11, 0.15);
-}
-
-.test-dialog-app .test-dialog button.difficulty-chip.checked {
-    border-color: var(--rt-gold, #b8860b);
-    background: rgba(184, 134, 11, 0.15);
+    background: var(--rt-gold-alpha-faint);
     color: var(--rt-gold, #b8860b);
 }
 
@@ -1113,18 +980,6 @@
 
 .test-dialog-app .test-dialog .condition-chip {
     position: relative;
-    display: inline-flex;
-    align-items: baseline;
-    gap: 5px;
-    padding: 2px 10px;
-    font-size: var(--rt-fs-md, 0.85em);
-    border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
-    border-radius: var(--rt-radius-sm, 3px);
-    cursor: pointer;
-}
-
-.test-dialog-app .test-dialog .condition-chip:hover {
-    border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
 }
 
 .test-dialog-app .test-dialog .condition-chip input {
@@ -1137,7 +992,7 @@
 
 .test-dialog-app .test-dialog .condition-chip:has(input:checked) {
     border-color: var(--rt-gold, #b8860b);
-    background: rgba(184, 134, 11, 0.15);
+    background: var(--rt-gold-alpha-faint);
 }
 
 .test-dialog-app .test-dialog .condition-chip input:checked + .chip-name {
@@ -1221,18 +1076,6 @@
 }
 
 /* Unnatural multiplier pips */
-
-.rogue-trader.sheet.character .unnatural {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-}
-
-.rogue-trader.sheet.character .unnatural-label {
-    font-size: var(--rt-fs-xs);
-    color: var(--rt-muted);
-}
 
 .rogue-trader.sheet.character .unnatural-pips {
     display: flex;
@@ -1371,7 +1214,7 @@
 }
 
 .rogue-trader.sheet.character .inv-pack-link:hover {
-    color: #a5936f;
+    color: var(--rt-gold-soft);
 }
 
 /* Combat tab: weapons list. Scoped to all sheets (not just .character):
@@ -1492,17 +1335,6 @@
     text-decoration: line-through;
 }
 
-.rogue-trader.sheet.character .inv-group-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-top: 8px;
-}
-
-.rogue-trader.sheet.character .inv-group-header .inv-group-label {
-    margin: 0;
-}
-
 /* Stat chip footer */
 
 .rogue-trader.sheet.character .stat-footer {
@@ -1522,14 +1354,6 @@
     gap: 2px;
     flex: 1 1 0;
     min-width: fit-content;
-}
-
-.rogue-trader.sheet.character .chip-label {
-    font-size: var(--rt-fs-sm);
-    font-weight: bold;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--rt-gold);
 }
 
 .rogue-trader.sheet.character .chip-value {

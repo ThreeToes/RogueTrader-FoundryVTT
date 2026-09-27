@@ -1,8 +1,9 @@
 /**
  * Transient conditions as Foundry statuses (bead q1ql, Core Rulebook Ch X
  * pp294-296 + combat condition conventions). PURE module: data in, Foundry
- * AE-shape data out; the adapter side (roll-system fear handler, init) does
- * the document writes.
+ * AE-shape data out; the adapter side (the roll handlers under
+ * presentation/rolls/, e.g. rolls/fear.ts, and init) does the document
+ * writes.
  *
  * Foundry paradigm mapping (owner design, epic character statuses):
  * - momentary conditions = system statuses (CONFIG.statusEffects, token

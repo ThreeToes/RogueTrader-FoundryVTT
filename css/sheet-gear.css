@@ -12,7 +12,9 @@
 	--rt-danger: #8b5e52;
 	--rt-danger-deep: #c0392b;
 	--rt-danger-alarm: #b71c1c;
+	--rt-warn: #c25b3f;
 	--rt-success: #7ca860;
+	--rt-on-gold: #fff;
 	--rt-border-solid: rgba(122, 106, 83, 0.9);
 	--rt-border-strong: rgba(122, 106, 83, 0.5);
 	--rt-border: rgba(122, 106, 83, 0.4);
@@ -20,6 +22,15 @@
 	--rt-border-soft: rgba(122, 106, 83, 0.3);
 	--rt-border-dim: rgba(122, 106, 83, 0.25);
 	--rt-border-faint: rgba(122, 106, 83, 0.2);
+	/* Alpha families of the other hues (bead 838i): gold wash/line/glow and
+	   the dim-white text step; panel fills beyond the doc-blessed 0.2
+	   (shade 0.25, shadow 0.3) — the 0.2 step stays a blessed literal. */
+	--rt-gold-alpha-faint: rgba(184, 134, 11, 0.15);
+	--rt-gold-alpha-soft: rgba(184, 134, 11, 0.25);
+	--rt-gold-alpha-strong: rgba(184, 134, 11, 0.6);
+	--rt-white-alpha: rgba(255, 255, 255, 0.65);
+	--rt-panel-shade: rgba(0, 0, 0, 0.25);
+	--rt-panel-shadow: rgba(0, 0, 0, 0.3);
 	/* Type scale (bead o6gx): xs .75 / sm .78 / md .85 / lg .9 — 0.72 and
 	   0.75 fold into xs, 0.78 and 0.8 into sm, 0.92 and 0.95 into lg. */
 	--rt-fs-xs: 0.75em;
@@ -319,7 +330,7 @@
 .rogue-trader.sheet .chip-option input:checked + .chip {
 	background: var(--rt-gold);
 	border-color: var(--rt-gold);
-	color: #fff;
+	color: var(--rt-on-gold);
 }
 
 /* Design tokens: consistent labels/inputs across all system sheets */
@@ -360,7 +371,7 @@
 	padding: 4px 6px;
 	min-height: 1.2em;
 	border-radius: var(--rt-radius-sm);
-	background: rgba(0, 0, 0, 0.25);
+	background: var(--rt-panel-shade);
 	color: var(--color-text-light-primary, #eee);
 }
 
@@ -401,7 +412,7 @@
 .rogue-trader.sheet .career-table td {
 	padding: 5px 8px;
 	text-align: left;
-	border-bottom: 1px solid rgba(184, 134, 11, 0.25);
+	border-bottom: 1px solid var(--rt-gold-alpha-soft);
 	line-height: 1.4;
 	vertical-align: top;
 }
@@ -417,18 +428,18 @@
 }
 
 .rogue-trader.sheet .career-table .prereq {
-	color: rgba(255, 255, 255, 0.65);
+	color: var(--rt-white-alpha);
 	font-size: var(--rt-fs-lg);
 }
 
 .rogue-trader.sheet .career-table .advance-link {
-	color: #ffd700;
+	color: var(--rt-gold-soft);
 	cursor: pointer;
 	text-decoration: underline dotted;
 }
 
 .rogue-trader.sheet .career-table .advance-mult {
-	color: rgba(255, 255, 255, 0.65);
+	color: var(--rt-white-alpha);
 	font-size: var(--rt-fs-md);
 	margin-left: 4px;
 }
@@ -460,7 +471,7 @@
 .rogue-trader.sheet .rank-xp {
 	font-size: var(--rt-fs-md);
 	font-weight: normal;
-	color: rgba(255, 255, 255, 0.65);
+	color: var(--rt-white-alpha);
 }
 
 .rogue-trader.sheet .career-tagline {
@@ -494,14 +505,14 @@
 
 .rogue-trader.sheet .career-source {
 	font-size: var(--rt-fs-md);
-	color: rgba(255, 255, 255, 0.65);
+	color: var(--rt-white-alpha);
 	font-style: normal;
 }
 
 .rogue-trader.sheet .description-readonly {
 	padding: 4px 6px;
 	border-radius: var(--rt-radius-sm);
-	background: rgba(0, 0, 0, 0.25);
+	background: var(--rt-panel-shade);
 }
 
 /* Career prose (bead rcv): epigraph quote + attribution styling. */
@@ -519,7 +530,7 @@
 .rogue-trader.sheet .career-content .epigraph .attribution {
 	text-align: right;
 	font-size: var(--rt-fs-lg);
-	color: rgba(255, 255, 255, 0.65);
+	color: var(--rt-white-alpha);
 	margin: 0;
 }
 
@@ -552,20 +563,6 @@
 
 .rogue-trader.gear .stats {
 	align-content: baseline;
-}
-
-.rogue-trader.gear .stats-row {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 4px;
-}
-
-.rogue-trader.gear .stats-row .stat {
-	display: flex;
-	flex-direction: column;
-	flex: 1;
 }
 
 .rogue-trader.sheet .stats-row .stat.craftsmanship select,
@@ -724,21 +721,10 @@
 	text-align: center;
 }
 
+/* part-label keeps only its nowrap here; the small-caps gold label
+   anatomy (fs-xs/0.05em) lives in the shared xcte rule above. */
 .rogue-trader.sheet .part-label {
-	font-size: var(--rt-fs-xs);
-	font-weight: bold;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-	color: var(--rt-gold);
 	white-space: nowrap;
-}
-
-.rogue-trader.sheet .chip-label {
-	font-size: var(--rt-fs-sm);
-	font-weight: bold;
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
-	color: var(--rt-gold);
 }
 
 .rogue-trader.sheet .inv-group-label {
@@ -774,7 +760,8 @@
    Global shared sheet patterns (bead: starship sheet tidy-up).
    Promoted from .character-creator/.background/.sheet.character scoping to
    the global sheet layer per DESIGN-LANGUAGE ("never scope row CSS to one
-   sheet class"). Values mirror the scoped originals.
+   sheet class"). Values mirror the scoped originals; the scoped duplicates
+   in sheet-character.css were removed (bead ah2c).
    --------------------------------------------------------------------------- */
 
 .rogue-trader.sheet .pick-chips {
@@ -891,9 +878,9 @@
 /* Capacity bars (bead 7dt0): shared used-vs-capacity meters rendered by
    the rt/capacity-bar partial — the Hull-tab stat grid and the Refit budget
    strip both use this one anatomy: label · bar track · used/total numbers.
-   Fill follows the encumbrance-bar precedent (sheet-character.css):
-   success when within capacity, alarm (rt-danger-deep) when used exceeds
-   capacity via the .over modifier. Tokens only. */
+   Fill follows the shared cb-track/cb-fill family in this file — success
+   when within capacity, alarm (rt-danger-deep) when used exceeds capacity
+   via the .over modifier. Tokens only. */
 /* Hull tab stat groups (bead 4n4z): four labelled .stat-group blocks each
    holding a .stat-grid. Labels reuse the shared .inv-group-label pattern
    (fs-lg uppercase muted). */
@@ -920,19 +907,47 @@
 	white-space: nowrap;
 }
 
-.rogue-trader.sheet.starship .capacity-bar .cb-track {
+/* Shared meter track/fill family (bead tye1): the rt/capacity-bar vocabulary
+   (cb-track / cb-fill) is the ONE meter anatomy — the starship capacity bars
+   (Hull tab + Refit budget strip, via the rt/capacity-bar partial) and the
+   character inventory encumbrance meter (css/sheet-character.css
+   .encumbrance-progress) both render this anatomy. State ramps preserved
+   exactly: .over (partial over-flag → rt-danger-deep alarm) and
+   .state-encumbered / .state-over (inventory encumbrance states). */
+.rogue-trader.sheet .cb-track {
 	flex: 1;
 	height: 10px;
 	border: 1px solid var(--rt-border-strong);
 	border-radius: var(--rt-radius-sm);
 	overflow: hidden;
-	background: rgba(0, 0, 0, 0.3);
+	background: var(--rt-panel-shadow);
 }
 
-.rogue-trader.sheet.starship .capacity-bar .cb-fill {
+.rogue-trader.sheet .cb-fill {
 	display: block;
 	height: 100%;
 	background: var(--rt-success);
+}
+
+.rogue-trader.sheet .over .cb-fill {
+	background: var(--rt-danger-deep);
+}
+
+.rogue-trader.sheet .over .cb-value {
+	color: var(--rt-danger-deep);
+	font-weight: bold;
+}
+
+.rogue-trader.sheet .state-encumbered .cb-fill {
+	background: var(--rt-gold);
+}
+
+.rogue-trader.sheet .state-over .cb-fill {
+	background: var(--rt-danger-deep);
+}
+
+.rogue-trader.sheet .state-over .cb-value {
+	color: var(--rt-danger-deep);
 }
 
 .rogue-trader.sheet.starship .capacity-bar .cb-value {
@@ -941,15 +956,8 @@
 }
 
 /* Alarm treatment: over-capacity space/SP/power (powerDeficit, space >
-   total, SP spent > total — computed in ship-sheet.ts context). */
-.rogue-trader.sheet.starship .capacity-bar.over .cb-fill {
-	background: var(--rt-danger-deep);
-}
-
-.rogue-trader.sheet.starship .capacity-bar.over .cb-value {
-	color: var(--rt-danger-deep);
-	font-weight: bold;
-}
+   total, SP spent > total — computed in ship-sheet.ts context). The fill
+   alarm colour lives in the shared .cb-fill family above. */
 
 /* Refit budget strip (bead 7dt0): the meters sit at the TOP of the Refit
    tab so install/remove feedback is immediate. */
@@ -1030,8 +1038,8 @@
 	margin-left: auto;
 }
 
-/* Oddity/History rows: value takes the line, roll button hugs the end. */
-.rogue-trader.sheet.starship .traits-row .ladder-option {
+/* Oddity/History complications: the roll button hugs the line's end. */
+.rogue-trader.sheet.starship .complication .ladder-option {
 	margin-left: auto;
 }
 
@@ -1061,44 +1069,44 @@
 	padding: 2px 0;
 }
 
-/* Shared ship-component rows (bead uc08): name · type badge · status badge
-   · power · space · SP, with the tab actions (slot select + remove anchor /
-   repair button + GM state select) in the block. The name keeps a minimum
-   width so a wide select can never flex-squeeze it to nothing — the
-   'conditions rows show no name' defect was the old flex:1 basis-0 name
-   collapsing against the state select on narrow sheets. */
+/* Shared ship-component rows (bead uc08, owner round 5): name · status
+   badge · condensed cost chip, with the tab actions in the block (Refit:
+   slot chips + remove anchor / Combat: repair button + GM state chips —
+   chips live in the child block, see below). The name keeps a minimum
+   width so chips can never flex-squeeze it to nothing — the 'conditions
+   rows show no name' defect was the old flex:1 basis-0 name collapsing
+   against a sibling on narrow sheets. */
 .rogue-trader.sheet.starship .inv-row .sc-name {
 	flex: 1 1 auto;
 	min-width: 10ch;
 }
 
-.rogue-trader.sheet.starship .inv-row .sc-type,
 .rogue-trader.sheet.starship .inv-row .sc-state,
-.rogue-trader.sheet.starship .inv-row .sc-slot,
-.rogue-trader.sheet.starship .inv-row .sc-state-select,
 .rogue-trader.sheet.starship .inv-row .sc-repair {
 	flex: none;
 }
 /* Fixed status-badge colour code (bead uc08): intact = muted, unpowered =
-   muted-deep, damaged = amber warn, destroyed = danger-alarm. Tokens only. */
-.rogue-trader.sheet.starship .inv-row .sc-state {
+   muted-deep, damaged = amber warn, destroyed = danger-alarm. Tokens only.
+   Shared by inv-row and battery-card badges (depressurised/no-slot are
+   battery-card-only states, styled there). */
+.rogue-trader.sheet.starship .sc-state {
 	border: 1px solid var(--rt-border-strong);
 	border-radius: var(--rt-radius);
 }
 
-.rogue-trader.sheet.starship .inv-row .sc-state.intact {
+.rogue-trader.sheet.starship .sc-state.intact {
 	color: var(--rt-muted);
 }
 
-.rogue-trader.sheet.starship .inv-row .sc-state.unpowered {
+.rogue-trader.sheet.starship .sc-state.unpowered {
 	color: var(--rt-muted-deep);
 }
 
-.rogue-trader.sheet.starship .inv-row .sc-state.damaged {
-	color: #c25b3f;
+.rogue-trader.sheet.starship .sc-state.damaged {
+	color: var(--rt-warn);
 }
 
-.rogue-trader.sheet.starship .inv-row .sc-state.destroyed {
+.rogue-trader.sheet.starship .sc-state.destroyed {
 	color: var(--rt-danger-alarm);
 	font-weight: 600;
 }
@@ -1121,17 +1129,20 @@
 	flex: none;
 }
 
-.rogue-trader.sheet.starship .inv-row .state-chip {
+/* Chip base (state + slot chips share one anatomy). */
+.rogue-trader.sheet.starship .inv-row .state-chip,
+.rogue-trader.sheet.starship .inv-row .slot-chip {
 	padding: 1px 8px;
 	font-size: var(--rt-fs-xs, 0.75em);
-	color: var(--rt-muted);
+	color: var(--rt-muted, #7a6a53);
 	background: none;
 	border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
 	border-radius: var(--rt-radius-sm, 3px);
 	cursor: pointer;
 }
 
-.rogue-trader.sheet.starship .inv-row .state-chip:hover {
+.rogue-trader.sheet.starship .inv-row .state-chip:hover,
+.rogue-trader.sheet.starship .inv-row .slot-chip:hover {
 	border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
 }
 
@@ -1140,7 +1151,7 @@
 .rogue-trader.sheet.starship .inv-row .state-chip.checked,
 .rogue-trader.sheet.starship .inv-row .slot-chip.checked {
 	border-color: var(--rt-gold, #b8860b);
-	background: rgba(184, 134, 11, 0.15);
+	background: var(--rt-gold-alpha-faint);
 	color: var(--rt-gold, #b8860b);
 	font-weight: bold;
 }
@@ -1158,20 +1169,6 @@
 	gap: 4px;
 }
 
-.rogue-trader.sheet.starship .inv-row .slot-chip {
-	padding: 1px 8px;
-	font-size: var(--rt-fs-xs, 0.75em);
-	color: var(--rt-muted, #7a6a53);
-	background: none;
-	border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
-	border-radius: var(--rt-radius-sm, 3px);
-	cursor: pointer;
-}
-
-.rogue-trader.sheet.starship .inv-row .slot-chip:hover {
-	border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
-}
-
 /* Disabled slot chips: greyed and unclickable — the hull has no capacity
    for the slot, it is broadside-illegal, or the slot is full (the reason
    rides the tooltip). */
@@ -1180,14 +1177,10 @@
 	cursor: not-allowed;
 }
 
-/* Loud weapon-capacity warnings (bead om4j) + weapon slot selector. */
+/* Loud weapon-capacity warnings (bead om4j). */
 .rogue-trader.sheet.starship .method-hint.warn {
-	color: #c25b3f;
+	color: var(--rt-warn);
 	margin: 2px 0;
-}
-
-.rogue-trader.sheet.starship .inv-row select {
-	padding: 0 4px;
 }
 
 .rogue-trader.sheet.starship .inv-row .inv-name {
@@ -1205,16 +1198,20 @@
 	padding: 0 4px;
 }
 
-/* Combat tab vitals strip (bead ecnp): the test-dialog target-strip pattern
-   (css/sheet-character.css) — gold small-caps label over a big number, thin
-   vertical rules, equal spacing. Void Shields render as pips (design-language
-   pip vocabulary, one lit pip per shield). */
+/* Shared strip anatomy (bead tye1): the test-dialog target-strip
+   (css/sheet-character.css) and the starship combat vitals strip (bead ecnp)
+   are the same anatomy verbatim — flex stretch, centred .stat column, thin
+   vertical rules, gold small-caps label over a big bold value. ONE rule
+   family here; the value size is a modifier (dialog 1.9em, vitals 1.6em).
+   Void Shields render as pips (design-language pip vocabulary, one lit pip
+   per shield). */
+.test-dialog-app .test-dialog .target-strip,
 .rogue-trader.sheet.starship .sc-vitals-strip {
 	display: flex;
 	align-items: stretch;
-	margin: 4px 0 8px;
 }
 
+.test-dialog-app .test-dialog .target-strip .stat,
 .rogue-trader.sheet.starship .sc-vitals-strip .stat {
 	flex: 1;
 	display: flex;
@@ -1224,10 +1221,12 @@
 	padding: 2px 8px;
 }
 
+.test-dialog-app .test-dialog .target-strip .stat + .stat,
 .rogue-trader.sheet.starship .sc-vitals-strip .stat + .stat {
 	border-left: 1px solid var(--rt-border-dim);
 }
 
+.test-dialog-app .test-dialog .target-strip .stat > label,
 .rogue-trader.sheet.starship .sc-vitals-strip .stat > label {
 	font-size: var(--rt-fs-xs);
 	font-weight: bold;
@@ -1236,10 +1235,20 @@
 	color: var(--rt-gold);
 }
 
+.test-dialog-app .test-dialog .target-strip .stat .value,
 .rogue-trader.sheet.starship .sc-vitals-strip .stat .value {
-	font-size: 1.6em;
+	font-size: 1.9em;
 	font-weight: bold;
 	line-height: 1.1;
+}
+
+/* Size modifier: the vitals strip keeps its tighter 1.6em value. */
+.rogue-trader.sheet.starship .sc-vitals-strip .stat .value {
+	font-size: 1.6em;
+}
+
+.rogue-trader.sheet.starship .sc-vitals-strip {
+	margin: 4px 0 8px;
 }
 
 .rogue-trader.sheet.starship .sc-vitals-strip .sc-vitals-max {
@@ -1282,8 +1291,8 @@
 }
 
 .rogue-trader.sheet.starship .sc-state-banner.warn {
-	color: #c25b3f;
-	border-color: #c25b3f;
+	color: var(--rt-warn);
+	border-color: var(--rt-warn);
 }
 
 /* Weapon battery cards (bead ecnp): one card per weapon in a 2-column
@@ -1337,36 +1346,18 @@
 	gap: 4px;
 }
 
-/* Status badges reuse the uc08 colour code (restated here because the
-   .inv-row-scoped rules do not reach battery cards). */
+/* Battery-card status badges reuse the shared uc08 colour code (above);
+   only the card-local box styling sits here. */
 .rogue-trader.sheet.starship .battery-card .sc-state {
 	flex: none;
 	padding: 0 6px;
 	font-size: var(--rt-fs-sm);
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
 }
 
-.rogue-trader.sheet.starship .battery-card .sc-state.intact {
-	color: var(--rt-muted);
-}
-
-.rogue-trader.sheet.starship .battery-card .sc-state.unpowered {
-	color: var(--rt-muted-deep);
-}
-
-.rogue-trader.sheet.starship .battery-card .sc-state.damaged {
-	color: #c25b3f;
-}
-
-.rogue-trader.sheet.starship .battery-card .sc-state.destroyed {
-	color: var(--rt-danger-alarm);
-	font-weight: 600;
-}
-
+/* Card-only states outside the shared uc08 vocabulary. */
 .rogue-trader.sheet.starship .battery-card .sc-state.depressurised,
 .rogue-trader.sheet.starship .battery-card .sc-state.no-slot {
-	color: #c25b3f;
+	color: var(--rt-warn);
 }
 
 /* Mini stat grid: STR · DMG · CRIT · RNG, same label-over-value anatomy as
@@ -1408,7 +1399,7 @@
 }
 
 .rogue-trader.sheet.starship .battery-card .sc-fire:hover:not(:disabled) {
-	box-shadow: 0 0 6px rgba(184, 134, 11, 0.6);
+	box-shadow: 0 0 6px var(--rt-gold-alpha-strong);
 }
 
 .rogue-trader.sheet.starship .battery-card .sc-fire:disabled {
@@ -1479,7 +1470,6 @@
 	font-size: var(--rt-fs-md);
 }
 
-.rogue-trader.sheet .comp-details .starship-status,
 .rogue-trader.sheet .starship-status {
 	display: flex;
 	flex-wrap: wrap;
@@ -1529,10 +1519,6 @@
 .rogue-trader.sheet.npc .npc-wounds .wound-box {
 	width: 2.5em;
 	text-align: center;
-}
-
-.rogue-trader.sheet.npc .npc-desc {
-	margin-top: 4px;
 }
 
 /* NPC inventory tab (owner spec): armour stats left, item list right. */

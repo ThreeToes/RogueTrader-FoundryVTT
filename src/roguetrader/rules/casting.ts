@@ -9,7 +9,7 @@
  * The pack data keeps the BOOK's psyker-side notation (focusTest "Opposed
  * Willpower", etc.); this resolver applies the sorcery substitution at the
  * pipeline edge so one power serves both modes. Pure + Foundry-free; the
- * adapter (rules/roll-system.ts) consumes it.
+ * adapter (presentation/rolls/psychic.ts) consumes it.
  *
  * Rounding of "half his unmodified Intelligence Bonus" (EA p85) is pending
  * owner confirmation (bead k0um); ceil matches the Core Rulebook's

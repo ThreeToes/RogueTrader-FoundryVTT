@@ -164,7 +164,7 @@ export class TestDialogBase extends HandlebarsApplicationMixin(ApplicationV2) {
 	#conditionLabel: ((key: string) => string) | null;
 	#ladder: DifficultyStep[];
 	#labelPrefix: string;
-	#custom: modifiersRow[];	// Bead z132: the modifiers expander persists its open state across
+	#custom: CustomModifierRow[];	// Bead z132: the modifiers expander persists its open state across
 	// rerenders (add/remove custom rows recreates the DOM); collapsed default.
 	#modifiersOpen = false;
 	// Bead wqt3: selected difficulty modifier (null = no selection).
@@ -487,4 +487,4 @@ export class TestDialogBase extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 }
 
-type modifiersRow = { label: string; value: number };
+type CustomModifierRow = { label: string; value: number };

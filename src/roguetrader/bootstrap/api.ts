@@ -3,7 +3,7 @@
  *
  * `game.rogueTrader.*` is the documented extension surface: the full roll set
  * plus performRoll, so a module can define its own request kinds and reuse the
- * pipeline. Split out of the sheet/init.ts composition root.
+ * pipeline. Split out of the former sheet/init.ts composition root.
  */
 
 import {

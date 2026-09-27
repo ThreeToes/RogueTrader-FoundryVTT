@@ -4,7 +4,7 @@
  * test modifiers).
  *
  * Handlers are registered by KIND (e.g. "wounds-max", "skill-rank") at init
- * via CONFIG.ROGUE_TRADER.talentEffectHandlers (attached in sheet/init.ts).
+ * via CONFIG.ROGUE_TRADER.talentEffectHandlers (attached in bootstrap/config.ts).
  * Each handler receives (actor, talent, effect) and returns a pure derived
  * contribution; consumers (rules/derived.ts, sheets) aggregate. Handlers never
  * mutate documents.

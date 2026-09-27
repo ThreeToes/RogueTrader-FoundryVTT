@@ -1,7 +1,7 @@
 /**
  * Origin traits (bead tgq9): runtime resolution of the traits attached to a
  * character's Origin Path picks. Definitions come from the
- * rogue-trader.origintraits compendium (cached at init, see sheet/init.ts);
+ * rogue-trader.origintraits compendium (cached at init, see the bootstrap composition root, bootstrap/index.ts);
  * the cache seam keeps the funnel contributor synchronous.
  *
  * Decisions (owner-approved):

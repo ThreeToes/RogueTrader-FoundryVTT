@@ -2,7 +2,7 @@
  * Runtime hooks (epic kof0, phase 5): the actor lifecycle hooks, the chat-card
  * button delegation and the creator context menus.
  *
- * Split out of the sheet/init.ts composition root.
+ * Split out of the former sheet/init.ts composition root.
  */
 
 import { applyDamageFromCard, rollDamageButton } from "../presentation/chat-actions";

@@ -25,9 +25,12 @@ import { type AttackProfile, attackProfileOf } from "../../ffg/domain/model/atta
  * Sheets/buttons call these; everything below this layer is pure kernel.
  *
  * Bead mvu2: the dialog -> funnel -> kernel -> card roll sequences moved to
- * rules/roll-system.ts (discriminated-union requests + handler registry);
- * this module keeps the damage pipeline (weapon damage rolls, apply-damage
- * flow) and re-exports the roll API for the established import paths.
+ * the roll pipeline (presentation/rolls/pipeline.ts, one handler per kind;
+ * the request union + handler contract lives in the roll-contract.ts files
+ * at ffg/application and rules level) — rules/roll-system.ts is now only a
+ * compatibility shim re-exporting those. This module keeps the damage
+ * pipeline (weapon damage rolls, apply-damage flow) and re-exports the roll
+ * API for the established import paths.
  */
 export {
 	rollTest,

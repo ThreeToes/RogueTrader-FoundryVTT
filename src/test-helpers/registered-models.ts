@@ -3,8 +3,8 @@
  * manifest and template.json agree with what is actually registered (beads
  * wosb, pwpu).
  *
- * This mirrors SHEET_REGISTRY in sheet/init.ts, which lives inside an init
- * function and so cannot be imported here. A rename in either place fails
+ * This mirrors SHEET_REGISTRY in bootstrap/sheet-registry.ts (once inside
+ * sheet/init.ts, now importable). A rename in either place fails
  * these tests loudly, which is the point.
  *
  * Model specifiers are relative to THIS file and loaded through `loadSchema`,

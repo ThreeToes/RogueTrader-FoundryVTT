@@ -3,7 +3,7 @@
  * before the first DataModel schema is built, plus the module extension points
  * and the homebrew setting.
  *
- * Split out of the 983-line sheet/init.ts composition root. The namespace is
+ * Split out of the former 983-line sheet/init.ts composition root. The namespace is
  * created (on first use) by registry.ts's createRegistries factory, so the
  * warmers can attach their providers without racing each other.
  */

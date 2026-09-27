@@ -8,8 +8,8 @@
                 <i class="fa-solid fa-circle-info"></i>
             </a>
             <div class="encumbrance-progress">
-                <div class="bar">
-                    <div class="fill" style="width: {{#if encumbrance.capacity}}{{encumbrance.percent}}{{else}}0{{/if}}%"></div>
+                <div class="cb-track">
+                    <span class="cb-fill" style="width: {{#if encumbrance.capacity}}{{encumbrance.percent}}{{else}}0{{/if}}%"></span>
                 </div>
                 <span class="encumbrance-text">{{encumbrance.weight}} / {{encumbrance.capacity}} kg ({{encumbrance.percent}}%) {{localize encumbrance.stateLabel}}</span>
             </div>

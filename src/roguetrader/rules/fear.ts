@@ -1,7 +1,8 @@
 /**
  * Fear machinery (bead jpbm, Core Rulebook Ch X "Fear and Damnation"
- * p294-296). Pure rules module: the adapter-side roll kind (roll-system.ts)
- * consumes these functions; Foundry dice and chat stay out of here.
+ * p294-296). Pure rules module: the adapter-side roll kind
+ * (presentation/rolls/fear.ts) consumes these functions; Foundry dice and
+ * chat stay out of here.
  *
  * Book rules (verbatim cites):
  * - "a Fear Test; this is a Willpower Test, modified by how frightening the

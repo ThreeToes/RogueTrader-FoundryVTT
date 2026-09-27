@@ -22,7 +22,6 @@
 	color: var(--rt-muted);
 }
 
-.rogue-trader.chat.roll .roll-value,
 .rogue-trader.chat.roll .roll-result .value,
 .rogue-trader.chat.roll .roll-target .value {
 	font-size: 1.6em;
@@ -30,7 +29,7 @@
 }
 
 .rogue-trader.chat.roll .roll-result.success .value {
-	color: #2e7d32;
+	color: var(--rt-success);
 }
 
 .rogue-trader.chat.roll .roll-result.failure .value {

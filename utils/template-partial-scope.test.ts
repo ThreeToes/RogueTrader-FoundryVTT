@@ -94,9 +94,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		id: "w1",
 		name: "Sunseed Lance",
 		type: "ship-weapon-component",
-		power: 8,
-		space: 6,
-		sp: 0,
+		cost: "P8 S6 SP-",
 		slot: "dorsal",
 	};
 	const refitContext = {
@@ -118,11 +116,14 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 	it("ship-refit resolves weaponSlots via @root across the inv-row boundary", () => {
 		const render = compile("ship-refit.hbs");
 		const html = render(refitContext);
-		// The select must render the ROOT weaponSlots vocabulary — with the
-		// old ../../ path it rendered zero options (selectOptions undefined).
-		expect(html).toContain('<option value="dorsal"');
-		expect(html).toContain('<option value="prow"');
-		expect(html).toContain('selected>Dorsal');
+		// Round 5: the slot picker is BUTTON CHIPS in a centred second row —
+		// the chips must still render the ROOT weaponSlots vocabulary across
+		// the partial-block boundary (the old ../../ path rendered nothing).
+		expect(html).toContain('data-slot="dorsal"');
+		expect(html).toContain('data-slot="prow"');
+		expect(html).toContain('class="slot-chip dorsal checked"');
+		// and the unassign chip
+		expect(html).toContain('data-slot=""');
 	});
 
 	it("ship-combat resolves combat.componentStates via @root across the boundary", () => {
@@ -141,9 +142,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 						type: "ship-component",
 						state: "damaged",
 						stateLabel: "Damaged",
-						power: 3,
-						space: 2,
-						sp: 0,
+						cost: "P3 S2 SP-",
 						repairable: true,
 					},
 				],
@@ -155,9 +154,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 						type: "ship-weapon-component",
 						state: "intact",
 						stateLabel: "Intact",
-						power: 4,
-						space: 2,
-						sp: 1,
+						cost: "P4 S2 SP1",
 						repairable: false,
 					},
 				],

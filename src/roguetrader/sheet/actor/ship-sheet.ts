@@ -16,7 +16,7 @@ import {
 	performRoll,
 	rollShipSalvo,
 } from "../../rules/adapter";
-import { cloneItemFromDrop, cloneItemIntoActor } from "../drop-clone";
+import { cloneItemFromDrop } from "../drop-clone";
 import { sheetContext } from "../context";
 import { enrichText } from "../rich-text";
 
@@ -28,14 +28,6 @@ import { getPackDocuments } from "../pack-resolve";
     Unknown states fall back to the raw key so corruption is loud. */
 function componentStateLabel(state: string): string {
 	return game.i18n.localize(`SHIP_COMBAT.STATE_${state.toUpperCase()}`);
-}
-
-/** Row for the hull picker: ships pack `ship` docs. */
-interface HullOption {
-	uuid: string;
-	name: string;
-	hullClass: string;
-	sp: number;
 }
 
 /** Category groups for the component picker (bead f5xu). */
@@ -59,11 +51,8 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
 			rollOddity: ShipSheet.#onRollOddity,
-			pickHull: ShipSheet.#onPickHull,
 			rollHistory: ShipSheet.#onRollHistory,
-			addComponent: ShipSheet.#onAddComponent,
 			removeComponent: ShipSheet.#onRemoveComponent,
-			toggleComponentGroup: ShipSheet.#onToggleComponentGroup,
 			setWeaponSlot: ShipSheet.#onSetWeaponSlot,
 			openItem: ShipSheet.#onOpenItem,
 			fireWeapon: ShipSheet.#onFireWeapon,
@@ -119,36 +108,8 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		},
 	};
 
-	/** Session-only collapsed state for the refit component categories. */
-	componentCollapsed: Record<string, boolean> = {
-		essential: true,
-		supplemental: true,
-		archeotech: true,
-		xenotech: true,
-	};
-
-	/** Session-only state for the demoted browse-chips section (bead pyi3). */
-	componentGroupsOpen = false;
-
 	override get title(): string {
 		return `${game.i18n.localize("STARSHIP.HEADER")}: ${this.document.name}`;
-	}
-
-	async #hullOptions(): Promise<HullOption[]> {
-		const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
-			uuid?: string;
-			name?: string;
-			type?: string;
-			system?: { hullClass?: string; sp?: number };
-		}>;
-		return docs
-			.filter((d) => d.type === "ship")
-			.map((d) => ({
-				uuid: d.uuid ?? "",
-				name: d.name ?? "",
-				hullClass: d.system?.hullClass ?? "",
-				sp: d.system?.sp ?? 0,
-			}));
 	}
 
 	async _prepareContext(options: object = {}) {
@@ -186,11 +147,19 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.crewSkill = crew.skill;
 		context.crewSpDelta = crew.spDelta;
 		context.spRemaining = system.spRemaining;
-		context.hullOptions = await this.#hullOptions();
+		// Complications (Tables 8-1 / 8-2): the stored value plus its
+		// compendium effect — the effect ONLY when the ships pack provides
+		// it, never fabricated (owner round 6).
+		context.oddity = await this.#complicationContext(
+			"machine-spirit-oddity",
+			system.machineSpiritOddity,
+		);
+		context.history = await this.#complicationContext(
+			"past-history",
+			system.pastHistory,
+		);
 		const components = this.#ownedComponents();
 		context.components = components;
-		context.componentGroups = await this.#componentGroups();
-		context.componentGroupsOpen = this.componentGroupsOpen;
 		// Installed components grouped by category (bead pyi3: inventory-style
 		// primary view; the pack pickers are demoted browse affordances).
 		context.installedGroups = COMPONENT_CATEGORIES.map(
@@ -363,15 +332,6 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		};
 	}
 
-	/** Toggle a refit category's collapsed state (session-only). */
-	static #onToggleComponentGroup(this: ShipSheet, _event: unknown, target: HTMLElement): void {
-		const key = target.dataset.group;
-		if (!key) return;
-		if (this.componentCollapsed[key]) delete this.componentCollapsed[key];
-		else this.componentCollapsed[key] = true;
-		this.render({ force: true });
-	}
-
 	/** Owned component items on this ship (bead f5xu). */
 	#ownedComponents(): Array<{
 		id: string;
@@ -414,100 +374,49 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 					// Status badge (bead uc08): state + localized label.
 					state: s.state ?? "intact",
 					stateLabel: componentStateLabel(s.state ?? "intact"),
+					// Condensed cost chip (owner round 5): "P1 S3 SP-" for
+					// consumers, "G45 S10 SP+1" for generators — the pack power
+					// strings carry "Generated", the sp strings carry their own
+					// sign ("-", "+1").
+					cost: `${/generated/i.test(s.power ?? "") ? "G" : "P"}${(s.power ?? "").match(/-?\d+/)?.[0] ?? "?"} S${s.space ?? 0} SP${s.sp ?? "-"}`,
 				};
 			}) as never;
 	}
 
-	/** Ships-pack component picker, grouped by category. */
-	async #componentGroups(): Promise<Array<{
-		key: string;
-		labelKey: string;
-		items: Array<{ uuid: string; name: string; power: string; space: number; sp: string }>;
-	}>> {
-		const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
-			uuid?: string;
-			name?: string;
-			type?: string;
-			system?: {
-				power?: string;
-				space?: number;
-				sp?: string;
-				category?: string;
-			};
-		}>;
-		return COMPONENT_CATEGORIES.map(({ key, labelKey }) => ({
-			key,
-			labelKey,
-			open: !this.componentCollapsed[key],
-			items: docs
-				.filter(
-					(d) =>
-						(d.type === "ship-component" || d.type === "ship-weapon-component") &&
-						d.system?.category === key,
-				)
-				.map((d) => ({
-					uuid: d.uuid ?? "",
-					name: d.name ?? "",
-					power: d.system?.power ?? "",
-					space: d.system?.space ?? 0,
-					sp: d.system?.sp ?? "-",
-				})),
-		}));
+	/**
+	 * One complications section (owner round 6): the stored name plus its
+	 * compendium effect. The effect comes ONLY from the ships pack — if the
+	 * pack or the entry is unavailable, effect stays null and the template
+	 * shows no text (never fabricated). A "? (roll N)" fallback from a roll
+	 * that found no entry counts as unset, so the roll button returns.
+	 */
+	async #complicationContext(
+		kind: string,
+		value: string,
+	): Promise<{ name: string; hasValue: boolean; effect: string | null }> {
+		const name = value ?? "";
+		const hasValue = name.trim().length > 0 && !name.startsWith("?");
+		let effect: string | null = null;
+		if (hasValue) {
+			const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
+				type?: string;
+				name?: string;
+				system?: { kind?: string; effect?: string };
+			}>;
+			const hit = docs.find(
+				(d) =>
+					d.type === "ship-complication" &&
+					d.system?.kind === kind &&
+					d.name === name,
+			);
+			effect = hit?.system?.effect ?? null;
+		}
+		return { name, hasValue, effect };
 	}
 
 	/** Roll 1d10 on a complications table and record the result name. */
 	static async #onRollOddity(this: ShipSheet): Promise<void> {
 		await this.#rollComplication("machine-spirit-oddity", "machineSpiritOddity");
-	}
-
-	/** Pick a hull from the ships pack: copy its statline into the actor. */
-	static async #onPickHull(
-		this: ShipSheet,
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const uuid = target.dataset.uuid;
-		if (!uuid) return;
-		const hull = (await foundry.utils.fromUuid(uuid)) as unknown as {
-			name?: string;
-			system?: {
-				hullClass?: string;
-				dimensions?: string;
-				mass?: string;
-				crew?: string;
-				accel?: string;
-				speed?: number;
-				manoeuvrability?: number;
-				detection?: number;
-				hullIntegrity?: number;
-				armour?: number;
-				turretRating?: number;
-				space?: number;
-				sp?: number;
-				weaponCapacity?: string;
-			};
-		} | null;
-		if (!hull?.system) return;
-		const s = hull.system;
-		await this.document.update({
-			system: {
-				hullName: hull.name ?? "",
-				hullClass: s.hullClass ?? "",
-				dimensions: s.dimensions ?? "",
-				mass: s.mass ?? "",
-				crew: s.crew ?? "",
-				accel: s.accel ?? "",
-				speed: s.speed ?? 0,
-				manoeuvrability: s.manoeuvrability ?? 0,
-				detection: s.detection ?? 0,
-				hullIntegrity: { value: s.hullIntegrity ?? 0, max: s.hullIntegrity ?? 0 },
-				armour: s.armour ?? 0,
-				turretRating: s.turretRating ?? 0,
-				space: { total: s.space ?? 0, used: 0 },
-				sp: { total: s.sp ?? 0, spent: 0 },
-				weaponCapacity: s.weaponCapacity ?? "",
-			},
-		} as never);
 	}
 
 	static async #onRollHistory(this: ShipSheet): Promise<void> {
@@ -544,30 +453,6 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	/** Install a component from a uuid (browse-chips path, bead f5xu). */
-	static async #onAddComponent(
-		this: ShipSheet,
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const uuid = target.dataset.uuid;
-		if (!uuid) return;
-		try {
-			const created = await cloneItemIntoActor(this.document, uuid, {
-				// Ship refit may install the same component twice — no dup check.
-				skipOwned: false,
-			});
-			if (!created) {
-				console.warn(`rogue-trader | component "${uuid}" did not resolve`);
-				return;
-			}
-			// New array may raise the shield max; clamp current upward is not
-			// needed (shields start at max), but keep current within bounds.
-			await this.#clampVoidShields();
-		} catch (error) {
-			console.error("rogue-trader | component add failed:", error);
-		}
-	}
-
 	/** Remove an installed component, then clamp void shields to the new max. */
 	static async #onRemoveComponent(
 		this: ShipSheet,
@@ -598,7 +483,9 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		target: HTMLElement,
 	): Promise<void> {
 		const id = target.dataset.itemId;
-		const slot = (target as HTMLSelectElement).value;
+		// Round 5: the slot picker is BUTTON CHIPS (data-slot); the select
+		// path stays as a fallback for any other caller.
+		const slot = target.dataset.slot ?? (target as HTMLSelectElement).value;
 		if (!id) return;
 		const item = this.document.items.get(id);
 		if (!item) return;

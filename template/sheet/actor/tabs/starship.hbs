@@ -1,28 +1,10 @@
 <section class="tab {{tabs.hull.cssClass}}" data-group="primary" data-tab="hull">
     <div class="starship border">
-        <h1>{{localize "STARSHIP.TAB_HULL"}}</h1>
+        {{!-- The hull snapshot line lives in the header now (owner round 5). --}}
 
-        {{!-- Hull snapshot (copied from the ships pack when the hull is chosen) --}}
-        <div class="traits-row">
-            <span class="origin-label">{{localize "STARSHIP.HULL_CLASS"}}:</span>
-            <span class="origin-name">{{system.hullName}}</span>
-            <span class="chip origin-mod">{{system.hullClass}}</span>
-        </div>
-        <div class="traits-row">
-            <span class="origin-label">{{localize "STARSHIP.DIMENSIONS"}}:</span>
-            <span class="origin-name">{{system.dimensions}}</span>
-            <span class="origin-label">{{localize "STARSHIP.MASS"}}:</span>
-            <span class="origin-name">{{system.mass}}</span>
-        </div>
-        <div class="traits-row">
-            <span class="origin-label">{{localize "STARSHIP.CREW_DETAIL"}}:</span>
-            <span class="origin-name">{{system.crew}}</span>
-            <span class="origin-label">{{localize "STARSHIP.ACCEL"}}:</span>
-            <span class="origin-name">{{system.accel}}</span>
-        </div>
-
-        {{!-- Statline: four labelled groups of the compact 3-column grid
-              (design-language stats-row pattern, bead 4n4z) --}}
+        {{!-- Statline: three side-by-side groups (Drive / Resilience / Crew)
+              then a full-width Resources group — owner option A, no ragged
+              rows. --}}
         <div class="stat-groups">
         <div class="stat-group">
             <h3 class="inv-group-label">{{localize "STARSHIP.GROUP_DRIVE"}}</h3>
@@ -81,9 +63,19 @@
                 <label>{{localize "STARSHIP.CREW_MORALE"}}</label>
                 <input name="system.crewMorale" type="number" min="0" max="100" value="{{system.crewMorale}}" />
             </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.CREW_QUALITY"}}</label>
+                <select name="system.crewQuality">
+                    {{selectOptions crewQualities selected=system.crewQuality localize=true}}
+                </select>
+                <span class="crew-skill-chips">
+                    <span class="chip origin-mod">{{localize "STARSHIP.CREW_SKILL"}} {{crewSkill}}</span>
+                    <span class="chip origin-mod">{{#if (gt crewSpDelta 0)}}+{{/if}}{{crewSpDelta}} SP</span>
+                </span>
+            </div>
             </div>
         </div>
-        <div class="stat-group">
+        <div class="stat-group resources">
             <h3 class="inv-group-label">{{localize "STARSHIP.GROUP_RESOURCES"}}</h3>
             <div class="stat-grid">
             <div class="stat">
@@ -112,28 +104,34 @@
         </div>
         </div>
 
-        {{!-- Crew quality (Core Rulebook p193) --}}
-        <div class="traits-row">
-            <span class="origin-label">{{localize "STARSHIP.CREW_QUALITY"}}:</span>
-            <select name="system.crewQuality">
-                {{selectOptions crewQualities selected=system.crewQuality localize=true}}
-            </select>
-            <span class="chip origin-mod">{{localize "STARSHIP.CREW_SKILL"}} {{crewSkill}}</span>
-            <span class="chip origin-mod">{{#if (gt crewSpDelta 0)}}+{{/if}}{{crewSpDelta}} SP</span>
-        </div>
-
-        {{!-- Complications (Tables 8-1 / 8-2) --}}
-        <div class="traits-row">
-            <span class="origin-label">{{localize "STARSHIP.ODDITY"}}:</span>
-            <span class="origin-name">{{system.machineSpiritOddity}}</span>
+        {{!-- Complications (Tables 8-1 / 8-2): sections of their own — the
+             stored value with its compendium effect underneath. The effect
+             renders ONLY when the ships pack provides it (never fabricated
+             if the pack is missing); the roll button returns until a value
+             is recorded. --}}
+        <div class="complication">
+            <h3 class="inv-group-label">{{localize "STARSHIP.ODDITY"}}</h3>
+            {{#if oddity.hasValue}}
+            <p class="complication-name">{{oddity.name}}</p>
+            {{#if oddity.effect}}
+            <p class="complication-effect">{{oddity.effect}}</p>
+            {{/if}}
+            {{else}}
             <button type="button" class="ladder-option" data-action="rollOddity"
                 data-tooltip="{{localize "STARSHIP.ROLL_HINT"}}">{{localize "STARSHIP.ROLL"}}</button>
+            {{/if}}
         </div>
-        <div class="traits-row">
-            <span class="origin-label">{{localize "STARSHIP.HISTORY"}}:</span>
-            <span class="origin-name">{{system.pastHistory}}</span>
+        <div class="complication">
+            <h3 class="inv-group-label">{{localize "STARSHIP.HISTORY"}}</h3>
+            {{#if history.hasValue}}
+            <p class="complication-name">{{history.name}}</p>
+            {{#if history.effect}}
+            <p class="complication-effect">{{history.effect}}</p>
+            {{/if}}
+            {{else}}
             <button type="button" class="ladder-option" data-action="rollHistory"
                 data-tooltip="{{localize "STARSHIP.ROLL_HISTORY"}}">{{localize "STARSHIP.ROLL_HISTORY"}}</button>
+            {{/if}}
         </div>
     </div>
 </section>

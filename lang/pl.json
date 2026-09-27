@@ -1188,6 +1188,7 @@
   "STARSHIP.SLOT_DORSAL": "Grzbiet",
   "STARSHIP.SLOT_PROW": "Dziób",
   "STARSHIP.SLOT_PORT": "Lewy burt",
+  "STARSHIP.SLOT_KEEL": "Kil",
   "STARSHIP.SLOT_STARBOARD": "Prawy burt",
   "STARSHIP.CREW_INCOMPETENT": "Niekompetentna (20)",
   "STARSHIP.CREW_COMPETENT": "Kompetentna (30)",

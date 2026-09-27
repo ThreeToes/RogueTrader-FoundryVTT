@@ -8,10 +8,14 @@
                 <label>{{localize "STARSHIP.NAME"}}</label>
                 <input name="name" type="text" value="{{document.name}}" />
             </div>
-            <div class="header-cell">
-                <label>{{localize "STARSHIP.HULL_CLASS"}}</label>
-                <input name="system.hullClass" type="text" value="{{source.system.hullClass}}" />
-            </div>
+        </div>
+        <div class="header-line line-2">
+            {{!-- Hull snapshot (copied from the ships pack when the hull is
+                 chosen) as one muted line — owner option A + round 5: moved
+                 out of the Hull tab body; the redundant empty HULL CLASS
+                 input is gone (hullName carries the real class). --}}
+            <span class="snapshot-line">{{source.system.hullName}} · {{source.system.dimensions}} ·
+                {{source.system.mass}} · {{source.system.crew}} · {{source.system.accel}}</span>
         </div>
     </div>
 </div>

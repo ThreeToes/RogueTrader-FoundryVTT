@@ -1,7 +1,5 @@
 <section class="tab {{tabs.combat.cssClass}}" data-group="primary" data-tab="combat">
     <div class="starship border">
-        <h1>{{localize "STARSHIP.TAB_COMBAT"}}</h1>
-
         {{!-- Vitals strip (bead ecnp): the test-dialog target-strip pattern —
              gold small-caps label over a big number, thin vertical rules.
              Void Shields render as pips (one per shield, all lit). --}}
@@ -91,7 +89,7 @@
         {{#if combat.roster.length}}
         <h3 class="inv-group-label">{{localize "SHIP_COMBAT.ROSTER_COMPONENTS"}}</h3>
         {{#each combat.roster as |c|}}
-        {{#> "rt/ship-component-row" id=c.id name=c.name type="" stateLabel="" power=c.power space=c.space sp=c.sp}}
+        {{#> "rt/ship-component-row" id=c.id name=c.name stateLabel="" cost=c.cost}}
         {{#if c.repairable}}
         <button type="button" class="rt-button sc-repair" data-action="repairComponent" data-item-id="{{c.id}}"
             data-tooltip="{{localize "SHIP_COMBAT.REPAIR_TOOLTIP"}}">
@@ -112,7 +110,7 @@
         {{#if combat.weaponRoster.length}}
         <h3 class="inv-group-label">{{localize "SHIP_COMBAT.ROSTER_WEAPONS"}}</h3>
         {{#each combat.weaponRoster as |c|}}
-        {{#> "rt/ship-component-row" id=c.id name=c.name type="" stateLabel="" power=c.power space=c.space sp=c.sp}}
+        {{#> "rt/ship-component-row" id=c.id name=c.name stateLabel="" cost=c.cost}}
         {{#if c.repairable}}
         <button type="button" class="rt-button sc-repair" data-action="repairComponent" data-item-id="{{c.id}}"
             data-tooltip="{{localize "SHIP_COMBAT.REPAIR_TOOLTIP"}}">

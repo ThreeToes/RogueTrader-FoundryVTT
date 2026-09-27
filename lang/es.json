@@ -1189,6 +1189,7 @@
   "STARSHIP.SLOT_DORSAL": "Dorsal",
   "STARSHIP.SLOT_PROW": "Proa",
   "STARSHIP.SLOT_PORT": "Babor",
+  "STARSHIP.SLOT_KEEL": "Quilla",
   "STARSHIP.SLOT_STARBOARD": "Estribor",
   "STARSHIP.CREW_INCOMPETENT": "Incompetente (20)",
   "STARSHIP.CREW_COMPETENT": "Competente (30)",

@@ -1,7 +1,5 @@
 <section class="tab {{tabs.refit.cssClass}}" data-group="primary" data-tab="refit">
     <div class="starship border">
-        <h1>{{localize "STARSHIP.TAB_REFIT"}}</h1>
-
         {{!-- Budget strip FIRST (bead 7dt0): power/space/SP meters recompute
              on every render, so installing a component shows its cost here
              immediately. Alarm colour when over capacity. --}}
@@ -35,15 +33,27 @@
                 <span class="acq-group-count">{{group.items.length}}</span>
             </div>
             {{#each group.items as |c|}}
-            {{#> "rt/ship-component-row" id=c.id name=c.name type=c.type state=c.state stateLabel=c.stateLabel power=c.power space=c.space sp=c.sp}}
-            {{#if (eq c.type "ship-weapon-component")}}
-            <select class="sc-slot" data-action="setWeaponSlot" data-item-id="{{c.id}}"
-                data-tooltip="{{localize "STARSHIP.SLOT_HINT"}}">
-                {{selectOptions @root.weaponSlots selected=c.slot localize=true blank="—"}}
-            </select>
-            {{/if}}
+            {{#> "rt/ship-component-row" id=c.id name=c.name state=c.state stateLabel=c.stateLabel cost=c.cost}}
             <a class="inv-delete" data-action="removeComponent" data-item-id="{{c.id}}"
                 data-tooltip="{{localize "STARSHIP.COMPONENT_REMOVE"}}"><i class="fa-solid fa-xmark"></i></a>
+            {{#if (eq c.type "ship-weapon-component")}}
+            {{!-- Second child row (owner round 5): weapon slot as BUTTON
+                 CHIPS, centred UNDER the row — no dropdown. The leading "—"
+                 chip unassigns the slot. @root across the partial-block
+                 boundary is the only working parent lookup (see
+                 utils/template-partial-scope.test.ts). --}}
+            <span class="sc-slot-chips" role="group"
+                data-tooltip="{{localize "STARSHIP.SLOT_HINT"}}">
+                <button type="button" class="slot-chip{{#if (eq c.slot "")}} checked{{/if}}"
+                    data-action="setWeaponSlot" data-item-id="{{c.id}}" data-slot=""
+                    aria-pressed="{{#if (eq c.slot "")}}true{{else}}false{{/if}}">—</button>
+                {{#each @root.weaponSlots as |label key|}}
+                <button type="button" class="slot-chip {{key}}{{#if (eq c.slot key)}} checked{{/if}}"
+                    data-action="setWeaponSlot" data-item-id="{{c.id}}" data-slot="{{key}}"
+                    aria-pressed="{{#if (eq c.slot key)}}true{{else}}false{{/if}}">{{localize label}}</button>
+                {{/each}}
+            </span>
+            {{/if}}
             {{/"rt/ship-component-row"}}
             {{/each}}
             {{/each}}
@@ -52,46 +62,8 @@
         <p class="method-hint">{{localize "STARSHIP.COMPONENTS_EMPTY"}}</p>
         {{/if}}
 
-        {{!-- Demoted browse affordance: the compendium pickers, collapsed by
-             default now that drag-and-drop is the primary install path --}}
-        <div class="acq-group">
-            <button type="button" class="acq-group-header" data-action="toggleComponentGroup" data-group="browse">
-                <i class="fa-solid {{#if componentGroupsOpen}}fa-chevron-down{{else}}fa-chevron-right{{/if}}"></i>
-                {{localize "STARSHIP.BROWSE_COMPONENTS"}}
-            </button>
-            {{#if componentGroupsOpen}}
-            {{#each componentGroups as |group|}}
-            {{#if group.items.length}}
-            <div class="acq-group">
-                <button type="button" class="acq-group-header" data-action="toggleComponentGroup" data-group="{{group.key}}">
-                    <i class="fa-solid {{#if group.open}}fa-chevron-down{{else}}fa-chevron-right{{/if}}"></i>
-                    {{localize group.labelKey}}
-                    <span class="acq-group-count">({{group.items.length}})</span>
-                </button>
-                {{#if group.open}}
-                <div class="pick-chips">
-                    {{#each group.items as |c|}}
-                    <a class="pick-chip" data-action="addComponent" data-uuid="{{c.uuid}}"
-                        data-tooltip="{{localize "WEAPON.POWER"}} {{c.power}} · {{localize "STARSHIP.SPACE"}} {{c.space}} · SP {{c.sp}}">{{c.name}}</a>
-                    {{/each}}
-                </div>
-                {{/if}}
-            </div>
-            {{/if}}
-            {{/each}}
-            {{/if}}
-        </div>
-
-        {{!-- Hull picker: apply a ships-pack hull to this actor --}}
-        <div class="inv-group-header">
-            <h2 class="inv-group-label">{{localize "STARSHIP.PICK_HULL"}}</h2>
-            <span class="acq-group-count">{{hullOptions.length}}</span>
-        </div>
-        <div class="pick-chips">
-            {{#each hullOptions as |h|}}
-            <a class="pick-chip {{#if (eq h.name ../system.hullName)}}selected{{/if}}"
-                data-action="pickHull" data-uuid="{{h.uuid}}">{{h.name}} ({{h.sp}} SP)</a>
-            {{/each}}
-        </div>
+        {{!-- Browse pickers + hull picker REMOVED (owner round 5): drag
+             and drop from the ships compendium is the install path, and
+             choosing a different hull is effectively a different ship. --}}
     </div>
 </section>

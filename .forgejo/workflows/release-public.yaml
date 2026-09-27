@@ -48,6 +48,20 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
+            # act runner images are slimmer than GitHub-hosted ubuntu-latest:
+            # zip/jq are not preinstalled (live failures 2026-09-08 "zip: command
+            # not found" and 2026-09-27 "jq: command not found" — the sync step
+            # extracts the private release body with jq BEFORE the packaging
+            # steps, so this must run FIRST, not just before the zip step).
+            # Install only what's missing; act containers run as root, other
+            # runners get sudo.
+            - name: Ensure build tools (zip, jq, unzip)
+              run: |
+                  command -v zip >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1 && exit 0
+                  if [ "$(id -u)" = "0" ]; then SUDO=""; else SUDO="sudo"; fi
+                  $SUDO apt-get update -qq
+                  $SUDO apt-get install -y -qq zip jq unzip
+
             - name: Install bun (pinned)
               run: |
                   curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
@@ -97,17 +111,6 @@ jobs:
               env:
                   RELEASE_MANIFEST: system-manifests/rogue-trader-public.json
               run: bun run build
-
-            # act runner images are slimmer than GitHub-hosted ubuntu-latest:
-            # zip/jq are not preinstalled (live failure 2026-09-08: "zip: command
-            # not found"). Install only what's missing; act containers run as
-            # root, other runners get sudo.
-            - name: Ensure build tools (zip, jq, unzip)
-              run: |
-                  command -v zip >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1 && exit 0
-                  if [ "$(id -u)" = "0" ]; then SUDO=""; else SUDO="sudo"; fi
-                  $SUDO apt-get update -qq
-                  $SUDO apt-get install -y -qq zip jq unzip
 
             - name: Sanity-check public build output
               env:

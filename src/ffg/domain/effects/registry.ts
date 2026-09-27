@@ -66,8 +66,8 @@ export function collectEffects(
 export function collectEffectModifiers(
 	view: ActorView,
 	query: EffectQuery,
-): import("../../../rules-engine/src/modifier").Modifier[] {
-	const out: import("../../../rules-engine/src/modifier").Modifier[] = [];
+): import("../../../rules-engine/modifier").Modifier[] {
+	const out: import("../../../rules-engine/modifier").Modifier[] = [];
 	for (const hit of collectEffects(view, query)) {
 		const modifier = hit.spec.toModifier?.(hit.item, hit.effect, query);
 		if (modifier) out.push(modifier);

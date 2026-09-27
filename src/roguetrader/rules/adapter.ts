@@ -3,7 +3,7 @@ import {
 	locationForHit,
 	parseDamageFormula,
 	resolveDamage,
-} from "../../rules-engine/src/index";
+} from "../../rules-engine/index";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
 import { actorView } from "../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../infrastructure/foundry/ports";

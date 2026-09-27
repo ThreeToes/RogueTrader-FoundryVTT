@@ -16,7 +16,7 @@
  * - "Snap out of it": Willpower Test at the beginning of his next Turn
  *   (p296).
  */
-import type { Modifier } from "../../rules-engine/src/modifier";
+import type { Modifier } from "../../rules-engine/modifier";
 
 /** Table 10-3 ladder: the test modifier for a given Fear rating. */
 export function fearTestModifier(rating: number): number {
@@ -77,7 +77,7 @@ export function resolveFearRating(actor: unknown): number | null {
 	return best;
 }
 
-export { degreesOfFailure } from "../../rules-engine/src/index";
+export { degreesOfFailure } from "../../rules-engine/index";
 
 /**
  * Table 10-4: The Shock Table (Core Rulebook p294, VERBATIM book text kept

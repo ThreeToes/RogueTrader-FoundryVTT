@@ -41,7 +41,7 @@ import {
 	type MadnessPoints,
 	type OwnedAfflictionLike,
 } from "../../rules/madness";
-import type { Modifier } from "../../../rules-engine/src/modifier";
+import type { Modifier } from "../../../rules-engine/modifier";
 import {
 	performRoll,
 	rollSnapOut,

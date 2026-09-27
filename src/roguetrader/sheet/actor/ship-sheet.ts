@@ -14,7 +14,7 @@ import {
 	crippledEffects,
 	emergencyRepairsCanFix,
 	SHIP_COMPONENT_STATES,
-} from "../../../rules-engine/src/index";
+} from "../../../rules-engine/index";
 import {
 	performRoll,
 	rollShipSalvo,

@@ -85,7 +85,7 @@ describe("fvtt-types imports (bead ihpm)", () => {
 	 * A relative import that does not resolve is invisible when it is TYPE-ONLY:
 	 * the bundler erases it, so `bun run build` is happy, and the imported name
 	 * silently becomes an error type (`any`) — which is exactly how
-	 * `import type { Modifier } from "../../rules-engine/src/modifier"` in
+	 * `import type { Modifier } from "../../rules-engine/modifier"` in
 	 * character-sheet.ts (one `../` short) disabled type checking of every
 	 * Modifier in that file.
 	 */

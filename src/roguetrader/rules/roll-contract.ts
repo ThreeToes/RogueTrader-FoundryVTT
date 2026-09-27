@@ -15,7 +15,7 @@
  * Types only — no runtime code.
  */
 
-import type { Modifier } from "../../rules-engine/src/index";
+import type { Modifier } from "../../rules-engine/index";
 import type {
 	PreparedRoll as GenericPreparedRoll,
 	RollBase as GenericRollBase,

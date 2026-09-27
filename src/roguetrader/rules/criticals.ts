@@ -1,7 +1,7 @@
 /**
  * Character Critical Damage — the Foundry side (bead ks3k).
  *
- * The MATHS lives in the rules-engine kernel (src/rules-engine/src/criticals.ts):
+ * The MATHS lives in the rules-engine kernel (src/rules-engine/criticals.ts):
  * which table, what severity, whether a battlesuit diverts the wound, how many
  * effects a repair removes, and how a d100 picks a row. This module only reads
  * the actor, rolls, stores the result and reports it — the same split the ship
@@ -29,7 +29,7 @@ import {
 	repairEffectCount,
 	selectCriticalResult,
 	splitWoundDamage,
-} from "../../rules-engine/src/index";
+} from "../../rules-engine/index";
 import { ROLLTABLES_PACK } from "../application/packs";
 import { postCard } from "./chat-flags";
 import type { ContentPort } from "../../ffg/application/ports";

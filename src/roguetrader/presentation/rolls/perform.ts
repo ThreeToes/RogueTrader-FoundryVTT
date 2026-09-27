@@ -9,7 +9,7 @@
  * exists and performRoll never needs editing.
  */
 
-import { type Modifier, type TestOutcome } from "../../../rules-engine/src/index";
+import { type Modifier, type TestOutcome } from "../../../rules-engine/index";
 import { systemOf } from "../../data/accessors";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";

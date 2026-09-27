@@ -17,7 +17,7 @@ import {
 	rtCore,
 	type SystemProfile,
 } from "../../ffg/domain/system-profile";
-import type { Modifier } from "../../rules-engine/src/modifier";
+import type { Modifier } from "../../rules-engine/modifier";
 import { testContributors } from "../../ffg/application/funnel";
 import { getPorts } from "../infrastructure/foundry/ports";
 

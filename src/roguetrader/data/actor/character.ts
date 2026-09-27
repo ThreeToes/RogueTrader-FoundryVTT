@@ -12,7 +12,7 @@ import { textField } from "../fields";
 import { effectsAreLive } from "../item/effects";
 import { sourceField } from "../item/source";
 import { careers, sorceryRanks } from "../../registry";
-import { MAX_CRITICAL_SEVERITY } from "../../../rules-engine/src/index";
+import { MAX_CRITICAL_SEVERITY } from "../../../rules-engine/index";
 
 export {
 	CHARACTERISTIC_KEYS,

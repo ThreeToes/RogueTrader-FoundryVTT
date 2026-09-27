@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Modifier } from "../../rules-engine/src/modifier";
+import type { Modifier } from "../../rules-engine/modifier";
 import { buildActorView, type LooseActor } from "../../ffg/domain/model/build";
 import {
 	breakdown,

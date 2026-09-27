@@ -10,7 +10,7 @@
  * mutate documents.
  */
 
-import type { Modifier } from "../../rules-engine/src/modifier";
+import type { Modifier } from "../../rules-engine/modifier";
 import type { ActorView } from "../../ffg/domain/model/actor";
 import { collectEffects } from "../../ffg/domain/effects";
 import { HandlerRegistry } from "../../ffg/domain/registry";

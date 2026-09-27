@@ -14,7 +14,7 @@
 
 import type { ItemView } from "../model/actor";
 import type { TestKind } from "../model/test";
-import type { Modifier } from "../../../rules-engine/src/modifier";
+import type { Modifier } from "../../../rules-engine/modifier";
 import type { EffectData } from "../model/effect";
 
 /** What a kind feeds. One kind may feed several channels. */

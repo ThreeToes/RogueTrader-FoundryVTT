@@ -16,7 +16,7 @@ import {
 
 /**
  * The Foundry-side helpers of the critical-damage flow (bead ks3k). The dice
- * maths is covered in src/rules-engine/src/criticals.test.ts; what is tested
+ * maths is covered in src/rules-engine/criticals.test.ts; what is tested
  * here is the actor reading — which item counts as a worn battlesuit, when the
  * once-per-Turn override is spent, and what the sheet is handed.
  *

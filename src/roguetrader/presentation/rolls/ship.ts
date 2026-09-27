@@ -20,7 +20,7 @@ import {
 	resolveSalvoDamage,
 	shipCritical,
 	type ShipComponentState,
-} from "../../../rules-engine/src/index";
+} from "../../../rules-engine/index";
 import { systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { postCard } from "../../rules/chat-flags";

@@ -10,7 +10,7 @@
  * Adding an effect kind = one `effectKinds.register(...)` here.
  */
 
-import type { Modifier } from "../../../rules-engine/src/modifier";
+import type { Modifier } from "../../../rules-engine/modifier";
 import type { EffectData } from "../model/effect";
 import type { ItemView } from "../model/actor";
 import { effectKinds } from "./registry";

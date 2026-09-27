@@ -21,7 +21,7 @@
  *   rules, flagged for verification).
  */
 
-import type { Modifier } from "../../rules-engine/src/modifier";
+import type { Modifier } from "../../rules-engine/modifier";
 import type { ActorView } from "../domain/model/actor";
 import type { TestKind } from "../domain/model/test";
 import { collectEffects } from "../domain/effects";

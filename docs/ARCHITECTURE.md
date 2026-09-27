@@ -25,7 +25,7 @@ parameterisation (epic `foundryvtt-rogue-trader-hr6r`).
 
 | Layer | Path | May import |
 | --- | --- | --- |
-| Kernel | `src/rules-engine/src/**` | other kernel files only |
+| Kernel | `src/rules-engine/**` | other kernel files only |
 | Domain | `src/ffg/domain/**` | kernel, `domain/**` |
 | Application | `src/ffg/application/**` | kernel, domain, `application/ports` |
 | Infrastructure | `src/ffg/infrastructure/**`, `src/roguetrader/infrastructure/**` | everything below + Foundry |
@@ -143,7 +143,7 @@ single registration — not a new collector.
 ## Enforcement
 
 `src/roguetrader/architecture.test.ts` scans the six directories in its
-`LAYER_DIRS` table — kernel (`src/rules-engine/src`), domain, application,
+`LAYER_DIRS` table — kernel (`src/rules-engine`), domain, application,
 infrastructure, presentation and bootstrap — and fails on any import or
 Foundry-global use that breaks the table above. Everything else (notably
 `src/roguetrader/rules/**` and `src/roguetrader/sheet/**`) falls into an

@@ -15,7 +15,7 @@
  * never reports a number.
  */
 
-import type { Modifier } from "../../rules-engine/src/modifier";
+import type { Modifier } from "../../rules-engine/modifier";
 import { repairBattlesuitCriticals, repairSkillFor } from "./criticals";
 import { rollSkillOutcome } from "./roll-system";
 

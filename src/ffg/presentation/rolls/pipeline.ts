@@ -25,7 +25,7 @@ import {
 	resolveTest,
 	sumModifiers,
 	type TestOutcome,
-} from "../../../rules-engine/src/index";
+} from "../../../rules-engine/index";
 import type { ActorView } from "../../domain/model/actor";
 import { postCard } from "../../application/chat-flags";
 import {

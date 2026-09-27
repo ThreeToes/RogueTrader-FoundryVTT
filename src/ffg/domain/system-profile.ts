@@ -11,14 +11,14 @@
  * Lives in domain (not rules) because it is pure profile DATA that every
  * layer — infrastructure's config port included — must be able to import;
  * the architecture boundaries (epic kof0) forbid infrastructure -> rules.
- * Mirrors the pattern of src/rules-engine/src/profile.ts (RuleProfile /
+ * Mirrors the pattern of src/rules-engine/profile.ts (RuleProfile /
  * rtCore) at the roguetrader layer.
  */
 
 import {
 	type RuleProfile,
 	rtCore as rtCoreRuleProfile,
-} from "../../rules-engine/src/index";
+} from "../../rules-engine/index";
 
 /**
  * Profile data for the pure creation/advancement/homebrew resolvers.

@@ -14,7 +14,7 @@
  * not exist at this layer); the RT layer narrows it back to `Actor`.
  */
 
-import type { Modifier, TestOutcome } from "../../rules-engine/src/index";
+import type { Modifier, TestOutcome } from "../../rules-engine/index";
 import type { TestKind } from "../domain/model/test";
 import type { MessageFlags } from "./chat-flags";
 

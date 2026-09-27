@@ -8,7 +8,7 @@
  * phenomena / damage / corruption follow-ups.
  */
 
-import type { Modifier } from "../../../rules-engine/src/index";
+import type { Modifier } from "../../../rules-engine/index";
 import { systemOf } from "../../data/accessors";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";

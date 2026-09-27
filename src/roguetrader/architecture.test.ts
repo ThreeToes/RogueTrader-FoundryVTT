@@ -36,7 +36,7 @@ type Layer =
 
 /** Directory -> layer. Order matters: first match wins. */
 const LAYER_DIRS: ReadonlyArray<readonly [Layer, string]> = [
-	["kernel", "src/rules-engine/src"],
+	["kernel", "src/rules-engine"],
 	["domain", "src/ffg/domain"],
 	["application", "src/ffg/application"],
 	["presentation", "src/ffg/presentation"],
@@ -269,7 +269,7 @@ describe("architecture boundaries (epic kof0)", () => {
 
 	test("the scanner flags a Foundry global in the kernel", () => {
 		const violations = violationsFor(
-			"src/rules-engine/src/x.ts",
+			"src/rules-engine/x.ts",
 			'export const name = game.i18n.localize("X");\n',
 		);
 		expect(violations.some((v) => v.includes("Foundry global"))).toBe(true);
@@ -277,7 +277,7 @@ describe("architecture boundaries (epic kof0)", () => {
 
 	test("the scanner ignores Foundry words in comments and strings", () => {
 		const violations = violationsFor(
-			"src/rules-engine/src/x.ts",
+			"src/rules-engine/x.ts",
 			'// uses game.i18n at the edge\nexport const label = "game.i18n";\n',
 		);
 		expect(violations).toEqual([]);
@@ -293,7 +293,7 @@ describe("architecture boundaries (epic kof0)", () => {
 
 	test("the scanner allows an inward kernel import", () => {
 		const violations = violationsFor(
-			"src/rules-engine/src/damage.ts",
+			"src/rules-engine/damage.ts",
 			'import type { RuleProfile } from "./profile";\n',
 		);
 		expect(violations).toEqual([]);

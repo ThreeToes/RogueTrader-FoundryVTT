@@ -10,6 +10,7 @@
  * where the GM changes their mind about that.
  */
 import { equipStateOf } from "../data/accessors";
+import { readRtFlag } from "../rules/chat-flags";
 
 /** Minimal owned-item shape the grouping/equip logic needs. */
 export interface NpcInventoryItemLike {
@@ -55,10 +56,9 @@ export interface NpcInventoryItem {
 
 /** Read the packer's compendiumSource stamp off an owned item. */
 export function compendiumSourceOf(item: NpcInventoryItemLike): string {
-	const flags = item.flags as
-		| { "rogue-trader"?: { compendiumSource?: string } }
-		| undefined;
-	return flags?.["rogue-trader"]?.compendiumSource ?? "";
+	// Namespace from the profile (bead pwn0): the stamp lives under the
+	// active system's chat-flag namespace.
+	return readRtFlag(item as { flags?: Record<string, Record<string, unknown>> }, "compendiumSource") ?? "";
 }
 
 export interface NpcInventoryGroup {

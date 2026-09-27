@@ -13,11 +13,21 @@ import type {
 	ActorView,
 	SystemViewBase,
 } from "../../../ffg/domain/model/actor";
-import { buildActorView, type LooseActor } from "../../../ffg/domain/model/build";
+import { messageFlagNamespace } from "../../../ffg/application/chat-flags";
+import {
+	buildActorView,
+	type LooseActor,
+} from "../../../ffg/domain/model/build";
+import { getPorts } from "./ports";
 
 /** Snapshot a Foundry Actor into the typed, Foundry-free read model. */
 export function actorView<S extends SystemViewBase = ActorSystemView>(
 	actor: Actor,
 ): ActorView<S> {
-	return buildActorView<S>(actor as unknown as LooseActor);
+	// The flag namespace is profile DATA (bead pwn0): resolved above the domain
+	// here (this is the infrastructure layer that owns the ports), passed in so
+	// the domain mapping never hardcodes a system id.
+	return buildActorView<S>(actor as unknown as LooseActor, {
+		flagNamespace: messageFlagNamespace(getPorts()),
+	});
 }

@@ -14,7 +14,7 @@
  */
 
 import type { ActorView } from "../../ffg/domain/model/actor";
-import type { RuleProfile } from "../../rules-engine/src/index";
+import type { SystemProfile } from "../../ffg/domain/system-profile";
 
 /** Which content the world has installed (cheap to probe; no doc loading). */
 export interface ContentCapabilities {
@@ -179,8 +179,12 @@ export interface ConfigPort {
 	 * crit handling, hit locations and the sibling-system extension points.
 	 * presentation/rolls/pipeline.ts and rules/adapter.ts resolve through this
 	 * instead of importing rtCore, so a sibling module swaps one binding here.
+	 *
+	 * Returns the SystemProfile (bead p7jv) so system-specific profile DATA
+	 * beyond the kernel rules (e.g. messageFlagNamespace) is reachable through
+	 * the same seam.
 	 */
-	profile(): RuleProfile;
+	profile(): SystemProfile;
 }
 
 /** Document writes the rules perform (never a read — reads use ActorView). */

@@ -1,15 +1,34 @@
 /**
- * The roll request/handler contract (epic kof0, phase 4): the discriminated
- * request union and the per-kind handler interface. Extracted from
- * roll-system.ts so handlers can live in their own modules without a cycle.
+ * The roll request/handler contract — RT layer (epic kof0, phase 4; bead
+ * p7jv).
+ *
+ * The GENERIC base (RollBase, the handler interface shape, PreparedRoll/
+ * RollContext, Modifier plumbing types) lives in
+ * src/ffg/application/roll-contract.ts. This file keeps the system-specific
+ * half: the closed RT RollKind union, the RT request shapes (psychic,
+ * navigator, ship-weapon, ship-repair, fear) and the RT kind-data map, and
+ * specialises the generic contract with them.
+ *
+ * The re-exports below keep every existing import path and call site
+ * unchanged — existing call sites must not churn.
  *
  * Types only — no runtime code.
  */
 
-import type { Modifier, TestOutcome } from "../../rules-engine/src/index";
-import type { TestKind } from "../../ffg/domain/model/test";
+import type { Modifier } from "../../rules-engine/src/index";
+import type {
+	PreparedRoll as GenericPreparedRoll,
+	RollBase as GenericRollBase,
+	RollHandler as GenericRollHandler,
+	RollContext as GenericRollContext,
+	TestDialogResultLike,
+} from "../../ffg/application/roll-contract";
 import type { RtMessageFlags } from "./chat-flags";
 import type { StrengthLevel } from "./psychic";
+
+// The generic plumbing types are re-exported as-is.
+export type RollContext = GenericRollContext;
+export type { TestDialogResultLike };
 
 // ---------------------------------------------------------------------------
 // Requests (discriminated union)
@@ -25,10 +44,9 @@ export type RollKind =
 	| "ship-repair"
 	| "fear";
 
-/** Shared request data. The title is derived per kind in the handler. */
-export interface RollBase {
+/** Shared request data (generic base, narrowed to the Foundry Actor). */
+export interface RollBase extends GenericRollBase {
 	actor: Actor;
-	/** Bypass the modify dialog (fast-forward). */
 	skipDialog?: boolean;
 }
 
@@ -126,15 +144,6 @@ export type RollRequest =
 // Handler contract
 // ---------------------------------------------------------------------------
 
-/** Funnel context passed through to collectTestModifiers (bead hyv/r1k). */
-export interface RollContext {
-	aimed?: boolean;
-	fireMode?: "single" | "burst" | "full";
-	flags?: Record<string, boolean>;
-	/** Skill-item test name (bead r1k) for "skill:<name>" effect keys. */
-	skillName?: string;
-}
-
 /**
  * Per-kind data a handler carries from prepare() to after() (bead ezys).
  *
@@ -188,88 +197,24 @@ export interface RollKindData {
 	};
 }
 
-/** Everything the shared pipeline needs once the handler has prepared. */
-export interface PreparedRoll<K extends RollKind = RollKind> {
-	/** Human card/dialog title (actor-qualified). */
-	title: string;
-	/** Unmodified target (characteristic / skill value). */
-	baseTarget: number;
-	/** Funnel test kind ("characteristic" | "skill" | "attack" | "focus-power"). */
-	testKind: TestKind;
-	/** Funnel test key (characteristic key or title surrogate). */
-	testKey: string;
-	/** Pre-dialog modifier rows (psy bonus, mastery, untrained, caller). */
-	initialModifiers: Modifier[];
-	/** Weapon shape for funnel effect collection (weapon kind only). */
-	weapon: { type: string; special?: string[] } | null;
-	/**
-	 * Guarded condition flags this handler sets from its own dialog controls
-	 * (bead xu83): the generic pre-roll condition toggles must not duplicate
-	 * them (e.g. the melee Charge checkbox already drives "charging").
-	 */
-	handledConditionFlags?: string[];
-	/** Pre-dialog funnel context (skill name). */
-	context: RollContext;
-	/** Extra roll-card template vars (e.g. showDamageButton). */
-	templateVars?: Record<string, unknown>;
+/**
+ * Everything the shared pipeline needs once the handler has prepared — the
+ * generic contract specialised with the RT kind-data map (and the RT
+ * namespaced flags shape).
+ */
+export interface PreparedRoll<K extends RollKind = RollKind>
+	extends GenericPreparedRoll<K, RollKindData> {
 	/** Flags set on the roll card at creation time. */
 	flags?: RtMessageFlags;
-	/** Profile override (bead sa6: Focus Power 91+ auto-fail). */
-	autoFailRoll?: number | null;
-	/** Profile override (bead jpbm: Fearless auto-passes the Fear Test). */
-	autoPassRoll?: number | null;
-	/** Kind-specific data carried from prepare to after (see RollKindData). */
-	kindData?: RollKindData[K];
 }
 
 /**
- * Per-kind handler. Every hook is optional except prepare (validation +
- * derived data); performRoll runs prepare -> dialog -> post-dialog rows ->
- * shared test pipeline -> after. Handlers that need Foundry UI do it inside
- * their hooks so the orchestrator stays Foundry-shape-free.
+ * Per-kind handler — the generic contract specialised with the RT request
+ * union and kind-data map. Shape-compatible with the pre-hoist interface, so
+ * handler modules and the registry need no edits.
  */
-export interface RollHandler<K extends RollKind> {
-	/** Validate + resolve the request. Null = bail (warnings already shown). */
-	prepare(
-		request: Extract<RollRequest, { kind: K }>,
-	): Promise<PreparedRoll<K> | null>;
-	/** Extra TestDialog config (weapon: attack-context selectors). */
-	dialogConfig?(
-		request: Extract<RollRequest, { kind: K }>,
-		prepared: PreparedRoll<K>,
-	): object;
-	/** Post-dialog modifier rows (weapon: Aim / Inaccurate cancellation). */
-	postDialogModifiers?(
-		request: Extract<RollRequest, { kind: K }>,
-		prepared: PreparedRoll<K>,
-		dialog: TestDialogResultLike,
-	): Modifier[];
-	/** Funnel context that depends on the dialog result (weapon: fire mode). */
-	testContext?(
-		request: Extract<RollRequest, { kind: K }>,
-		prepared: PreparedRoll<K>,
-		dialog: TestDialogResultLike | null,
-	): RollContext;
-	/** Post-card follow-up (damage flag, evasion, phenomena, power damage). */
-	after?(
-		request: Extract<RollRequest, { kind: K }>,
-		prepared: PreparedRoll<K>,
-		outcome: TestOutcome,
-		messageId: string | null,
-		/** Resolved test numbers + final modifier list (bead jpbm). */
-		info?: { target: number; modifiers: Modifier[] },
-	): Promise<void>;
-}
-
-/** Minimal shape of the TestDialog result the hooks consume. */
-export interface TestDialogResultLike {
-	modifiers: Modifier[];
-	/** Guarded condition toggles chosen in the dialog (bead xu83). */
-	flags?: Record<string, boolean>;
-	attack?: {
-		fireMode?: "single" | "burst" | "full";
-		aimed?: boolean;
-		aimFull?: boolean;
-		flags?: Record<string, boolean>;
-	};
-}
+export type RollHandler<K extends RollKind = RollKind> = GenericRollHandler<
+	K,
+	RollRequest,
+	RollKindData
+>;

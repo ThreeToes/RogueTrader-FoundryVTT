@@ -8,7 +8,11 @@
  */
 
 import { getPorts } from "../infrastructure/foundry/ports";
-import type { DamageApplyFlag } from "../rules/chat-flags";
+import {
+	type DamageApplyFlag,
+	messageFlagNamespace,
+	readMessageFlag,
+} from "../../ffg/application/chat-flags";
 import { applyDamageWithCriticals, postCriticalCard } from "../rules/criticals";
 import { rollDamageForCard } from "../rules/adapter";
 
@@ -28,9 +32,7 @@ export async function applyDamageFromCard(
 				update: (u: object) => Promise<void>;
 			})
 		: undefined;
-	const data = message?.flags?.["rogue-trader"]?.damageApply as
-		| DamageApplyFlag
-		| undefined;
+	const data = readMessageFlag(getPorts(), message, "damageApply");
 	if (!message || !data || data.applied) {
 		// Fallback: the button itself carries the outcome (data-target /
 		// data-wounds) - usable even when the message flag is missing, e.g.
@@ -92,9 +94,11 @@ async function applyToTarget(
 	});
 	if (message) {
 		await message.update({
-			flags: {
-				"rogue-trader": {
-					damageApply: {
+		// Namespace from the profile (bead p7jv): RT's value is
+		// "rogue-trader", so the wire format is unchanged.
+		flags: {
+			[messageFlagNamespace(getPorts())]: {
+				damageApply: {
 						...effective,
 						wounds: woundsAmount,
 						targetUuid,
@@ -131,7 +135,7 @@ export async function rollDamageButton(
 				update: (u: object) => Promise<void>;
 			})
 		: undefined;
-	const data = message?.flags?.["rogue-trader"]?.damageRoll as
+	const data = readMessageFlag(getPorts(), message, "damageRoll") as
 		| {
 				attackerUuid?: string;
 				weaponUuid?: string;
@@ -144,7 +148,7 @@ export async function rollDamageButton(
 	await rollDamageForCard(data as never);
 	await message.update({
 		flags: {
-			"rogue-trader": {
+			[messageFlagNamespace(getPorts())]: {
 				damageRoll: { ...data, rolled: true },
 			},
 		},

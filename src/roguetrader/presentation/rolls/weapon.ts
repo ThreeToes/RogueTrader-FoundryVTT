@@ -9,6 +9,7 @@
  */
 
 import { attackProfileOf } from "../../../ffg/domain/model/attack";
+import { messageFlagNamespace } from "../../../ffg/application/chat-flags";
 import { equipStateOf, systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollHandler } from "../../rules/roll-contract";
@@ -107,8 +108,10 @@ export const weaponHandler: RollHandler<"weapon"> = {
 		if (outcome.success && messageId) {
 			const item = request.actor.items.get(request.itemId);
 			await ports.chat.update(messageId, {
+				// Namespace from the profile (bead p7jv): RT's value is
+				// "rogue-trader", so the wire format is unchanged.
 				flags: {
-					"rogue-trader": {
+					[messageFlagNamespace(ports)]: {
 						damageRoll: {
 							attackerUuid: request.actor.uuid,
 							weaponUuid: item?.uuid,

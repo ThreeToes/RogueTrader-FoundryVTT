@@ -55,6 +55,7 @@ import {
 	skillGrantPayload,
 } from "../../rules/grants";
 import { sheetContext } from "../context";
+import { readRtFlag } from "../../rules/chat-flags";
 import { waitForDefaultGrants } from "../default-grants";
 import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
 import { CreatorApplication } from "./creator-application";
@@ -739,7 +740,7 @@ export class CharacterCreator extends CreatorApplication {
 		)) as unknown as Array<{
 			name?: string;
 			type?: string;
-			flags?: { "rogue-trader"?: { source?: string } };
+			flags?: Record<string, Record<string, unknown>>;
 			system?: {
 				availability?: string;
 				class?: string;
@@ -755,7 +756,7 @@ export class CharacterCreator extends CreatorApplication {
 			// pack, so bucket by the build-time source flag. The Tau armoury is
 			// hand-authored mixed-type, so it buckets by item type; heirlooms and
 			// cybernetics are not acquisitions.
-			const source = doc.flags?.["rogue-trader"]?.source ?? "";
+			const source = readRtFlag(doc, "source") ?? "";
 			const group =
 				source === "tau-armoury"
 					? doc.type === "armour"

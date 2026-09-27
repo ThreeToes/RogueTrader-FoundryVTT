@@ -860,85 +860,315 @@
 
 /* Test dialog (unified roll dialog) */
 
-.rogue-trader.dialog.test-dialog-app {
-    min-width: 420px;
-    min-height: 220px;
+/* Test dialog (bead z132, ledger-first restyle).
+
+   The dialog window is NOT inside `.sheet`, so sheet-scoped group-label
+   rules never applied here — that is why the old "Modifiers" heading
+   rendered huge. All dialog typography is scoped under the window root
+   (`.dialog.test-dialog-app`) and uses the design tokens from
+   docs/DESIGN-LANGUAGE.md. */
+
+.dialog.test-dialog-app {
+    min-width: 440px;
+    min-height: 260px;
 }
 
-.rogue-trader .test-dialog {
+.test-dialog-app .test-dialog {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.rogue-trader .test-dialog .modifier-list {
+/* Section headings — the group-label treatment (fs-lg, uppercase, muted),
+   previously inherited wrongly from a generic dialog h3 rule. */
+.test-dialog-app .test-dialog .dialog-group-label {
+    font-size: var(--rt-fs-lg, 0.9em);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--rt-muted, #7a6a53);
+    margin: 4px 0 0;
+}
+
+/* Three-stat strip: base · modifiers · target, small gold label over the
+   number, a simple vertical rule between the cells (no box — bead z132
+   round 4). */
+.test-dialog-app .test-dialog .target-strip {
+    display: flex;
+    align-items: stretch;
+}
+
+.test-dialog-app .test-dialog .target-strip .stat {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    gap: 1px;
+    padding: 2px 8px;
 }
 
-.rogue-trader .test-dialog .modifier-row {
+.test-dialog-app .test-dialog .target-strip .stat + .stat {
+    border-left: 1px solid var(--rt-border-dim, rgba(122, 106, 83, 0.25));
+}
+
+.test-dialog-app .test-dialog .target-strip .stat > label {
+    font-size: var(--rt-fs-xs, 0.75em);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--rt-gold, #b8860b);
+}
+
+/* All three values the same size; Target keeps the gold-soft emphasis. */
+.test-dialog-app .test-dialog .target-strip .stat .value {
+    font-size: 1.9em;
+    font-weight: bold;
+    line-height: 1.1;
+}
+
+.test-dialog-app .test-dialog .target-strip .stat .preview-value {
+    color: var(--rt-gold-soft, #d9c38a);
+}
+
+/* The modifiers expander: collapsed by default, the summary carries the
+   group label and a count note. */
+.test-dialog-app .test-dialog .modifier-expander > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.test-dialog-app .test-dialog .modifier-expander > summary::-webkit-details-marker {
+    display: none;
+}
+
+.test-dialog-app .test-dialog .modifier-expander > summary::after {
+    content: "▾";
+    color: var(--rt-muted, #7a6a53);
+    font-size: var(--rt-fs-sm, 0.78em);
+}
+
+.test-dialog-app .test-dialog .modifier-expander[open] > summary::after {
+    content: "▴";
+}
+
+.test-dialog-app .test-dialog .modifier-expander > summary .summary-note {
+    font-size: var(--rt-fs-sm, 0.78em);
+    color: var(--rt-muted, #7a6a53);
+}
+
+.test-dialog-app .test-dialog .modifier-expander[open] .ledger {
+    margin-top: 4px;
+}
+
+/* The shared ledger chrome: one bordered panel for every contributor
+   group (situational selects, modifiers, custom rows) so a lone fixed row
+   no longer reads as a stray sentence. */
+.test-dialog-app .test-dialog .ledger {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
+    border-radius: var(--rt-radius, 4px);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.test-dialog-app .test-dialog .ledger .modifier-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 1px 0;
+    gap: 8px;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--rt-border-dim, rgba(122, 106, 83, 0.25));
 }
 
-.rogue-trader .test-dialog .modifier-row.fixed {
-    opacity: 0.85;
+.test-dialog-app .test-dialog .ledger .modifier-row:last-of-type {
+    border-bottom: none;
 }
 
-.rogue-trader .test-dialog .modifier-label {
+.test-dialog-app .test-dialog .ledger-field-label {
+    font-size: var(--rt-fs-sm, 0.78em);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--rt-gold, #b8860b);
+    flex: none;
+}
+
+.test-dialog-app .test-dialog .modifier-label {
     flex: 1;
     min-width: 0;
 }
 
-.rogue-trader .test-dialog .modifier-source {
-    font-size: var(--rt-fs-md);
-    opacity: 0.7;
+.test-dialog-app .test-dialog .modifier-source {
+    font-size: var(--rt-fs-md, 0.85em);
+    color: var(--rt-muted, #7a6a53);
     white-space: nowrap;
 }
 
-.rogue-trader .test-dialog .modifier-value {
+.test-dialog-app .test-dialog .modifier-value {
     width: 4em;
     text-align: center;
 }
 
-.rogue-trader .test-dialog .modifier-value.pos {
-    color: var(--rt-success);
+.test-dialog-app .test-dialog .modifier-value.pos {
+    color: var(--rt-success, #7ca860);
     font-weight: bold;
 }
 
-.rogue-trader .test-dialog .modifier-value.neg {
-    color: var(--rt-danger-deep);
+.test-dialog-app .test-dialog .modifier-value.neg {
+    color: var(--rt-danger-deep, #c0392b);
     font-weight: bold;
 }
 
-.rogue-trader .test-dialog .modifier-remove {
+.test-dialog-app .test-dialog .modifier-remove {
     width: 1.2em;
     text-align: center;
-    color: var(--rt-danger);
+    color: var(--rt-danger, #8b5e52);
     cursor: pointer;
 }
 
-.rogue-trader .test-dialog .modifier-add {
+.test-dialog-app .test-dialog .modifier-add {
     align-self: flex-start;
-    font-size: var(--rt-fs-md);
+    margin-top: 2px;
+    padding: 1px 6px;
+    font-size: var(--rt-fs-sm, 0.78em);
+    color: var(--rt-muted, #7a6a53);
+    background: none;
+    border: 1px dashed var(--rt-border-mid, rgba(122, 106, 83, 0.35));
+    border-radius: var(--rt-radius-sm, 3px);
+    cursor: pointer;
 }
 
-.rogue-trader .test-dialog .target-preview {
+.test-dialog-app .test-dialog .modifier-add:hover {
+    color: var(--rt-gold, #b8860b);
+    border-color: var(--rt-gold, #b8860b);
+}
+
+/* Chip groups: the difficulty ladder is BUTTON chips (no native input to
+   leak through — bead z132 round 2); condition toggles keep checkboxes
+   behind the visually-hidden pattern, with the sibling rule as the checked
+   highlight fallback for engines without :has(). */
+.test-dialog-app .test-dialog .difficulty-ladder,
+.test-dialog-app .test-dialog .condition-chips {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 8px;
-    border: 1px solid var(--rt-border-strong);
-    border-radius: var(--rt-radius);
-    background: rgba(0, 0, 0, 0.2);
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    border: none;
+    margin: 0;
+    padding: 0;
 }
 
-.rogue-trader .test-dialog .preview-value {
-    font-size: 1.3em;
+/* Difficulty chips are buttons: default look is the Foundry button reset
+   plus the chip chrome; .checked is the gold lit state. */
+.test-dialog-app .test-dialog button.difficulty-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 2px 10px;
+    font-size: var(--rt-fs-md, 0.85em);
+    font-family: inherit;
+    color: inherit;
+    background: none;
+    border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
+    border-radius: var(--rt-radius-sm, 3px);
+    cursor: pointer;
+}
+
+.test-dialog-app .test-dialog button.difficulty-chip:hover {
+    border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
+}
+
+.test-dialog-app .test-dialog .difficulty-chip .chip-value {
+    color: var(--rt-muted, #7a6a53);
+}
+
+/* The "no difficulty modifier" chip is the ghost option of the ladder. */
+.test-dialog-app .test-dialog .difficulty-chip.none {
+    color: var(--rt-muted, #7a6a53);
+    font-style: italic;
+}
+
+.test-dialog-app .test-dialog button.difficulty-chip.checked {
+    border-color: var(--rt-gold, #b8860b);
+    background: rgba(184, 134, 11, 0.15);
+}
+
+.test-dialog-app .test-dialog button.difficulty-chip.checked {
+    border-color: var(--rt-gold, #b8860b);
+    background: rgba(184, 134, 11, 0.15);
+    color: var(--rt-gold, #b8860b);
+}
+
+.test-dialog-app .test-dialog button.difficulty-chip.checked .chip-value {
+    color: var(--rt-gold-soft, #d9c38a);
+}
+
+.test-dialog-app .test-dialog button.difficulty-chip.none.checked {
+    color: var(--rt-gold-soft, #d9c38a);
+}
+
+.test-dialog-app .test-dialog .condition-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 2px 10px;
+    font-size: var(--rt-fs-md, 0.85em);
+    border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
+    border-radius: var(--rt-radius-sm, 3px);
+    cursor: pointer;
+}
+
+.test-dialog-app .test-dialog .condition-chip:hover {
+    border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
+}
+
+.test-dialog-app .test-dialog .condition-chip input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.test-dialog-app .test-dialog .condition-chip:has(input:checked) {
+    border-color: var(--rt-gold, #b8860b);
+    background: rgba(184, 134, 11, 0.15);
+}
+
+.test-dialog-app .test-dialog .condition-chip input:checked + .chip-name {
+    color: var(--rt-gold, #b8860b);
     font-weight: bold;
+}
+
+/* The window scrolls when the ledger grows: cap the content height. */
+.dialog.test-dialog-app .window-content {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Footer strip: actions separated from the ledger, Roll keeps the default
+   gold emphasis. */
+.test-dialog-app .test-dialog .dialog-buttons {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
+    gap: 8px;
+}
+
+/* Roll and Cancel identical in size: equal flex share, and a shared
+   min-height so the Roll button's icon cannot make it the taller one. */
+.test-dialog-app .test-dialog .dialog-buttons .dialog-button {
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 2.4em;
 }
 
 /* Skill picker (Add Custom) */

@@ -39,6 +39,7 @@ const LAYER_DIRS: ReadonlyArray<readonly [Layer, string]> = [
 	["kernel", "src/rules-engine/src"],
 	["domain", "src/ffg/domain"],
 	["application", "src/ffg/application"],
+	["presentation", "src/ffg/presentation"],
 	["infrastructure", "src/ffg/infrastructure"],
 	["infrastructure", "src/roguetrader/infrastructure"],
 	["presentation", "src/roguetrader/presentation"],
@@ -113,7 +114,9 @@ const FOUNDRY_COUPLED_RULES: ReadonlySet<string> = new Set([
 	"src/roguetrader/rules/adapter.ts",
 	"src/roguetrader/rules/battlesuit-repair.ts",
 	"src/roguetrader/rules/roll-system.ts",
-	"src/roguetrader/rules/test-dialog.ts",
+	// test-dialog.ts left the allowlist in bead p7jv: the Foundry-coupled
+	// machinery moved to src/ffg/infrastructure/foundry/test-dialog.ts and the
+	// remaining shim is pure RT data (branding + difficulty ladder).
 ]);
 
 /** Foundry globals an inner layer may never touch (identifier + access). */

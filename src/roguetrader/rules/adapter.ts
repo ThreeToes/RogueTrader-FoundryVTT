@@ -17,6 +17,7 @@ import {
 	targetToughnessMultiplier,
 } from "./talent-effects";
 import { postCard, type DamageRollFlag } from "./chat-flags";
+import { messageFlagNamespace } from "../../ffg/application/chat-flags";
 import { type AttackProfile, attackProfileOf } from "../../ffg/domain/model/attack";
 
 /**
@@ -147,6 +148,7 @@ async function postWeaponDamage(
 	hitRoll = 0,
 	isCritical = false,
 ): Promise<void> {
+	const ports = getPorts();
 	// RT notation allows a trailing damage-type suffix ("1d10+4 E") which
 	// Foundry's Roll parser rejects - strip it first (bead 6tr); the parsed
 	// type also backfills profiles that never had a type set. A mutation attack
@@ -337,7 +339,9 @@ async function postWeaponDamage(
 		// click handler never recomputes, plus an application marker so the
 		// button cannot fire twice.
 		{
-			"rogue-trader": {
+			// Namespace from the profile (bead p7jv): RT's value is
+			// "rogue-trader", so the wire format is unchanged.
+			[messageFlagNamespace(ports)]: {
 				damageApply: {
 					wounds: damage.wounds,
 					targetUuid: target.uuid,

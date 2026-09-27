@@ -50,6 +50,19 @@ export interface SystemProfile extends RuleProfile {
 	 * sanctioned +3, renegades/sorcerers +4.
 	 */
 	pushCap: { sanctioned: number; other: number };
+	/**
+	 * Chat-message flag namespace (bead p7jv): the key under which the system
+	 * writes and reads chat-card flags. System-specific DATA, not a hardcoded
+	 * string — the chat-flag machinery resolves it via the config port.
+	 */
+	messageFlagNamespace: string;
+	/**
+	 * Handlebars template for the shared roll card (bead p7jv): the shared
+	 * pipeline's `runTest` renders this through the chat port. System-specific
+	 * branding DATA, like messageFlagNamespace — a sibling system points it at
+	 * its own template and the hoisted pipeline machinery stays neutral.
+	 */
+	rollCardTemplate: string;
 }
 
 /** Rogue Trader core profile — the current hardcoded values, as data. */
@@ -65,6 +78,8 @@ export const rtCore: SystemProfile = {
 	// As data: the values psychic.ts#pushCap() resolves (Table 6-1, p157) —
 	// the profile must not depend on the rules layer.
 	pushCap: { sanctioned: 3, other: 4 },
+	messageFlagNamespace: "rogue-trader",
+	rollCardTemplate: "systems/rogue-trader/template/chat/roll.hbs",
 };
 
 /** Default profile the pure resolvers fall back to when none is supplied. */

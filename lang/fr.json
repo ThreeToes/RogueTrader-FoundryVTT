@@ -749,6 +749,8 @@
   "NPC.LADDER_TOOLTIP": "Niveau de compétence (bonus sur la caractéristique)",
   "ROGUE_TRADER.CHARACTER.SHEET": "Rogue Trader – Personnage",
   "ROLL.TARGET": "Cible",
+  "ROLL.BASE": "Base",
+  "ROLL.SITUATIONAL": "Situationnel",
   "ROLL.FIRE_MODE": "Mode de tir",
   "ROLL.FIRE_MODE_SINGLE": "Tir unique",
   "ROLL.FIRE_MODE_BURST": "Rafale semi-automatique",

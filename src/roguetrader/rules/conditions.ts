@@ -22,6 +22,7 @@
  */
 
 import { SHOCK_TABLE, shockOutcome, type ShockRow } from "./fear";
+import { readRtFlag, rtFlagPath } from "./chat-flags";
 
 export interface SystemStatus {
 	/** Status id (CONFIG.statusEffects id + ActiveEffect `statuses` key). */
@@ -188,14 +189,14 @@ export function conditionEffectData(
 		name: label ?? status.id,
 		img: "icons/svg/aura.svg",
 		statuses: [status.id],
-		"flags.rogue-trader.condition": {
+		[rtFlagPath("condition")]: {
 			shockRoll: rollTotal,
 			textKey: condition.textKey,
 			insanity: condition.insanity,
 		},
 	};
 	if (status.snapOut) {
-		data["flags.rogue-trader.snapOut"] = true;
+		data[rtFlagPath("snapOut")] = true;
 	}
 	if (condition.duration.rounds) {
 		data.duration = { rounds: condition.duration.rounds };
@@ -228,7 +229,7 @@ export function carriedConditions(
 				id?: string;
 				name?: string;
 				statuses?: string[];
-				flags?: { "rogue-trader"?: { snapOut?: boolean } };
+				flags?: Record<string, Record<string, unknown>>;
 			}>;
 		}
 	).effects ?? [];
@@ -241,7 +242,9 @@ export function carriedConditions(
 		.map((e) => ({
 			id: e.id ?? "",
 			name: e.name ?? "",
-			snapOut: e.flags?.["rogue-trader"]?.snapOut === true,
+			// The snap-out marker is a flag under the profile namespace (bead
+			// pwn0): read through the shared reader, not a hardcoded literal.
+			snapOut: readRtFlag(e, "snapOut") === true,
 		}));
 }
 

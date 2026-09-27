@@ -737,6 +737,8 @@
   "NPC.LADDER_TOOLTIP": "Nivel de habilidad (bono sobre la característica)",
   "ROGUE_TRADER.CHARACTER.SHEET": "Rogue Trader – Personaje",
   "ROLL.TARGET": "Objetivo",
+  "ROLL.BASE": "Base",
+  "ROLL.SITUATIONAL": "Situacional",
   "ROLL.FIRE_MODE": "Modo de fuego",
   "ROLL.FIRE_MODE_SINGLE": "Tiro único",
   "ROLL.FIRE_MODE_BURST": "Ráfaga semi-automática",

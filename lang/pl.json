@@ -773,6 +773,8 @@
   "NPC.LADDER_TOOLTIP": "Poziom umiejętności (bonus do cechy)",
   "ROGUE_TRADER.CHARACTER.SHEET": "Rogue Trader – Postać",
   "ROLL.TARGET": "Cel",
+  "ROLL.BASE": "Baza",
+  "ROLL.SITUATIONAL": "Sytuacyjne",
   "ROLL.FIRE_MODE": "Tryb ostrzału",
   "ROLL.FIRE_MODE_SINGLE": "Pojedynczy strzał",
   "ROLL.FIRE_MODE_BURST": "Seria półautomatyczna",

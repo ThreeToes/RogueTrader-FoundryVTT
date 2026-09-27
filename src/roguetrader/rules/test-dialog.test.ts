@@ -23,7 +23,8 @@ for (const key of ["game", "ui", "foundry"]) {
 	},
 };
 
-const { DIFFICULTY_LADDER } = await import("./test-dialog");
+const { DIFFICULTY_LADDER, RT_TEST_DIALOG_BRANDING, TestDialog, TestDialogBase } =
+	await import("./test-dialog");
 
 // The stubs must not leak into other test files in the same bun process.
 afterAll(() => {
@@ -92,5 +93,27 @@ describe("DIFFICULTY_LADDER (bead wqt3)", () => {
 				expect(strings[key], `${lang} has ${key}`).toBeTruthy();
 			}
 		}
+	});
+});
+
+describe("test-dialog system seams (bead p7jv)", () => {
+	it("carries the RT branding (template path, window id/classes)", () => {
+		expect(TestDialog.branding).toEqual(RT_TEST_DIALOG_BRANDING);
+	});
+
+	it("injects the RT ladder + i18n prefix as request defaults", () => {
+		expect(TestDialog.defaults.difficultyLadder).toEqual(DIFFICULTY_LADDER);
+		expect(TestDialog.defaults.difficultyLabelPrefix).toBe(
+			"ROLL.DIFFICULTY_",
+		);
+	});
+
+	it("leaves the base machinery neutral (empty branding, no defaults)", () => {
+		expect(TestDialogBase.branding).toEqual({
+			template: "",
+			windowId: "test-dialog",
+			windowClasses: ["dialog", "test-dialog-app"],
+		});
+		expect(TestDialogBase.defaults).toEqual({});
 	});
 });

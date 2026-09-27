@@ -173,7 +173,7 @@ interface ConditionsActorLike {
 		id?: string;
 		name?: string;
 		statuses?: string[];
-		flags?: { "rogue-trader"?: { snapOut?: boolean } };
+		flags?: Record<string, Record<string, unknown>>;
 	}>;
 }
 

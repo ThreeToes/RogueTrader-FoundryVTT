@@ -31,7 +31,13 @@ export interface LooseEffect {
 	name?: string;
 	statuses?: unknown;
 	changes?: unknown;
-	flags?: { "rogue-trader"?: { snapOut?: boolean } };
+	/**
+	 * Document flags keyed by NAMESPACE. The domain never knows the active
+	 * system's namespace (bead pwn0): callers pass it via buildActorView's
+	 * options and the builder looks it up here. Previously this was a hardcoded
+	 * `{ "rogue-trader"?: ... }` literal — a domain-layer inversion.
+	 */
+	flags?: Record<string, { snapOut?: boolean }>;
 	snapOut?: boolean;
 }
 
@@ -72,7 +78,7 @@ export function itemView(item: LooseItem): ItemView {
 	};
 }
 
-export function effectView(effect: LooseEffect): EffectView {
+export function effectView(effect: LooseEffect, flagNamespace?: string): EffectView {
 	return {
 		id: effect.id ?? "",
 		name: effect.name ?? "",
@@ -82,13 +88,27 @@ export function effectView(effect: LooseEffect): EffectView {
 		),
 		snapOut:
 			effect.snapOut === true ||
-			effect.flags?.["rogue-trader"]?.snapOut === true,
+			(flagNamespace !== undefined &&
+				effect.flags?.[flagNamespace]?.snapOut === true),
 	};
 }
 
-/** Snapshot loose document-shaped input into the typed read model. */
+/**
+ * Snapshot loose document-shaped input into the typed read model.
+ *
+ * The optional `flagNamespace` is the active profile's chat-flag namespace,
+ * resolved ABOVE the domain (application/infrastructure own the ports); when
+ * it is omitted, namespaced effect flags are not read (direct `snapOut`
+ * fields still are).
+ */
+export interface BuildActorViewOptions {
+	/** Active profile chat-flag namespace (e.g. RT's value at runtime). */
+	flagNamespace?: string;
+}
+
 export function buildActorView<S extends SystemViewBase = ActorSystemView>(
 	input: LooseActor,
+	options?: BuildActorViewOptions,
 ): ActorView<S> {
 	const system = (input.system ?? {}) as S;
 	return {
@@ -101,9 +121,11 @@ export function buildActorView<S extends SystemViewBase = ActorSystemView>(
 			Record<string, CharacteristicView>
 		>,
 		items: toArray<LooseItem>(input.items).map(itemView),
-		effects: toArray<LooseEffect>(input.effects).map(effectView),
+		effects: toArray<LooseEffect>(input.effects).map((effect) =>
+			effectView(effect, options?.flagNamespace),
+		),
 		appliedEffects: toArray<LooseEffect>(
 			input.appliedEffects ?? input.effects,
-		).map(effectView),
+		).map((effect) => effectView(effect, options?.flagNamespace)),
 	};
 }

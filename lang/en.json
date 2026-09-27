@@ -451,6 +451,8 @@
   "NPC.DELETE_SKILL": "Reset to unknown",
   "NPC.LADDER_TOOLTIP": "Skill level (roll bonus over the characteristic)",
   "ROLL.TARGET": "Target",
+  "ROLL.BASE": "Base",
+  "ROLL.SITUATIONAL": "Situational",
   "ROLL.FIRE_MODE": "Fire Mode",
   "ROLL.FIRE_MODE_SINGLE": "Single Shot",
   "ROLL.FIRE_MODE_BURST": "Semi-Auto Burst",

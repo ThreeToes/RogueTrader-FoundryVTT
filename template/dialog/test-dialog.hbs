@@ -1,8 +1,10 @@
 <div class="test-dialog">
     {{#if attackContext}}
-    <div class="attack-context">
+    <h3 class="dialog-group-label">{{localize "ROLL.SITUATIONAL"}}</h3>
+    <div class="attack-context ledger">
         {{#if attackContext.ranged}}
         <div class="modifier-row fixed">
+            <label class="ledger-field-label">{{localize "ROLL.FIRE_MODE"}}</label>
             <select class="attack-select" data-fire-mode>
                 <option value="single">{{localize "ROLL.FIRE_MODE_SINGLE"}}</option>
                 <option value="burst">{{localize "ROLL.FIRE_MODE_BURST"}} (+10)</option>
@@ -11,6 +13,7 @@
         </div>
         {{/if}}
         <div class="modifier-row fixed">
+            <label class="ledger-field-label">{{localize "ROLL.AIM"}}</label>
             <select class="attack-select" data-aim>
                 <option value="none">{{localize "ROLL.AIM_NONE"}}</option>
                 <option value="half">{{localize "ROLL.AIM_HALF"}} (+10)</option>
@@ -28,62 +31,79 @@
     </div>
     {{/if}}
 
-    <div class="difficulty-row modifier-row fixed">
-        <select class="attack-select" data-difficulty data-action="updateDifficulty">
-            <option value="">{{localize "ROLL.DIFFICULTY_NONE"}}</option>
-            {{#each difficulty as |d|}}
-            <option value="{{d.value}}" {{#if (eq ../difficultyValue d.value)}}selected{{/if}}>{{d.label}}
-                ({{#if (gt d.value 0)}}+{{/if}}{{d.value}})</option>
-            {{/each}}
-        </select>
+    <div class="target-strip">
+        <div class="stat">
+            <label>{{localize "ROLL.BASE"}}</label>
+            <span class="value" data-base>{{baseTarget}}</span>
+        </div>
+        <div class="stat">
+            <label>{{localize "ROLL.MODIFIERS"}}</label>
+            <span class="value" data-total>0</span>
+        </div>
+        <div class="stat">
+            <label>{{localize "ROLL.TARGET"}}</label>
+            <span class="value preview-value" data-preview>{{previewTarget}}</span>
+        </div>
     </div>
 
-    <div class="modifier-list">
-        {{#if conditions.length}}
-        <h3 class="inv-group-label">{{localize "ROLL.CONDITIONS"}}</h3>
-        <dl class="contributor-list condition-list">
-            {{#each conditions as |c|}}
-            <div class="modifier-row fixed condition-toggle">
-                <label class="attack-check">
-                    <input type="checkbox" data-condition="{{c.key}}" {{#if c.checked}}checked{{/if}} />
-                    <span class="modifier-label">{{c.label}}</span>
-                </label>
-            </div>
-            {{/each}}
-        </dl>
-        {{/if}}
-        <h3 class="inv-group-label">{{localize "ROLL.MODIFIERS"}}</h3>
-        {{#if contributors.length}}
-        <dl class="contributor-list">
+    {{#if difficulty.length}}
+    <h3 class="dialog-group-label">{{localize "ROLL.DIFFICULTY"}}</h3>
+    <div class="difficulty-ladder" role="group" aria-label="{{localize "ROLL.DIFFICULTY"}}">
+        <button type="button" class="difficulty-chip none{{#if difficultyNone}} checked{{/if}}"
+            data-difficulty data-value="" data-action="updateDifficulty"
+            aria-pressed="{{#if difficultyNone}}true{{else}}false{{/if}}"
+        >{{localize "ROLL.DIFFICULTY_NONE"}}</button>
+        {{#each difficulty as |d|}}
+        <button type="button" class="difficulty-chip{{#if (eq ../difficultyValue d.value)}} checked{{/if}}"
+            data-difficulty data-value="{{d.value}}" data-action="updateDifficulty"
+            data-tooltip="{{d.label}} {{#if (gt d.value 0)}}+{{/if}}{{d.value}}"
+            aria-pressed="{{#if (eq ../difficultyValue d.value)}}true{{else}}false{{/if}}"
+        >{{d.label}} <span class="chip-value">{{#if (gt d.value 0)}}+{{/if}}{{d.value}}</span></button>
+        {{/each}}
+    </div>
+    {{/if}}
+
+    {{#if conditions.length}}
+    <h3 class="dialog-group-label">{{localize "ROLL.CONDITIONS"}}</h3>
+    <div class="condition-chips">
+        {{#each conditions as |c|}}
+        <label class="condition-chip">
+            <input type="checkbox" data-condition="{{c.key}}" {{#if c.checked}}checked{{/if}} />
+            <span class="chip-name">{{c.label}}</span>
+        </label>
+        {{/each}}
+    </div>
+    {{/if}}
+
+    <details class="modifier-expander" data-modifiers {{#if modifiersOpen}}open{{/if}}>
+        <summary>
+            <span class="dialog-group-label">{{localize "ROLL.MODIFIERS"}}</span>
+            <span class="summary-note" data-summary-note>{{contributors.length}}</span>
+        </summary>
+        <div class="ledger modifier-list">
             {{#each contributors as |m|}}
             <div class="modifier-row fixed" data-tooltip="{{m.sourceLabel}}">
                 <span class="modifier-label">{{m.label}}</span>
                 <span class="modifier-source">{{localize m.sourceLabel}}</span>
-                <span class="modifier-value {{#if (gt m.value 0)}}pos{{else}}neg{{/if}}">{{m.value}}</span>
+                <span class="modifier-value {{#if (gt m.value 0)}}pos{{else if (lt m.value 0)}}neg{{/if}}">{{m.value}}</span>
             </div>
             {{/each}}
-        </dl>
-        {{/if}}
-        {{#each customModifiers as |m i|}}
-        <div class="modifier-row custom">
-            <input class="modifier-label" type="text" value="{{m.label}}" placeholder="{{localize "ROLL.LABEL"}}"
-                data-index="{{i}}" data-action="updateModifier" data-field="label" />
-            <input class="modifier-value" type="number" value="{{m.value}}" data-index="{{i}}"
-                data-action="updateModifier" data-field="value" />
-            <a class="modifier-remove" data-action="removeModifier" data-index="{{i}}"
-                data-tooltip="{{localize "ROLL.REMOVE"}}"
-            ><i class="fa-solid fa-xmark"></i></a>
+            {{#each customModifiers as |m i|}}
+            <div class="modifier-row custom">
+                <input class="modifier-label" type="text" value="{{m.label}}" placeholder="{{localize "ROLL.LABEL"}}"
+                    data-index="{{i}}" data-action="updateModifier" data-field="label" />
+                <input class="modifier-value" type="number" value="{{m.value}}" data-index="{{i}}"
+                    data-action="updateModifier" data-field="value" />
+                <a class="modifier-remove" data-action="removeModifier" data-index="{{i}}"
+                    data-tooltip="{{localize "ROLL.REMOVE"}}"
+                ><i class="fa-solid fa-xmark"></i></a>
+            </div>
+            {{/each}}
+            <button type="button" class="modifier-add" data-action="addModifier">
+                <i class="fas fa-plus"></i> {{localize "ROLL.ADD_MODIFIER"}}
+            </button>
         </div>
-        {{/each}}
-        <button type="button" class="modifier-add" data-action="addModifier">
-            <i class="fas fa-plus"></i> {{localize "ROLL.ADD_MODIFIER"}}
-        </button>
-    </div>
-
-    <div class="target-preview">
-        <span class="chip-label">{{localize "ROLL.TARGET"}}</span>
-        <span class="preview-value" data-preview>{{previewTarget}}</span>
-    </div>
+    </details>
 
     <nav class="dialog-buttons flexrow">
         <button type="button" class="dialog-button default" data-action="roll">

@@ -7,11 +7,11 @@
                 <span class="value">{{target}}</span>
             </div>
             <div class="roll-result {{outcomeClass}}">
-                <span class="value">{{roll}}</span>
                 <span class="label">
                     {{outcomeLabel}}
                     {{#if critical}}<strong>({{localize "ROLL.CRITICAL"}})</strong>{{/if}}
                 </span>
+                <span class="value">{{roll}}</span>
             </div>
         </div>
         {{#if analysis.length}}

@@ -29,13 +29,16 @@ parameterisation (epic `foundryvtt-rogue-trader-hr6r`).
 | Domain | `src/ffg/domain/**` | kernel, `domain/**` |
 | Application | `src/ffg/application/**` | kernel, domain, `application/ports` |
 | Infrastructure | `src/ffg/infrastructure/**`, `src/roguetrader/infrastructure/**` | everything below + Foundry |
-| Presentation | `src/roguetrader/presentation/**`, `sheet/**` | everything below + Foundry |
+| Presentation | `src/ffg/presentation/**`, `src/roguetrader/presentation/**`, `sheet/**` | everything below + Foundry |
 | Bootstrap | `src/roguetrader/bootstrap/**` | everything + Foundry |
 
-Still under `src/roguetrader/` (pending the hoist): `rules/**`, `data/**`,
-`sheet/**`, `bootstrap/**`, `presentation/rolls/**`, `registry.ts`, and the
-`infrastructure/foundry/` content + ports adapters (`content.ts`, `ports.ts`,
-`profile-port.ts`).
+Still under `src/roguetrader/`: the RT-specific layers — `rules/**` (roll flows,
+funnel contributor registration, the RT roll contract), `data/**`, `sheet/**`,
+`bootstrap/**`, the RT roll handlers in `presentation/rolls/**`, `registry.ts`,
+and the `infrastructure/foundry/` shims over the hoisted adapters. These are
+RT rules and Foundry DataModels by design, not hoist debt; the remaining
+shared-layer leftovers (chat-flag namespace sweep, the `build.ts` flag
+inversion) are tracked in the beads tracker.
 
 **Never allowed below `infrastructure`:** the globals `foundry`, `game`, `CONFIG`,
 `ui`, `Hooks`, `canvas`, or an import from `fvtt-types`. If a rule needs a die, a

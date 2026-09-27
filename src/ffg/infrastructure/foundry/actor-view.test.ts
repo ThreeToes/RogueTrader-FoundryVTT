@@ -149,3 +149,31 @@ describe("actorView per-system instantiation (h2uo)", () => {
 		expect(leak).toBeUndefined();
 	});
 });
+
+// Bead pwn0: the flag namespace is profile DATA resolved above the domain.
+describe("buildActorView flag namespace (bead pwn0)", () => {
+	const snapOutEffect = {
+		id: "fx1",
+		name: "Fleeing",
+		flags: { "sibling-core": { snapOut: true }, "rogue-trader": { snapOut: true } },
+	};
+
+	test("a caller-provided namespace is used to read effect flags", () => {
+		const view = buildActorView({ effects: [snapOutEffect] }, {
+			flagNamespace: "sibling-core",
+		});
+		expect(view.effects[0]?.snapOut).toBe(true);
+	});
+
+	test("no namespace means namespaced flags are not read", () => {
+		const view = buildActorView({ effects: [snapOutEffect] });
+		expect(view.effects[0]?.snapOut).toBe(false);
+	});
+
+	test("an explicit direct snapOut field is read regardless", () => {
+		const view = buildActorView({
+			effects: [{ id: "fx2", name: "Stunned", snapOut: true }],
+		});
+		expect(view.effects[0]?.snapOut).toBe(true);
+	});
+});

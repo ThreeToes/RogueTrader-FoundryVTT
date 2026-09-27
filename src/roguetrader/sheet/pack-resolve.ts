@@ -77,8 +77,9 @@ export async function getCharacterOptionDocs(type: string): Promise<unknown[]> {
 /**
  * Sheet action: open the compendium source of an owned item (bead kwm9,
  * shared by CharacterSheet + NpcSheet). Reads data-uuid off the target —
- * the packer stamps flags["rogue-trader"].compendiumSource on every
- * embedded item that resolves from a pack (et3x). Items without a stamp
+ * the packer stamps the compendiumSource flag under the system's chat-flag
+ * namespace (RT's value is "rogue-trader") on every embedded item that
+ * resolves from a pack (et3x). Items without a stamp
  * (standalone book traits, homebrew) render no link, so a missing uuid is
  * a normal no-op.
  */

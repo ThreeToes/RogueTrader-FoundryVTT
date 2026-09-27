@@ -11,12 +11,13 @@ features of Foundry.
 
 ## Install
 
-Paste this manifest URL into Foundry's **Game Systems: Install System**
-dialog:
+Install this system by using the following manifest URL:
 
 ```
 https://raw.githubusercontent.com/ThreeToes/RogueTrader-FoundryVTT/refs/heads/master/system-manifests/rogue-trader-public.json
 ```
+
+Foundry will be able to update this on its own.
 
 ## Related Websites
 

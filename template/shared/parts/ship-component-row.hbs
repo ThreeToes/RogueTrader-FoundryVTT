@@ -1,0 +1,27 @@
+{{!-- Shared ship-component row (bead uc08): ONE anatomy for starship
+     component rows on the Refit tab (installed components) and the Combat
+     tab (merged component roster). Anatomy: name · type badge · status
+     badge · power · space · SP, then the @partial-block for tab-specific
+     actions (Refit: weapon-slot select + remove anchor; Combat: Emergency
+     Repair button + GM state select).
+     Hash: id, name, type (item type slug, localized via TYPES.Item.*),
+     state (SHIP_COMPONENT_STATES vocabulary, book p223 — also keys the
+     status-badge colour class), stateLabel (localized STATE_* string),
+     power, space, sp (rendered unconditionally — a space of 0 is a real
+     value, so emptiness must not hide it).
+     Status-badge colour code is FIXED here and styled once in the ship
+     section of css/sheet-gear.css: intact = muted, unpowered = muted-deep,
+     damaged = amber warn, destroyed = danger-alarm. --}}
+<div class="inv-row ship-component-row"{{#if id}} data-item-id="{{id}}"{{/if}}>
+    <span class="inv-name sc-name" title="{{name}}">{{name}}</span>
+    {{#if type}}<span class="chip sc-type">{{localize (concat "TYPES.Item." type)}}</span>{{/if}}
+    {{#if stateLabel}}<span class="chip sc-state {{state}}">{{stateLabel}}</span>{{/if}}
+    {{!-- Value chips right-aligned as one group (owner round 2): they hug
+         the row end, never wrap, and leave the name the rest of the line. --}}
+    <span class="sc-values">
+        <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{power}}</span>
+        <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{space}}</span>
+        <span class="chip origin-mod">SP {{sp}}</span>
+    </span>
+    {{> @partial-block}}
+</div>

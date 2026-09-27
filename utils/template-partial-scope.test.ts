@@ -55,6 +55,15 @@ const COMBAT_WEAPON_ROW = readFileSync(
 	"template/shared/parts/combat-weapon-row.hbs",
 	"utf8",
 );
+// Beads uc08 + 7dt0 added two shared partials the ship tabs render.
+const SHIP_COMPONENT_ROW = readFileSync(
+	"template/shared/parts/ship-component-row.hbs",
+	"utf8",
+);
+const CAPACITY_BAR = readFileSync(
+	"template/shared/parts/capacity-bar.hbs",
+	"utf8",
+);
 
 function compile(name: string): HandlebarsTemplateDelegate {
 	const source = readFileSync(`template/sheet/actor/tabs/${name}`, "utf8");
@@ -65,6 +74,8 @@ function compile(name: string): HandlebarsTemplateDelegate {
 	handlebars.registerPartial("rt/inv-row", INV_ROW);
 	handlebars.registerPartial("rt/weapon-row", WEAPON_ROW);
 	handlebars.registerPartial("rt/combat-weapon-row", COMBAT_WEAPON_ROW);
+	handlebars.registerPartial("rt/ship-component-row", SHIP_COMPONENT_ROW);
+	handlebars.registerPartial("rt/capacity-bar", CAPACITY_BAR);
 	return handlebars.compile(source);
 }
 
@@ -96,6 +107,12 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		installedGroups: [
 			{ key: "weapons", labelKey: "X", items: [weaponComponent] },
 		],
+		// Budget strip (bead 7dt0): capacity-bar renders the meter values.
+		meters: {
+			power: { used: 8, total: 40, pct: 20, over: false },
+			space: { used: 6, total: 40, pct: 15, over: false },
+			sp: { used: 0, total: 60, pct: 0, over: false },
+		},
 	};
 
 	it("ship-refit resolves weaponSlots via @root across the inv-row boundary", () => {
@@ -111,14 +128,59 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 	it("ship-combat resolves combat.componentStates via @root across the boundary", () => {
 		const render = compile("ship-combat.hbs");
 		const html = render({
-			components: [{ id: "c1", name: "Lifta-Droppa", state: "damaged" }],
+			// Bead uc08: the roster is ONE merged list; the state select lives
+			// inside the rt/ship-component-row partial-block, so this still
+			// guards the same @root-across-the-boundary regression.
 			combat: {
 				componentStates: { intact: "Intact", damaged: "Damaged" },
-				repairable: [{ id: "c1", name: "Lifta-Droppa" }],
+				weapons: [],
+				roster: [
+					{
+						id: "c1",
+						name: "Lifta-Droppa",
+						type: "ship-component",
+						state: "damaged",
+						stateLabel: "Damaged",
+						power: 3,
+						space: 2,
+						sp: 0,
+						repairable: true,
+					},
+				],
+				// Owner round 2: weapon components get their own section.
+				weaponRoster: [
+					{
+						id: "w1",
+						name: "Mars Pattern Macrocannons",
+						type: "ship-weapon-component",
+						state: "intact",
+						stateLabel: "Intact",
+						power: 4,
+						space: 2,
+						sp: 1,
+						repairable: false,
+					},
+				],
 			},
 		});
-		expect(html).toContain('<option value="intact"');
-		expect(html).toContain('<option value="damaged"');
+		// owner round 2: the roster is split by type and the duplicate status
+		// badge is OMITTED (the chips are the status display). The localize
+		// stub emits raw keys.
+		expect(html).toContain("SHIP_COMBAT.ROSTER_COMPONENTS");
+		expect(html).toContain("SHIP_COMBAT.ROSTER_WEAPONS");
+		expect(html).toContain('data-action="repairComponent"');
+		expect(html).not.toContain('class="chip sc-state');
+		expect(html).not.toContain("TYPES.Item.ship-component");
+		// owner round 3: the state picker is BUTTON CHIPS (no dropdown) — one
+		// chip per state of the p223 vocabulary resolved via @root across the
+		// partial-block boundary, the current state lit.
+		expect(html).toContain('class="state-chip damaged checked"');
+		expect(html).toContain('data-state="damaged"');
+		expect(html).toContain('data-action="setComponentState"');
+		// intact chip is rendered unchecked on the damaged row
+		expect(html).toContain('class="state-chip intact"');
+		// and the weapon roster's intact row is lit
+		expect(html).toContain('class="state-chip intact checked"');
 	});
 
 	it("npc-main takes the editable branch via @root across the boundary", () => {

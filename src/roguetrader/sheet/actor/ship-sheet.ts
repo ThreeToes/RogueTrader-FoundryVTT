@@ -24,6 +24,12 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 import { getPackDocuments } from "../pack-resolve";
 
+/** Component state → localized SHIP_COMBAT.STATE_* label (bead uc08).
+    Unknown states fall back to the raw key so corruption is loud. */
+function componentStateLabel(state: string): string {
+	return game.i18n.localize(`SHIP_COMBAT.STATE_${state.toUpperCase()}`);
+}
+
 /** Row for the hull picker: ships pack `ship` docs. */
 interface HullOption {
 	uuid: string;
@@ -59,6 +65,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			removeComponent: ShipSheet.#onRemoveComponent,
 			toggleComponentGroup: ShipSheet.#onToggleComponentGroup,
 			setWeaponSlot: ShipSheet.#onSetWeaponSlot,
+			openItem: ShipSheet.#onOpenItem,
 			fireWeapon: ShipSheet.#onFireWeapon,
 			repairComponent: ShipSheet.#onRepairComponent,
 			setComponentState: ShipSheet.#onSetComponentState,
@@ -84,6 +91,10 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			template:
 				"systems/rogue-trader/template/sheet/actor/tabs/ship-combat.hbs",
 		},
+		notes: {
+			template:
+				"systems/rogue-trader/template/sheet/actor/tabs/ship-notes.hbs",
+		},
 	};
 
 	static TABS = {
@@ -95,6 +106,12 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 					id: "combat",
 					group: "primary",
 					label: "STARSHIP.TAB_COMBAT",
+					cssClass: "",
+				},
+				{
+					id: "notes",
+					group: "primary",
+					label: "STARSHIP.TAB_NOTES",
 					cssClass: "",
 				},
 			],
@@ -185,7 +202,40 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		).filter((g) => g.items.length > 0);
 		// Derived totals (bead om4j): recomputed from installed items on every
 		// render so space/SP/power/shields never drift from the items.
-		context.derived = deriveShipStats(components);
+		const derived = deriveShipStats(components);
+		context.derived = derived;
+		// Capacity-bar meters (bead 7dt0): fill percentages and over-capacity
+		// flags for the shared rt/capacity-bar partial, computed once per render
+		// so the Hull tab and the Refit budget strip never disagree.
+		const spaceTotal = Math.max(0, system.space?.total ?? 0);
+		const spTotal = Math.max(0, system.sp?.total ?? 0);
+		const powerTotal = Math.max(0, derived.powerGenerated);
+		const pct = (used: number, total: number): number =>
+			total > 0
+				? Math.min(100, Math.round((used / total) * 100))
+				: used > 0
+					? 100
+					: 0;
+		context.meters = {
+			power: {
+				used: derived.powerUsed,
+				total: powerTotal,
+				pct: pct(derived.powerUsed, powerTotal),
+				over: derived.powerDeficit > 0,
+			},
+			space: {
+				used: derived.spaceUsed,
+				total: spaceTotal,
+				pct: pct(derived.spaceUsed, spaceTotal),
+				over: derived.spaceUsed > spaceTotal,
+			},
+			sp: {
+				used: derived.spSpent,
+				total: spTotal,
+				pct: pct(derived.spSpent, spTotal),
+				over: derived.spSpent > spTotal,
+			},
+		};
 		context.weaponSlots = Object.fromEntries(
 			WEAPON_SLOTS.map((slot) => [slot, `STARSHIP.SLOT_${slot.toUpperCase()}`]),
 		);
@@ -219,6 +269,8 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		category: string;
 		slot: string;
 		special: string;
+		state: string;
+		stateLabel: string;
 	}>): Record<string, unknown> {
 		const doc = this.document.system as unknown as {
 			hullIntegrity: { value: number; max: number };
@@ -246,6 +298,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			// Crippled ships halve weapon Strength (round up, book p221).
 			const rawStrength = s.strength ?? 0;
 			w.slot = w.slot ?? "";
+			w.stateLabel = componentStateLabel(s.state ?? "intact");
 			Object.assign(w, {
 				damage: s.damage ?? "",
 				critRating: s.critRating ?? 0,
@@ -271,19 +324,40 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				s.depressurised === true,
 			);
 		});
+		// Merged component roster (bead uc08): every installed component with
+		// its status badge + repair eligibility, replacing the separate
+		// Emergency Repairs and GM Component Conditions sections. Split by
+		// type (owner round 2): ship components and weapon components get
+		// their own sections so names keep their line space.
+		const roster = components
+			.filter((c) => c.type !== "ship-weapon-component")
+			.map((c) => ({
+				...c,
+				repairable: repairable.some((r) => r.id === c.id),
+			}));
+		const weaponRoster = components
+			.filter((c) => c.type === "ship-weapon-component")
+			.map((c) => ({
+				...c,
+				repairable: repairable.some((r) => r.id === c.id),
+			}));
 		return {
 			hullIntegrity: doc.hullIntegrity,
 			crewPopulation: doc.crewPopulation ?? 100,
 			crewMorale: doc.crewMorale ?? 100,
 			voidShields: doc.voidShields ?? 0,
+			// Vitals-strip pips (bead ecnp): one entry per shield, all lit —
+			// shields have no book-defined maximum to burn down towards.
+			voidShieldPips: Array.from({ length: doc.voidShields ?? 0 }),
 			crewSkill: crew.skill,
 			crippled,
 			weapons,
-			repairable,
+			roster,
+			weaponRoster,
 			componentStates: Object.fromEntries(
 				SHIP_COMPONENT_STATES.map((state) => [
 					state,
-					game.i18n.localize(`SHIP_COMBAT.STATE_${state.toUpperCase()}`),
+					componentStateLabel(state),
 				]),
 			),
 		};
@@ -309,6 +383,8 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		category: string;
 		slot: string;
 		special: string;
+		state: string;
+		stateLabel: string;
 	}> {
 		return this.document.items
 			.filter((i) => {
@@ -322,7 +398,8 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 					sp?: string;
 					category?: string;
 					slot?: string;
-					special?: string;
+						special?: string;
+					state?: string;
 				};
 				return {
 					id: i.id ?? "",
@@ -334,6 +411,9 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 					category: s.category ?? "supplemental",
 					slot: s.slot ?? "",
 					special: s.special ?? "",
+					// Status badge (bead uc08): state + localized label.
+					state: s.state ?? "intact",
+					stateLabel: componentStateLabel(s.state ?? "intact"),
 				};
 			}) as never;
 	}
@@ -525,6 +605,17 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		await item.update({ system: { slot } } as never);
 	}
 
+	/** Open a weapon/component item sheet (bead ecnp battery cards). */
+	static #onOpenItem(
+		this: ShipSheet,
+		_event: Event,
+		target: HTMLElement,
+	): void {
+		const id = target.dataset.itemId;
+		if (!id) return;
+		this.document.items.get(id)?.sheet?.render(true);
+	}
+
 	/**
 	 * Fire an installed weapon (bead xfta, book p220): prompt the range
 	 * band vs the target, then run the ship-weapon roll kind (gunner BS
@@ -584,7 +675,9 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		target: HTMLElement,
 	): Promise<void> {
 		const id = target.dataset.itemId;
-		const state = (target as HTMLSelectElement).value;
+		// Bead z132-family round 3: the roster state picker is BUTTON CHIPS
+		// (data-state); the old select path stays for the depressurised toggle.
+		const state = target.dataset.state ?? (target as HTMLSelectElement).value;
 		if (!id) return;
 		const item = this.document.items.get(id);
 		if (!item) return;

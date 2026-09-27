@@ -2,20 +2,39 @@
     <div class="starship border">
         <h1>{{localize "STARSHIP.TAB_COMBAT"}}</h1>
 
-        {{!-- Crippled state (bead xfta, book p221): 0 Hull Integrity --}}
+        {{!-- Vitals strip (bead ecnp): the test-dialog target-strip pattern —
+             gold small-caps label over a big number, thin vertical rules.
+             Void Shields render as pips (one per shield, all lit). --}}
+        <div class="sc-vitals-strip">
+            <div class="stat">
+                <label>{{localize "STARSHIP.HULL_INTEGRITY"}}</label>
+                <span class="value">{{combat.hullIntegrity.value}}<span class="sc-vitals-max">/{{combat.hullIntegrity.max}}</span></span>
+            </div>
+            <div class="stat shields">
+                <label>{{localize "SHIP_COMBAT.VOID_SHIELDS"}}</label>
+                <span class="pips">{{#each combat.voidShieldPips}}<span class="pip lit"></span>{{/each}}{{#if (eq combat.voidShields 0)}}<span class="value">0</span>{{/if}}</span>
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.CREW_POPULATION"}}</label>
+                <span class="value">{{combat.crewPopulation}}</span>
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.CREW_MORALE"}}</label>
+                <span class="value">{{combat.crewMorale}}</span>
+            </div>
+            <div class="stat">
+                <label>{{localize "STARSHIP.CREW_SKILL"}}</label>
+                <span class="value">{{combat.crewSkill}}</span>
+            </div>
+        </div>
+
+        {{!-- State banner (bead ecnp): colour-coded alarm/warn row under the
+             strip instead of prose. Crippled (0 Hull, book p221) is the
+             alarm case; depressurised weapons are the warn case. --}}
         {{#if combat.crippled.crippled}}
-        <p class="method-hint warn">⚠ {{localize "SHIP_COMBAT.CRIPPLED"}}
-            ({{localize "SHIP_COMBAT.CRIPPLED_EFFECTS"}})</p>
+        <div class="sc-state-banner alarm">⚠ {{localize "SHIP_COMBAT.CRIPPLED"}} — {{localize "SHIP_COMBAT.CRIPPLED_EFFECTS"}}</div>
         {{/if}}
 
-        {{!-- Ship status row --}}
-        <div class="starship-status">
-            <span class="chip origin-mod">{{localize "STARSHIP.HULL_INTEGRITY"}}: {{combat.hullIntegrity.value}}/{{combat.hullIntegrity.max}}</span>
-            <span class="chip origin-mod">{{localize "SHIP_COMBAT.VOID_SHIELDS"}}: {{combat.voidShields}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.CREW_POPULATION"}}: {{combat.crewPopulation}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.CREW_MORALE"}}: {{combat.crewMorale}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.CREW_SKILL"}}: {{combat.crewSkill}}</span>
-        </div>
 
         {{!-- Weapons: fire action per installed ship-weapon-component --}}
         <div class="inv-group-header">
@@ -23,64 +42,93 @@
             <span class="acq-group-count">{{combat.weapons.length}}</span>
         </div>
         {{#if combat.weapons.length}}
-        <div class="starship-components">
+        <div class="sc-battery">
             {{#each combat.weapons as |w|}}
-            {{#> "rt/inv-row" id=w.id name=w.name}}
-            <span class="chip origin-mod">{{localize w.slotLabel}} {{w.slot}}</span>
-            <span class="chip origin-mod">{{localize "SHIP_COMBAT.STRENGTH"}} {{w.strength}}</span>
-            <span class="chip origin-mod">{{localize "SHIP_COMBAT.DAMAGE"}} {{w.damage}}</span>
-            <span class="chip origin-mod">{{localize "SHIP_COMBAT.CRIT"}} {{w.critRating}}</span>
-            <span class="chip origin-mod">{{localize "SHIP_COMBAT.RANGE"}} {{w.range}}</span>
-            {{#if (ne w.state "intact")}}
-            <span class="chip warn">{{localize (concat "SHIP_COMBAT.STATE_" w.state)}}</span>
-            {{/if}}            {{#if w.depressurised}}
-            <span class="chip origin-mod warn">{{localize "SHIP_COMBAT.DEPRESSURISED"}}</span>
-            {{/if}}
-            <button type="button" class="rt-button" data-action="fireWeapon" data-item-id="{{w.id}}"
-                {{#if (ne w.state "intact")}}disabled{{/if}}
-                data-tooltip="{{localize "SHIP_COMBAT.FIRE_TOOLTIP"}}">
-                {{localize "SHIP_COMBAT.FIRE"}}
-            </button>
-            {{/"rt/inv-row"}}
+            <div class="battery-card" data-item-id="{{w.id}}">
+                <div class="card-head">
+                    <span class="card-name" data-action="openItem" data-item-id="{{w.id}}"
+                        data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{w.name}}</span>
+                    <span class="card-slot">{{localize w.slotLabel}}{{#if w.slot}} {{w.slot}}{{/if}}</span>
+                </div>
+                <div class="card-badges">
+                    {{#if (ne w.state "intact")}}
+                    <span class="sc-state {{w.state}}">{{w.stateLabel}}</span>
+                    {{/if}}
+                    {{#if w.depressurised}}
+                    <span class="sc-state depressurised">{{localize "SHIP_COMBAT.DEPRESSURISED"}}</span>
+                    {{/if}}
+                    {{#if (not w.slot)}}
+                    <span class="sc-state no-slot">{{localize w.slotLabel}}</span>
+                    {{/if}}
+                </div>
+                <div class="card-stats">
+                    <span class="stat"><label>{{localize "SHIP_COMBAT.STRENGTH"}}</label><span class="value">{{w.strength}}</span></span>
+                    <span class="stat"><label>{{localize "SHIP_COMBAT.DAMAGE"}}</label><span class="value">{{w.damage}}</span></span>
+                    <span class="stat"><label>{{localize "SHIP_COMBAT.CRIT"}}</label><span class="value">{{w.critRating}}</span></span>
+                    <span class="stat"><label>{{localize "SHIP_COMBAT.RANGE"}}</label><span class="value">{{w.range}}</span></span>
+                </div>
+                <button type="button" class="sc-fire" data-action="fireWeapon" data-item-id="{{w.id}}"
+                    {{#if (ne w.state "intact")}}disabled{{/if}}
+                    data-tooltip="{{localize "SHIP_COMBAT.FIRE_TOOLTIP"}}">
+                    {{localize "SHIP_COMBAT.FIRE"}}
+                </button>
+            </div>
             {{/each}}
         </div>
         {{else}}
         <p class="method-hint">{{localize "SHIP_COMBAT.NO_WEAPONS"}}</p>
         {{/if}}
 
-        {{!-- Repairs: Emergency Repairs eligible components (book p216-218) --}}
-        <div class="inv-group-header">
-            <h2 class="inv-group-label">{{localize "SHIP_COMBAT.REPAIRS"}}</h2>
-            <span class="acq-group-count">{{combat.repairable.length}}</span>
-        </div>
-        {{#if combat.repairable.length}}
-        <div class="starship-components">
-            {{#each combat.repairable as |c|}}
-            {{#> "rt/inv-row" id=c.id name=c.name}}
-            <button type="button" class="rt-button" data-action="repairComponent" data-item-id="{{c.id}}"
-                data-tooltip="{{localize "SHIP_COMBAT.REPAIR_TOOLTIP"}}">
-                {{localize "SHIP_COMBAT.REPAIR"}}
-            </button>
-            {{/"rt/inv-row"}}
-            {{/each}}
-        </div>
-        {{else}}
-        <p class="method-hint">{{localize "SHIP_COMBAT.REPAIRS_NONE"}}</p>
-        {{/if}}
-
-        {{!-- GM manual component condition override (book p223 vocabulary) --}}
+        {{!-- Component roster (bead uc08, round 2 per owner): ONE merged
+             list, split by component type so names get the space the type
+             badge used to eat. The status badge is OMITTED here because the
+             GM state select shows the same information — the select itself
+             carries the state colour (duplicate 'Intact' removed). --}}
         <div class="inv-group-header">
             <h2 class="inv-group-label">{{localize "SHIP_COMBAT.CONDITIONS"}}</h2>
+            <span class="acq-group-count">{{combat.roster.length}}</span>
         </div>
-        <div class="starship-components">
-            {{#each components as |c|}}
-            {{#> "rt/inv-row" id=c.id name=c.name}}
-            <select data-action="setComponentState" data-item-id="{{c.id}}"
-                data-tooltip="{{localize "SHIP_COMBAT.STATE_HINT"}}">
-                {{selectOptions @root.combat.componentStates selected=c.state}}
-            </select>
-            {{/"rt/inv-row"}}
+        {{#if combat.roster.length}}
+        <h3 class="inv-group-label">{{localize "SHIP_COMBAT.ROSTER_COMPONENTS"}}</h3>
+        {{#each combat.roster as |c|}}
+        {{#> "rt/ship-component-row" id=c.id name=c.name type="" stateLabel="" power=c.power space=c.space sp=c.sp}}
+        {{#if c.repairable}}
+        <button type="button" class="rt-button sc-repair" data-action="repairComponent" data-item-id="{{c.id}}"
+            data-tooltip="{{localize "SHIP_COMBAT.REPAIR_TOOLTIP"}}">
+            {{localize "SHIP_COMBAT.REPAIR"}}
+        </button>
+        {{/if}}
+        <span class="sc-state-chips" role="group"
+            data-tooltip="{{localize "SHIP_COMBAT.STATE_HINT"}}">
+            {{#each @root.combat.componentStates as |label key|}}
+            <button type="button" class="state-chip {{key}}{{#if (eq c.state key)}} checked{{/if}}"
+                data-action="setComponentState" data-item-id="{{c.id}}" data-state="{{key}}"
+                aria-pressed="{{#if (eq c.state key)}}true{{else}}false{{/if}}">{{label}}</button>
             {{/each}}
-        </div>
+        </span>
+        {{/"rt/ship-component-row"}}
+        {{/each}}
+        {{/if}}
+        {{#if combat.weaponRoster.length}}
+        <h3 class="inv-group-label">{{localize "SHIP_COMBAT.ROSTER_WEAPONS"}}</h3>
+        {{#each combat.weaponRoster as |c|}}
+        {{#> "rt/ship-component-row" id=c.id name=c.name type="" stateLabel="" power=c.power space=c.space sp=c.sp}}
+        {{#if c.repairable}}
+        <button type="button" class="rt-button sc-repair" data-action="repairComponent" data-item-id="{{c.id}}"
+            data-tooltip="{{localize "SHIP_COMBAT.REPAIR_TOOLTIP"}}">
+            {{localize "SHIP_COMBAT.REPAIR"}}
+        </button>
+        {{/if}}
+        <span class="sc-state-chips" role="group"
+            data-tooltip="{{localize "SHIP_COMBAT.STATE_HINT"}}">
+            {{#each @root.combat.componentStates as |label key|}}
+            <button type="button" class="state-chip {{key}}{{#if (eq c.state key)}} checked{{/if}}"
+                data-action="setComponentState" data-item-id="{{c.id}}" data-state="{{key}}"
+                aria-pressed="{{#if (eq c.state key)}}true{{else}}false{{/if}}">{{label}}</button>
+            {{/each}}
+        </span>
+        {{/"rt/ship-component-row"}}
+        {{/each}}
+        {{/if}}
     </div>
 </section>

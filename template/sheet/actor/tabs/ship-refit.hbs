@@ -2,6 +2,16 @@
     <div class="starship border">
         <h1>{{localize "STARSHIP.TAB_REFIT"}}</h1>
 
+        {{!-- Budget strip FIRST (bead 7dt0): power/space/SP meters recompute
+             on every render, so installing a component shows its cost here
+             immediately. Alarm colour when over capacity. --}}
+        <div class="refit-budget">
+            <h2 class="inv-group-label">{{localize "STARSHIP.REFIT_BUDGET"}}</h2>
+            {{> "rt/capacity-bar" label=(localize "STARSHIP.POWER") used=derived.powerUsed total=derived.powerGenerated pct=meters.power.pct over=meters.power.over}}
+            {{> "rt/capacity-bar" label=(localize "STARSHIP.SPACE") used=derived.spaceUsed total=system.space.total pct=meters.space.pct over=meters.space.over}}
+            {{> "rt/capacity-bar" label=(localize "DYNASTY.SHIP_POINTS") used=derived.spSpent total=system.sp.total pct=meters.sp.pct over=meters.sp.over}}
+        </div>
+
         {{!-- Drag-and-drop install (bead pyi3): drag ship-component /
              ship-weapon-component items here from the ships compendium.
              Non-component items are refused with a loud warning. --}}
@@ -25,17 +35,16 @@
                 <span class="acq-group-count">{{group.items.length}}</span>
             </div>
             {{#each group.items as |c|}}
-            {{#> "rt/inv-row" id=c.id name=c.name deleteAction="removeComponent" deleteTooltip=(localize "STARSHIP.COMPONENT_REMOVE")}}
-            <span class="chip origin-mod">{{localize "WEAPON.POWER"}} {{c.power}}</span>
-            <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{c.space}}</span>
-            <span class="chip origin-mod">SP {{c.sp}}</span>
+            {{#> "rt/ship-component-row" id=c.id name=c.name type=c.type state=c.state stateLabel=c.stateLabel power=c.power space=c.space sp=c.sp}}
             {{#if (eq c.type "ship-weapon-component")}}
-            <select data-action="setWeaponSlot" data-item-id="{{c.id}}"
+            <select class="sc-slot" data-action="setWeaponSlot" data-item-id="{{c.id}}"
                 data-tooltip="{{localize "STARSHIP.SLOT_HINT"}}">
                 {{selectOptions @root.weaponSlots selected=c.slot localize=true blank="—"}}
             </select>
             {{/if}}
-            {{/"rt/inv-row"}}
+            <a class="inv-delete" data-action="removeComponent" data-item-id="{{c.id}}"
+                data-tooltip="{{localize "STARSHIP.COMPONENT_REMOVE"}}"><i class="fa-solid fa-xmark"></i></a>
+            {{/"rt/ship-component-row"}}
             {{/each}}
             {{/each}}
         </div>

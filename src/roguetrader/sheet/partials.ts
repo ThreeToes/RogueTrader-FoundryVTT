@@ -15,7 +15,9 @@ export const SHARED_PARTIALS = [
 	"shared/parts/compact-header.hbs",
 	"shared/parts/paired-value.hbs",
 	"shared/parts/creator-nav.hbs",
+	"shared/parts/capacity-bar.hbs",
 	"shared/parts/inv-row.hbs",
+	"shared/parts/ship-component-row.hbs",
 	"shared/parts/weapon-row.hbs",
 	"shared/parts/combat-weapon-row.hbs",
 ] as const;

@@ -1,0 +1,18 @@
+{{!-- Shared capacity bar (bead 7dt0): ONE anatomy for used-vs-capacity
+     meters on the starship Hull tab (stat-grid) and the Refit tab (budget
+     strip). Reuses the encumbrance bar precedent (fill + over state).
+     Hash: label (localized, passed by the caller), used, total (numbers),
+     pct (0-100 fill width, computed in the sheet context), over (boolean —
+     alarm colour when used exceeds capacity). An optional @partial-block
+     renders after the numbers (Hull tab: editable total input). --}}
+<div class="capacity-bar{{#if over}} over{{/if}}">
+    <span class="cb-label">{{label}}</span>
+    <span class="cb-track" data-tooltip="{{label}}: {{used}}/{{total}}">
+        <span class="cb-fill" style="width: {{pct}}%"></span>
+    </span>
+    <span class="cb-value">{{used}}/{{total}}</span>
+    {{!-- Guarded block: the Refit budget strip invokes this partial WITHOUT
+         a block (only the Hull tab passes the editable-total block). A bare
+         {{> @partial-block}} with no block throws at render time. --}}
+    {{#if @partial-block}}{{> @partial-block}}{{/if}}
+</div>

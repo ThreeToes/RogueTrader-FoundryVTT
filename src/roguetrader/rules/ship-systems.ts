@@ -203,6 +203,11 @@ export interface WeaponSlotIssue {
  * slot must exist on the hull and not exceed its count, and broadsides
  * (Table 8-4 "Broadside") must take Port or Starboard.
  */
+/** Broadside weapons (Table 8-4) may only occupy Port or Starboard. */
+export function broadsideWeapon(name: string, special?: string): boolean {
+	return /broadside/i.test(`${name} ${special ?? ""}`);
+}
+
 export function validateWeaponSlots(
 	capacity: string,
 	weapons: ShipWeaponLike[],
@@ -221,8 +226,7 @@ export function validateWeaponSlots(
 			issues.push({ name: w.name, kind: "unknown-slot", slot });
 			continue;
 		}
-		const isBroadside = /broadside/i.test(`${w.name} ${w.special ?? ""}`);
-		if (isBroadside && slot !== "port" && slot !== "starboard") {
+		if (broadsideWeapon(w.name, w.special) && slot !== "port" && slot !== "starboard") {
 			issues.push({ name: w.name, kind: "broadside-slot", slot });
 			continue;
 		}

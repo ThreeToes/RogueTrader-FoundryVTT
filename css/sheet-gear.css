@@ -1172,6 +1172,14 @@
 	border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
 }
 
+/* Disabled slot chips: greyed and unclickable — the hull has no capacity
+   for the slot, it is broadside-illegal, or the slot is full (the reason
+   rides the tooltip). */
+.rogue-trader.sheet.starship .inv-row .slot-chip:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
 /* Loud weapon-capacity warnings (bead om4j) + weapon slot selector. */
 .rogue-trader.sheet.starship .method-hint.warn {
 	color: #c25b3f;

@@ -3,9 +3,12 @@ import {
 	CREW_QUALITIES,
 } from "../../data/actor/starship-actor";
 import {
+	broadsideWeapon,
 	deriveShipStats,
+	parseWeaponCapacity,
 	validateWeaponSlots,
 	WEAPON_SLOTS,
+	type WeaponSlot,
 } from "../../rules/ship-systems";
 import {
 	crippledEffects,
@@ -169,6 +172,45 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				items: components.filter((c) => c.category === key),
 			}),
 		).filter((g) => g.items.length > 0);
+		// Per-weapon slot chips (owner round 7): a slot chip is ENABLED when
+		// the hull declares capacity for it, the weapon could legally occupy
+		// it (broadsides are Port/Starboard only, Table 8-4), and the slot is
+		// not already full of OTHER weapons. Disabled chips carry the reason
+		// as their tooltip.
+		const capacitySlots = parseWeaponCapacity(system.weaponCapacity ?? "");
+		const weaponComponents = components.filter(
+			(c) => c.type === "ship-weapon-component",
+		);
+		const usedCounts: Partial<Record<string, number>> = {};
+		for (const w of weaponComponents) {
+			const slot = (w.slot ?? "").toLowerCase();
+			if (slot) usedCounts[slot] = (usedCounts[slot] ?? 0) + 1;
+		}
+		for (const w of weaponComponents) {
+			const broadside = broadsideWeapon(w.name, w.special);
+			const ownSlot = (w.slot ?? "").toLowerCase();
+			w.slotChips = WEAPON_SLOTS.map((key) => {
+				const max = capacitySlots[key as WeaponSlot] ?? 0;
+				let reason = "";
+				if (max === 0) {
+					reason = game.i18n.localize("STARSHIP.ISSUE_UNKNOWN_SLOT");
+				} else if (broadside && key !== "port" && key !== "starboard") {
+					reason = game.i18n.localize("STARSHIP.ISSUE_BROADSIDE_SLOT");
+				} else {
+					const usedElsewhere =
+						(usedCounts[key] ?? 0) - (ownSlot === key ? 1 : 0);
+					if (usedElsewhere >= max) {
+						reason = game.i18n.localize("STARSHIP.ISSUE_OVER_CAPACITY");
+					}
+				}
+				return {
+					key,
+					label: game.i18n.localize(`STARSHIP.SLOT_${key.toUpperCase()}`),
+					disabled: reason.length > 0,
+					reason,
+				};
+			});
+		}
 		// Derived totals (bead om4j): recomputed from installed items on every
 		// render so space/SP/power/shields never drift from the items.
 		const derived = deriveShipStats(components);
@@ -213,9 +255,14 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			components.filter((c) => c.type === "ship-weapon-component"),
 		).map((issue) => ({
 			name: issue.name,
-			slot: issue.slot ?? "",
+			slot: issue.slot
+				? game.i18n.localize(`STARSHIP.SLOT_${issue.slot.toUpperCase()}`)
+				: "",
 			message: game.i18n.localize(
-				`STARSHIP.ISSUE_${issue.kind.toUpperCase()}`,
+				// The kind carries hyphens ("unknown-slot"); the i18n keys use
+				// underscores (ISSUE_UNKNOWN_SLOT) — the raw key leaked onto the
+				// sheet until this (owner round 7).
+				`STARSHIP.ISSUE_${issue.kind.toUpperCase().replaceAll("-", "_")}`,
 			),
 		}));
 		// Shared rich-text partial (bead bef7) renders notes via prose-mirror.
@@ -345,6 +392,12 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		special: string;
 		state: string;
 		stateLabel: string;
+		slotChips?: Array<{
+			key: string;
+			label: string;
+			disabled: boolean;
+			reason: string;
+		}>;
 	}> {
 		return this.document.items
 			.filter((i) => {

@@ -96,6 +96,12 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		type: "ship-weapon-component",
 		cost: "P8 S6 SP-",
 		slot: "dorsal",
+		// Per-weapon slot chips (owner round 7): validity computed in the
+		// sheet context; the harness pins that the template renders them.
+		slotChips: [
+			{ key: "dorsal", label: "STARSHIP.SLOT_DORSAL", disabled: false, reason: "" },
+			{ key: "prow", label: "STARSHIP.SLOT_PROW", disabled: true, reason: "STARSHIP.ISSUE_UNKNOWN_SLOT" },
+		],
 	};
 	const refitContext = {
 		weaponSlots: { dorsal: "Dorsal", prow: "Prow" },
@@ -116,12 +122,14 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 	it("ship-refit resolves weaponSlots via @root across the inv-row boundary", () => {
 		const render = compile("ship-refit.hbs");
 		const html = render(refitContext);
-		// Round 5: the slot picker is BUTTON CHIPS in a centred second row —
-		// the chips must still render the ROOT weaponSlots vocabulary across
-		// the partial-block boundary (the old ../../ path rendered nothing).
+		// Round 5 + 7: the slot picker is BUTTON CHIPS in a centred second
+		// row, driven by per-weapon chip data — invalid slots render DISABLED
+		// with their reason.
 		expect(html).toContain('data-slot="dorsal"');
 		expect(html).toContain('data-slot="prow"');
 		expect(html).toContain('class="slot-chip dorsal checked"');
+		expect(html).toContain("disabled");
+		expect(html).toContain('data-tooltip="STARSHIP.ISSUE_UNKNOWN_SLOT"');
 		// and the unassign chip
 		expect(html).toContain('data-slot=""');
 	});

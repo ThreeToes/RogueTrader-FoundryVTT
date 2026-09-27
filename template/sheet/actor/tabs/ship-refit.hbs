@@ -47,10 +47,14 @@
                 <button type="button" class="slot-chip{{#if (eq c.slot "")}} checked{{/if}}"
                     data-action="setWeaponSlot" data-item-id="{{c.id}}" data-slot=""
                     aria-pressed="{{#if (eq c.slot "")}}true{{else}}false{{/if}}">—</button>
-                {{#each @root.weaponSlots as |label key|}}
-                <button type="button" class="slot-chip {{key}}{{#if (eq c.slot key)}} checked{{/if}}"
-                    data-action="setWeaponSlot" data-item-id="{{c.id}}" data-slot="{{key}}"
-                    aria-pressed="{{#if (eq c.slot key)}}true{{else}}false{{/if}}">{{localize label}}</button>
+                {{!-- Per-weapon chips (owner round 7): slots the hull has no
+                     capacity for, broadside-illegal slots, and full slots are
+                     DISABLED with the reason as their tooltip. --}}
+                {{#each c.slotChips as |chip|}}
+                <button type="button" class="slot-chip {{chip.key}}{{#if (eq c.slot chip.key)}} checked{{/if}}"
+                    data-action="setWeaponSlot" data-item-id="{{c.id}}" data-slot="{{chip.key}}"
+                    {{#if chip.disabled}}disabled data-tooltip="{{chip.reason}}"{{else}}aria-pressed="{{#if (eq c.slot chip.key)}}true{{else}}false{{/if}}"{{/if}}
+                >{{chip.label}}</button>
                 {{/each}}
             </span>
             {{/if}}

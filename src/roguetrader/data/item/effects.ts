@@ -20,7 +20,6 @@ export {
 } from "../../../ffg/domain/model/effect";
 
 /** Schema factory for the effect list; identical shape across item types. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- matches Talent's inferred field type
 export function effectsField() {
 	return new foundry.data.fields.ArrayField(
 		new foundry.data.fields.SchemaField({

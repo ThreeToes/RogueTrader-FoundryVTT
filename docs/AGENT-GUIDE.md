@@ -196,8 +196,12 @@ Session-earned map of where things live (beads fjw/yb6/r1k/bpd/ay0/g7k/tfk/9if):
   `collectTalentDamageEffects` (weapon-scoped since 2k5: the attacking weapon's
   own effects apply, gear/armour damage effects inert); effects schema field on
   `data/item/gear.ts` (inherited by Weapon/Armour) + `talent.ts`; editor =
-  `template/sheet/item/parts/effect-tab.hbs` + `sheet/item/effect-actions.ts`
-  (kind dropdowns from `talentEffectHandlers.kinds()`).
+  the shared partial `template/shared/parts/effect-editor.hbs` (registered in
+  `SHARED_PARTIALS` in `src/roguetrader/sheet/partials.ts`), invoked from the
+  five item data-tab templates (`data.hbs` / `armour-data.hbs` /
+  `weapon-data.hbs` / `parts/talent-content.hbs` / `parts/trait-content.hbs`),
+  driven by `sheet/item/effect-actions.ts` (kind dropdowns from
+  `talentEffectHandlers.kinds()`).
   **Rule of thumb**: new effect kind = register handler + (if roll-mechanic)
   kernel/adapter support — never data-only.
 - **Advancement** (g7k/ayw/clng): pure engine = `rules/advancement.ts` (ledger,

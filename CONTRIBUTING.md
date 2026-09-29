@@ -2,23 +2,23 @@
 
 ## Developer Tooling
 
-This repository leverages [gulp](https://gulpjs.com/) to run automated build tasks. If your system supports `npm`, you can run the following commands from the root of the project to get set up:
+This repository leverages [Bun](https://bun.sh/) to run automated build tasks. Run the following commands from the root of the project to get set up:
 
-### `npm install`
+### `bun install`
 
 Installs all dependencies needed to run developer tooling scripts.
 
-### `npm run build` / `gulp buildAll`
+### `bun run build`
 
 Runs all relevant build scripts (listed below).
 
-### `npm run build:css` / `gulp buildCSS`
+### `bun run build:css`
 
-Converts the LESS in `./less` to the final `rogue-trader.css`.
+Builds the final `rogue-trader.css`.
 
-### `npm run build:watch` / `gulp`
+### `bun run watch`
 
-Runs the LESS -> CSS builder in watch mode so that changes made to the LESS files will automatically compile to CSS.
+Runs the builder in watch mode so that changes made to the source files are automatically rebuilt.
 
 ## Code
 
@@ -28,7 +28,9 @@ To contribute code, [fork this project](https://docs.github.com/en/get-started/q
 
 ### Style
 
-Please attempt to follow code style present throughout the project. An ESLint profile is included to help with maintaining a consistent code style. All warnings presented by the linter should be resolved before an PR is submitted.
+Please attempt to follow code style present throughout the project. The project lints with Biome: run `bun run lint` to lint and `bun run format` to format. All warnings presented by `bun run check` should be resolved before an PR is submitted.
 
-- `gulp lint` or `npm run lint` - Run the linter and display any issues found.
-- `gulp lint --fix` or `npm run lint:fix` - Automatically fix any code style issues that can be fixed.
+- `bun run lint` - Run the linter and display any issues found.
+- `bun run format` - Write formatting fixes (formatting only; does not apply lint fixes).
+- `bun run check --write` - Run the full Biome check (lint + format) and automatically apply fixes.
+- `bun run check` - Run the full Biome check (lint + format) over the project.

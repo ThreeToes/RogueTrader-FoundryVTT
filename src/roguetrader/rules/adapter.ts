@@ -84,7 +84,7 @@ export async function rollWeaponDamage(
 	// attack too, so it resolves through the same profile as a weapon.
 	const profile = attackProfileOf(item as never);
 	if (!item || !profile) {
-		ports.notify.warn("ROLL.UNKNOWN_SKILL");
+		ports.notify.warn("ROLL.UNKNOWN_ITEM");
 		return;
 	}
 	// Carry gating matches the to-hit attack gate; innate attacks (mutations)

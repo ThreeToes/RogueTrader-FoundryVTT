@@ -206,6 +206,7 @@
   "HEADER.DESCRIPTION": "Description",
   "ROLL.MODIFIER": "Modifier",
   "ROLL.UNKNOWN_SKILL": "Unknown skill.",
+  "ROLL.UNKNOWN_ITEM": "Unknown item — it may have been deleted.",
   "WOUNDS.REDUCED": "reduces wounds",
   "WOUNDS.ARMOUR": "Armour",
   "WOUNDS.SOAK": "Soak",

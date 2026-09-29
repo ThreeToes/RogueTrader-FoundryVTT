@@ -889,6 +889,7 @@
   "ATTACK_TYPE.ALLOUT": "Ataque toutes outres",
   "ROLL.MODIFIER": "Modificateur",
   "ROLL.UNKNOWN_SKILL": "Compétence inconnue.",
+  "ROLL.UNKNOWN_ITEM": "Objet inconnu — il a peut-être été supprimé.",
   "CHAT.ATTACK_RANGE": "Portée",
   "CHAT.ATTACK_TYPE": "Type",
   "CHAT.HAS_PSYCHIC_PHENOMENA_WITH_WARPCONDUIT": "Vous devez tirer sur la table des Phénomènes Psychiques à +30 !",

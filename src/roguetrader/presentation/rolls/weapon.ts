@@ -25,7 +25,7 @@ export const weaponHandler: RollHandler<"weapon"> = {
 		// Core p369) attacks exactly like a weapon, from the same profile.
 		const profile = attackProfileOf(item as never);
 		if (!item || !profile) {
-			ports.notify.warn("ROLL.UNKNOWN_SKILL");
+			ports.notify.warn("ROLL.UNKNOWN_ITEM");
 			return null;
 		}
 		// Equip-state gate: attacks require the weapon to be carried (the

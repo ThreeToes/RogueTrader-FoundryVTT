@@ -39,7 +39,7 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		const ship = request.actor;
 		const item = ship.items.get(request.itemId);
 		if (!item || (item.type as string) !== "ship-weapon-component") {
-			ports.notify.warn("ROLL.UNKNOWN_SKILL");
+			ports.notify.warn("ROLL.UNKNOWN_ITEM");
 			return null;
 		}
 		const weapon = item.system as unknown as {
@@ -297,7 +297,7 @@ export const shipRepairHandler: RollHandler<"ship-repair"> = {
 		const ship = request.actor;
 		const item = ship.items.get(request.itemId);
 		if (!item) {
-			ports.notify.warn("ROLL.UNKNOWN_SKILL");
+			ports.notify.warn("ROLL.UNKNOWN_ITEM");
 			return null;
 		}
 		const sys = item.system as unknown as {

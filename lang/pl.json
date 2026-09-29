@@ -911,6 +911,7 @@
   "ARMOUR.STOWED_TOOLTIP": "Schowana — nie daje punktów armatury, dopóki nie zostanie założona.",
   "ROLL.MODIFIER": "Modyfikator",
   "ROLL.UNKNOWN_SKILL": "Nieznana umiejętność.",
+  "ROLL.UNKNOWN_ITEM": "Nieznany przedmiot — mógł zostać usunięty.",
   "CHAT.CONTEXT.REROLL": "Ponów test wydając Przeznaczenie",
   "CHAT.ACCURATE_HEADER": "Test celny",
   "CHAT.DAMAGE_HEADER": "Test obrażeń",

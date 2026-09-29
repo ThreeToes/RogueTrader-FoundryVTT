@@ -884,6 +884,7 @@
   "ATTACK_TYPE.ALLOUT": "Ataque total",
   "ROLL.MODIFIER": "Modificador",
   "ROLL.UNKNOWN_SKILL": "Habilidad desconocida.",
+  "ROLL.UNKNOWN_ITEM": "Objeto desconocido: puede haber sido eliminado.",
   "CHAT.PSY_PUSH": "Potenciar",
   "CHAT.NUMBER_OF_HIT": "Número de impactos",
   "CHAT.HAS_PSYCHIC_PHENOMENA": "¡Debes tirar en la tabla de Fenómenos Psíquicos!",

@@ -15,7 +15,7 @@ export const navigatorHandler: RollHandler<"navigator"> = {
 		const actor = request.actor;
 		const item = actor.items.get(request.itemId);
 		if (!item || (item.type as string) !== "navigatorpower") {
-			ports.notify.warn("ROLL.UNKNOWN_SKILL");
+			ports.notify.warn("ROLL.UNKNOWN_ITEM");
 			return null;
 		}
 		const system = systemOf(actor);

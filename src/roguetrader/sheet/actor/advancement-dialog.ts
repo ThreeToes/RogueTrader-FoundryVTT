@@ -1,4 +1,6 @@
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { systemOf } from "../../data/accessors";
+import { characteristicValues } from "../skills-domain";
 import { sheetContext } from "../context";
 import { getCharacterOptionDocs } from "../pack-resolve";
 import {
@@ -26,6 +28,26 @@ import { talentGrant, promptParameterisedSubject } from "./grant-helpers";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
+
+/**
+ * Session cache for the compendium pack fetches (bead j4io, owner-approved
+ * 2026-09-29): the compendium does not change mid-session, so memoizing the
+ * getCharacterOptionDocs PROMISES (keyed by doc type) also dedupes concurrent
+ * renders. A rejected fetch is evicted so the next render retries.
+ */
+const characterOptionDocsCache = new Map<string, Promise<unknown[]>>();
+
+function characterOptionDocsOnce(type: string): Promise<unknown[]> {
+	let promise = characterOptionDocsCache.get(type);
+	if (!promise) {
+		promise = getCharacterOptionDocs(type).catch((error: unknown) => {
+			characterOptionDocsCache.delete(type);
+			throw error;
+		});
+		characterOptionDocsCache.set(type, promise);
+	}
+	return promise;
+}
 
 /**
  * Player-facing Spend-XP dialog (bead clng). The single Foundry-coupled
@@ -148,7 +170,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			};
 		}> = [];
 		if (careerKey) {
-			allCareers = (await getCharacterOptionDocs("career")) as unknown as typeof allCareers;
+			allCareers = (await characterOptionDocsOnce("career")) as unknown as typeof allCareers;
 			const doc = allCareers.find((d) => d.system.key === careerKey);
 			if (doc) {
 				this.#career = {
@@ -169,7 +191,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			}
 		}
 		{
-			const docs = (await getCharacterOptionDocs("skill")) as unknown as Array<{
+			const docs = (await characterOptionDocsOnce("skill")) as unknown as Array<{
 				id?: string;
 				name?: string;
 				system: { key?: string; characteristic?: string };
@@ -189,7 +211,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		// "psychic-technique", ...).
 		this.#nameByKey = {};
 		{
-			const docs = (await getCharacterOptionDocs("talent")) as unknown as Array<{
+			const docs = (await characterOptionDocsOnce("talent")) as unknown as Array<{
 				name?: string;
 				system: { key?: string };
 			}>;
@@ -220,9 +242,8 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		const ownedSkills = this.actor.items
 			.filter((item) => (item.type as string) === "skill")
 			.map((item) => item.name ?? "");
-		const characteristics: Partial<Record<string, number>> = Object.fromEntries(
-			Object.entries(system.characteristics ?? {}).map(([k, v]) => [k, v.value]),
-		);
+		const characteristics: Partial<Record<string, number>> =
+			characteristicValues(system);
 		if (this.#career) {
 			for (const doc of allCareers) {
 				const alt = doc.system;
@@ -406,12 +427,10 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				xp: { spent: totalSpent([...ledger, entry]) },
 			},
 		} as never);
-		ui.notifications?.info(
-			game.i18n!.format("ADVANCE.BOUGHT", {
-				name: `${game.i18n!.localize(`CHARACTERISTIC.${key.toUpperCase()}`)} +5 (${next.tier})`,
-				cost: String(next.cost),
-			}),
-		);
+		getPorts().notify.info("ADVANCE.BOUGHT", {
+			name: `${getPorts().i18n.t(`CHARACTERISTIC.${key.toUpperCase()}`)} +5 (${next.tier})`,
+			cost: String(next.cost),
+		});
 		this.render({ force: true } as never);
 	}
 
@@ -454,9 +473,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		// Bead tfk: structured prereq evaluation joins the confirm reasons —
 		// only UNMET prereqs; unparseable strings stay GM-confirm text.
 		const prereqSnapshot = {
-			characteristics: Object.fromEntries(
-				Object.entries(system.characteristics ?? {}).map(([k, v]) => [k, v.value]),
-			),
+			characteristics: characteristicValues(system),
 			talents: this.actor.items
 				.filter((item) => (item.type as string) === "talent")
 				.map((item) => item.name ?? ""),
@@ -515,17 +532,13 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		const derived = derivedRank(thresholds, totalSpent(nextLedger));
 		if (derived > (system.rank ?? 1)) {
 			updates.rank = derived;
-			ui.notifications?.info(
-				game.i18n!.format("ADVANCE.RANK_UP", { rank: String(derived) }),
-			);
+			getPorts().notify.info("ADVANCE.RANK_UP", { rank: String(derived) });
 		}
 		await this.actor.update({ system: updates } as never);
-		ui.notifications?.info(
-			game.i18n!.format("ADVANCE.BOUGHT", {
-				name: row.name,
-				cost: String(row.cost),
-			}),
-		);
+		getPorts().notify.info("ADVANCE.BOUGHT", {
+			name: row.name,
+			cost: String(row.cost),
+		});
 		this.render({ force: true } as never);
 	}
 
@@ -579,9 +592,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				xp: { spent: totalSpent(ledger) },
 			},
 		} as never);
-		ui.notifications?.info(
-			game.i18n!.format("ADVANCE.REFUNDED", { name: removed.name, cost: String(removed.cost) }),
-		);
+		getPorts().notify.info("ADVANCE.REFUNDED", { name: removed.name, cost: String(removed.cost) });
 		this.render({ force: true } as never);
 	}
 }

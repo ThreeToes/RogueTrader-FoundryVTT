@@ -2,33 +2,25 @@ import { Character } from "../../data/actor/character";
 import { characteristics } from "../../registry";
 import { sheetContext } from "../context";
 import { getCharacterOptionDocs } from "../pack-resolve";
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ApplicationV2 } = foundry.applications.api;
+import { OwnedItemPicker } from "./owned-picker";
 
 /**
  * Minimal skill picker: lists the catalog from the skills compendium pack and
  * lets the user create custom specializations. Owned skills appear on the
  * character sheet's skills tab.
  */
-export class SkillPicker extends HandlebarsApplicationMixin(ApplicationV2) {
-	static DEFAULT_OPTIONS = {
+export class SkillPicker extends OwnedItemPicker {
+	static DEFAULT_OPTIONS = OwnedItemPicker.pickerOptions({
 		id: "rogue-trader-skill-picker",
-		classes: ["rogue-trader", "sheet", "skill-picker"],
-		position: { width: 400, height: 500 },
-		window: { title: "SKILL.ADD", resizable: true },
+		slug: "skill-picker",
+		titleKey: "SKILL.ADD",
+		width: 400,
+		height: 500,
 		actions: {
 			addCatalog: SkillPicker.#addCatalog,
 			addCustom: SkillPicker.#addCustom,
 		},
-	};
-
-	actor: foundry.documents.Actor;
-
-	constructor(options: { actor: foundry.documents.Actor } & object) {
-		super(options);
-		this.actor = options.actor;
-	}
+	});
 
 	static PARTS = {
 		form: {
@@ -54,11 +46,7 @@ export class SkillPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 		catalog.sort((a, b) => a.name.localeCompare(b.name));
 
-		const owned = new Set(
-			this.actor.items
-				.filter((item) => item.type === "skill")
-				.map((item) => item.name),
-		);
+		const owned = this.ownedItemNames("skill");
 		context.catalog = catalog.map((entry) => ({
 			...entry,
 			owned: owned.has(entry.name),

@@ -1,5 +1,5 @@
 import { Vehicle } from "../../data/actor/vehicle";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { isWeaponType } from "../../data/accessors";
 import { tokenFootprintLabel } from "../../rules/vehicle-tokens";
 import {
@@ -90,9 +90,7 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			(system.traits ?? []).map((t) => [t, true]),
 		);
 		context.facingChoices = Object.fromEntries(vehicleFacings.entries());
-		context.descriptionHTML = await enrichText(system.description, this.document, {
-			secrets: this.document.isOwner,
-		});
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 
 		// Crew rows (resolved names from Actor UUIDs - references, not embedded).
 		context.crewRows = (system.crew ?? []).map((uuid) => ({

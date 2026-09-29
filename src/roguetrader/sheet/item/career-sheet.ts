@@ -1,7 +1,7 @@
 import { careers } from "../../registry";
 import type { CareerRank } from "../../data/item/career";
 import { ITEM_DESCRIPTION_TABS } from "../tabs";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -153,12 +153,7 @@ export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.startingSkills = system.startingSkills ?? [];
 		context.startingTalents = system.startingTalents ?? [];
 		context.startingGear = system.startingGear ?? [];
-		context.descriptionHTML =
-			await enrichText(
-				system.description ?? "",
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

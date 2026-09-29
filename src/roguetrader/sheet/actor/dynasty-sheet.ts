@@ -1,14 +1,15 @@
 import { Dynasty } from "../../data/actor/dynasty";
 import { startingProfitFactorAndShipPoints } from "../../rules/acquisition";
 import {
-	allowedWarrantColumns,
 	getWarrantEntries,
+	pruneWarrantPicks,
 	resolveWarrant,
 	WARRANT_ROWS,
 	WARRANT_ROW_LABEL_KEYS,
 	warrantInRow,
 	type WarrantRow,
 } from "../../rules/warrant";
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { enrichText } from "../rich-text";
 
@@ -115,20 +116,12 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		}
 	}
 
-	#colOf(picks: Record<string, string>, row: WarrantRow): number | null {
-		const key = picks[row];
-		if (!key) return null;
-		const entry = getWarrantEntries().find(
-			(e) => e.row === row && e.key === key,
-		);
-		return entry ? entry.col : null;
-	}
-
 	/**
 	 * GM edit: set/clear one row's pick, prune any downstream pick the change
-	 * makes unreachable, then re-derive the totals. The APPLIED Profit Factor /
-	 * Ship Points follow the path while at least one pick remains; clearing the
-	 * whole path leaves the applied values alone (the GM may keep them).
+	 * makes unreachable (shared pruneWarrantPicks, bead 6yz8), then re-derive
+	 * the totals. The APPLIED Profit Factor / Ship Points follow the path while
+	 * at least one pick remains; clearing the whole path leaves the applied
+	 * values alone (the GM may keep them).
 	 */
 	async #setPick(rowValue: string, key: string): Promise<void> {
 		if (!(WARRANT_ROWS as string[]).includes(rowValue)) return;
@@ -138,35 +131,15 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		};
 		if (key) picks[row] = key;
 		else delete picks[row];
-		let prevCol = this.#colOf(picks, row);
-		for (
-			let i = WARRANT_ROWS.indexOf(row) + 1;
-			i < WARRANT_ROWS.length;
-			i++
-		) {
-			const r = WARRANT_ROWS[i];
-			if (!picks[r]) {
-				prevCol = null;
-				continue;
-			}
-			const entry = getWarrantEntries().find(
-				(e) => e.row === r && e.key === picks[r],
-			);
-			if (!entry || !allowedWarrantColumns(r, prevCol).includes(entry.col)) {
-				delete picks[r];
-				prevCol = null;
-				continue;
-			}
-			prevCol = entry.col;
-		}
+		const pruned = pruneWarrantPicks(picks, row);
 		const resolved = resolveWarrant(
-			WARRANT_ROWS.filter((r) => picks[r]).map((r) => ({
+			WARRANT_ROWS.filter((r) => pruned[r]).map((r) => ({
 				row: r,
-				key: picks[r],
+				key: pruned[r],
 			})),
 		);
 		const update: Record<string, unknown> = {
-			"system.warrant.picks": picks,
+			"system.warrant.picks": pruned,
 			"system.warrant.shipPoints": resolved.shipPoints,
 			"system.warrant.profitFactor": resolved.profitFactor,
 		};
@@ -198,9 +171,8 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	 * dynasty document, not in the character creator (owner redesign).
 	 */
 	static async #onRollStarting(this: DynastySheet): Promise<void> {
-		const roll = new foundry.dice.Roll("1d10");
-		await roll.evaluate();
-		const result = startingProfitFactorAndShipPoints(roll.total ?? 1);
+		const total = (await getPorts().dice.roll("1d10")).total ?? 1;
+		const result = startingProfitFactorAndShipPoints(total);
 		await (this.document as unknown as {
 			update: (data: object) => Promise<unknown>;
 		}).update({
@@ -209,13 +181,11 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				shipPoints: { total: result.shipPoints },
 			},
 		});
-		ui.notifications?.info(
-			game.i18n!.format("DYNASTY.ROLLED", {
-				roll: String(roll.total ?? 1),
-				pf: String(result.profitFactor),
-				sp: String(result.shipPoints),
-			}),
-		);
+		getPorts().notify.info("DYNASTY.ROLLED", {
+			roll: String(total),
+			pf: String(result.profitFactor),
+			sp: String(result.shipPoints),
+		});
 		this.render({ force: true });
 	}
 }

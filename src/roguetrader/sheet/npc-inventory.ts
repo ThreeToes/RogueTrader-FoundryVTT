@@ -11,6 +11,9 @@
  */
 import { equipStateOf } from "../data/accessors";
 import { readRtFlag } from "../rules/chat-flags";
+// One equip state machine (bead 73di) — lives in sheet/equip.ts so both
+// sheets consume the same module; re-exported here for existing importers.
+export { equipToggleState } from "./equip";
 
 /** Minimal owned-item shape the grouping/equip logic needs. */
 export interface NpcInventoryItemLike {
@@ -21,23 +24,6 @@ export interface NpcInventoryItemLike {
 	/** Raw item flags — read for the packer's compendiumSource stamp (et3x,
 	 * surfaced as the sheet's link-back affordance, bead kwm9). */
 	flags?: unknown;
-}
-
-/**
- * Next equip state for the NPC equip/stow toggle. ARMOUR-AWARE (bead 2dvj):
- * armour cycles worn<->stowed (the only valid armour states — the old
- * stowed<->carried toggle produced an invalid "carried" armour state);
- * weapons and gear cycle stowed<->carried. Anything else keeps its state
- * (non-equippable items never get a toggle anchor in the template).
- */
-export function equipToggleState(
-	type: string | undefined,
-	current: string,
-): string {
-	if (type === "armour") {
-		return current === "worn" ? "stowed" : "worn";
-	}
-	return current === "stowed" ? "carried" : "stowed";
 }
 
 /** A grouped inventory item as rendered on the NPC inventory tab. */

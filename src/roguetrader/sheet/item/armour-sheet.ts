@@ -3,7 +3,7 @@ import { Battlesuit } from "../../data/item/battlesuit";
 import { bodyLocations } from "../../registry";
 import { effectActions, effectEditorChoices } from "./effect-actions";
 import { ITEM_DATA_TABS } from "../tabs";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -61,7 +61,7 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		];
 
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
+		Object.assign(context, effectEditorChoices());
 
 		// Tau battlesuits (bead rojm) share this sheet and add the profile block
 		// the book prints on p38: Hard Points, Size, Strength, Primary Systems and
@@ -84,12 +84,7 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 		// Description tab: enriched HTML from the system description
 		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).
-		context.descriptionHTML =
-			await enrichText(
-				this.document.system.description,
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

@@ -284,6 +284,7 @@ describe("ownership gate (bead qiuo)", () => {
 			notify: {
 				warn: (key) => warnings.push(key),
 				info: () => undefined,
+				error: () => undefined,
 			},
 		});
 		return warnings;

@@ -1,12 +1,84 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import {
 	allowedWarrantColumns,
+	pruneWarrantPicks,
 	resolveWarrant,
 	setWarrantEntries,
 	type WarrantEntry,
 	WARRANT_ROWS,
+	warrantEntryFromDoc,
 	warrantRowColumns,
 } from "./warrant";
+
+describe("pruneWarrantPicks (bead 6yz8, the shared path-pruning walk)", () => {
+	// A legal full path: a2 (col 2) -> b3 (col 3) -> c3 (col 3) -> d3 (col 3)
+	// -> e3 (col 3) -> f3 (col 3).
+	const full: Record<string, string> = {
+		"warrant-age": "a2",
+		"fortune-fate": "b3",
+		acquisition: "c3",
+		sanction: "d3",
+		contacts: "e3",
+		renown: "f3",
+	};
+
+	test("a downstream pick reachable within +-1 column survives", () => {
+		// a2 -> b3 is legal (|3-2| = 1); the rest of the path is untouched.
+		expect(pruneWarrantPicks(full, "warrant-age")).toEqual(full);
+	});
+
+	test("an unreachable downstream pick is dropped, input untouched", () => {
+		const before = { ...full };
+		// Changing to a1 (col 1) makes b3 (col 3) unreachable.
+		const picks = { ...full, "warrant-age": "a1" };
+		const pruned = pruneWarrantPicks(picks, "warrant-age");
+		expect(pruned["warrant-age"]).toBe("a1");
+		expect(pruned["fortune-fate"]).toBeUndefined();
+		expect(full).toEqual(before); // pure: input not mutated
+	});
+
+	test("a dropped pick resets the anchor and downstream re-anchors", () => {
+		// sanction d1 (col 1) is unreachable from c3 (col 3) — dropped; the
+		// anchor resets to null, and contacts e3 (col 3) survives past the
+		// gap (null allows everything) while keeping its own column.
+		const picks: Record<string, string> = { ...full, sanction: "d1" };
+		const pruned = pruneWarrantPicks(picks, "warrant-age");
+		expect(pruned.sanction).toBeUndefined();
+		expect(pruned.contacts).toBe("e3");
+		expect(pruned.renown).toBe("f3");
+	});
+
+	test("picks before fromRow are untouched even when they look illegal", () => {
+		const picks = {
+			"warrant-age": "a2",
+			"fortune-fate": "b3",
+			acquisition: "c0", // unreachable from b3, but ABOVE fromRow
+			sanction: "d2",
+		};
+		const pruned = pruneWarrantPicks(picks, "sanction");
+		expect(pruned["warrant-age"]).toBe("a2");
+		expect(pruned["fortune-fate"]).toBe("b3");
+		expect(pruned.acquisition).toBe("c0");
+		// sanction IS fromRow: the anchor row itself is never examined, so
+		// even its odd column is kept.
+		expect(pruned.sanction).toBe("d2");
+	});
+
+	test("an unpicked row resets the anchor (null allows everything)", () => {
+		// fortune-fate removed: anchor at b is a2, the gap resets the anchor
+		// to null, and with a null anchor every column of the next row is
+		// allowed — so c3 and its legal successor survive.
+		const picks = { "warrant-age": "a2", acquisition: "c3", sanction: "d3" };
+		const pruned = pruneWarrantPicks(picks, "warrant-age");
+		expect(pruned).toEqual(picks); // nothing was dropped
+	});
+
+	test("an unknown stored key is dropped like an unreachable pick", () => {
+		const picks = { ...full, acquisition: "gone" };
+		const pruned = pruneWarrantPicks(picks, "warrant-age");
+		expect(pruned.acquisition).toBeUndefined();
+	});
+});
 
 /**
  * Synthetic chart mirroring the p34 column layout: Acquisition spans columns
@@ -101,6 +173,45 @@ describe("warrant chart adjacency (Into the Storm p33)", () => {
 	test("warrantRowColumns lists the distinct occupied columns", () => {
 		expect(warrantRowColumns("acquisition")).toEqual([0, 1, 2, 3, 4, 5, 6]);
 		expect(warrantRowColumns("renown")).toEqual([2, 3, 4]);
+	});
+});
+
+describe("warrantEntryFromDoc (bead 5rk0, the shared pack mapping)", () => {
+	test("maps a full pack document", () => {
+		expect(
+			warrantEntryFromDoc({
+				name: "Age of Redemption",
+				system: {
+					key: "a6",
+					row: "warrant-age",
+					col: 6,
+					description: "Book prose.",
+					mechanics: {
+						shipPoints: 8,
+						profitFactor: 6,
+						notes: ["One Archeotech component."],
+					},
+				},
+			}),
+		).toEqual({
+			key: "a6",
+			row: "warrant-age",
+			col: 6,
+			name: "Age of Redemption",
+			description: "Book prose.",
+			mechanics: {
+				shipPoints: 8,
+				profitFactor: 6,
+				notes: ["One Archeotech component."],
+			},
+		});
+	});
+
+	test("returns null for a doc missing its key or carrying an off-chart row", () => {
+		expect(warrantEntryFromDoc({ name: "Orphan", system: { row: "warrant-age" } })).toBeNull();
+		expect(
+			warrantEntryFromDoc({ name: "Orphan", system: { key: "x", row: "not-a-row" } }),
+		).toBeNull();
 	});
 });
 

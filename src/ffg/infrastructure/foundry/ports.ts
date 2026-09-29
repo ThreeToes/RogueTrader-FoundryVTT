@@ -145,10 +145,20 @@ function localise(key: string, vars?: Record<string, unknown>): string {
 	return vars ? api.format(key, vars as Record<string, string>) : api.localize(key);
 }
 
-function notifications(): { warn(m: string): void; info(m: string): void } | undefined {
+function notifications(): {
+	warn(m: string): void;
+	info(m: string): void;
+	error(m: string): void;
+} | undefined {
 	return (
 		globalThis as {
-			ui?: { notifications?: { warn(m: string): void; info(m: string): void } };
+			ui?: {
+				notifications?: {
+					warn(m: string): void;
+					info(m: string): void;
+					error(m: string): void;
+				};
+			};
 		}
 	).ui?.notifications;
 }
@@ -159,6 +169,9 @@ const notify: Notify = {
 	},
 	info(key, vars) {
 		notifications()?.info(localise(key, vars));
+	},
+	error(key, vars) {
+		notifications()?.error(localise(key, vars));
 	},
 };
 

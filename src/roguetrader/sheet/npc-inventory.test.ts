@@ -22,7 +22,7 @@ describe("equipToggleState (armour-aware, bead 2dvj)", () => {
 		expect(equipToggleState("gear", "stowed")).toBe("carried");
 	});
 
-	it("non-equippable types keep their state (no toggle is rendered)", () => {
+	it("non-equippables never render a toggle anchor; the function itself cycles stowed/carried", () => {
 		expect(equipToggleState("talent", "stowed")).toBe("carried");
 	});
 });

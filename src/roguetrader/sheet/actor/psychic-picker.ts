@@ -1,8 +1,6 @@
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ApplicationV2 } = foundry.applications.api;
-
 import { sheetContext } from "../context";
 import { getCharacterOptionDocs } from "../pack-resolve";
+import { OwnedItemPicker } from "./owned-picker";
 
 /**
  * Psychic power compendium picker (bead m4me): lists the character-options
@@ -10,23 +8,17 @@ import { getCharacterOptionDocs } from "../pack-resolve";
  * not exist yet (extraction bead 5u5) — the picker degrades to a hint until
  * it lands. Mirrors SkillPicker/TalentPicker.
  */
-export class PsychicPicker extends HandlebarsApplicationMixin(ApplicationV2) {
-	static DEFAULT_OPTIONS = {
+export class PsychicPicker extends OwnedItemPicker {
+	static DEFAULT_OPTIONS = OwnedItemPicker.pickerOptions({
 		id: "rogue-trader-psychic-picker",
-		classes: ["rogue-trader", "sheet", "psychic-picker"],
-		position: { width: 420, height: 500 },
-		window: { title: "PSYCHIC_POWER.PICKER_TITLE", resizable: true },
+		slug: "psychic-picker",
+		titleKey: "PSYCHIC_POWER.PICKER_TITLE",
+		width: 420,
+		height: 500,
 		actions: {
 			addPower: PsychicPicker.#addPower,
 		},
-	};
-
-	actor: foundry.documents.Actor;
-
-	constructor(options: { actor: foundry.documents.Actor } & object) {
-		super(options as never);
-		this.actor = options.actor;
-	}
+	});
 
 	static PARTS = {
 		form: {
@@ -55,11 +47,7 @@ export class PsychicPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 			restricted: boolean;
 		}> = [];
 		if (documents.length > 0) {
-			const owned = new Set(
-				this.actor.items
-					.filter((item) => (item.type as string) === "psychicpower")
-					.map((item) => item.name),
-			);
+			const owned = this.ownedItemNames("psychicpower");
 			for (const doc of documents) {
 				if (!doc.name) continue;
 				const subtype = doc.system.subtype ?? "focus";

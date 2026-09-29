@@ -17,6 +17,7 @@
  * manually dropped components (bead pyi3 DnD) survive the reconcile.
  */
 import { getPackDocuments } from "../pack-resolve";
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { crewQualityEffects, CREW_QUALITIES } from "../../rules/ship-crew";
 import {
@@ -104,25 +105,36 @@ const SUPPLEMENTAL_TYPE_LABELS: Readonly<Record<string, string>> = {
 	xenotech: "STARSHIP.COMPONENTS_XENOTECH",
 };
 
+/** Ships-pack document shape used by the creator's option builders. */
+type ShipPackDoc = {
+	uuid?: string;
+	id?: string;
+	name?: string;
+	type?: string;
+	system?: {
+		power?: string;
+		space?: number;
+		sp?: string;
+		category?: string;
+		componentType?: string;
+		hullTypes?: string;
+		description?: string;
+		special?: string;
+	};
+};
+
+async function fetchShipsPackDocs(): Promise<ShipPackDoc[]> {
+	return (await getPackDocuments("rogue-trader.ships")) as ShipPackDoc[];
+}
+
 /** Ships-pack component vocabulary (shared by the instance + static paths). */
-async function fetchComponentOptions(): Promise<PackOption[]> {
-	const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
-		uuid?: string;
-		id?: string;
-		name?: string;
-		type?: string;
-		system?: {
-			power?: string;
-			space?: number;
-			sp?: string;
-			category?: string;
-			componentType?: string;
-			hullTypes?: string;
-			description?: string;
-			special?: string;
-		};
-	}>;
-	return docs
+async function fetchComponentOptions(
+	// Bead yi5t: render paths pass the ONCE-fetched docs array; click paths
+	// omit it and trigger a fresh fetch.
+	docs?: ShipPackDoc[],
+): Promise<PackOption[]> {
+	const all = docs ?? (await fetchShipsPackDocs());
+	return all
 		.filter(
 			(d) =>
 				d.type === "ship-component" || d.type === "ship-weapon-component",
@@ -173,27 +185,10 @@ export class ShipCreator extends CreatorApplication {
 		},
 	};
 
-	/** Ships-pack component options (the refit picker's vocabulary). */
-	#componentOptions(): Promise<PackOption[]> {
-		return fetchComponentOptions();
-	}
-
 	/** Hull options: ships-pack `ship` docs (hulls + NPC quick-starts). */
-	async #hullOptions(): Promise<PackOption[]> {
-		const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
-			uuid?: string;
-			id?: string;
-			name?: string;
-			type?: string;
-			system?: {
-				power?: string;
-				space?: number;
-				sp?: string;
-				category?: string;
-				description?: string;
-			};
-		}>;
-		return docs
+	async #hullOptions(docs?: ShipPackDoc[]): Promise<PackOption[]> {
+		const all = docs ?? (await fetchShipsPackDocs());
+		return all
 			.filter((d) => d.type === "ship")
 			.map((d) => ({
 				uuid: d.uuid ?? "",
@@ -255,8 +250,11 @@ export class ShipCreator extends CreatorApplication {
 		context.crewQuality = state.crewQuality;
 		context.hullUuid = state.hullUuid;
 		context.hullName = state.hullName;
-		context.hullOptions = await this.#hullOptions();
-		const options = await this.#componentOptions();
+		// Ships pack fetched ONCE per render (bead yi5t); hull and component
+		// options both filter the same docs array.
+		const shipsDocs = await fetchShipsPackDocs();
+		context.hullOptions = await this.#hullOptions(shipsDocs);
+		const options = await fetchComponentOptions(shipsDocs);
 		const hull = (await this.#hullStatline()) ?? {};
 		const hullClass = String(hull.hullClass ?? "").toLowerCase();
 		// Pick state is stamped onto the option rows (bead mby6 follow-up):
@@ -568,7 +566,7 @@ export class ShipCreator extends CreatorApplication {
 	static async #onFinish(this: ShipCreator): Promise<void> {
 		const state = this.creatorState;
 		if (!state.hullUuid) {
-			ui.notifications?.warn(game.i18n.localize("SHIP_CREATOR.NO_HULL"));
+			getPorts().notify.warn("SHIP_CREATOR.NO_HULL");
 			return;
 		}
 		// Essential completeness (book p200): "A ship must have one (no more)
@@ -582,11 +580,9 @@ export class ShipCreator extends CreatorApplication {
 			),
 		);
 		if (missing.length > 0) {
-			ui.notifications?.warn(
-				game.i18n.format("SHIP_CREATOR.MISSING_ESSENTIALS", {
-					list: missing.join(", "),
-				}),
-			);
+			getPorts().notify.warn("SHIP_CREATOR.MISSING_ESSENTIALS", {
+				list: missing.join(", "),
+			});
 			return;
 		}
 		const hull = (await foundry.utils.fromUuid(state.hullUuid)) as unknown as {

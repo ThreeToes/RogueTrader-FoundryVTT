@@ -4,15 +4,6 @@ import { WeaponClass } from "./weapon-class";
 import { textField } from "../fields";
 
 /**
- * Placeholder for weapon qualities (e.g. Accurate, Tearing).
- * TODO: flesh out into a proper schema once weapon qualities are modelled.
- */
-export interface WeaponQuality {
-	name: string;
-	rating?: number;
-}
-
-/**
  * Common behaviour and data shared by all weapon types (melee, ranged).
  */
 export abstract class Weapon extends Gear {

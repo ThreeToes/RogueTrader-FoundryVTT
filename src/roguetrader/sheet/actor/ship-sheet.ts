@@ -20,6 +20,7 @@ import {
 	rollShipSalvo,
 } from "../../rules/adapter";
 import { cloneItemFromDrop } from "../drop-clone";
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { enrichText } from "../rich-text";
 
@@ -152,12 +153,22 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.spRemaining = system.spRemaining;
 		// Complications (Tables 8-1 / 8-2): the stored value plus its
 		// compendium effect — the effect ONLY when the ships pack provides
-		// it, never fabricated (owner round 6).
+		// it, never fabricated (owner round 6). The pack is fetched ONCE per
+		// render (bead yi5t) and shared by both complication lookups.
+		const shipsDocs = (await getPackDocuments(
+			"rogue-trader.ships",
+		)) as Array<{
+			type?: string;
+			name?: string;
+			system?: { kind?: string; effect?: string };
+		}>;
 		context.oddity = await this.#complicationContext(
+			shipsDocs,
 			"machine-spirit-oddity",
 			system.machineSpiritOddity,
 		);
 		context.history = await this.#complicationContext(
+			shipsDocs,
 			"past-history",
 			system.pastHistory,
 		);
@@ -443,6 +454,11 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	 * that found no entry counts as unset, so the roll button returns.
 	 */
 	async #complicationContext(
+		docs: Array<{
+			type?: string;
+			name?: string;
+			system?: { kind?: string; effect?: string };
+		}>,
 		kind: string,
 		value: string,
 	): Promise<{ name: string; hasValue: boolean; effect: string | null }> {
@@ -450,11 +466,6 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const hasValue = name.trim().length > 0 && !name.startsWith("?");
 		let effect: string | null = null;
 		if (hasValue) {
-			const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
-				type?: string;
-				name?: string;
-				system?: { kind?: string; effect?: string };
-			}>;
 			const hit = docs.find(
 				(d) =>
 					d.type === "ship-complication" &&
@@ -492,11 +503,9 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				`rogue-trader | ship refit: "${created.name}" (${type}) is not a ship component; not installed`,
 			);
 			await this.document.deleteEmbeddedDocuments("Item", [created.id]);
-			ui.notifications?.warn(
-				game.i18n.format("STARSHIP.DROP_NOT_COMPONENT", {
-					name: created.name ?? "",
-				}),
-			);
+			getPorts().notify.warn("STARSHIP.DROP_NOT_COMPONENT", {
+				name: created.name ?? "",
+			});
 			return;
 		}
 		await this.#clampVoidShields();
@@ -631,9 +640,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	async #rollComplication(kind: string, field: string): Promise<void> {
-		const roll = new foundry.dice.Roll("1d10");
-		await roll.evaluate();
-		const result = roll.total ?? 1;
+		const result = (await getPorts().dice.roll("1d10")).total ?? 1;
 		const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
 			type?: string;
 			name?: string;

@@ -1,6 +1,6 @@
 import { effectActions } from "./effect-actions";
 import { NavigatorPower } from "../../data/item/navigator-power";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -51,12 +51,7 @@ export class NavigatorPowerSheet extends HandlebarsApplicationMixin(
 			adept: "",
 			master: "",
 		};
-		context.descriptionHTML =
-			await enrichText(
-				this.document.system.description,
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

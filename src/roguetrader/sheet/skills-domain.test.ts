@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	buildCharacteristicViews,
 	CHAR_SHORTS,
+	characteristicValues,
 	LADDER_OPTIONS,
 	mergeOwnedAndCatalogRows,
 	skillNameKey,
@@ -164,5 +165,27 @@ describe("characteristic views (bead 6l90)", () => {
 		const view = buildCharacteristicViews(system, format)[0];
 		expect(view.delta).toBe(0);
 		expect(view.effectiveValue).toBe(view.value);
+	});
+});describe("characteristicValues (bead bdu4)", () => {
+	it("maps present values to a plain record", () => {
+		expect(
+			characteristicValues({
+				characteristics: { ws: { value: 40 }, bs: { value: 35 } },
+			}),
+		).toEqual({ ws: 40, bs: 35 });
+	});
+
+	it("yields an empty record when characteristics is missing", () => {
+		expect(characteristicValues({})).toEqual({});
+		expect(characteristicValues({ characteristics: undefined })).toEqual({});
+	});
+
+	it("preserves the call sites' exact fallback (only the record is coalesced)", () => {
+		// `?? {}` guards the missing record; each entry maps straight from
+		// v.value with no per-key fallback, as the original sites did.
+		expect(characteristicValues({ characteristics: null })).toEqual({});
+		expect(
+			characteristicValues({ characteristics: { ws: { value: 40 } } }),
+		).toEqual({ ws: 40 });
 	});
 });

@@ -1,4 +1,5 @@
 import { Character } from "../../data/actor/character";
+import { itemIdFromTarget } from "../dom";
 import {
 	equipStateOf,
 	isWeaponType,
@@ -19,6 +20,7 @@ import {
 } from "../../registry";
 import { collectSorceryRank } from "../../rules/talent-effects";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { isPsykerLike } from "../../rules/psyker";
 import { criticalSheetContext } from "../../rules/criticals";
 import { rollBattlesuitRepair } from "../../rules/battlesuit-repair";
@@ -45,7 +47,6 @@ import type { Modifier } from "../../../rules-engine/modifier";
 import {
 	performRoll,
 	rollSnapOut,
-	rollWeaponDamage,
 	toggleSustainedPower,
 } from "../../rules/adapter";
 import { missingSkillGrants } from "../../rules/default-skills";
@@ -61,6 +62,14 @@ import type { EffectData } from "../../data/item/effects";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { actorEncumbrance } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
+import {
+	gatePsykerTab,
+	openItemAction,
+	rollDamageAction,
+	rollWeaponAction,
+	startItemRowDrag,
+} from "./shared-actions";
+import { equipToggleState } from "../equip";
 import { armourLocations, weaponRows } from "./view-models";
 import {
 	buildCharacteristicViews,
@@ -80,6 +89,15 @@ import { enrichText } from "../rich-text";
 
 // (CharacteristicView, MAX_UNNATURAL_STEPS moved to sheet/skills-domain — bead 6l90)
 
+/** Structural row of a career pack document, shared by the career builders. */
+interface CareerDocRow {
+	uuid?: string;
+	system: {
+		key: string;
+		ranks?: Array<{ rank: number; xpLevel: number }>;
+	};
+}
+
 export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "character"],
@@ -94,11 +112,11 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			addSkill: CharacterSheet.#onAddSkill,
 			setUnnatural: CharacterSheet.#onSetUnnatural,
 			setLadder: CharacterSheet.#onSetLadder,
-			openItem: CharacterSheet.#onOpenItem,
-			openPackItem: CharacterSheet.#onOpenPackItem,
+			openItem: openItemAction,
+			openPackItem: openPackItemAction,
 			deleteItem: CharacterSheet.#onDeleteItem,
-			rollWeapon: CharacterSheet.#onRollWeapon,
-			rollDamage: CharacterSheet.#onRollDamage,
+			rollWeapon: rollWeaponAction,
+			rollDamage: rollDamageAction,
 			openTalentPicker: CharacterSheet.#onOpenTalentPicker,
 			toggleEquip: CharacterSheet.#onToggleEquip,
 			openAdvancement: CharacterSheet.#onOpenAdvancement,
@@ -134,69 +152,15 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		await rollSnapOut(this.actor);
 	}
 
-	static async #onOpenItem(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const itemId =
-			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
-		if (!itemId) return;
-		const item = this.actor.items.get(itemId);
-		if (item) item.sheet?.render(true);
-	}
-
-	/**
-	 * Open the COMPENDIUM version of an item (bead oaaz): reads data-uuid
-	 * (pack uuid resolved in _prepareContext), robust pack resolution per
-	 * the wwuc root cause. Used by the Background tab's talent book icons.
-	 * Thin wrapper over the shared action (bead kwm9 — NpcSheet uses it too).
-	 */
-	static #onOpenPackItem(
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		return openPackItemAction(_event, target);
-	}
-
 	/** Delete an owned inventory item. */
 	static async #onDeleteItem(
 		this: { actor: foundry.documents.Actor },
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId =
-			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId = itemIdFromTarget(target);
 		if (!itemId) return;
 		await this.actor.items.get(itemId)?.delete();
-	}
-
-	/** Roll the to-hit test for a weapon on the combat tab (v1). */
-	static async #onRollWeapon(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const itemId =
-			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
-		if (!itemId) return;
-		await performRoll({
-			kind: "weapon",
-			actor: this.actor,
-			itemId,
-		});
-	}
-
-	/** Quick damage roll from a weapon row (no to-hit test). */
-	static async #onRollDamage(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const itemId =
-			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
-		if (!itemId) return;
-		await rollWeaponDamage(this.actor, itemId);
 	}
 
 	static async #onOpenTalentPicker(this: {
@@ -225,7 +189,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId = itemIdFromTarget(target);
 		if (!itemId) return;
 		await performRoll({
 			kind: "psychic",
@@ -253,8 +217,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId =
-			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId = itemIdFromTarget(target);
 		if (!itemId) return;
 		await performRoll({
 			kind: "navigator",
@@ -285,9 +248,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			// resolution (sheet/pack-resolve.ts), fromUuid as fallback.
 			const item = await resolvePackDocument(uuid);
 			if (!item) {
-				ui.notifications?.error(
-					game.i18n!.format("BACKGROUND.OPEN_CAREER_FAIL", { uuid }),
-				);
+				getPorts().notify.error("BACKGROUND.OPEN_CAREER_FAIL", { uuid });
 				console.warn(`rogue-trader | career link: "${uuid}" did not resolve`);
 				return;
 			}
@@ -296,9 +257,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			// Surface render failures visibly instead of dying silently —
 			// CareerSheet._prepareContext errors land here.
 			console.error("rogue-trader | career link failed:", error);
-			ui.notifications?.error(
-				game.i18n!.format("BACKGROUND.OPEN_CAREER_FAIL", { uuid }),
-			);
+			getPorts().notify.error("BACKGROUND.OPEN_CAREER_FAIL", { uuid });
 		}
 	}
 
@@ -365,9 +324,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		)) as foundry.documents.Item[];
 		const doc = docs.find((item) => item.name === name);
 		if (!doc) {
-			ui.notifications?.warn(
-				game.i18n!.format("AFFLICTION.GRANT_MISSING", { name }),
-			);
+			getPorts().notify.warn("AFFLICTION.GRANT_MISSING", { name });
 			return;
 		}
 		const object = doc.toObject() as unknown as {
@@ -451,16 +408,16 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	/**
-	 * Toggle the equip state of an inventory item: stowed -> carried (or worn
-	 * for armour); any ready state -> stowed.
+	 * Toggle the equip state of an inventory item. The type allowlist stays
+	 * here (bead 73di: the character keeps a narrower type set); the state
+	 * computation is the ONE shared machine (sheet/equip.ts, bead 2dvj).
 	 */
 	static async #onToggleEquip(
 		this: { actor: foundry.documents.Actor },
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId =
-			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId = itemIdFromTarget(target);
 		if (!itemId) return;
 		const item = this.actor.items.get(itemId);
 		if (!item) return;
@@ -471,9 +428,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			)
 		)
 			return;
-		const current = equipStateOf(item);
-		const readyState = type === "armour" ? "worn" : "carried";
-		const next = current === readyState ? "stowed" : readyState;
+		const next = equipToggleState(type, equipStateOf(item));
 		await item.update({ system: { equipState: next } });
 	}
 
@@ -641,21 +596,22 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	};
 
 	/**
-	 * The psychic tab renders only for psykers (bead m4me): Navigators count
-	 * (Core Rulebook p182), anyone with a Psy Rating, and anyone who owns
-	 * psychic/navigator powers (bead hli6 follow-up: the header psyker
-	 * checkbox moved onto this tab, so owned powers must be able to reveal
-	 * it for homebrew/GM-granted psykers). Mundane characters never see the
-	 * tab in the nav nor the section.
+	 * The psychic tab renders only for psykers (bead m4me): shared psyker
+	 * predicate (bead 73di, gatePsykerTab); this sheet gates the "psychic" id.
+	 * Navigators count (Core Rulebook p182), anyone with a Psy Rating, and
+	 * anyone who owns psychic/navigator powers (bead hli6 follow-up: the
+	 * header psyker checkbox moved onto this tab, so owned powers must be able
+	 * to reveal it for homebrew/GM-granted psykers). Mundane characters never
+	 * see the tab in the nav nor the section.
 	 */
 	protected override _prepareTabs(
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
-		const tabs = super._prepareTabs(group);
-		if (!isPsykerLike(actorView(this.actor))) {
-			delete tabs.psychic;
-		}
-		return tabs;
+		return gatePsykerTab(
+			this.actor,
+			super._prepareTabs(group),
+			"psychic",
+		);
 	}
 
 	/**
@@ -663,14 +619,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	 * data so rows can be dropped onto other sheets/hotbars.
 	 */
 	protected _onDragStart(event: DragEvent): void {
-		const row = (event.target as HTMLElement | null)?.closest<HTMLElement>(
-			"[data-item-uuid]",
-		);
-		if (!row?.dataset.itemUuid) return;
-		event.dataTransfer?.setData(
-			"text/plain",
-			JSON.stringify({ type: "Item", uuid: row.dataset.itemUuid }),
-		);
+		startItemRowDrag(event);
 	}
 
 	/**
@@ -730,6 +679,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		await this.actor.createEmbeddedDocuments("Item", grants);
 	}
 
+/**
+	 * Builds the sheet context tab by tab. Orchestration only: ensure default
+	 * skills -> base context -> the shared per-render career fetch -> one
+	 * builder per tab/section, each documented below. The await order (skill
+	 * catalog, talent pack, rich-text enrichment) is preserved.
+	 */
 	async _prepareContext(options: { isFirstRender: boolean }) {
 		await this.#ensureDefaultSkills();
 		const context = sheetContext(await super._prepareContext(options as never));
@@ -739,6 +694,37 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// still being suffered, and whether a worn battlesuit can repair them.
 		context.criticals = criticalSheetContext(this.actor);
 
+		// Career docs fetched ONCE per render (bead yi5t) and shared by both
+		// consumers below — the advancement-thresholds lookup and the career-link
+		// lookup. getCharacterOptionDocs re-fetches the pack on every call.
+		const careerDocs = (await getCharacterOptionDocs(
+			"career",
+		)) as unknown as CareerDocRow[];
+
+		this.#careerContext(context, system, careerDocs);
+		await this.#skillsContext(context, system);
+		this.#psychicContext(context, system);
+		this.#inventoryContext(context);
+		await this.#backgroundContext(context, system);
+		this.#derivedContext(context, system);
+		this.#madnessContext(context, system);
+		await this.#notesContext(context, system);
+		// Career link resolves against the shared careerDocs; kept after the
+		// section builders to preserve the original assignment order.
+		this.#careerLinkContext(context, system, careerDocs);
+
+		return context;
+	}
+
+	/**
+	 * Stats tab: the career picker (bead 0ib), advancement-rank tooltips (bead
+	 * ayw) and the display-only XP pool.
+	 */
+	#careerContext(
+		context: Record<string, unknown>,
+		system: Character,
+		careerDocs: CareerDocRow[],
+	): void {
 		// Career picker (bead 0ib): choices from the careers registry; the
 		// read-only label resolves via the registry so homebrew careers work.
 		context.careerLabel = system.careerKey
@@ -753,14 +739,8 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// || expressions with nested quotes, see character-sheet render error).
 		context.advancementTooltip = game.i18n!.localize("ADVANCE.OPEN");
 		if (system.careerKey) {
-			const docs = (await getCharacterOptionDocs("career")) as unknown as Array<{
-				system: {
-					key: string;
-					ranks?: Array<{ rank: number; xpLevel: number }>;
-				};
-			}>;
-			if (docs.length > 0) {
-				const careerDoc = docs.find((d) => d.system.key === system.careerKey);
+			if (careerDocs.length > 0) {
+				const careerDoc = careerDocs.find((d) => d.system.key === system.careerKey);
 				const thresholds = (careerDoc?.system.ranks ?? []).map((r) => ({
 					rank: r.rank,
 					xpLevel: r.xpLevel,
@@ -786,7 +766,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// lifetime total stays editable.
 		context.xpSpent = totalSpent((system.advances ?? []) as AdvanceLedgerEntry[]);
 		context.xpTotal = system.xp?.total ?? 0;
+	}
 
+	/** Skills tab: characteristic views + the owned/catalog skill ladder rows. */
+	async #skillsContext(
+		context: Record<string, unknown>,
+		system: Character,
+	): Promise<void> {
 		context.characteristics = buildCharacteristicViews(
 			system,
 			// fvtt-types narrow format's vars to Record<string, string>; the
@@ -823,7 +809,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		});
 
 		context.isPC = this.actor.type === "explorer";
+	}
 
+	/** Psychic tab (bead m4me): powers, psyker status, sorcery, navigation. */
+	#psychicContext(context: Record<string, unknown>, system: Character): void {
 		// Psychic tab (bead m4me): owned powers + psyker status; the tab nav
 		// itself is gated in _prepareTabs.
 		context.isPsyker = isPsykerLike(actorView(this.actor));
@@ -884,7 +873,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 					masteryLabel: `NAVIGATOR_POWER.${(sys.mastery ?? "novice").toUpperCase()}`,
 				};
 			});
+	}
 
+	/**
+	 * Inventory + combat tabs: grouped gear, armour AP per location and weapon
+	 * rows, plus the talent rows the background tab builds on.
+	 */
+	#inventoryContext(context: Record<string, unknown>): void {
 		// Inventory: all non-skill owned items grouped by family. Weight display
 		// only - aggregation/encumbrance is deliberately NOT calculated here yet.
 		const byType = (types: string[]) =>
@@ -957,21 +952,29 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 		// Consolidated Background tab (bead ay0): origins + career + talents.
 		context.talentRows = byType(["talent"]);
+	}
+
+	/** Background tab: talents, origins, dynasty, origin traits, grants. */
+	async #backgroundContext(
+		context: Record<string, unknown>,
+		system: Character,
+	): Promise<void> {
 		// Compendium link per talent row (bead oaaz): pack uuid by name
 		// (case-insensitive), same careers-pack pattern as careerItemId above.
 		const packDocs = (await getCharacterOptionDocs("talent")) as unknown as Array<{
 			uuid?: string;
 			name?: string;
 		}>;
-		if (packDocs.length > 0 && context.talentRows.length > 0) {
+		const talentRows = context.talentRows as Array<
+			Record<string, unknown> & { name?: string; packUuid?: string }
+		>;
+		if (packDocs.length > 0 && talentRows.length > 0) {
 			const byName = new Map(
 				packDocs
 					.filter((d) => d.name)
 					.map((d) => [d.name!.toLowerCase(), d.uuid ?? ""]),
 			);
-			for (const row of context.talentRows as Array<
-				Record<string, unknown> & { name?: string; packUuid?: string }
-			>) {
+			for (const row of talentRows) {
 				row.packUuid = row.name
 					? (byName.get(row.name.toLowerCase()) ?? "")
 					: "";
@@ -1082,16 +1085,20 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			...grant,
 			label: grant.benefit ? `${grant.name} ${grant.benefit}` : grant.name,
 		}));
+	}
 
-		// Career link: the compendium career item behind the actor's careerKey,
-		// opened via openCareerSheet for the full crunch tables. Diagnostic log
-		// when the lookup fails (bead qwp6) — pack missing, or key mismatch.
-		const docs = (await getCharacterOptionDocs("career")) as unknown as Array<{
-			uuid?: string;
-			system: { key: string };
-		}>;
-		if (docs.length > 0 && system.careerKey) {
-			const careerDoc = docs.find((d) => d.system.key === system.careerKey);
+	/**
+	 * Career link: the compendium career item behind the actor's careerKey,
+	 * opened via openCareerSheet for the full crunch tables. Diagnostic log
+	 * when the lookup fails (bead qwp6) — pack missing, or key mismatch.
+	 */
+	#careerLinkContext(
+		context: Record<string, unknown>,
+		system: Character,
+		careerDocs: CareerDocRow[],
+	): void {
+		if (careerDocs.length > 0 && system.careerKey) {
+			const careerDoc = careerDocs.find((d) => d.system.key === system.careerKey);
 			if (!careerDoc) {
 				console.warn(
 					`rogue-trader | no career doc with system.key "${system.careerKey}" in the character-options pack`,
@@ -1099,12 +1106,15 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			}
 			context.careerItemId = careerDoc?.uuid ?? "";
 		} else {
-			if (docs.length === 0) {
+			if (careerDocs.length === 0) {
 				console.warn("rogue-trader | careers pack not registered (game.packs)");
 			}
 			context.careerItemId = "";
 		}
+	}
 
+	/** Combat tab read-outs: encumbrance + the derived (read-only) values. */
+	#derivedContext(context: Record<string, unknown>, system: Character): void {
 		// Encumbrance: carried weight vs capacity derived from Strength Bonus
 		// (rules/encumbrance.ts deriveCapacity, VERIFY book rule). Only READY
 		// items count (bead yar): carried weapons/gear, worn armour.
@@ -1122,7 +1132,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			woundsMax: woundsMax(actorView(this.actor)),
 			fatigueMax: fatigueThreshold(system),
 		};
+	}
 
+	/** Madness tracks + conditions (epic 1g2t, q1ql): pure helper. */
+	#madnessContext(context: Record<string, unknown>, system: Character): void {
 		// Madness tracks + conditions (epic 1g2t, q1ql): pure helper.
 		Object.assign(
 			context,
@@ -1137,15 +1150,19 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				this.actor as unknown as never,
 			),
 		);
+	}
 
+	/** Notes tab: rich-text description + motivation (owner request). */
+	async #notesContext(
+		context: Record<string, unknown>,
+		system: Character,
+	): Promise<void> {
 		const enrich = (text: string) =>
 			enrichText(text, this.document, { secrets: this.document.isOwner });
 		context.descriptionHTML = await enrich(system.description);
 		// Notes tab: motivation is rich text (owner request; appearance was
 		// culled — the description field covers it).
 		context.motivationHTML = await enrich(system.life?.motivation ?? "");
-
-		return context;
 	}
 }
 
@@ -1245,9 +1262,7 @@ async function prepareDroppedItems(
 			};
 			const outcome = await applyAfflictionProcedure(system.procedure, {
 				roll: async (notation) => {
-					const die = new foundry.dice.Roll(notation);
-					await die.evaluate();
-					return die.total ?? 0;
+					return (await getPorts().dice.roll(notation)).total ?? 0;
 				},
 				characteristic: (key) => character.effectiveCharacteristicValue(key),
 				mutationRows: async () => mutationRowsFrom(await loadMutations()),
@@ -1267,9 +1282,7 @@ async function prepareDroppedItems(
 		system.effects = await resolveEffectValues(
 			system.effects,
 			async (notation) => {
-				const die = new foundry.dice.Roll(notation);
-				await die.evaluate();
-				return die.total ?? 0;
+				return (await getPorts().dice.roll(notation)).total ?? 0;
 			},
 		);
 	}

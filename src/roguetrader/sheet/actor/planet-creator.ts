@@ -24,6 +24,7 @@ import {
 	resultLabelFromRow,
 	rollMatchesRange,
 } from "../../rules/planet-tables";
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { CreatorApplication } from "./creator-application";
 
@@ -246,17 +247,13 @@ export class PlanetCreator extends CreatorApplication {
 		const stage = STAGES.find((s) => s.key === stageKey);
 		if (!stage) return;
 		const state = this.stages[stageKey];
-		const roll = new foundry.dice.Roll(`1d${stage.die}`);
-		await roll.evaluate();
-		const raw = roll.total ?? 1;
+		const raw = (await getPorts().dice.roll(`1d${stage.die}`)).total ?? 1;
 		// Effective result keeps the book's open-ended semantics: e.g.
 		// Climate 10 + 2 → 12 matches "11 or higher"; no clamping.
 		const result = raw + state.modifier;
 		const options = await this.#stageOptions(stage.kind);
 		if (options.length === 0) {
-			ui.notifications?.warn(
-				game.i18n.format("PLANET_CREATOR.NO_ROWS", { kind: stage.kind }),
-			);
+			getPorts().notify.warn("PLANET_CREATOR.NO_ROWS", { kind: stage.kind });
 			return;
 		}
 		// Gravity/Orbital rows split per planetary body type — filter to the
@@ -266,9 +263,7 @@ export class PlanetCreator extends CreatorApplication {
 				? filterByBodyType(options, resultLabelFromRow(this.stages.body.name))
 				: options;
 		if (filtered.length === 0) {
-			ui.notifications?.warn(
-				game.i18n.format("PLANET_CREATOR.NO_ROWS", { kind: stage.kind }),
-			);
+			getPorts().notify.warn("PLANET_CREATOR.NO_ROWS", { kind: stage.kind });
 			return;
 		}
 		let row: PackRow | undefined;
@@ -293,11 +288,9 @@ export class PlanetCreator extends CreatorApplication {
 					o.name.toLowerCase().includes(species.toLowerCase()),
 			);
 			if (!row) {
-				ui.notifications?.warn(
-					game.i18n.format("PLANET_CREATOR.NO_SPECIES_ROW", {
-						species,
-					}),
-				);
+				getPorts().notify.warn("PLANET_CREATOR.NO_SPECIES_ROW", {
+					species,
+				});
 				return;
 			}
 			label = matchRollMap(parseRollMap(row.summary), result) ?? "";
@@ -306,11 +299,9 @@ export class PlanetCreator extends CreatorApplication {
 			if (row) label = resultLabelFromRow(row.name);
 		}
 		if (!row) {
-			ui.notifications?.warn(
-				game.i18n.format("PLANET_CREATOR.NO_MATCH", {
-					result: String(result),
-				}),
-			);
+			getPorts().notify.warn("PLANET_CREATOR.NO_MATCH", {
+				result: String(result),
+			});
 			return;
 		}
 		state.uuid = row.uuid;

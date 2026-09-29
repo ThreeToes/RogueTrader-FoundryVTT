@@ -20,6 +20,7 @@
  */
 
 import { ChartPool } from "../../ffg/domain/model/chart";
+import { nested, num, packSystem, str, strArray } from "../data/pack-fields";
 
 export type WarrantRow =
 	| "warrant-age"
@@ -74,6 +75,37 @@ export interface WarrantEntry {
 
 const warrantPool = new ChartPool<WarrantEntry>(WARRANT_ROWS);
 
+/**
+ * THE pack-document -> WarrantEntry mapping (bead 5rk0), shared by the ready
+ * pack warmer (bootstrap/warmers) and the creator's on-demand pool fill
+ * (sheet/actor/warrant-creator) so the schema only has one copy. Style
+ * mirrors the other warmers (pack-fields helpers). Returns null for a doc
+ * missing its `key` or carrying a `row` outside the chart — the same docs the
+ * original warmWarrant filter and creator `toEntry` both dropped.
+ */
+export function warrantEntryFromDoc(doc: {
+	name?: string | null;
+	system?: unknown;
+}): WarrantEntry | null {
+	const s = packSystem(doc);
+	const key = str(s, "key");
+	const row = str(s, "row");
+	if (!key || !isWarrantRow(row)) return null;
+	const mechanics = nested(s, "mechanics");
+	return {
+		key,
+		row,
+		col: num(s, "col"),
+		name: doc.name ?? "",
+		description: str(s, "description"),
+		mechanics: {
+			shipPoints: num(mechanics, "shipPoints"),
+			profitFactor: num(mechanics, "profitFactor"),
+			notes: strArray(mechanics, "notes"),
+		},
+	};
+}
+
 /** Replace the runtime chart pool (pack loader / tests). */
 export function setWarrantEntries(entries: WarrantEntry[]): void {
 	warrantPool.set(entries);
@@ -112,6 +144,55 @@ export function allowedWarrantColumns(
 	prevCol: number | null,
 ): number[] {
 	return warrantPool.allowedColumns(row, prevCol);
+}
+
+/**
+ * The column of a row's stored pick (its WarrantEntry), or null when the row
+ * is unpicked or its key is unknown to the runtime pool. Shared by the
+ * creator and the dynasty sheet (bead 6yz8) so a pick's column is resolved
+ * exactly one way.
+ */
+export function warrantPickColumn(
+	picks: Record<string, string>,
+	row: WarrantRow,
+): number | null {
+	const key = picks[row];
+	if (!key) return null;
+	const entry = getWarrantEntries().find((e) => e.row === row && e.key === key);
+	return entry ? entry.col : null;
+}
+
+/**
+ * Prune any pick at/after `fromRow` that the (changed) pick at `fromRow`
+ * makes unreachable, so the stored path is always legal. Walks the rows after
+ * `fromRow` in order: a missing pick resets the anchor to null; a pick whose
+ * entry is missing or whose column is not in allowedWarrantColumns(row,
+ * prevCol) is dropped and resets the anchor. Returns a NEW picks record (the
+ * input is not mutated).
+ */
+export function pruneWarrantPicks(
+	picks: Record<string, string>,
+	fromRow: WarrantRow,
+): Record<string, string> {
+	const pruned: Record<string, string> = { ...picks };
+	let prevCol = warrantPickColumn(pruned, fromRow);
+	for (let i = WARRANT_ROWS.indexOf(fromRow) + 1; i < WARRANT_ROWS.length; i++) {
+		const row = WARRANT_ROWS[i];
+		if (!pruned[row]) {
+			prevCol = null;
+			continue;
+		}
+		const entry = getWarrantEntries().find(
+			(e) => e.row === row && e.key === pruned[row],
+		);
+		if (!entry || !allowedWarrantColumns(row, prevCol).includes(entry.col)) {
+			delete pruned[row];
+			prevCol = null;
+			continue;
+		}
+		prevCol = entry.col;
+	}
+	return pruned;
 }
 
 export interface WarrantPick {

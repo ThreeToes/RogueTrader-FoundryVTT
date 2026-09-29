@@ -1,5 +1,6 @@
 import { talents } from "../../registry";
 import { sheetContext } from "../context";
+import { characteristicValues } from "../skills-domain";
 import { getCharacterOptionDocs } from "../pack-resolve";
 import {
 	evaluatePrerequisites,
@@ -7,32 +8,24 @@ import {
 } from "../../rules/prereq";
 import { talentGrant, promptParameterisedSubject } from "./grant-helpers";
 import { parameterisedBase } from "../../rules/grants";
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ApplicationV2 } = foundry.applications.api;
+import { OwnedItemPicker } from "./owned-picker";
 
 /**
  * Minimal talent picker: lists the talent registry (CONFIG.ROGUE_TRADER
  * .talents) and grants selected talents as owned `talent` items. Reuses the
  * skill-picker anatomy and styling; owned talents appear in the inventory tab.
  */
-export class TalentPicker extends HandlebarsApplicationMixin(ApplicationV2) {
-	static DEFAULT_OPTIONS = {
+export class TalentPicker extends OwnedItemPicker {
+	static DEFAULT_OPTIONS = OwnedItemPicker.pickerOptions({
 		id: "rogue-trader-talent-picker",
-		classes: ["rogue-trader", "sheet", "skill-picker"],
-		position: { width: 400, height: 460 },
-		window: { title: "TALENT.ADD", resizable: true },
+		slug: "skill-picker",
+		titleKey: "TALENT.ADD",
+		width: 400,
+		height: 460,
 		actions: {
 			addCatalog: TalentPicker.#addCatalog,
 		},
-	};
-
-	actor: foundry.documents.Actor;
-
-	constructor(options: { actor: foundry.documents.Actor } & object) {
-		super(options);
-		this.actor = options.actor;
-	}
+	});
 
 	static PARTS = {
 		form: {
@@ -43,11 +36,7 @@ export class TalentPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	async _prepareContext(_options: object = {}) {
 		const context = sheetContext(await super._prepareContext(_options as never));
-		const owned = new Set(
-			this.actor.items
-				.filter((item) => item.type === "talent")
-				.map((item) => item.name),
-		);
+		const owned = this.ownedItemNames("talent");
 		// NOTE(prereqs): per-entry prerequisite gating (Talent.canGrant) activates
 		// once the registry carries per-entry metadata (key -> {label, prereq} instead
 		// of key -> label only); the base seed defines no chains, so all entries grant.
@@ -132,13 +121,8 @@ export class TalentPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 			psyRating?: number;
 		};
 		return {
-			characteristics: Object.fromEntries(
-				Object.entries(system.characteristics ?? {}).map(([k, v]) => [
-					k,
-					v.value,
-				]),
-			),
-			talents: this.actor.items
+		characteristics: characteristicValues(system),
+		talents: this.actor.items
 				.filter((item) => item.type === "talent")
 				.map((item) => item.name ?? ""),
 			psyRating: system.psyRating ?? 0,

@@ -20,6 +20,7 @@ export const SHARED_PARTIALS = [
 	"shared/parts/ship-component-row.hbs",
 	"shared/parts/weapon-row.hbs",
 	"shared/parts/combat-weapon-row.hbs",
+	"shared/parts/effect-editor.hbs",
 ] as const;
 
 const PREFIX = "systems/rogue-trader/template/";

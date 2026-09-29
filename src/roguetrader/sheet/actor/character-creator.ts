@@ -54,19 +54,13 @@ import {
 	reconcileForCreator,
 	skillGrantPayload,
 } from "../../rules/grants";
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { readRtFlag } from "../../rules/chat-flags";
 import { waitForDefaultGrants } from "../default-grants";
 import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
 import { CreatorApplication } from "./creator-application";
 import { promptParameterisedSubject, talentGrant } from "./grant-helpers";
-
-/** yclz: prompt for a parameterised talent's subject; resolved names pass through. */
-async function resolveParameterisedTalent(
-	name: string,
-): Promise<string | null> {
-	return promptParameterisedSubject(name);
-}
 
 /** Career-doc suggestion cache (system.suggestedHomeWorlds), per session. */
 let careerSuggestionCache: Map<string, string[]> | null = null;
@@ -213,9 +207,7 @@ function emptyState(): CreatorState {
 }
 
 async function roll(formula: string): Promise<number> {
-	const roll = new foundry.dice.Roll(formula);
-	await roll.evaluate();
-	return roll.total ?? 0;
+	return (await getPorts().dice.roll(formula)).total ?? 0;
 }
 
 /**
@@ -1124,7 +1116,7 @@ export class CharacterCreator extends CreatorApplication {
 			this.creatorState.acquisition = null;
 		} else {
 			if (target.dataset.selectable === "false") {
-				ui.notifications!.warn(game.i18n!.localize("CREATOR.ACQ_BLOCKED"));
+				getPorts().notify.warn("CREATOR.ACQ_BLOCKED");
 				return;
 			}
 			const payload = this.#acquisitionPayloads.get(key);
@@ -1480,7 +1472,7 @@ export class CharacterCreator extends CreatorApplication {
 			}
 			// yclz: resolve parameterised talents ("Peer (choose one)") to a
 			// concrete subject before granting; cancelled prompt = skipped.
-			const resolvedName = await resolveParameterisedTalent(talentName);
+			const resolvedName = await promptParameterisedSubject(talentName);
 			if (!resolvedName) continue;
 			if (seenNames.has(normName(resolvedName))) continue;
 			seenNames.add(normName(resolvedName));
@@ -1489,7 +1481,7 @@ export class CharacterCreator extends CreatorApplication {
 		for (const leftover of unmatched) {
 			if (isUnresolvedChoice(leftover)) manual.push(leftover);
 			else if (!seenNames.has(normName(leftover))) {
-				const resolvedName = await resolveParameterisedTalent(leftover);
+				const resolvedName = await promptParameterisedSubject(leftover);
 				if (!resolvedName) continue;
 				if (seenNames.has(normName(resolvedName))) continue;
 				seenNames.add(normName(resolvedName));

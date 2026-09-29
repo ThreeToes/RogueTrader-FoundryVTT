@@ -17,45 +17,16 @@ import {
 	allowedWarrantColumns,
 	getWarrantEntries,
 	isWarrantRow,
+	pruneWarrantPicks,
 	resolveWarrant,
 	setWarrantEntries,
 	WARRANT_ROWS,
 	WARRANT_ROW_LABEL_KEYS,
 	type WarrantEntry,
 	type WarrantRow,
+	warrantEntryFromDoc,
+	warrantPickColumn,
 } from "../../rules/warrant";
-
-/** Map a pack document onto the runtime pool entry. */
-function toEntry(doc: {
-	name?: string;
-	system?: {
-		key?: string;
-		row?: string;
-		col?: number;
-		description?: string;
-		mechanics?: {
-			shipPoints?: number;
-			profitFactor?: number;
-			notes?: unknown[];
-		};
-	};
-}): WarrantEntry | null {
-	const s = doc.system ?? {};
-	const row = String(s.row ?? "");
-	if (!isWarrantRow(row) || !s.key) return null;
-	return {
-		key: String(s.key),
-		row,
-		col: Number(s.col ?? 0),
-		name: doc.name ?? "",
-		description: String(s.description ?? ""),
-		mechanics: {
-			shipPoints: Number(s.mechanics?.shipPoints ?? 0),
-			profitFactor: Number(s.mechanics?.profitFactor ?? 0),
-			notes: (s.mechanics?.notes ?? []).map(String),
-		},
-	};
-}
 
 export class WarrantCreator extends CreatorApplication {
 	static DEFAULT_OPTIONS = CreatorApplication.creatorOptions({
@@ -100,19 +71,17 @@ export class WarrantCreator extends CreatorApplication {
 		setWarrantEntries(
 			docs
 				.filter((doc) => doc.type === "warrant-option")
-				.map((doc) => toEntry(doc as never))
+				// The SHARED doc mapping (bead 5rk0), same as the ready warmer.
+				.map((doc) => warrantEntryFromDoc(doc))
 				.filter((entry): entry is WarrantEntry => entry !== null),
 		);
 	}
 
-	/** Column of a row's current pick (null when unpicked/unknown). */
+	/**
+	 * Column of a row's current pick (null when unpicked).
+	 */
 	#colOf(row: WarrantRow): number | null {
-		const key = this.picks[row];
-		if (!key) return null;
-		const entry = getWarrantEntries().find(
-			(e) => e.row === row && e.key === key,
-		);
-		return entry ? entry.col : null;
+		return warrantPickColumn(this.picks, row);
 	}
 
 	/**
@@ -120,24 +89,7 @@ export class WarrantCreator extends CreatorApplication {
 	 * stored path is always legal (same protect-intent as the origin creator).
 	 */
 	#pruneDownstream(fromRow: WarrantRow): void {
-		let prevCol = this.#colOf(fromRow);
-		for (let i = WARRANT_ROWS.indexOf(fromRow) + 1; i < WARRANT_ROWS.length; i++) {
-			const row = WARRANT_ROWS[i];
-			const key = this.picks[row];
-			if (!key) {
-				prevCol = null;
-				continue;
-			}
-			const entry = getWarrantEntries().find(
-				(e) => e.row === row && e.key === key,
-			);
-			if (!entry || !allowedWarrantColumns(row, prevCol).includes(entry.col)) {
-				delete this.picks[row];
-				prevCol = null;
-				continue;
-			}
-			prevCol = entry.col;
-		}
+		this.picks = pruneWarrantPicks(this.picks, fromRow);
 	}
 
 	async _prepareContext(_options: object = {}) {

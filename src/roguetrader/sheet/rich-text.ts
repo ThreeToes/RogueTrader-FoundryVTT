@@ -20,3 +20,19 @@ export async function enrichText(
 		relativeTo: relativeTo as foundry.abstract.Document.Any,
 	});
 }
+
+/**
+ * Item-sheet description enrichment (bead pe92): the one call every item
+ * sheet repeated verbatim — enrich `system.description` against the document
+ * with owner-only secrets. Kept as a helper, not a base class (see
+ * sheet/context.ts for why shared bases break tsc).
+ */
+export async function itemDescriptionHTML(document: unknown): Promise<string> {
+	const doc = document as {
+		system: { description?: string };
+		isOwner: boolean;
+	};
+	return enrichText(doc.system.description ?? "", document, {
+		secrets: doc.isOwner,
+	});
+}

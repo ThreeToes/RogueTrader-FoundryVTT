@@ -1,5 +1,5 @@
 import { effectActions } from "./effect-actions";
-import { enrichText } from "../rich-text";
+import { enrichText, itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -52,12 +52,7 @@ export class ShipHullSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 				this.document,
 				{ secrets: this.document.isOwner },
 			);
-		context.descriptionHTML =
-			await enrichText(
-				String(this.document.system.description ?? ""),
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

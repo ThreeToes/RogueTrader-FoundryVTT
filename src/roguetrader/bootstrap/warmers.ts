@@ -17,7 +17,6 @@ import {
 	optionalStr,
 	packSystem,
 	str,
-	strArray,
 } from "../data/pack-fields";
 import type { SkillSourceLike } from "../rules/default-skills";
 import {
@@ -31,10 +30,9 @@ import {
 } from "../rules/origins";
 import type { OriginTraitDef } from "../rules/origin-traits";
 import {
-	isWarrantRow,
 	setWarrantEntries,
+	warrantEntryFromDoc,
 	type WarrantEntry,
-	type WarrantRow,
 } from "../rules/warrant";
 import { getCharacterOptionDocs, getPackDocuments } from "../sheet/pack-resolve";
 import { rogueTraderConfig } from "./config";
@@ -153,25 +151,15 @@ function warmWarrant(): void {
 	warmPool({
 		load: () => getPackDocuments("rogue-trader.warrant"),
 		keep: (doc: foundry.documents.Item) => doc.type === "warrant-option",
-		map: (doc: foundry.documents.Item): WarrantEntry => {
-			const s = packSystem(doc);
-			const mechanics = nested(s, "mechanics");
-			return {
-				key: str(s, "key"),
-				row: str(s, "row") as WarrantRow,
-				col: num(s, "col"),
-				name: doc.name ?? "",
-				description: str(s, "description"),
-				mechanics: {
-					shipPoints: num(mechanics, "shipPoints"),
-					profitFactor: num(mechanics, "profitFactor"),
-					notes: strArray(mechanics, "notes"),
-				},
-			};
-		},
-		set: (entries) =>
+		// The mapping is SHARED with the rules module (bead 5rk0), like the
+		// origins warmer: building it inline here silently drifts when the
+		// WarrantEntry schema grows a field. Invalid docs (missing key/row) map
+		// to null and are dropped below — the same docs the old inline filter
+		// (entry.key && isWarrantRow) dropped.
+		map: (doc: foundry.documents.Item) => warrantEntryFromDoc(doc),
+		set: (entries: Array<WarrantEntry | null>) =>
 			setWarrantEntries(
-				entries.filter((entry) => entry.key && isWarrantRow(entry.row)),
+				entries.filter((entry): entry is WarrantEntry => entry !== null),
 			),
 	});
 }

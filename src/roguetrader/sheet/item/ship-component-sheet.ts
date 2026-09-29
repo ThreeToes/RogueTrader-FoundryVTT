@@ -1,5 +1,5 @@
 import { effectActions, effectEditorChoices } from "./effect-actions";
-import { enrichText } from "../rich-text";
+import { enrichText, itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -97,7 +97,7 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 		const isWeapon = this.document.type === "ship-weapon-component";
 		const componentType = String(sys.componentType ?? "");
 		const category = String(sys.category ?? "");
-		Object.assign(context, effectEditorChoices(localize));
+		Object.assign(context, effectEditorChoices());
 		context.isWeapon = isWeapon;
 		context.typeLabel = localize(TYPE_LABELS[componentType] ?? componentType);
 		context.categoryLabel = localize(CATEGORY_LABELS[category] ?? category);
@@ -117,12 +117,7 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 				this.document,
 				{ secrets: this.document.isOwner },
 			);
-		context.descriptionHTML =
-			await enrichText(
-				String(this.document.system.description ?? ""),
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

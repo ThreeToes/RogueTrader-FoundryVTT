@@ -2,7 +2,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 import { sheetContext } from "../context";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 import { effectActions, effectEditorChoices } from "./effect-actions";
 
@@ -34,16 +34,9 @@ export class TraitSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		const context = sheetContext(await super._prepareContext(options as never));
 
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(context, effectEditorChoices((key) =>
-			game.i18n.localize(key),
-		));
+		Object.assign(context, effectEditorChoices());
 
-		context.descriptionHTML =
-			await enrichText(
-				(this.document.system as { description?: string }).description ?? "",
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

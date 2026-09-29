@@ -1,7 +1,5 @@
-import { Weapon, WeaponQuality } from "./weapon";
+import { Weapon } from "./weapon";
 import { RANGED_CLASSES, WeaponClass } from "./weapon-class";
-
-export type { WeaponQuality };
 /**
  * Ranged weapon: a Weapon with ammunition management.
  */

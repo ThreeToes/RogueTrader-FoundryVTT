@@ -6,6 +6,7 @@
  * "Compendium.<pack>.<type>.<id>" -> game.packs.get("<pack>").getDocument(id).
  * fromUuid stays the fallback for non-compendium uuid shapes.
  */
+import { getPorts } from "../../ffg/infrastructure/foundry/ports";
 import { packDocuments } from "../infrastructure/foundry/content";
 export async function resolvePackDocument(
 	uuid: string,
@@ -69,7 +70,7 @@ export async function getCharacterOptionDocs(type: string): Promise<unknown[]> {
 	const sheet = (item as { sheet?: { render: (o?: object) => unknown } }).sheet;
 	if (!sheet) {
 		console.error(`rogue-trader | ${label}: resolved document has no sheet:`, item);
-		ui.notifications?.error(game.i18n!.localize("BACKGROUND.OPEN_CAREER_FAIL"));
+		getPorts().notify.error("BACKGROUND.OPEN_CAREER_FAIL");
 		return;
 	}
 	await sheet.render({ force: true });

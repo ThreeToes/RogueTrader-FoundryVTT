@@ -1,0 +1,39 @@
+{{!-- Shared item effects editor (bead ixky): label + hint + add-row +
+     per-effect kind/testKey/value/label rows when editable, else the static
+     list or the none-hint. Invoked at template root context, so ../kindChoices
+     and ../testKeyChoices resolve exactly as in the inline copies. --}}
+<label>{{localize labelKey}}</label>
+{{#if editable}}
+<p class="untrained-hint">{{localize hintKey}}</p>
+<div class="effect-add-row">
+    <a data-action="addEffect"><i class="fas fa-plus"></i> {{localize "EFFECTS.ADD"}}</a>
+</div>
+{{#each source.system.effects as |effect i|}}
+<div class="stats-row">
+    <select name="system.effects.{{i}}.kind"
+        data-tooltip="{{localize kindTipKey}}">
+        {{selectOptions ../kindChoices selected=effect.kind}}
+    </select>
+    <select name="system.effects.{{i}}.testKey"
+        data-tooltip="{{localize testTipKey}}">
+        {{selectOptions ../testKeyChoices selected=effect.testKey}}
+    </select>
+    <input name="system.effects.{{i}}.value" type="number" value="{{effect.value}}"
+        data-tooltip="{{localize valueTipKey}}" />
+    <input name="system.effects.{{i}}.label" type="text" value="{{effect.label}}"
+        data-tooltip="{{localize "ROLL.LABEL"}}" />
+    <a class="effect-remove" data-action="removeEffect" data-index="{{i}}"
+        title="{{localize "EFFECTS.REMOVE"}}"><i class="fas fa-times"></i></a>
+</div>
+{{/each}}
+{{else}}
+{{#if source.system.effects.length}}
+<ul class="static-effects">
+    {{#each source.system.effects as |effect|}}
+    <li>{{effect.label}} ({{effect.kind}}{{#if effect.testKey}}: {{effect.testKey}}{{/if}}) {{#if (gt effect.value 0)}}+{{/if}}{{effect.value}}</li>
+    {{/each}}
+</ul>
+{{else}}
+<p class="untrained-hint">{{localize noneKey}}</p>
+{{/if}}
+{{/if}}

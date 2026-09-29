@@ -105,6 +105,25 @@ export function mergeOwnedAndCatalogRows(
 }
 
 // ---------------------------------------------------------------------------
+// Characteristics snapshot
+// ---------------------------------------------------------------------------
+
+/**
+ * Plain `Record<key, number>` snapshot of an actor's characteristics, as the
+ * prerequisite/gate evaluators expect (shared idiom, bead bdu4). Missing
+ * characteristics record yields an empty record; per-key values map straight
+ * from `v.value` with no additional fallback, matching the original call
+ * sites exactly.
+ */
+export function characteristicValues(system: {
+	characteristics?: Record<string, { value: number }> | null;
+}): Record<string, number> {
+	return Object.fromEntries(
+		Object.entries(system.characteristics ?? {}).map(([k, v]) => [k, v.value]),
+	);
+}
+
+// ---------------------------------------------------------------------------
 // Characteristic views
 // ---------------------------------------------------------------------------
 

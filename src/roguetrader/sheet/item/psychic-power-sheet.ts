@@ -3,7 +3,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 
 import { DamageType } from "../../data/item/damage-types";
 import { ITEM_DATA_TABS } from "../tabs";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 import {
 	psychicPowerClasses,
@@ -53,12 +53,7 @@ export class PsychicPowerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.damageTypeChoices = Object.fromEntries(
 			Object.values(DamageType).map((value) => [value, value]),
 		);
-		context.descriptionHTML =
-			await enrichText(
-				this.document.system.description,
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

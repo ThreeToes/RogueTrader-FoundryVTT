@@ -8,7 +8,7 @@ import {
 } from "../../data/item/weapon-class";
 import { weaponFamilies } from "../../registry";
 import { effectActions, effectEditorChoices } from "./effect-actions";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -84,17 +84,12 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
 		Object.assign(
 			context,
-			effectEditorChoices((key) => game.i18n.localize(key)),
+			effectEditorChoices(),
 		);
 
 		// Description tab: enriched HTML from the system description
 		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).
-		context.descriptionHTML =
-			await enrichText(
-				this.document.system.description,
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

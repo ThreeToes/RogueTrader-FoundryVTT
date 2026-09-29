@@ -1,5 +1,7 @@
 import { CacheActor } from "../../data/actor/cache";
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { actorEncumbrance } from "../../rules/encumbrance";
+import { startItemRowDrag } from "./shared-actions";
 import { sheetContext } from "../context";
 import { enrichText } from "../rich-text";
 
@@ -123,14 +125,7 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	/** Drag an item row out; core {type, uuid} data so other sheets accept it. */
 	protected _onDragStart(event: DragEvent): void {
-		const row = (event.target as HTMLElement | null)?.closest<HTMLElement>(
-			"[data-item-uuid]",
-		);
-		if (!row?.dataset.itemUuid) return;
-		event.dataTransfer?.setData(
-			"text/plain",
-			JSON.stringify({ type: "Item", uuid: row.dataset.itemUuid }),
-		);
+		startItemRowDrag(event);
 	}
 
 	/** Drop an external Item in (GM stocking the cache). */
@@ -205,7 +200,7 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			  }
 			| null;
 		if (!taker?.createEmbeddedDocuments) {
-			ui.notifications?.warn(game.i18n.localize("CACHE.NO_TAKER"));
+			getPorts().notify.warn("CACHE.NO_TAKER");
 			return;
 		}
 
@@ -244,13 +239,11 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const bonus = Number(taker.system?.characteristicBonus?.("s") ?? 0);
 		const outcome = actorEncumbrance(items, bonus);
 		if (outcome.state === "ok") return;
-		ui.notifications?.warn(
-			game.i18n.format("CACHE.OVERLOADED", {
-				actor: taker.name,
-				count: String(takenCount),
-				weight: String(outcome.weight),
-				capacity: String(outcome.capacity),
-			}),
-		);
+		getPorts().notify.warn("CACHE.OVERLOADED", {
+			actor: taker.name,
+			count: String(takenCount),
+			weight: String(outcome.weight),
+			capacity: String(outcome.capacity),
+		});
 	}
 }

@@ -137,6 +137,7 @@ export interface Clock {
 export interface Notify {
 	warn(key: string, vars?: Record<string, unknown>): void;
 	info(key: string, vars?: Record<string, unknown>): void;
+	error(key: string, vars?: Record<string, unknown>): void;
 }
 
 /** Localisation. Domain/application return keys; this resolves them. */

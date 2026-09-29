@@ -4,7 +4,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 import { effectActions, effectEditorChoices } from "./effect-actions";
 import { ITEM_DATA_TABS } from "../tabs";
 import { sheetContext } from "../context";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
 export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
@@ -39,7 +39,7 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.tabs = this._prepareTabs("primary");
 
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
+		Object.assign(context, effectEditorChoices());
 
 		// Tau battlesuit systems (bead i0dc) share this sheet: expose the category
 		// and the Hard Point cost the suit's budget is spent on. Guarded so plain
@@ -55,12 +55,7 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			};
 		}
 
-		context.descriptionHTML =
-			await enrichText(
-				this.document.system.description,
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

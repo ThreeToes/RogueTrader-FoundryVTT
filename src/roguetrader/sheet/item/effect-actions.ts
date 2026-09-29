@@ -68,8 +68,11 @@ const EFFECT_KIND_LABEL_KEYS: Record<string, string> = {
  * Dropdown choices for the shared effect editor: `kindChoices` maps kind ->
  * localized label (registered module kinds fall back to the raw kind);
  * `testKeyChoices` maps key -> localized label with "" = all tests.
+ * `localize` is optional and defaults to `game.i18n.localize`.
  */
-export function effectEditorChoices(localize: (key: string) => string): {
+export function effectEditorChoices(
+	localize: (key: string) => string = (key) => game.i18n.localize(key),
+): {
 	kindChoices: Record<string, string>;
 	testKeyChoices: Record<string, string>;
 } {

@@ -2,7 +2,7 @@ import { talentCategories } from "../../registry";
 import { findPackTalentDoc } from "../actor/grant-helpers";
 import { isBareTalent, talentBackfillPatch } from "../../rules/talent-backfill";
 import { effectActions, effectEditorChoices } from "./effect-actions";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -70,13 +70,8 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			] as string,
 		);
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(context, effectEditorChoices((key) => game.i18n.localize(key)));
-		context.descriptionHTML =
-			await enrichText(
-				this.document.system.description,
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		Object.assign(context, effectEditorChoices());
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

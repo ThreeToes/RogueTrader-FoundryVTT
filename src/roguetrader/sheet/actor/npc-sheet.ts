@@ -1,6 +1,5 @@
 import {
 	performRoll,
-	rollWeaponDamage,
 } from "../../rules/adapter";
 import type { CharacteristicKey as Key } from "../../data/actor/character";
 import {
@@ -10,9 +9,15 @@ import {
 import { cloneItemFromDrop, npcEquipDefaultSystemOverrides } from "../drop-clone";
 import {
 	compendiumSourceOf,
-	equipToggleState,
 	npcInventoryGroups,
 } from "../npc-inventory";
+import { equipToggleState } from "../equip";
+import {
+	gatePsykerTab,
+	openItemAction,
+	rollDamageAction,
+	rollWeaponAction,
+} from "./shared-actions";
 import { openPackItemAction } from "../pack-resolve";
 import { armourLocations, weaponRows } from "./view-models";
 import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
@@ -20,6 +25,7 @@ import { sheetContext } from "../context";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { isPsykerLike } from "../../rules/psyker";
 import { enrichText } from "../rich-text";
+import { itemIdFromTarget } from "../dom";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -40,11 +46,11 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
-			openItem: NpcSheet.#onOpenItem,
+			openItem: openItemAction,
 			rollNpcTest: NpcSheet.#onRollTest,
 			rollNpcSkill: NpcSheet.#onRollSkill,
-			rollNpcWeapon: NpcSheet.#onRollWeapon,
-			rollNpcDamage: NpcSheet.#onRollDamage,
+			rollNpcWeapon: rollWeaponAction,
+			rollNpcDamage: rollDamageAction,
 			rollNpcPower: NpcSheet.#onRollPower,
 			// setNpcLadder is wired imperatively on select change (see _onRender)
 			// and must NOT be registered as a click action (breaks the
@@ -52,7 +58,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			deleteNpcSkill: NpcSheet.#onDeleteSkill,
 			toggleNpcEquip: NpcSheet.#onToggleEquip,
 			deleteNpcItem: NpcSheet.#onDeleteItem,
-			openPackItem: NpcSheet.#onOpenPackItem,
+			openPackItem: openPackItemAction,
 		},
 	};
 
@@ -96,15 +102,16 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		},
 	};
 
-	/** The psychic tab exists only for psykers/navigators (bead m4me rule). */
+	/** The psychic tab exists only for psykers/navigators (bead m4me rule).
+	 * Shared psyker predicate (bead 73di); this sheet gates ITS tab id (psy). */
 	protected override _prepareTabs(
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
-		const tabs = super._prepareTabs(group);
-		if (!isPsykerLike(actorView(this.actor))) {
-			delete tabs.psy;
-		}
-		return tabs;
+		return gatePsykerTab(
+			this.actor,
+			super._prepareTabs(group),
+			"psy",
+		);
 	}
 
 	/**
@@ -219,28 +226,6 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		return context;
 	}
 
-	/** Open an owned item's sheet (parity with the PC inventory rows, wiy0). */
-	static async #onOpenItem(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const itemId =
-			target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
-		if (!itemId) return;
-		const item = this.actor.items.get(itemId);
-		if (item) item.sheet?.render(true);
-	}
-
-	/** Open the COMPENDIUM source of an owned item (bead kwm9): thin wrapper
-	 * over the shared pack-resolve action (also used by CharacterSheet). */
-	static #onOpenPackItem(
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		return openPackItemAction(_event, target);
-	}
-
 	/** Click a characteristic cell to roll it. */
 	static async #onRollTest(
 		this: { actor: foundry.documents.Actor },
@@ -264,7 +249,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		target: HTMLElement,
 	): Promise<void> {
 		// Shared inv-row vocabulary: actions ride data-item-id on the row.
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId = itemIdFromTarget(target);
 		if (!itemId) return;
 		await performRoll({
 			kind: "skill",
@@ -274,37 +259,13 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		});
 	}
 
-	static async #onRollWeapon(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
-		if (!itemId) return;
-		await performRoll({
-			kind: "weapon",
-			actor: this.actor,
-			itemId,
-		});
-	}
-
-	static async #onRollDamage(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
-		if (!itemId) return;
-		await rollWeaponDamage(this.actor, itemId);
-	}
-
 	/** Activate a psychic power (or navigator power by item type). */
 	static async #onRollPower(
 		this: { actor: foundry.documents.Actor },
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId = itemIdFromTarget(target);
 		if (!itemId) return;
 		const item = this.actor.items.get(itemId);
 		if (!item) return;
@@ -358,7 +319,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId = itemIdFromTarget(target);
 		if (!itemId) return;
 		const item = this.actor.items.get(itemId);
 		if (!item) return;
@@ -391,7 +352,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		target: HTMLElement,
 	): Promise<void> {
 		// Shared inv-row vocabulary: actions ride data-item-id on the row.
-		const itemId = target.closest<HTMLElement>("[data-item-id]")?.dataset.itemId;
+		const itemId = itemIdFromTarget(target);
 		if (!itemId) return;
 		await this.actor.items.get(itemId)?.delete();
 	}

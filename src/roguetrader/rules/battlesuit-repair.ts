@@ -16,6 +16,7 @@
  */
 
 import type { Modifier } from "../../rules-engine/modifier";
+import { getPorts } from "../../ffg/infrastructure/foundry/ports";
 import { repairBattlesuitCriticals, repairSkillFor } from "./criticals";
 import { rollSkillOutcome } from "./roll-system";
 
@@ -29,7 +30,7 @@ export async function rollBattlesuitRepair(actor: unknown): Promise<{
 } | null> {
 	const skill = repairSkillFor(actor);
 	if (!skill?.id) {
-		ui.notifications?.warn(game.i18n!.localize("CRITICAL.REPAIR_NO_SKILL"));
+		getPorts().notify.warn("CRITICAL.REPAIR_NO_SKILL");
 		return null;
 	}
 	const modifier: Modifier = {
@@ -53,8 +54,6 @@ export async function rollBattlesuitRepair(actor: unknown): Promise<{
 		actor,
 		degrees,
 	);
-	ui.notifications?.info(
-		game.i18n!.format("CRITICAL.REPAIRED", { count: String(removed) }),
-	);
+	getPorts().notify.info("CRITICAL.REPAIRED", { count: String(removed) });
 	return { removed, remaining, degrees };
 }

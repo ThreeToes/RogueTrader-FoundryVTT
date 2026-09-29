@@ -1,5 +1,5 @@
 import { effectActions } from "./effect-actions";
-import { enrichText } from "../rich-text";
+import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -64,12 +64,7 @@ export class GameTableSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			}))
 			.filter((c) => c.value !== "" && c.value !== "0");
 		context.columns = columns;
-		context.descriptionHTML =
-			await enrichText(
-				String(sys.description ?? ""),
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.descriptionHTML = await itemDescriptionHTML(this.document);
 		return context;
 	}
 }

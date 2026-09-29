@@ -1,78 +1,78 @@
 /* Character sheet (pc/npc) */
 
 .rogue-trader.sheet.character {
-    min-width: 500px;
-    min-height: 800px;
+	min-width: 500px;
+	min-height: 800px;
 }
 
 .rogue-trader.sheet.character .characteristics-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px 24px;
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 6px 24px;
 }
 
 .rogue-trader.sheet.character .characteristic {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-width: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	min-width: 0;
 }
 
 .rogue-trader.sheet.character .characteristic label {
-    font-weight: bold;
-    text-align: left;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+	font-weight: bold;
+	text-align: left;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .rogue-trader.sheet.character .char-inputs {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    min-height: 24px;
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	min-height: 24px;
 }
 
 .rogue-trader.sheet.character .char-value {
-    width: 3.5em;
-    text-align: center;
+	width: 3.5em;
+	text-align: center;
 }
 
 .rogue-trader.sheet.character .char-bonus {
-    width: 2.5em;
-    text-align: center;
-    border: none;
-    background: transparent;
-    font-weight: bold;
-    pointer-events: none;
+	width: 2.5em;
+	text-align: center;
+	border: none;
+	background: transparent;
+	font-weight: bold;
+	pointer-events: none;
 }
 
 /* Effective-value delta from owned afflictions/mutations (bead xu83): the
    stored value above stays the base; this shows how far the live modifiers
    move it. */
 .rogue-trader.sheet.character .char-delta {
-    font-size: 0.8em;
-    font-weight: bold;
-    pointer-events: none;
-    cursor: help;
+	font-size: 0.8em;
+	font-weight: bold;
+	pointer-events: none;
+	cursor: help;
 }
 
 .rogue-trader.sheet.character .char-delta.pos {
-    color: var(--rt-success);
+	color: var(--rt-success);
 }
 
 .rogue-trader.sheet.character .char-delta.neg {
-    color: var(--rt-danger);
+	color: var(--rt-danger);
 }
 
 .rogue-trader.sheet.character .encumbrance-progress {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-width: 10em;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 1;
+	min-width: 10em;
 }
 
 /* Meter anatomy (bead tye1): the track/fill uses the shared cb-track/cb-fill
@@ -80,26 +80,26 @@
    capacity bars and this meter); the state ramp (.state-encumbered → gold,
    .state-over → rt-danger-deep) also lives there. */
 .rogue-trader.sheet.character .state-over .encumbrance-text {
-    color: var(--rt-danger-deep);
+	color: var(--rt-danger-deep);
 }
 
 .rogue-trader.sheet.character .encumbrance-text {
-    font-size: var(--rt-fs-sm);
-    color: var(--rt-muted);
-    white-space: nowrap;
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-muted);
+	white-space: nowrap;
 }
 
 /* Derived values (read-only chips) */
 
 .rogue-trader.sheet.character .derived-row .derived-value {
-    font-size: 1.05em;
-    font-weight: bold;
-    color: var(--rt-muted);
-    cursor: help;
+	font-size: 1.05em;
+	font-weight: bold;
+	color: var(--rt-muted);
+	cursor: help;
 }
 
 .rogue-trader.sheet.character .derived-row .stat-chip {
-    flex: none;
+	flex: none;
 }
 
 /* Characteristic roll button on character sheets. Scoped to all sheets:
@@ -107,93 +107,93 @@
    on the NPC main tab too, and the PC styling is the base. */
 
 .rogue-trader.sheet .char-roll {
-    flex: none;
-    width: 1.5em;
-    text-align: center;
-    color: var(--rt-gold);
-    cursor: pointer;
+	flex: none;
+	width: 1.5em;
+	text-align: center;
+	color: var(--rt-gold);
+	cursor: pointer;
 }
 
 .rogue-trader.sheet .char-roll:hover {
-    text-shadow: 0 0 4px currentColor;
+	text-shadow: 0 0 4px currentColor;
 }
 /* Skills tab */
 
 .rogue-trader.sheet.character .skills-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
 }
 
 .rogue-trader.sheet.character .skill-group-label {
-    margin: 8px 0 2px;
-    font-size: var(--rt-fs-lg);
-    text-transform: uppercase;
-    color: var(--rt-muted);
+	margin: 8px 0 2px;
+	font-size: var(--rt-fs-lg);
+	text-transform: uppercase;
+	color: var(--rt-muted);
 }
 
 .rogue-trader.sheet.character .skill-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 0;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0;
 }
 
 .rogue-trader.sheet.character .skill-delete {
-    width: 1.5em;
-    text-align: center;
-    color: var(--rt-danger);
-    cursor: pointer;
+	width: 1.5em;
+	text-align: center;
+	color: var(--rt-danger);
+	cursor: pointer;
 }
 
 .rogue-trader.sheet.character .skill-name {
-    flex: 1;
-    margin: 0;
+	flex: 1;
+	margin: 0;
 }
 
 .rogue-trader.sheet.character .ladder {
-    display: flex;
-    gap: 2px;
+	display: flex;
+	gap: 2px;
 }
 
 .rogue-trader.sheet.character .ladder-option {
-    font-size: var(--rt-fs-xs);
-    padding: 1px 6px;
-    border: 1px solid var(--rt-muted);
-    background: transparent;
-    border-radius: var(--rt-radius-sm);
-    cursor: pointer;
+	font-size: var(--rt-fs-xs);
+	padding: 1px 6px;
+	border: 1px solid var(--rt-muted);
+	background: transparent;
+	border-radius: var(--rt-radius-sm);
+	cursor: pointer;
 }
 
 .rogue-trader.sheet.character .ladder-option.active {
-    background: var(--rt-gold);
-    color: var(--rt-on-gold);
+	background: var(--rt-gold);
+	color: var(--rt-on-gold);
 }
 
 .rogue-trader.sheet.character .skill-roll {
-    width: 1.5em;
-    text-align: center;
-    color: var(--rt-gold);
-    cursor: pointer;
+	width: 1.5em;
+	text-align: center;
+	color: var(--rt-gold);
+	cursor: pointer;
 }
 
 .rogue-trader.sheet.character .skill-roll:hover {
-    text-shadow: 0 0 4px currentColor;
+	text-shadow: 0 0 4px currentColor;
 }
 
 .rogue-trader.sheet.character .skill-row.untrained {
-    opacity: 0.55;
+	opacity: 0.55;
 }
 
 .rogue-trader.sheet.character .skill-advanced {
-    font-size: var(--rt-fs-sm);
-    color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-muted);
 }
 
 .rogue-trader.sheet.character .untrained-hint {
-    font-size: var(--rt-fs-sm);
-    color: var(--rt-muted);
-    margin-top: 6px;
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-muted);
+	margin-top: 6px;
 }
 
 /* Character creator (Origin Path wizard, bead ay0) */
@@ -764,25 +764,25 @@
    docs/DESIGN-LANGUAGE.md. */
 
 .dialog.test-dialog-app {
-    min-width: 440px;
-    min-height: 260px;
+	min-width: 440px;
+	min-height: 260px;
 }
 
 .test-dialog-app .test-dialog {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
 /* Section headings — the group-label treatment (fs-lg, uppercase, muted),
    previously inherited wrongly from a generic dialog h3 rule. */
 .test-dialog-app .test-dialog .dialog-group-label {
-    font-size: var(--rt-fs-lg, 0.9em);
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--rt-muted, #7a6a53);
-    margin: 4px 0 0;
+	font-size: var(--rt-fs-lg, 0.9em);
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rt-muted, #7a6a53);
+	margin: 4px 0 0;
 }
 
 /* Three-stat strip: base · modifiers · target. The strip ANATOMY (label /
@@ -791,124 +791,124 @@
    dialog-specific bits stay here. */
 /* All three values the same size; Target keeps the gold-soft emphasis. */
 .test-dialog-app .test-dialog .target-strip .stat .preview-value {
-    color: var(--rt-gold-soft, #d9c38a);
+	color: var(--rt-gold-soft, #d9c38a);
 }
 
 /* The modifiers expander: collapsed by default, the summary carries the
    group label and a count note. */
 .test-dialog-app .test-dialog .modifier-expander > summary {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    cursor: pointer;
-    list-style: none;
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	cursor: pointer;
+	list-style: none;
 }
 
 .test-dialog-app .test-dialog .modifier-expander > summary::-webkit-details-marker {
-    display: none;
+	display: none;
 }
 
 .test-dialog-app .test-dialog .modifier-expander > summary::after {
-    content: "▾";
-    color: var(--rt-muted, #7a6a53);
-    font-size: var(--rt-fs-sm, 0.78em);
+	content: "▾";
+	color: var(--rt-muted, #7a6a53);
+	font-size: var(--rt-fs-sm, 0.78em);
 }
 
 .test-dialog-app .test-dialog .modifier-expander[open] > summary::after {
-    content: "▴";
+	content: "▴";
 }
 
 .test-dialog-app .test-dialog .modifier-expander > summary .summary-note {
-    font-size: var(--rt-fs-sm, 0.78em);
-    color: var(--rt-muted, #7a6a53);
+	font-size: var(--rt-fs-sm, 0.78em);
+	color: var(--rt-muted, #7a6a53);
 }
 
 .test-dialog-app .test-dialog .modifier-expander[open] .ledger {
-    margin-top: 4px;
+	margin-top: 4px;
 }
 
 /* The shared ledger chrome: one bordered panel for every contributor
    group (situational selects, modifiers, custom rows) so a lone fixed row
    no longer reads as a stray sentence. */
 .test-dialog-app .test-dialog .ledger {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 6px 10px;
-    border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
-    border-radius: var(--rt-radius, 4px);
-    background: rgba(0, 0, 0, 0.2);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 6px 10px;
+	border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
+	border-radius: var(--rt-radius, 4px);
+	background: rgba(0, 0, 0, 0.2);
 }
 
 .test-dialog-app .test-dialog .ledger .modifier-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 2px 0;
-    border-bottom: 1px solid var(--rt-border-dim, rgba(122, 106, 83, 0.25));
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 2px 0;
+	border-bottom: 1px solid var(--rt-border-dim, rgba(122, 106, 83, 0.25));
 }
 
 .test-dialog-app .test-dialog .ledger .modifier-row:last-of-type {
-    border-bottom: none;
+	border-bottom: none;
 }
 
 .test-dialog-app .test-dialog .ledger-field-label {
-    font-size: var(--rt-fs-sm, 0.78em);
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--rt-gold, #b8860b);
-    flex: none;
+	font-size: var(--rt-fs-sm, 0.78em);
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rt-gold, #b8860b);
+	flex: none;
 }
 
 .test-dialog-app .test-dialog .modifier-label {
-    flex: 1;
-    min-width: 0;
+	flex: 1;
+	min-width: 0;
 }
 
 .test-dialog-app .test-dialog .modifier-source {
-    font-size: var(--rt-fs-md, 0.85em);
-    color: var(--rt-muted, #7a6a53);
-    white-space: nowrap;
+	font-size: var(--rt-fs-md, 0.85em);
+	color: var(--rt-muted, #7a6a53);
+	white-space: nowrap;
 }
 
 .test-dialog-app .test-dialog .modifier-value {
-    width: 4em;
-    text-align: center;
+	width: 4em;
+	text-align: center;
 }
 
 .test-dialog-app .test-dialog .modifier-value.pos {
-    color: var(--rt-success, #7ca860);
-    font-weight: bold;
+	color: var(--rt-success, #7ca860);
+	font-weight: bold;
 }
 
 .test-dialog-app .test-dialog .modifier-value.neg {
-    color: var(--rt-danger-deep, #c0392b);
-    font-weight: bold;
+	color: var(--rt-danger-deep, #c0392b);
+	font-weight: bold;
 }
 
 .test-dialog-app .test-dialog .modifier-remove {
-    width: 1.2em;
-    text-align: center;
-    color: var(--rt-danger, #8b5e52);
-    cursor: pointer;
+	width: 1.2em;
+	text-align: center;
+	color: var(--rt-danger, #8b5e52);
+	cursor: pointer;
 }
 
 .test-dialog-app .test-dialog .modifier-add {
-    align-self: flex-start;
-    margin-top: 2px;
-    padding: 1px 6px;
-    font-size: var(--rt-fs-sm, 0.78em);
-    color: var(--rt-muted, #7a6a53);
-    background: none;
-    border: 1px dashed var(--rt-border-mid, rgba(122, 106, 83, 0.35));
-    border-radius: var(--rt-radius-sm, 3px);
-    cursor: pointer;
+	align-self: flex-start;
+	margin-top: 2px;
+	padding: 1px 6px;
+	font-size: var(--rt-fs-sm, 0.78em);
+	color: var(--rt-muted, #7a6a53);
+	background: none;
+	border: 1px dashed var(--rt-border-mid, rgba(122, 106, 83, 0.35));
+	border-radius: var(--rt-radius-sm, 3px);
+	cursor: pointer;
 }
 
 .test-dialog-app .test-dialog .modifier-add:hover {
-    color: var(--rt-gold, #b8860b);
-    border-color: var(--rt-gold, #b8860b);
+	color: var(--rt-gold, #b8860b);
+	border-color: var(--rt-gold, #b8860b);
 }
 
 /* Chip groups: the difficulty ladder is BUTTON chips (no native input to
@@ -917,13 +917,13 @@
    highlight fallback for engines without :has(). */
 .test-dialog-app .test-dialog .difficulty-ladder,
 .test-dialog-app .test-dialog .condition-chips {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 5px;
-    border: none;
-    margin: 0;
-    padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 5px;
+	border: none;
+	margin: 0;
+	padding: 0;
 }
 
 /* Shared chip anatomy (bead 628o): difficulty (button) and condition
@@ -931,264 +931,264 @@
    bits live in the rules below. */
 .test-dialog-app .test-dialog .difficulty-chip,
 .test-dialog-app .test-dialog .condition-chip {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 5px;
-    padding: 2px 10px;
-    font-size: var(--rt-fs-md, 0.85em);
-    border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
-    border-radius: var(--rt-radius-sm, 3px);
-    cursor: pointer;
+	display: inline-flex;
+	align-items: baseline;
+	gap: 5px;
+	padding: 2px 10px;
+	font-size: var(--rt-fs-md, 0.85em);
+	border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
+	border-radius: var(--rt-radius-sm, 3px);
+	cursor: pointer;
 }
 
 /* Difficulty chips are buttons: Foundry's button reset would leak through
    without these (bead z132 round 2); .checked is the gold lit state. */
 .test-dialog-app .test-dialog button.difficulty-chip {
-    font-family: inherit;
-    color: inherit;
-    background: none;
+	font-family: inherit;
+	color: inherit;
+	background: none;
 }
 
 .test-dialog-app .test-dialog button.difficulty-chip:hover,
 .test-dialog-app .test-dialog .condition-chip:hover {
-    border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
+	border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
 }
 
 .test-dialog-app .test-dialog .difficulty-chip .chip-value {
-    color: var(--rt-muted, #7a6a53);
+	color: var(--rt-muted, #7a6a53);
 }
 
 /* The "no difficulty modifier" chip is the ghost option of the ladder. */
 .test-dialog-app .test-dialog .difficulty-chip.none {
-    color: var(--rt-muted, #7a6a53);
-    font-style: italic;
+	color: var(--rt-muted, #7a6a53);
+	font-style: italic;
 }
 
 .test-dialog-app .test-dialog button.difficulty-chip.checked {
-    border-color: var(--rt-gold, #b8860b);
-    background: var(--rt-gold-alpha-faint);
-    color: var(--rt-gold, #b8860b);
+	border-color: var(--rt-gold, #b8860b);
+	background: var(--rt-gold-alpha-faint);
+	color: var(--rt-gold, #b8860b);
 }
 
 .test-dialog-app .test-dialog button.difficulty-chip.checked .chip-value {
-    color: var(--rt-gold-soft, #d9c38a);
+	color: var(--rt-gold-soft, #d9c38a);
 }
 
 .test-dialog-app .test-dialog button.difficulty-chip.none.checked {
-    color: var(--rt-gold-soft, #d9c38a);
+	color: var(--rt-gold-soft, #d9c38a);
 }
 
 .test-dialog-app .test-dialog .condition-chip {
-    position: relative;
+	position: relative;
 }
 
 .test-dialog-app .test-dialog .condition-chip input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
 }
 
 .test-dialog-app .test-dialog .condition-chip:has(input:checked) {
-    border-color: var(--rt-gold, #b8860b);
-    background: var(--rt-gold-alpha-faint);
+	border-color: var(--rt-gold, #b8860b);
+	background: var(--rt-gold-alpha-faint);
 }
 
 .test-dialog-app .test-dialog .condition-chip input:checked + .chip-name {
-    color: var(--rt-gold, #b8860b);
-    font-weight: bold;
+	color: var(--rt-gold, #b8860b);
+	font-weight: bold;
 }
 
 /* The window scrolls when the ledger grows: cap the content height. */
 .dialog.test-dialog-app .window-content {
-    max-height: 70vh;
-    overflow-y: auto;
+	max-height: 70vh;
+	overflow-y: auto;
 }
 
 /* Footer strip: actions separated from the ledger, Roll keeps the default
    gold emphasis. */
 .test-dialog-app .test-dialog .dialog-buttons {
-    margin-top: auto;
-    padding-top: 10px;
-    border-top: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
-    gap: 8px;
+	margin-top: auto;
+	padding-top: 10px;
+	border-top: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
+	gap: 8px;
 }
 
 /* Roll and Cancel identical in size: equal flex share, and a shared
    min-height so the Roll button's icon cannot make it the taller one. */
 .test-dialog-app .test-dialog .dialog-buttons .dialog-button {
-    flex: 1 1 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    min-height: 2.4em;
+	flex: 1 1 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-height: 2.4em;
 }
 
 /* Skill picker (Add Custom) */
 
 .rogue-trader.sheet.skill-picker .skill-picker {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    height: 100%;
-    overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	height: 100%;
+	overflow: hidden;
 }
 
 .rogue-trader.sheet.skill-picker .catalog {
-    flex: 1 1 auto;
-    min-height: 0;
-    max-height: 380px;
-    overflow-y: auto;
-    padding-right: 4px;
+	flex: 1 1 auto;
+	min-height: 0;
+	max-height: 380px;
+	overflow-y: auto;
+	padding-right: 4px;
 }
 
 .rogue-trader.sheet.skill-picker .catalog-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 1px 0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 1px 0;
 }
 
 .rogue-trader.sheet.skill-picker .catalog-row.owned {
-    opacity: 0.55;
+	opacity: 0.55;
 }
 
 .rogue-trader.sheet.skill-picker .add-row {
-    cursor: pointer;
-    color: var(--rt-gold);
-    width: 1.5em;
-    text-align: center;
+	cursor: pointer;
+	color: var(--rt-gold);
+	width: 1.5em;
+	text-align: center;
 }
 
 .rogue-trader.sheet.skill-picker form.custom {
-    flex: none;
-    display: flex;
-    gap: 6px;
-    align-items: center;
+	flex: none;
+	display: flex;
+	gap: 6px;
+	align-items: center;
 }
 
 .rogue-trader.sheet.skill-picker form.custom input {
-    flex: 1;
-    min-width: 8em;
+	flex: 1;
+	min-width: 8em;
 }
 
 /* Unnatural multiplier pips */
 
 .rogue-trader.sheet.character .unnatural-pips {
-    display: flex;
-    gap: 3px;
+	display: flex;
+	gap: 3px;
 }
 
 /* Unnatural multiplier pips: one block (the pre-2-column 8px variant was
    superseded and removed, bead xcte). */
 .rogue-trader.sheet.character .unnatural-pips .pip {
-    appearance: none;
-    flex: none;
-    width: 9px;
-    height: 9px;
-    min-width: 9px;
-    max-width: 9px;
-    min-height: 9px;
-    line-height: 1;
-    padding: 0;
-    margin: 0;
-    border: 1px solid var(--rt-gold);
-    border-radius: 50%;
-    background: transparent;
-    cursor: pointer;
+	appearance: none;
+	flex: none;
+	width: 9px;
+	height: 9px;
+	min-width: 9px;
+	max-width: 9px;
+	min-height: 9px;
+	line-height: 1;
+	padding: 0;
+	margin: 0;
+	border: 1px solid var(--rt-gold);
+	border-radius: 50%;
+	background: transparent;
+	cursor: pointer;
 }
 
 .rogue-trader.sheet.character .unnatural-pips .pip.lit {
-    background: var(--rt-gold);
-    box-shadow: 0 0 3px rgba(184, 134, 11, 0.8);
+	background: var(--rt-gold);
+	box-shadow: 0 0 3px rgba(184, 134, 11, 0.8);
 }
 
 /* Combat tab: armour body layout */
 
 .rogue-trader.sheet.character .combat h1 {
-    margin-bottom: 8px;
+	margin-bottom: 8px;
 }
 
 .rogue-trader.sheet.character .part-ap {
-    font-size: 1.15em;
-    font-weight: bold;
+	font-size: 1.15em;
+	font-weight: bold;
 }
 
 /* Inventory tab: character-scoped extras (shared rules live in gear.less) */
 
 .rogue-trader.sheet.character .encumbrance-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 8px;
-    border: 1px solid var(--rt-border-strong);
-    border-radius: var(--rt-radius);
-    background: rgba(0, 0, 0, 0.2);
-    margin-bottom: 10px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 8px;
+	border: 1px solid var(--rt-border-strong);
+	border-radius: var(--rt-radius);
+	background: rgba(0, 0, 0, 0.2);
+	margin-bottom: 10px;
 }
 
 .rogue-trader.sheet.character .encumbrance-bar .chip-value input {
-    width: 4em;
-    text-align: center;
+	width: 4em;
+	text-align: center;
 }
 
 .rogue-trader.sheet.character .encumbrance-bar .unit {
-    color: var(--rt-muted);
-    font-size: var(--rt-fs-md);
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-md);
 }
 
 .rogue-trader.sheet.character .capacity-note {
-    font-size: var(--rt-fs-sm);
-    color: var(--rt-muted);
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: auto;
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-muted);
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
 }
 
 /* Inventory line vocabulary (bead npc-parity): promoted from the character
    sheet to the global sheet layer per DESIGN-LANGUAGE ("never scope row CSS
    to one sheet class") so the NPC sheet's shared rt/inv-row rows match. */
 .rogue-trader.sheet .inv-row.draggable {
-    cursor: grab;
+	cursor: grab;
 }
 
 .rogue-trader.sheet .inv-grab {
-    color: var(--rt-muted);
-    width: 1.2em;
-    text-align: center;
+	color: var(--rt-muted);
+	width: 1.2em;
+	text-align: center;
 }
 
 .rogue-trader.sheet .inv-name {
-    flex: 1;
-    cursor: pointer;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+	flex: 1;
+	cursor: pointer;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .rogue-trader.sheet .inv-name:hover {
-    color: var(--rt-gold);
+	color: var(--rt-gold);
 }
 
 .rogue-trader.sheet .inv-weight {
-    font-size: var(--rt-fs-md);
-    color: var(--rt-muted);
+	font-size: var(--rt-fs-md);
+	color: var(--rt-muted);
 }
 
 .rogue-trader.sheet .inv-delete {
-    width: 1.2em;
-    text-align: center;
-    color: var(--rt-muted);
-    cursor: pointer;
+	width: 1.2em;
+	text-align: center;
+	color: var(--rt-muted);
+	cursor: pointer;
 }
 
 .rogue-trader.sheet .inv-delete:hover {
-    color: var(--rt-danger);
+	color: var(--rt-danger);
 }
 
 /* Leading action anchor in shared inventory rows (the weapon/skill roll
@@ -1207,14 +1207,14 @@
 
 /* Bead oaaz: compendium link (book icon) next to talent rows. */
 .rogue-trader.sheet.character .inv-pack-link {
-    width: 1.2em;
-    text-align: center;
-    color: var(--rt-muted);
-    cursor: pointer;
+	width: 1.2em;
+	text-align: center;
+	color: var(--rt-muted);
+	cursor: pointer;
 }
 
 .rogue-trader.sheet.character .inv-pack-link:hover {
-    color: var(--rt-gold-soft);
+	color: var(--rt-gold-soft);
 }
 
 /* Combat tab: weapons list. Scoped to all sheets (not just .character):
@@ -1223,61 +1223,61 @@
    with the component. */
 
 .rogue-trader.sheet .weapon-list {
-    padding: 0;
-    margin: 4px 0 0;
+	padding: 0;
+	margin: 4px 0 0;
 }
 
 .rogue-trader.sheet .weapon-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 2px 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 2px 0;
 }
 
 .rogue-trader.sheet .weapon-name {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: pointer;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
 }
 
 .rogue-trader.sheet .weapon-name:hover {
-    color: var(--rt-gold);
+	color: var(--rt-gold);
 }
 
 .rogue-trader.sheet .weapon-class {
-    font-size: var(--rt-fs-sm);
-    text-transform: uppercase;
-    color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+	text-transform: uppercase;
+	color: var(--rt-muted);
 }
 
 .rogue-trader.sheet .weapon-roll {
-    flex: none;
-    width: 1.5em;
+	flex: none;
+	width: 1.5em;
 }
 
 /* Unequipped weapons: the attack icon is dimmed until carried (bead 05m). */
 .rogue-trader.sheet .weapon-roll.unequipped {
-    opacity: 0.4;
+	opacity: 0.4;
 }
 
 /* Quick damage-roll button on the combat tab weapon rows. */
 .rogue-trader.sheet .damage-roll {
-    flex: none;
-    width: 1.5em;
+	flex: none;
+	width: 1.5em;
 }
 
 .rogue-trader.sheet .weapon-stat {
-    min-width: 2.5em;
-    text-align: center;
-    font-weight: bold;
+	min-width: 2.5em;
+	text-align: center;
+	font-weight: bold;
 }
 
 .rogue-trader.sheet .weapon-stat.rof {
-    font-weight: normal;
-    font-size: var(--rt-fs-lg);
+	font-weight: normal;
+	font-size: var(--rt-fs-lg);
 }
 
 /* Header: shared header-grid pattern (gear.less); character specifics only */
@@ -1285,90 +1285,90 @@
 /* Vehicle sheet */
 
 .rogue-trader.sheet.vehicle {
-    min-width: 540px;
-    min-height: 380px;
+	min-width: 540px;
+	min-height: 380px;
 }
 
 /* Size field + its derived battle-map footprint (bead yyd1). */
 .rogue-trader.sheet.vehicle .size-footprint {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
 .rogue-trader.sheet.vehicle .token-footprint {
-    flex: none;
-    white-space: nowrap;
-    font-size: var(--rt-fs-sm);
-    color: var(--rt-muted);
+	flex: none;
+	white-space: nowrap;
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-muted);
 }
 
 .rogue-trader.sheet.vehicle .facing-ap {
-    width: 4em;
-    text-align: center;
+	width: 4em;
+	text-align: center;
 }
 
 .rogue-trader.sheet.vehicle .system-row {
-    gap: 14px;
+	gap: 14px;
 }
 
 .rogue-trader.sheet.vehicle .system-rating {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .rogue-trader.sheet.vehicle .system-rating input {
-    width: 3em;
-    text-align: center;
+	width: 3em;
+	text-align: center;
 }
 
 .rogue-trader.sheet.vehicle .system-rating-label,
 .rogue-trader.sheet.vehicle .system-damaged span {
-    font-size: var(--rt-fs-sm);
-    text-transform: uppercase;
-    color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+	text-transform: uppercase;
+	color: var(--rt-muted);
 }
 
 .rogue-trader.sheet.vehicle .system-damaged input:checked + span {
-    color: var(--rt-danger-deep);
-    text-decoration: line-through;
+	color: var(--rt-danger-deep);
+	text-decoration: line-through;
 }
 
 /* Stat chip footer */
 
 .rogue-trader.sheet.character .stat-footer {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 10px 18px;
-    align-items: flex-end;
-    margin-top: 14px;
-    padding-top: 10px;
-    border-top: 1px solid var(--rt-border);
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 10px 18px;
+	align-items: flex-end;
+	margin-top: 14px;
+	padding-top: 10px;
+	border-top: 1px solid var(--rt-border);
 }
 
 .rogue-trader.sheet.character .stat-chip {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex: 1 1 0;
-    min-width: fit-content;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	flex: 1 1 0;
+	min-width: fit-content;
 }
 
 .rogue-trader.sheet.character .chip-value {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .rogue-trader.sheet.character .chip-value input {
-    width: 3.5em;
-    text-align: center;
+	width: 3.5em;
+	text-align: center;
 }
 
 .rogue-trader.sheet.character .chip-sep {
-    color: var(--rt-muted);
+	color: var(--rt-muted);
 }
 
 /* Shared creator-wizard navigation (consolidation, owner ask): back on the

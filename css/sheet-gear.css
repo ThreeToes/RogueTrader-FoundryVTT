@@ -2,8 +2,11 @@
    bundle — utils/css.ts concatenates sheet-gear.css first, so every later
    rule (and the other files) can rely on these custom properties. Alpha
    steps of the muted border family get named tokens; rare one-off alphas
-   stay literal. */
-.rogue-trader {
+   stay literal. The selector also covers .test-dialog-app (bead y8u3):
+   that dialog window is NOT inside .rogue-trader, but its rules rely on
+   these tokens with no fallback args. */
+.rogue-trader,
+.test-dialog-app {
 	--rt-gold: #b8860b;
 	--rt-gold-soft: #d9c38a;
 	--rt-muted: #7a6a53;
@@ -500,6 +503,16 @@
    resizable-window rule; the window is resizable, the content must follow). */
 .rogue-trader.sheet.ship-creator .window-content,
 .rogue-trader.planet-creator .window-content {
+	overflow-y: auto;
+}
+
+/* Creator wizards (character + warrant): both are step wizards whose
+   flex-column content must scroll - the body grows past the fixed window
+   height (AGENTS.md resizable-window rule). */
+.rogue-trader.character-creator .window-content,
+.rogue-trader.warrant-creator .window-content {
+	display: flex;
+	flex-direction: column;
 	overflow-y: auto;
 }
 
@@ -1056,8 +1069,8 @@
 }
 
 .rogue-trader.sheet.starship .complication .complication-effect {
-	color: var(--rt-muted, #7a6a53);
-	font-size: var(--rt-fs-md, 0.85em);
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-md);
 	margin: 2px 0 0;
 }
 
@@ -1133,26 +1146,26 @@
 .rogue-trader.sheet.starship .inv-row .state-chip,
 .rogue-trader.sheet.starship .inv-row .slot-chip {
 	padding: 1px 8px;
-	font-size: var(--rt-fs-xs, 0.75em);
-	color: var(--rt-muted, #7a6a53);
+	font-size: var(--rt-fs-xs);
+	color: var(--rt-muted);
 	background: none;
-	border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
-	border-radius: var(--rt-radius-sm, 3px);
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius-sm);
 	cursor: pointer;
 }
 
 .rogue-trader.sheet.starship .inv-row .state-chip:hover,
 .rogue-trader.sheet.starship .inv-row .slot-chip:hover {
-	border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
+	border-color: var(--rt-border-strong);
 }
 
 /* Checked chip = the difficulty-chip gold treatment, exactly as the test
    dialog renders its selected ladder rung. Shared by state + slot chips. */
 .rogue-trader.sheet.starship .inv-row .state-chip.checked,
 .rogue-trader.sheet.starship .inv-row .slot-chip.checked {
-	border-color: var(--rt-gold, #b8860b);
+	border-color: var(--rt-gold);
 	background: var(--rt-gold-alpha-faint);
-	color: var(--rt-gold, #b8860b);
+	color: var(--rt-gold);
 	font-weight: bold;
 }
 
@@ -1479,7 +1492,7 @@
 
 .rogue-trader.sheet .comp-details .comp-value {
 	font-size: var(--rt-fs-lg);
-	color: var(--rt-text, var(--color-text-light-highlight, inherit));
+	color: var(--color-text-light-highlight, inherit);
 }
 
 .rogue-trader.sheet .comp-details .comp-flavour {

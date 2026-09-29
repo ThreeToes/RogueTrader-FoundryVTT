@@ -1,0 +1,43 @@
+# Composite action (bead gdhg): the zip/jq tool install shared by both
+# release workflows. The apt-get install lives here and ONLY here.
+name: 'Ensure build tools'
+description: 'Install zip/jq (and optionally unzip) if missing'
+inputs:
+    unzip:
+        description: 'Also install unzip (needed only by release-public)'
+        required: false
+        default: 'false'
+runs:
+    using: 'composite'
+    steps:
+        - name: Ensure build tools
+          shell: bash
+          run: |
+              # act runner images are slimmer than GitHub-hosted ubuntu-latest:
+              # zip/jq are not preinstalled (live failures 2026-09-08 "zip: command
+              # not found" and 2026-09-27 "jq: command not found"). Install only
+              # what's missing; act containers run as root, other runners get sudo.
+              # NOTE: in release-public this action must be the FIRST step — the
+              # sync step extracts the private release body with jq BEFORE the
+              # packaging steps.
+              # Fast path: only skip the install when every binary this run
+              # needs is already present. When unzip is requested it must be
+              # part of the check too, otherwise a runner with zip+jq but no
+              # unzip exits 0 and release-public's later `unzip -l` fails
+              # (round-2 review fix, bead b2c6) — do NOT simplify this back to
+              # a zip+jq-only check.
+              if [ "${{ inputs.unzip }}" = "true" ]; then
+                  command -v zip >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && command -v unzip >/dev/null 2>&1 && exit 0
+              else
+                  command -v zip >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 && exit 0
+              fi
+              # Install the full requested set (missing pieces are cheap).
+              # Pinned bun version lives separately in
+              # .forgejo/actions/install-bun/action.yaml.
+              if [ "$(id -u)" = "0" ]; then SUDO=""; else SUDO="sudo"; fi
+              $SUDO apt-get update -qq
+              if [ "${{ inputs.unzip }}" = "true" ]; then
+                  $SUDO apt-get install -y -qq zip jq unzip
+              else
+                  $SUDO apt-get install -y -qq zip jq
+              fi

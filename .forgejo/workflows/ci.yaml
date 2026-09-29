@@ -10,7 +10,8 @@
 #   on standard installs); adjust if your instance configures another mirror.
 # - `runs-on: ubuntu-latest` assumes the instance's default label mapping —
 #   point it at your runner's label if it differs (e.g. docker://node images).
-
+# - The pinned bun version lives in .forgejo/actions/install-bun/action.yaml.
+#
 name: ci
 
 on:
@@ -26,9 +27,7 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Install bun (pinned)
-              run: |
-                  curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
-                  echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+              uses: ./.forgejo/actions/install-bun
 
             - name: Install dependencies
               run: bun install --frozen-lockfile

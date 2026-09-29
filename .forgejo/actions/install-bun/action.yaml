@@ -1,0 +1,12 @@
+# Composite action (bead gdhg): the pinned bun install step shared by all
+# workflows. The install command lives here and ONLY here.
+name: 'Install bun (pinned)'
+description: 'Install bun at a fixed version and put it on PATH'
+runs:
+    using: 'composite'
+    steps:
+        - name: Install bun (pinned)
+          shell: bash
+          run: |
+              curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"
+              echo "$HOME/.bun/bin" >> "$GITHUB_PATH"

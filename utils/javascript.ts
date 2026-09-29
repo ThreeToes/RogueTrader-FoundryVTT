@@ -16,4 +16,6 @@ export async function bundleTypescript() {
 	}
 }
 
-await bundleTypescript();
+if (import.meta.main) {
+	await bundleTypescript();
+}

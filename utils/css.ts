@@ -12,19 +12,16 @@ const SOURCES = [
 ];
 const DEST = "./release/rogue_trader/css/rogue-trader.css";
 
-const parts: string[] = [];
-for (const src of SOURCES) {
-	const text = await readFile(src, "utf8");
-	parts.push(`/* ${src} */\n${text}`);
-}
-
-await Bun.write(DEST, parts.join("\n"));
-console.log(`[css] bundled ${SOURCES.length} sources -> ${DEST}`);
-
 export async function bundleCss() {
 	const parts: string[] = [];
 	for (const src of SOURCES) {
 		parts.push(`/* ${src} */\n${await readFile(src, "utf8")}`);
 	}
+
 	await Bun.write(DEST, parts.join("\n"));
+	console.log(`[css] bundled ${SOURCES.length} sources -> ${DEST}`);
+}
+
+if (import.meta.main) {
+	await bundleCss();
 }

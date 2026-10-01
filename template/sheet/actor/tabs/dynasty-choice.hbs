@@ -1,0 +1,35 @@
+{{!-- Ship & Warrant Path choice tab (bead twtq): ONE shared read-only
+     template for all six chart-row tabs — never hand-copied per row.
+     DynastySheet._preparePartContext parameterises it per row: `warrantTab`
+     is that row's picked-entry view (sheet/actor/warrant-views.ts),
+     `rowId`/`rowTabClass` carry the tab wiring (data-group/data-tab anatomy
+     per docs/DESIGN-LANGUAGE.md). --}}
+<section class="tab {{rowTabClass}}" data-group="primary" data-tab="{{rowId}}">
+    <div class="dynasty border">
+        <h1 class="inv-group-label">{{localize warrantTab.labelKey}}</h1>
+        {{#if warrantTab.resolved}}
+        <div class="warrant-choice">
+            <div class="traits-row">
+                <span class="origin-label">{{warrantTab.name}}</span>
+                {{#if (ne warrantTab.shipPoints null)}}
+                <span class="chip origin-mod">{{localize "DYNASTY.SHIP_POINTS"}} {{warrantTab.shipPoints}}</span>
+                {{/if}}
+                {{#if (ne warrantTab.profitFactor null)}}
+                <span class="chip origin-mod">{{localize "DYNASTY.PROFIT_FACTOR"}} {{warrantTab.profitFactor}}</span>
+                {{/if}}
+            </div>
+            <div class="warrant-choice-description">{{{warrantTab.descriptionHTML}}}</div>
+            {{#if warrantTab.notes.length}}
+            <p class="warrant-row-label">{{localize "DYNASTY.WARRANT_NOTES_LABEL"}}</p>
+            <ul class="warrant-notes">
+                {{#each warrantTab.notes as |note|}}<li>{{note}}</li>{{/each}}
+            </ul>
+            {{/if}}
+        </div>
+        {{else}}
+        {{!-- Unpicked row (or a pick the pool no longer resolves): a plain
+             hint, never a blank tab (bead twtq). --}}
+        <p class="method-hint">{{localize "DYNASTY.WARRANT_CHOICE_NONE"}}</p>
+        {{/if}}
+    </div>
+</section>

@@ -490,9 +490,10 @@
 /* Single-section (non-tabbed) sheets: the shared `.rogue-trader .tab`
    scroll rule only covers tabbed sheets, so their one content section must
    scroll at the window-content level (planet attached tables + notes are
-   unbounded; dynasty notes likewise). */
-.rogue-trader.sheet.planet .window-content,
-.rogue-trader.sheet.dynasty .window-content {
+   unbounded). The dynasty sheet used to need the same but is tabbed since
+   bead twtq — its two tab-content templates now follow the shared `.tab`
+   rule instead. */
+.rogue-trader.sheet.planet .window-content {
 	display: flex;
 	flex-direction: column;
 	overflow-y: auto;

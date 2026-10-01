@@ -1,6 +1,11 @@
-{{!-- Single-view body: NOT a tab section (core CSS hides .tab[data-tab]
-     without .active; this sheet has no tab nav). --}}
-<section class="tab">
+{{!-- Record tab (bead twtq): Profit Factor / Ship Points fields, the
+     starting roll, the GM's Warrant pickers and the notes. The sheet is
+     tabbed now — this is one of seven tab sections in the shared tab
+     anatomy (docs/DESIGN-LANGUAGE.md); tabs 2-7 render the read-only
+     choice views from the shared dynasty-choice.hbs template.
+     The pickers dispatch imperatively via input[data-warrant-row]
+     (dynasty-sheet._onRender); keep their markup when editing. --}}
+<section class="tab {{tabs.record.cssClass}}" data-group="primary" data-tab="record">
     <div class="dynasty border">
         <div class="traits-row">
             <span class="origin-label">{{localize "DYNASTY.SHIP_POINTS"}}:</span>
@@ -20,8 +25,10 @@
             </div>
         </div>
         <div class="traits-row">
+            {{#if editable}}
             <button type="button" class="ladder-option" data-action="rollStarting"
                 data-tooltip="{{localize "DYNASTY.ROLL_HINT"}}">{{localize "DYNASTY.ROLL_STARTING"}}</button>
+            {{/if}}
         </div>
 
         <div class="warrant-section">
@@ -29,6 +36,7 @@
             {{#if warrantPoolEmpty}}
             <p class="method-hint">{{localize "DYNASTY.WARRANT_POOL_MISSING"}}</p>
             {{else}}
+            {{#if editable}}
             <p class="method-hint">{{localize "DYNASTY.WARRANT_HINT"}}</p>
             <div class="warrant-grid">
                 {{#each warrantRows as |wr|}}
@@ -51,6 +59,22 @@
                 </div>
                 {{/each}}
             </div>
+            {{else}}
+            {{!-- Players: the recorded path as read-only chips (bead twtq —
+                 the sheet is a record, the WarrantCreator does the picking). --}}
+            {{#each warrantChoices as |c|}}
+            <div class="warrant-row">
+                <span class="warrant-row-label">{{localize c.labelKey}}</span>
+                {{#if c.name}}
+                <span class="chip">{{c.name}}</span>
+                {{else if c.pickKey}}
+                <span class="chip">{{c.pickKey}}</span>
+                {{else}}
+                <span class="chip">{{localize "DYNASTY.WARRANT_NONE_PICK"}}</span>
+                {{/if}}
+            </div>
+            {{/each}}
+            {{/if}}
             <div class="warrant-footer">
                 {{#if warrant.hasPicks}}
                 <span class="chip origin-mod">{{localize "DYNASTY.WARRANT_FROM"}}:
@@ -62,8 +86,10 @@
                 {{#unless warrant.complete}}
                 <span class="method-hint">{{localize "DYNASTY.WARRANT_INCOMPLETE"}}</span>
                 {{/unless}}
+                {{#if editable}}
                 <button type="button" class="ladder-option"
                     data-action="clearWarrant">{{localize "DYNASTY.WARRANT_CLEAR"}}</button>
+                {{/if}}
                 {{else}}
                 <p class="static-value">{{localize "DYNASTY.WARRANT_NONE"}}</p>
                 {{/if}}

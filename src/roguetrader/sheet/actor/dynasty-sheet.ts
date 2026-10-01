@@ -9,6 +9,7 @@ import {
 	warrantInRow,
 	type WarrantRow,
 } from "../../rules/warrant";
+import { warrantChoiceViews } from "./warrant-views";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { enrichText } from "../rich-text";
@@ -20,10 +21,19 @@ const { ActorSheetV2 } = foundry.applications.sheets;
  * Dynasty sheet (bead gjvg): the group's Profit Factor and Ship Points
  * record. Minimal editable fields; Ship Points remaining derives 1:1.
  *
+ * Tabbed record (bead twtq): tab 1 keeps the PF/SP fields, the starting roll,
+ * the GM's Warrant pickers (owners/GM only) and the notes; tabs 2-7 are one
+ * READ-ONLY view per Ship & Warrant Path chart row showing the picked
+ * entry's flavour text and mechanics — the picking wizard stays the
+ * WarrantCreator, this sheet is the record.
+ *
  * Extends the Foundry bases directly and widens the context locally with
  * `sheetContext` (bead e2ge): a shared Rt*Sheet base cannot be made
  * type-correct without making tsc non-terminating — see sheet/context.ts.
  */
+const CHOICE_TAB_TEMPLATE =
+	"systems/rogue-trader/template/sheet/actor/tabs/dynasty-choice.hbs";
+
 export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "dynasty"],
@@ -41,8 +51,34 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			template:
 				"systems/rogue-trader/template/sheet/actor/parts/dynasty-header.hbs",
 		},
-		form: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/dynasty.hbs",
+		tabs: {
+			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+		},
+		record: {
+			template:
+				"systems/rogue-trader/template/sheet/actor/tabs/dynasty-record.hbs",
+		},
+		// One PART per choice tab, all rendering the SAME shared template
+		// parameterised in _preparePartContext — never six hand-copied files
+		// (bead twtq).
+		...Object.fromEntries(
+			WARRANT_ROWS.map((row) => [row, { template: CHOICE_TAB_TEMPLATE }]),
+		),
+	};
+
+	static TABS = {
+		primary: {
+			tabs: [
+				{ id: "record", group: "primary", label: "DYNASTY.TAB_RECORD", cssClass: "" },
+				// Tab labels reuse the chart-row step labels (WARRANT.ROW_*).
+				...WARRANT_ROWS.map((row) => ({
+					id: row,
+					group: "primary" as const,
+					label: WARRANT_ROW_LABEL_KEYS[row],
+					cssClass: "",
+				})),
+			],
+			initial: "record",
 		},
 	};
 
@@ -74,6 +110,22 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				selected: picks[row] === entry.key,
 			})),
 		}));
+		// Per-row choice views (bead twtq): one view per chart row, resolved
+		// against the pool by the shared pure helper; each resolved view's
+		// verbatim description is enriched here (async, owner-only secrets) —
+		// the choice tabs show the flavour text of THEIR choice.
+		const choices = warrantChoiceViews(picks, getWarrantEntries());
+		const ownerSecrets = this.document.isOwner;
+		for (const view of choices) {
+			if (!view.resolved) continue;
+			view.descriptionHTML = await enrichText(view.description, this.document, {
+				secrets: ownerSecrets,
+			});
+		}
+		context.warrantChoices = choices;
+		context.warrantChoicesByRow = Object.fromEntries(
+			choices.map((view) => [view.row, view]),
+		);
 		const resolved = resolveWarrant(
 			WARRANT_ROWS.filter((row) => picks[row]).map((row) => ({
 				row,
@@ -89,6 +141,39 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			notes: resolved.notes,
 		};
 		return context;
+	}
+
+	/**
+	 * Choice-tab parameterisation (bead twtq): all six choice tabs render the
+	 * ONE shared dynasty-choice.hbs; each of those parts' context gains the
+	 * row's view (`warrantTab`), the tab id (`rowId`, the data-tab attribute)
+	 * and the tab's active class (`rowTabClass`, mirrors the core
+	 * `tabs.<id>.cssClass` wiring the record template uses).
+	 */
+	// The override widens types off the Foundry RenderContext graph (same
+	// reason as sheetContext in sheet/context.ts): a typed signature makes
+	// tsc non-terminating.
+	protected override async _preparePartContext(
+		partId: string,
+		context: unknown,
+	): Promise<any> {
+		const base = await super._preparePartContext(
+			partId as never,
+			context as never,
+			{} as never,
+		);
+		if (!(WARRANT_ROWS as string[]).includes(partId)) return base;
+		const tabs = (base as { tabs?: Record<string, { cssClass?: string }> })
+			.tabs ?? {};
+		const choice = base as {
+			warrantChoicesByRow?: Record<string, unknown>;
+		};
+		return {
+			...base,
+			warrantTab: choice.warrantChoicesByRow?.[partId],
+			rowId: partId,
+			rowTabClass: tabs[partId]?.cssClass ?? "",
+		};
 	}
 
 	protected override async _onRender(

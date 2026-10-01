@@ -274,6 +274,29 @@
 	padding-left: 18px;
 }
 
+/* Dynasty sheet (bead twtq): the sheet is tabbed now — the shared
+   `.rogue-trader .tab` scroll rule covers its content, so these are the
+   resize clamps (design-language sizing rule). */
+.rogue-trader.sheet.dynasty {
+	min-width: 520px;
+	min-height: 420px;
+}
+
+/* Dynasty sheet: choice tabs (bead twtq). One view per Ship & Warrant Path
+   chart row; the description is the entry's verbatim prose, enriched
+   read-only. */
+.rogue-trader.sheet.dynasty .warrant-choice .traits-row {
+	justify-content: flex-start;
+	gap: 6px;
+}
+
+.rogue-trader.sheet.dynasty .warrant-choice-description {
+	margin: 4px 0 0;
+	padding: 4px 6px;
+	border-radius: var(--rt-radius-sm);
+	background: var(--rt-panel-shade);
+}
+
 /* Dynasty sheet: Warrant Path section (bead mrsb). Row pickers reuse the
    shared chip-select radio-chip pattern; the six chart rows sit on a
    responsive two-column grid instead of a stack of full-width selects. */

@@ -34,7 +34,7 @@
             <span class="adv-name">{{localize c.labelKey}}</span>
             <span class="adv-detail">
                 {{#if c.next}}
-                +5 {{localize (concat "ADVANCE.TIER_" c.next.tier)}} — {{c.next.cost}} {{localize "ADVANCE.XP"}}
+                +5 {{localize c.tierLabelKey}} — {{c.next.cost}} {{localize "ADVANCE.XP"}}
                 <em>({{c.purchased}} {{localize "ADVANCE.PURCHASED"}})</em>
                 {{else}}
                 {{localize "ADVANCE.EXHAUSTED"}}

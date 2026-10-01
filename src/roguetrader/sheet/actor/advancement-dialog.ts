@@ -302,6 +302,14 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				value: system.characteristics[key]?.value ?? 0,
 				purchased,
 				next,
+				// Localized tier label computed here, NOT via a template concat:
+				// SCHEME_TIERS are lowercase ("simple"), the lang keys are uppercase
+				// (ADVANCE.TIER_SIMPLE), and {{localize (concat "ADVANCE.TIER_" tier)}}
+				// therefore resolved "ADVANCE.TIER_simple" — a key that does not exist,
+				// so every tier rendered raw (missing-translation report 2026-10-01).
+				tierLabelKey: next
+					? `ADVANCE.TIER_${next.tier.toUpperCase()}`
+					: "",
 				affordable: next ? next.cost <= pool : false,
 			};
 		});

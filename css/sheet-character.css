@@ -493,6 +493,13 @@
 
 /* Advancement dialog (bead clng) */
 
+/* The window is resizable and the ledger grows past the fixed height, so the
+   content must scroll (AGENTS.md resizable-window rule). Same pattern as the
+   test dialog's capped, scrolling window-content. */
+.rogue-trader.advancement-dialog .window-content {
+	overflow-y: auto;
+}
+
 .rogue-trader .advancement {
 	display: flex;
 	flex-direction: column;

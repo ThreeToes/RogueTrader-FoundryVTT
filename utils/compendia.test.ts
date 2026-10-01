@@ -852,6 +852,67 @@ describe("compendium folder groupings (bead nsqt)", () => {
 			).toBe("Criminals & Underworld");
 		});
 
+		test("warrant pack groups by the chart row (bead 3cb1)", () => {
+			expect(
+				resolveEntryGroup(
+					{ name: "The Waning", system: { row: "warrant-age" } },
+					"warrant",
+				),
+			).toBe("Warrant Age");
+			expect(
+				resolveEntryGroup(
+					{ name: "Rising Star", system: { row: "fortune-fate" } },
+					"warrant",
+				),
+			).toBe("Fortune and Fate");
+			expect(
+				resolveEntryGroup(
+					{ name: "Exile", system: { row: "acquisition" } },
+					"warrant",
+				),
+			).toBe("Acquisition");
+			expect(
+				resolveEntryGroup(
+					{ name: "Halo Artefacts", system: { row: "sanction" } },
+					"warrant",
+				),
+			).toBe("Sanction");
+			expect(
+				resolveEntryGroup(
+					{ name: "Pirates", system: { row: "contacts" } },
+					"warrant",
+				),
+			).toBe("Contacts");
+			expect(
+				resolveEntryGroup(
+					{ name: "Famous", system: { row: "renown" } },
+					"warrant",
+				),
+			).toBe("Renown");
+		});
+
+		test("an authored group override still wins on the warrant pack", () => {
+			expect(
+				resolveEntryGroup(
+					{
+						name: "The Waning",
+						system: { row: "warrant-age" },
+						group: "Other",
+					},
+					"warrant",
+				),
+			).toBe("Other");
+		});
+
+		test("unmapped warrant row fails loudly (bead 3cb1)", () => {
+			expect(() =>
+				resolveEntryGroup(
+					{ name: "Mystery Option", system: { row: "mystery-row" } },
+					"warrant",
+				),
+			).toThrow(/no folder label for row/);
+		});
+
 		test("unmapped npc name fails loudly (bead g0vv)", () => {
 			expect(() =>
 				resolveEntryGroup({ name: "Mystery NPC", type: "npc" }, "npcs"),

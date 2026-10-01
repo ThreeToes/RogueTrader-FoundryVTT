@@ -114,6 +114,12 @@
                 {{else}}
                 <a class="chip origin-note" data-tooltip="{{a.text}}">{{a.name}}{{#if a.severity}} ({{a.severity}}){{/if}}</a>
                 {{/if}}
+                {{!-- Delete affordance (bead fjtr): same anchor as the
+                     talent rows — deleteItem is a sheet action, so Foundry
+                     only dispatches it when the sheet is editable. --}}
+                <a class="inv-delete" data-action="deleteItem" data-item-id="{{a.id}}"
+                    data-tooltip="{{localize "GEAR.DELETE"}}"
+                ><i class="fa-solid fa-xmark"></i></a>
                 {{/each}}
                 {{/if}}
                 {{/each}}

@@ -48,6 +48,10 @@ export const ITEM_MODELS: Record<string, ModelEntry> = {
 	mutation: { spec: "../roguetrader/data/item/mutation", className: "Mutation" },
 	madnessentry: { spec: "../roguetrader/data/item/madness", className: "MadnessEntry" },
 	trait: { spec: "../roguetrader/data/item/trait", className: "Trait" },
+	"warrant-option": {
+		spec: "../roguetrader/data/item/warrant-option",
+		className: "WarrantOption",
+	},
 	ammunition: { spec: "../roguetrader/data/item/ammunition", className: "Ammunition" },
 	"force-field": { spec: "../roguetrader/data/item/force-field", className: "ForceField" },
 	"weapon-modification": { spec: "../roguetrader/data/item/weapon-modification", className: "WeaponModification" },

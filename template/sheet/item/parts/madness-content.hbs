@@ -1,0 +1,65 @@
+{{!-- Madness affliction sheet (bead fgm1): kind, d100 roll band, Degree +
+     test modifier, acquired severity, mechanical effects and the verbatim
+     book prose. Same stats vocabulary as the other item content templates. --}}
+<section class="madness-content">
+    <div class="stats border">
+        <h1>{{localize "MADNESS.HEADER"}}</h1>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "MADNESS.KIND"}}</label>
+                <p class="static-value">{{kindLabel}}</p>
+            </div>
+            {{#if showRollBand}}
+            <div class="stat">
+                <label>{{localize "MADNESS.ROLL_BAND"}}</label>
+                <p class="static-value">{{rollMin}}&ndash;{{rollMax}}</p>
+            </div>
+            {{/if}}
+        </div>
+        {{#if showDegree}}
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "MADNESS.DEGREE"}}</label>
+                <p class="static-value">{{degree}}</p>
+            </div>
+            {{#if modifier}}
+            <div class="stat">
+                <label>{{localize "MADNESS.MODIFIER"}}</label>
+                <p class="static-value">{{#if (gt modifier 0)}}+{{/if}}{{modifier}}</p>
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
+        {{#if acquiredSeverity}}
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "MADNESS.ACQUIRED_SEVERITY"}}</label>
+                <p class="static-value">{{acquiredSeverity}}</p>
+            </div>
+        </div>
+        {{/if}}
+        <div class="stats-row">
+            <div class="stat full-width">
+                {{> rt/effect-editor labelKey="EFFECTS.LIST" hintKey="EFFECTS.HINT" kindTipKey="EFFECTS.KIND_HINT" testTipKey="EFFECTS.TEST_KEY_HINT" valueTipKey="EFFECTS.VALUE_HINT" noneKey="EFFECTS.NONE"}}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "TITLE.DESCRIPTION"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.description"
+                    value="{{source.system.description}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{descriptionHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

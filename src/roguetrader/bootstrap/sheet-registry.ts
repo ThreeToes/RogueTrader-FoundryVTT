@@ -59,9 +59,11 @@ import { PsychicPowerSheet } from "../sheet/item/psychic-power-sheet";
 import { ShipComponentSheet } from "../sheet/item/ship-component-sheet";
 import { ShipComplicationSheet } from "../sheet/item/ship-complication-sheet";
 import { ShipHullSheet } from "../sheet/item/ship-hull-sheet";
+import { MadnessEntrySheet } from "../sheet/item/madness-entry-sheet";
 import { SkillSheet } from "../sheet/item/skill-sheet";
 import { TalentSheet } from "../sheet/item/talent-sheet";
 import { TraitSheet } from "../sheet/item/trait-sheet";
+import { WarrantOptionSheet } from "../sheet/item/warrant-option-sheet";
 import { WeaponSheet } from "../sheet/item/weapon-sheet";
 
 // 6a1x: any sheet constructor. never[] params (not unknown[]) so concrete
@@ -189,9 +191,12 @@ export const SHEET_REGISTRY: Record<
 		},
 		// Origin Path chart entries (epic 1gb7; moved out of rules/origins.ts).
 		origin: { model: Origin, sheet: GearSheet, label: "TYPES.Item.origin" },
+		// Ship & Warrant Path chart options (bead 3cb1): a read-only reference
+		// sheet showing the chart row + column, the derived SP/PF totals, the
+		// mechanics notes and the verbatim book prose.
 		"warrant-option": {
 			model: WarrantOption,
-			sheet: GearSheet,
+			sheet: WarrantOptionSheet,
 			label: "TYPES.Item.warrant-option",
 		},
 		// Heirloom grant templates (Table 1-2, epic 1gb7 follow-up).
@@ -207,7 +212,7 @@ export const SHEET_REGISTRY: Record<
 		},
 		madnessentry: {
 			model: MadnessEntry,
-			sheet: GearSheet,
+			sheet: MadnessEntrySheet,
 			label: "ROGUE_TRADER.GEAR.SHEET",
 		},
 		// Rulebook traits (bead 25ii): innate creature features. Always

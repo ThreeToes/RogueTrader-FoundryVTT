@@ -1,0 +1,55 @@
+<section class="warrant-option-content">
+    <div class="stats border">
+        <h1>{{localize "TYPES.Item.warrant-option"}}</h1>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "WARRANT_OPTION.CHART_ROW"}}</label>
+                <p class="static-value">{{rowLabel}}</p>
+            </div>
+            <div class="stat">
+                <label>{{localize "WARRANT_OPTION.CHART_COLUMN"}}</label>
+                <p class="static-value">{{col}}</p>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat">
+                <label>{{localize "DYNASTY.SHIP_POINTS"}}</label>
+                <p class="static-value">{{shipPoints}}</p>
+            </div>
+            <div class="stat">
+                <label>{{localize "DYNASTY.PROFIT_FACTOR"}}</label>
+                <p class="static-value">{{profitFactor}}</p>
+            </div>
+        </div>
+        {{#if notes.length}}
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "WARRANT_OPTION.NOTES"}}</label>
+                <ul class="static-effects">
+                    {{#each notes as |note|}}
+                    <li>{{note}}</li>
+                    {{/each}}
+                </ul>
+            </div>
+        </div>
+        {{/if}}
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "TITLE.DESCRIPTION"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.description"
+                    value="{{source.system.description}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{descriptionHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

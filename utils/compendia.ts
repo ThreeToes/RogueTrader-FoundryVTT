@@ -374,7 +374,22 @@ const GROUPED_PACKS: ReadonlySet<string> = new Set([
 	"ships",
 	"gametables",
 	"npcs",
+	"warrant",
 ]);
+
+/**
+ * Warrant pack grouping (bead 3cb1): by the Into the Storm pp33-44 chart
+ * row (system.row on every entry). The labels are the chart's own row
+ * headings. Unmapped rows fail loudly, per conventions.
+ */
+const WARRANT_GROUP_LABELS: Readonly<Record<string, string>> = {
+	"warrant-age": "Warrant Age",
+	"fortune-fate": "Fortune and Fate",
+	acquisition: "Acquisition",
+	sanction: "Sanction",
+	contacts: "Contacts",
+	renown: "Renown",
+};
 
 /**
  * Ship pack grouping (bead 5lbn owner ask): ships.yaml by hullClass for
@@ -723,6 +738,16 @@ export function resolveEntryGroup(
 	}
 	if (pack === "tools") return "Tools";
 	if (pack === "ships") return shipGroupLabel(entry);
+	if (pack === "warrant") {
+		const row = String(system.row ?? "");
+		const label = WARRANT_GROUP_LABELS[row];
+		if (!label) {
+			throw new Error(
+				`grouping: warrant/${String(entry.name)}: no folder label for row "${row}" — extend WARRANT_GROUP_LABELS (loud failure)`,
+			);
+		}
+		return label;
+	}
 	if (pack === "npcs") return npcGroupLabel(entry);
 	if (pack === "gametables") {
 		const kind = String((entry.system ?? {}).kind ?? "");

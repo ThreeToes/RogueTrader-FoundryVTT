@@ -77,13 +77,15 @@
             </div>
             <div class="traits-row">
                 <span class="origin-label">{{localize "MADNESS.INSANITY"}}:
-                    {{#if editable}}<input name="system.insanity" type="number" min="0"
-                        value="{{source.system.insanity}}" class="madness-points" />{{else}}{{madness.insanityPoints}}{{/if}}
-                    {{madness.insanityDegree}}</span>
+                    {{!-- Read-only here: the header tracker strip owns the
+                         bound input for system.insanity. Two inputs with the
+                         same name in one form submit an ARRAY (Foundry
+                         FormDataExtended#getFieldValue) which NumberField
+                         rejects — the whole actor update failed and no value
+                         took hold. Edit these tracks via the header chips. --}}
+                    {{madness.insanityPoints}}{{madness.insanityDegree}}</span>
                 <span class="origin-label">{{localize "MADNESS.CORRUPTION"}}:
-                    {{#if editable}}<input name="system.corruption" type="number" min="0"
-                        value="{{source.system.corruption}}" class="madness-points" />{{else}}{{madness.corruptionPoints}}{{/if}}
-                    {{madness.corruptionDegree}}</span>
+                    {{madness.corruptionPoints}}{{madness.corruptionDegree}}</span>
                 {{#if madness.nextDisorder}}<span class="origin-label"
                     data-tooltip="{{localize "MADNESS.NEXT_DISORDER_HINT"}}">{{localize "MADNESS.NEXT_DISORDER"}}:
                     {{madness.nextDisorder}}</span>{{/if}}

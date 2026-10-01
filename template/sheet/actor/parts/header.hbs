@@ -59,12 +59,18 @@
                 <div class="stat-chip">
                     <span class="chip-label">{{localize "CHARACTER.INSANITY"}}</span>
                     <div class="chip-value">
+                        {{!-- Sole bound input for this path: a second input with
+                             the same name elsewhere in the form (background.hbs
+                             once had one) makes FormDataExtended submit an ARRAY
+                             and NumberField rejects it, failing every update
+                             (see duplicate-input regression test). --}}
                         <input name="system.insanity" type="number" min="0" value="{{source.system.insanity}}" />
                     </div>
                 </div>
                 <div class="stat-chip">
                     <span class="chip-label">{{localize "CHARACTER.CORRUPTION"}}</span>
                     <div class="chip-value">
+                        {{!-- Sole bound input for this path, same rule as insanity above. --}}
                         <input name="system.corruption" type="number" min="0" value="{{source.system.corruption}}" />
                     </div>
                 </div>

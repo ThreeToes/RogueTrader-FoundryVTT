@@ -3,6 +3,7 @@ import {
 	buildCharacteristicViews,
 	CHAR_SHORTS,
 	characteristicValues,
+	findOwnedSkillForRow,
 	LADDER_OPTIONS,
 	mergeOwnedAndCatalogRows,
 	skillNameKey,
@@ -13,6 +14,82 @@ describe("skillNameKey (t093 semantics)", () => {
 		expect(skillNameKey("  Speak Language (Low Gothic) ")).toBe(
 			"speak language (low gothic)",
 		);
+	});
+});
+
+describe("findOwnedSkillForRow (bead wxkw — shared preview/application matcher)", () => {
+	const owned = [
+		{ key: "awareness", name: "Awareness", ladder: 2 },
+		{ key: "", name: "tech-use", ladder: 1 }, // keyless owned item (default-skill hook)
+		{ key: "", name: "  Common Lore (Imperium) ", ladder: 1 },
+	];
+	const row = (over: Record<string, unknown> = {}) => ({
+		key: "",
+		name: "",
+		...over,
+	});
+
+	it("matches by pack key first", () => {
+		expect(findOwnedSkillForRow(owned, row({ key: "awareness" }))).toBe(owned[0]);
+	});
+
+	it("matches by exact name after the key fails", () => {
+		expect(findOwnedSkillForRow(owned, row({ name: "Common Lore (Imperium)" })))
+			.toBe(owned[2]);
+	});
+
+	it("matches trimmed + case-insensitively (t093 semantics)", () => {
+		// The bead-wxkw failure mode: a keyless owned item whose name differs
+		// from the row's name only by case/whitespace.
+		expect(
+			findOwnedSkillForRow(
+				[{ key: "", name: "  awareness ", ladder: 2 }],
+				row({ name: "Awareness" }),
+			),
+		).toMatchObject({ name: "  awareness " });
+		expect(findOwnedSkillForRow(owned, row({ name: "COMMON LORE (imperium)" })))
+			.toBe(owned[2]);
+	});
+
+	it("keys win even when a name match appears earlier in the list", () => {
+		// The two-pass key-first shape (the live application's semantics): a
+		// key match anywhere beats an earlier accidental name match.
+		const mixed = [
+			{ key: "", name: "Awareness", ladder: 1 },
+			{ key: "awareness", name: "Awareness (pack)", ladder: 3 },
+		];
+		expect(
+			findOwnedSkillForRow(mixed, row({ key: "awareness", name: "Awareness" })),
+		).toBe(mixed[1]);
+	});
+
+	it("an empty row key never matches a keyless owned skill by key", () => {
+		// The old live path matched empty system.key === empty row.key and
+		// could bump an unrelated keyless skill.
+		const keyless = [{ key: "", name: "Dodge", ladder: 1 }];
+		expect(findOwnedSkillForRow(keyless, row({ name: "Awareness" })))
+			.toBeUndefined();
+	});
+
+	it("returns undefined on no match; blank candidate names never match", () => {
+		expect(findOwnedSkillForRow(owned, row({ name: "Unheard-Of" })))
+			.toBeUndefined();
+		expect(
+			findOwnedSkillForRow([{ key: "x", name: "" }], row({ name: "x" })),
+		).toBeUndefined();
+	});
+
+	it("compares against BOTH the resolved row name and the raw row name", () => {
+		// Key-only raw row name ('tech-use') vs the display name the button
+		// carries ('Tech-Use'): either side alone must find the owned skill.
+		expect(findOwnedSkillForRow(owned, row({ name: "tech-use" }), "Tech-Use"))
+			.toBe(owned[1]);
+		expect(
+			findOwnedSkillForRow(
+				[{ key: "", name: "Tech-Use", ladder: 1 }],
+				row({ name: "tech-use-tech" }),
+			),
+		).toBeUndefined(); // name-key compare, not substring
 	});
 });
 

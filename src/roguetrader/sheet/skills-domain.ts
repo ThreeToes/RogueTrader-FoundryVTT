@@ -35,6 +35,49 @@ export function skillNameKey(name: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Owned-skill ↔ advance-row matcher (bead wxkw)
+// ---------------------------------------------------------------------------
+
+/** Structural shape of an advance row the owned-skill matcher needs. */
+export interface AdvanceRowSkillLike {
+	key?: string | null;
+	/** Raw row name (key-only rows carry the pack key; differs from display). */
+	name?: string | null;
+}
+
+/**
+ * THE owned-skill ↔ advance-row matcher, shared by the ladder preview
+ * (advancement-view-model) and the live application (#applySkillAdvance) so
+ * preview and purchase can never disagree again. Key-first across the list,
+ * then `skillNameKey` (trimmed, case-insensitive, t093 semantics) against
+ * BOTH the resolved row name (the one the button carries) and the raw row
+ * name — so a keyless owned item whose name differs only by casing/spacing
+ * is bumped, never re-granted as a duplicate ladder-1 skill.
+ */
+export function findOwnedSkillForRow<
+	T extends { key?: string | null; name?: string | null },
+>(
+	skills: readonly T[],
+	row: AdvanceRowSkillLike,
+	resolvedName?: string | null,
+): T | undefined {
+	// Key match requires a non-empty row key: an empty row key must never
+	// match a keyless owned skill's empty system.key (the old live path did).
+	if ((row.key ?? "") !== "") {
+		const byKey = skills.find((skill) => skill.key === row.key);
+		if (byKey) return byKey;
+	}
+	const nameKeys = [resolvedName, row.name]
+		.filter((n): n is string => typeof n === "string" && skillNameKey(n) !== "")
+		.map(skillNameKey);
+	if (nameKeys.length === 0) return undefined;
+	return skills.find((skill) => {
+		const skillKey = skillNameKey(skill.name ?? "");
+		return skillKey !== "" && nameKeys.includes(skillKey);
+	});
+}
+
+// ---------------------------------------------------------------------------
 // Owned + catalog skill-row merge
 // ---------------------------------------------------------------------------
 

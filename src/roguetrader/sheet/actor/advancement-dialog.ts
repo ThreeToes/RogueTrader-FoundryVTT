@@ -1,17 +1,13 @@
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { systemOf } from "../../data/accessors";
-import { characteristicValues } from "../skills-domain";
+import { characteristicValues, findOwnedSkillForRow } from "../skills-domain";
 import { sheetContext } from "../context";
 import { getCharacterOptionDocs } from "../pack-resolve";
 import {
-	availableRows,
 	characteristicNextAdvance,
 	derivedRank,
 	evaluateAlternateRankGate,
 	ledgerEntryFor,
-	multiplierRemaining,
-	rankProgress,
-	spentOnRank,
 	totalSpent,
 	validatePurchase,
 	type AdvanceLedgerEntry,
@@ -23,6 +19,10 @@ import {
 	evaluatePrerequisites,
 	parsePrerequisites,
 } from "../../rules/prereq";
+import {
+	buildAdvancementViewModel,
+	filterAdvancementRows,
+} from "./advancement-view-model";
 import { CHARACTERISTIC_KEYS } from "../../data/actor/character";
 import { talentGrant, promptParameterisedSubject } from "./grant-helpers";
 
@@ -69,6 +69,8 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			buy: AdvancementDialog.#onBuy,
 			buyCharacteristic: AdvancementDialog.#onBuyCharacteristic,
 			refund: AdvancementDialog.#onRefund,
+			selectRank: AdvancementDialog.#onSelectRank,
+			toggleFilter: AdvancementDialog.#onToggleFilter,
 		},
 	};
 
@@ -109,13 +111,29 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		characteristic: string;
 	}> = [];
 
-	/** Key > name resolution for key-only rank-table rows (careers carry empty names). */
-	#nameByKey: Record<string, string> = {};
+	/** Talent catalog docs: name resolution + benefit tooltips (lzeb child 1). */
+	#talentDocs: Array<{ key: string; name: string; description: string }> = [];
 
-	constructor(options: { actor: foundry.documents.Actor } & object) {
+	constructor(options: {
+		actor: foundry.documents.Actor;
+	} & object) {
 		super(options as never);
 		this.actor = options.actor;
 	}
+
+	// ----------------------------------------------------------------- 
+	// Dialog-held UI state (epic lzeb child 2, creatorState pattern): rank
+	// chip selection + search/filter toolbar. Purely presentational — never
+	// touches the ledger; re-rendered on interaction.
+	/** Selected rank chip; null = follow the view model's defaultRank. */
+	#selectedRank: number | null = null;
+	/** Search text (lowercase compare happens in filterAdvancementRows). */
+	#search = "";
+	/** Toolbar toggles. */
+	#onlyAffordable = false;
+	#onlyUnowned = false;
+	/** One-shot: restore focus/caret to the search input after the re-render. */
+	#refocusSearch = false;
 
 	static PARTS = {
 		form: {
@@ -129,11 +147,11 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		const system = systemOf(this.actor);
 		const ledger = (system.advances ?? []) as AdvanceLedgerEntry[];
 		const spent = totalSpent(ledger);
-		const pool = Math.max(0, (system.xp?.total ?? 0) - spent);
 
 		// Load the career from the compendium by key.
 		this.#career = null;
 		this.#skillDocs = [];
+		this.#talentDocs = [];
 		this.#alternateRows = [];
 		this.#alternateOffers = [];
 		const careerKey = system.careerKey;
@@ -208,28 +226,29 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			}
 		}
 		// Talents pack for name resolution of key-only rows ("psy-rating",
-		// "psychic-technique", ...).
-		this.#nameByKey = {};
+		// "psychic-technique", ...) and the benefit tooltips (lzeb child 1:
+		// name + description resolution moved into the pure view model).
+		this.#talentDocs = [];
 		{
 			const docs = (await characterOptionDocsOnce("talent")) as unknown as Array<{
 				name?: string;
-				system: { key?: string };
+				system: { key?: string; description?: string };
 			}>;
 			for (const doc of docs) {
 				if (doc.name && doc.system.key) {
-					this.#nameByKey[doc.system.key] = doc.name;
+					this.#talentDocs.push({
+						key: doc.system.key,
+						name: doc.name,
+						description: doc.system.description ?? "",
+					});
 				}
 			}
-		}
-		for (const doc of this.#skillDocs) {
-			if (doc.key) this.#nameByKey[doc.key] = doc.name;
 		}
 
 		const thresholds: RankThresholdLike[] = (this.#career?.ranks ?? []).map(
 			(r) => ({ rank: r.rank, xpLevel: r.xpLevel }),
 		);
 		const derived = derivedRank(thresholds, spent);
-		const progress = rankProgress(thresholds, spent);
 		const isGM = (game as unknown as { user?: { isGM?: boolean } }).user?.isGM;
 
 		// Alternate/elite ranks (bead g45s): offer the advance tables of every
@@ -239,9 +258,14 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		const ownedTalents = this.actor.items
 			.filter((item) => (item.type as string) === "talent")
 			.map((item) => item.name ?? "");
-		const ownedSkills = this.actor.items
+		const ownedSkillItems = this.actor.items
 			.filter((item) => (item.type as string) === "skill")
-			.map((item) => item.name ?? "");
+			.map((item) => ({
+				key: (item.system as unknown as { key?: string }).key ?? "",
+				name: item.name ?? "",
+				ladder: (item.system as unknown as { ladder?: number }).ladder ?? 1,
+			}));
+		const ownedSkills = ownedSkillItems.map((skill) => skill.name);
 		const characteristics: Partial<Record<string, number>> =
 			characteristicValues(system);
 		if (this.#career) {
@@ -288,89 +312,178 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			}
 		}
 
-		// Characteristic advance rows: next tier per characteristic from the
-		// career scheme; ledger counts prior +5 purchases.
-		context.characteristics = CHARACTERISTIC_KEYS.map((key) => {
-			const scheme = this.#career?.characteristicAdvances?.[key];
-			const purchased = ledger.filter(
-				(entry) => entry.type === "characteristic" && entry.characteristic === key,
-			).length;
-			const next = scheme ? characteristicNextAdvance(scheme, purchased) : null;
-			return {
-				key,
-				labelKey: `CHARACTERISTIC.${key.toUpperCase()}`,
-				value: system.characteristics[key]?.value ?? 0,
-				purchased,
-				next,
-				// Localized tier label computed here, NOT via a template concat:
-				// SCHEME_TIERS are lowercase ("simple"), the lang keys are uppercase
-				// (ADVANCE.TIER_SIMPLE), and {{localize (concat "ADVANCE.TIER_" tier)}}
-				// therefore resolved "ADVANCE.TIER_simple" — a key that does not exist,
-				// so every tier rendered raw (missing-translation report 2026-10-01).
-				tierLabelKey: next
-					? `ADVANCE.TIER_${next.tier.toUpperCase()}`
-					: "",
-				affordable: next ? next.cost <= pool : false,
-			};
+		// Row enrichment moved into the pure view model (epic lzeb child 1,
+		// bead anv0): resolved names, owned/multiplier, ladder previews,
+		// characteristic tiers, affordability, prereq unmet lists, benefit
+		// tooltips, rank groups and the default rank chip — all unit-tested.
+		// The dialog only orchestrates: feed the plain inputs, hang the result
+		// on the context (existing keys unchanged; new fields additive).
+		const viewModel = buildAdvancementViewModel({
+			xpTotal: system.xp?.total ?? 0,
+			career: this.#career,
+			alternateRows: this.#alternateRows,
+			ledger,
+			characteristics,
+			ownedTalentNames: ownedTalents,
+			psyRating: system.psyRating ?? 0,
+			ownedSkills: ownedSkillItems,
+			skillDocs: this.#skillDocs,
+			talentDocs: this.#talentDocs,
 		});
 
-		// Rank advance rows (held or previously held: rank <= derived), plus the
-		// eligible alternate ranks' rows (bead g45s).
-		const rows = availableRows(
-			[
-				...(this.#career?.ranks.flatMap((r) => r.advances) ?? []),
-				...this.#alternateRows,
-			],
-			derived,
-		);
-		const rankGroups: Array<Record<string, unknown>> = [];
-		for (let rank = 1; rank <= derived; rank += 1) {
-			const rankRows = rows
-				.filter((row) => row.rank === rank)
-				.map((row) => ({
-					...row,
-					name: row.name || this.#nameByKey[row.key] || row.key,
-					purchased: ledger.filter(
-						(entry) =>
-							entry.type === row.type &&
-							entry.key === row.key &&
-							entry.rank === row.rank,
-					).length,
-					remaining: multiplierRemaining(row, ledger),
-					affordable: row.cost <= pool,
-					prereqText: row.prerequisites.filter(Boolean).join(", "),
-					prereqList: row.prerequisites.join("|"),
-					sourceName: (row as { sourceName?: string }).sourceName,
-					ledgerIndex: ledger.findIndex(
-						(entry) =>
-							entry.type === row.type &&
-							entry.rank === row.rank &&
-							((row.key && entry.key === row.key) ||
-								(!row.key && entry.name === row.name)),
-					),
-				}));
-			if (rankRows.length > 0) {
-				rankGroups.push({
-					rank,
-					xpLevel: thresholds.find((t) => t.rank === rank)?.xpLevel ?? 0,
-					spentOnRank: spentOnRank(ledger, rank),
-					rows: rankRows,
-				});
-			}
+		context.pool = viewModel.pool;
+		context.spent = viewModel.spent;
+		context.rank = viewModel.rank;
+		context.systemRank = system.rank ?? 1;
+		context.rankUp = viewModel.rank > (system.rank ?? 1);
+		context.progress = viewModel.progress;
+		context.rankGroups = viewModel.rankGroups;
+		context.characteristics = viewModel.characteristics;
+		context.defaultRank = viewModel.defaultRank;
+
+		// Rank chip selection (lzeb child 2): null selection follows the
+		// view model's defaultRank (lowest rank with unpurchased rows).
+		const selectedRank =
+			this.#selectedRank ?? viewModel.defaultRank ?? null;
+		context.selectedRank = selectedRank;
+		context.search = this.#search;
+		context.onlyAffordable = this.#onlyAffordable;
+		context.onlyUnowned = this.#onlyUnowned;
+		const filter = {
+			search: this.#search,
+			affordableOnly: this.#onlyAffordable,
+			unownedOnly: this.#onlyUnowned,
+		};
+		const shown =
+			viewModel.rankGroups.find((group) => group.rank === selectedRank) ??
+			null;
+		context.shownGroup = shown
+			? { ...shown, rows: filterAdvancementRows(shown.rows, filter) }
+			: null;
+		context.shownEmpty =
+			Boolean(shown) &&
+			((context.shownGroup as { rows: unknown[] }).rows.length === 0);
+
+		// Meter: % toward the next rank inside THIS rank's window (spent from
+		// the current rank threshold to the next one).
+		const currentThreshold =
+			viewModel.rank > 1
+				? (thresholds.find((t) => t.rank === viewModel.rank)?.xpLevel ?? 0)
+				: 0;
+		const nextThreshold = viewModel.progress.nextXpLevel;
+		context.progressPct =
+			nextThreshold && nextThreshold > currentThreshold
+				? Math.max(
+						0,
+						Math.min(
+							100,
+							Math.round(
+								((viewModel.spent - currentThreshold) /
+									(nextThreshold - currentThreshold)) *
+									100,
+							),
+						),
+					)
+				: 0;
+
+		// Locked next-rank preview (lzeb child 2): re-run the pure builder with
+		// the ledger topped up to the next threshold — that flips derivedRank to
+		// the next rank (pool 0 → all rows unaffordable) and enriches its rows
+		// with resolved names + prereq state. Presentational only.
+		context.nextRankPreview = null;
+		if (viewModel.progress.nextRank && this.#career) {
+			const previewLedger: AdvanceLedgerEntry[] =
+				viewModel.progress.remaining > 0
+					? [
+							...ledger,
+							{
+								type: "talent",
+								key: "",
+								name: "next-rank-preview",
+								cost: viewModel.progress.remaining,
+								rank: 0,
+							},
+						]
+					: ledger;
+			const previewVM = buildAdvancementViewModel({
+				xpTotal: system.xp?.total ?? 0,
+				career: this.#career,
+				alternateRows: this.#alternateRows,
+				ledger: previewLedger,
+				characteristics,
+				ownedTalentNames: ownedTalents,
+				psyRating: system.psyRating ?? 0,
+				ownedSkills: ownedSkillItems,
+				skillDocs: this.#skillDocs,
+				talentDocs: this.#talentDocs,
+			});
+			context.nextRankPreview =
+				previewVM.rankGroups.find(
+					(group) => group.rank === viewModel.progress.nextRank,
+				) ?? null;
 		}
 
-		context.pool = pool;
-		context.spent = spent;
-		context.rank = derived;
-		context.systemRank = system.rank ?? 1;
-		context.rankUp = derived > (system.rank ?? 1);
-		context.progress = progress;
-		context.rankGroups = rankGroups;
 		context.alternateOffers = this.#alternateOffers;
-		context.canBuy = pool > 0 && Boolean(this.#career);
+		context.canBuy = viewModel.canBuy;
 		context.isGM = isGM === true;
 		context.hasCareer = Boolean(this.#career);
 		return context;
+	}
+
+	/** The search input's value must survive re-renders (creator pattern). */
+	protected override async _onRender(
+		context: unknown,
+		options: unknown,
+	): Promise<void> {
+		await super._onRender(context as never, options as never);
+		const input = this.element?.querySelector<HTMLInputElement>(
+			'input[name="advancement-search"]',
+			);
+		if (!input) return;
+		if (this.#refocusSearch) {
+			this.#refocusSearch = false;
+			input.focus();
+			input.setSelectionRange(input.value.length, input.value.length);
+		}
+		if (!input.dataset.wired) {
+			input.dataset.wired = "1";
+			input.addEventListener("input", () => {
+				this.#search = input.value;
+				this.#refocusSearch = true;
+				this.render({ force: true } as never);
+			});
+		}
+	}
+
+	/** Rank chip click: show that rank's table (presentational state only). */
+	static async #onSelectRank(
+		this: AdvancementDialog,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		this.#selectedRank = Number(target.dataset.rank ?? 1);
+		this.#refocusSearch = false;
+		this.render({ force: true } as never);
+	}
+
+	/** Toolbar toggle: flip one filter chip and re-render. */
+	static async #onToggleFilter(
+		this: AdvancementDialog,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		switch (target.dataset.filter) {
+			case "affordable":
+				this.#onlyAffordable = !this.#onlyAffordable;
+				break;
+			case "unowned":
+				this.#onlyUnowned = !this.#onlyUnowned;
+				break;
+			default:
+				return;
+		}
+		this.#refocusSearch = false;
+		this.render({ force: true } as never);
 	}
 
 	/** Confirm dialog listing the soft-enforcement reasons (GM overridable). */
@@ -552,16 +665,21 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 
 	/** Skill advance: bump the ladder of an owned skill, or grant it. */
 	async #applySkillAdvance(row: AdvanceRowLike): Promise<boolean> {
-		// Owned match by pack key first, then by exact name.
-		const owned =
-			this.actor.items.find(
-				(item) =>
-					(item.type as string) === "skill" &&
-					(item.system as unknown as { key?: string }).key === row.key,
-			) ??
-			this.actor.items.find(
-				(item) => (item.type as string) === "skill" && item.name === row.name,
-			);
+		// Owned match through the SHARED matcher (bead wxkw): the exact helper
+		// the view model's ladder preview uses, so a promised bump can never
+		// turn into a duplicate ladder-1 grant (key first, then the trimmed,
+		// case-insensitive name against the resolved and raw row names).
+		const owned = findOwnedSkillForRow(
+			this.actor.items
+				.filter((item) => (item.type as string) === "skill")
+				.map((item) => ({
+					item,
+					key: (item.system as unknown as { key?: string }).key ?? "",
+					name: item.name ?? "",
+				})),
+			row,
+			row.name, // data-name is already the resolved display name
+		)?.item;
 		if (owned) {
 			const system = owned.system as unknown as { ladder: number };
 			const ladder = Math.min(4, (system.ladder ?? 1) + 1);

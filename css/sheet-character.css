@@ -514,13 +514,24 @@
 	padding: 6px;
 }
 
-/* Advancement dialog (bead clng) */
+/* Advancement dialog (bead clng; reworked lzeb child 2 to the design
+   language: gold small-caps stat labels, cb-track/cb-fill meter,
+   pick-chip rank navigation, search/filter toolbar, dimmed unaffordable
+   rows, locked next-rank preview). Token-only styling, scoped to the
+   dialog's classes (the shared .sheet-scoped chip/meter rules do not
+   apply — the dialog carries .dialog, not .sheet). */
 
 /* The window is resizable and the ledger grows past the fixed height, so the
    content must scroll (AGENTS.md resizable-window rule). Same pattern as the
-   test dialog's capped, scrolling window-content. */
+   test dialog's capped, scrolling window-content. Sizing rule: min-width/
+   min-height on the app class — ApplicationV2 clamps resize to these. */
 .rogue-trader.advancement-dialog .window-content {
 	overflow-y: auto;
+}
+
+.rogue-trader.advancement-dialog {
+	min-width: 560px;
+	min-height: 440px;
 }
 
 .rogue-trader .advancement {
@@ -529,15 +540,98 @@
 	gap: 6px;
 }
 
-.rogue-trader .advancement .advancement-header {
+/* Header stats: pool · spent · rank — small-caps gold labels mirroring the
+   .stats-row .stat > label anatomy (sheet-gear.css); scoped here because the
+   shared rule targets .rogue-trader.sheet. */
+.rogue-trader .advancement .advancement-header.stats-row {
 	display: flex;
-	gap: 14px;
-	font-size: var(--rt-fs-lg);
+	gap: 8px;
+	justify-content: space-between;
+	margin-bottom: 2px;
 }
 
-.rogue-trader .advancement .advancement-progress {
-	margin-left: auto;
+.rogue-trader .advancement .advancement-header .stat {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	gap: 1px;
+}
+
+.rogue-trader .advancement .advancement-header .stat > label {
+	font-size: var(--rt-fs-sm);
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rt-gold);
+}
+
+.rogue-trader .advancement .advancement-header .stat .stat-value {
+	font-weight: bold;
+}
+
+/* xp-to-next-rank meter: the shared cb-track/cb-fill anatomy, gold fill —
+   progress (not capacity), so gold instead of the capacity success fill. */
+.rogue-trader .advancement .advancement-meter {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--rt-fs-sm);
 	color: var(--rt-muted);
+}
+
+.rogue-trader .advancement .advancement-meter .cb-label {
+	flex: none;
+	color: var(--rt-muted);
+}
+
+.rogue-trader .advancement .advancement-meter .cb-track {
+	flex: 1;
+	height: 10px;
+	border: 1px solid var(--rt-border-strong);
+	border-radius: var(--rt-radius-sm);
+	overflow: hidden;
+	background: var(--rt-panel-shadow);
+}
+
+.rogue-trader .advancement .advancement-meter .cb-fill {
+	display: block;
+	height: 100%;
+	background: var(--rt-gold);
+}
+
+/* Rank chips: creator-chip vocabulary — one chip per held rank. */
+.rogue-trader .advancement .rank-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.rogue-trader .advancement .rank-chips .pick-chip,
+.rogue-trader .advancement .advancement-toolbar .pick-chip {
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius);
+	padding: 1px 8px;
+	font-size: var(--rt-fs-md);
+	cursor: pointer;
+	background: none;
+}
+
+.rogue-trader .advancement .rank-chips .pick-chip.selected,
+.rogue-trader .advancement .advancement-toolbar .pick-chip.selected {
+	background: var(--rt-border);
+	color: var(--color-text-light-highlight, var(--rt-gold-soft));
+}
+
+/* Search + filter toolbar over the shown rank's rows. */
+.rogue-trader .advancement .advancement-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.rogue-trader .advancement .advancement-toolbar input[type="search"] {
+	flex: 1;
+	min-width: 0;
 }
 
 .rogue-trader .advancement .rank-up-note {
@@ -571,14 +665,79 @@
 	padding: 2px 0;
 }
 
+/* Unaffordable rows dim — the design language's muted-deep off state — and
+   their buttons render disabled (template condition). */
+.rogue-trader .advancement .advancement-row.unaffordable {
+	color: var(--rt-muted-deep);
+}
+
 .rogue-trader .advancement .advancement-row .adv-name {
 	flex: 1;
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	flex-wrap: wrap;
+	min-width: 0;
 }
 
 .rogue-trader .advancement .advancement-row .adv-detail {
 	font-size: var(--rt-fs-md);
 	opacity: 0.85;
 	white-space: nowrap;
+}
+
+/* Owned-state chip: purchased/max multiplier (or the plain "owned" chip). */
+.rogue-trader .advancement .adv-multiplier {
+	border: 1px solid var(--rt-border-strong);
+	border-radius: var(--rt-radius);
+	padding: 0 6px;
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-white-alpha);
+	cursor: help;
+}
+
+.rogue-trader .advancement .adv-multiplier.owned {
+	color: var(--rt-gold-soft);
+	background: var(--rt-gold-alpha-faint);
+}
+
+/* Prerequisite chips — bracketed, secondary, like the career-table prereqs. */
+.rogue-trader .advancement .adv-prereq {
+	font-size: var(--rt-fs-md);
+	color: var(--rt-white-alpha);
+}
+
+.rogue-trader .advancement .adv-prereq.unmet {
+	color: var(--rt-warn);
+}
+
+/* Skill ladder preview: current → next (Core Rulebook p39 skill grades). */
+.rogue-trader .advancement .adv-ladder {
+	font-size: var(--rt-fs-md);
+	color: var(--rt-muted);
+	white-space: nowrap;
+}
+
+.rogue-trader .advancement .adv-ladder .fa-angle-right {
+	color: var(--rt-gold);
+}
+
+.rogue-trader .advancement .adv-ladder .ladder-current {
+	color: var(--rt-muted);
+}
+
+.rogue-trader .advancement .adv-ladder .ladder-next {
+	color: var(--rt-gold-soft);
+	font-weight: bold;
+}
+
+/* Characteristic tier label (simple/intermediate/trained/expert). */
+.rogue-trader .advancement .adv-tier {
+	color: var(--rt-muted);
+}
+
+.rogue-trader .advancement .adv-source {
+	color: var(--rt-muted);
 }
 
 .rogue-trader .advancement .adv-buy {
@@ -592,8 +751,14 @@
 	border-radius: var(--rt-radius-sm);
 }
 
-.rogue-trader .advancement .prereq {
-	opacity: 0.7;
+/* Locked next-rank preview: planning-only — greyed rows, no buttons. */
+.rogue-trader .advancement .next-rank-preview.locked {
+	opacity: 0.55;
+}
+
+.rogue-trader .advancement .next-rank-preview .advancement-row.locked {
+	color: var(--rt-muted-deep);
+	cursor: default;
 }
 
 .rogue-trader .header .advancement-open {

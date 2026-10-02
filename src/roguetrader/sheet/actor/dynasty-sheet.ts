@@ -34,6 +34,56 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const CHOICE_TAB_TEMPLATE =
 	"systems/rogue-trader/template/sheet/actor/tabs/dynasty-choice.hbs";
 
+/**
+ * Dotted update delta applying `next` on top of the CURRENT stored picks
+ * (bead uuef): values for set/changed rows and a v14 deletion operator for
+ * every row `next` drops. A bare replacement object is NOT enough —
+ * TypedObjectField#_updateDiff only walks the keys present in the update, so
+ * an empty-object replacement (or a pruned record whose only change is a
+ * removed key) yields an empty diff and is silently dropped, leaving the
+ * picks in place (the dead Clear Warrant Path button). The v14-native route
+ * is a `foundry.data.operators.ForcedDeletion` per removed key.
+ * @param picks stored system.warrant.picks record.
+ * @param next the wanted picks record.
+ * @returns update object with dotted `system.warrant.picks.*` keys.
+ */
+export function warrantPicksDelta(
+	picks: Record<string, string>,
+	next: Record<string, string>,
+): Record<string, unknown> {
+	const update: Record<string, unknown> = {};
+	for (const [row, key] of Object.entries(next)) {
+		if (picks[row] !== key) update[`system.warrant.picks.${row}`] = key;
+	}
+	for (const row of Object.keys(picks)) {
+		if (!(row in next)) {
+			update[`system.warrant.picks.${row}`] = v14DeletionOperator();
+		}
+	}
+	return update;
+}
+
+/**
+	 * A `foundry.data.operators.ForcedDeletion` instance (verified on core
+	 * v14.366 — client/client.mjs uses it identically). fvtt-types v13 lacks
+	 * the operators namespace, so the access is typed locally; lazy so the
+	 * module survives import in headless tests without a full foundry stub.
+	 * @returns fresh deletion operator.
+	 */
+function v14DeletionOperator(): object {
+	const cls = (
+		foundry.data as {
+			operators?: { ForcedDeletion?: new () => object };
+		}
+	).operators?.ForcedDeletion;
+	if (!cls) {
+		throw new Error(
+			"rogue-trader | foundry.data.operators.ForcedDeletion unavailable (requires Foundry v14+)",
+		);
+	}
+	return new cls();
+}
+
 export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "dynasty"],
@@ -224,7 +274,7 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			})),
 		);
 		const update: Record<string, unknown> = {
-			"system.warrant.picks": pruned,
+			...warrantPicksDelta(picks, pruned),
 			"system.warrant.shipPoints": resolved.shipPoints,
 			"system.warrant.profitFactor": resolved.profitFactor,
 		};
@@ -238,15 +288,22 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		this.render({ force: true });
 	}
 
-	/** Clear the recorded path (the applied PF/SP are left untouched). */
+	/**
+	 * Clear the recorded path (the applied PF/SP are left untouched). The
+	 * picks are removed per key with the v14 deletion operator — an empty
+	 * replacement object is silently dropped by TypedObjectField#_updateDiff
+	 * (bead uuef root cause).
+	 */
 	static async #onClearWarrant(this: DynastySheet): Promise<void> {
-		await (this.document as unknown as {
-			update: (data: object) => Promise<unknown>;
-		}).update({
-			"system.warrant.picks": {},
+		const picks = (this.document.system as Dynasty).warrant?.picks ?? {};
+		const update: Record<string, unknown> = {
+			...warrantPicksDelta(picks, {}),
 			"system.warrant.shipPoints": 0,
 			"system.warrant.profitFactor": 0,
-		});
+		};
+		await (this.document as unknown as {
+			update: (data: object) => Promise<unknown>;
+		}).update(update);
 		this.render({ force: true });
 	}
 

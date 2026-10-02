@@ -1,0 +1,36 @@
+#!/bin/sh
+# Pre-commit hook mirroring the verification steps of .forgejo/workflows/ci.yaml
+# (bead qdmc). Install once per clone with: bun run hooks:install
+#
+# Checks: typecheck (pure + scoped), lint, bun test, verify:templates.
+#
+# The full `bun run build` step CI also runs is OMITTED here so a commit stays
+# fast (build:packs is slow and src/packs is machine-local anyway); CI remains
+# the gate for the build. Bypass this hook with: git commit --no-verify.
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+fail=0
+
+echo "==> bun run typecheck (pure + scoped)"
+if bun run typecheck; then echo "    typecheck OK"; else echo "    typecheck FAILED"; fail=1; fi
+
+echo "==> bun run lint"
+if bun run lint; then echo "    lint OK"; else echo "    lint FAILED"; fail=1; fi
+
+echo "==> bun test"
+if bun test; then echo "    bun test OK"; else echo "    bun test FAILED"; fail=1; fi
+
+echo "==> bun run verify:templates"
+if bun run verify:templates; then echo "    verify:templates OK"; else echo "    verify:templates FAILED"; fail=1; fi
+
+if [ "$fail" -ne 0 ]; then
+    echo ""
+    echo "pre-commit checks FAILED — commit refused."
+    echo "To bypass (discouraged): git commit --no-verify"
+    exit 1
+fi
+
+echo ""
+echo "All pre-commit checks passed."

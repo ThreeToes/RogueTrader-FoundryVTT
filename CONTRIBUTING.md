@@ -20,6 +20,14 @@ Builds the final `rogue-trader.css`.
 
 Runs the builder in watch mode so that changes made to the source files are automatically rebuilt.
 
+### `bun run hooks:install`
+
+Git hooks are not versioned by default, so pointing this clone at the committed
+ones is a one-time, per-clone step: run `bun run hooks:install` (which runs
+`git config core.hooksPath .githooks`). Until you do, no pre-commit checks
+run locally and nothing stops a red state from being committed the way CI
+does — bypass the checks deliberately with `git commit --no-verify`.
+
 ## Code
 
 Here are some guidelines for contributing code to this project.

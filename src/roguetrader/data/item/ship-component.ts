@@ -167,6 +167,21 @@ export class ShipWeaponComponent extends ShipComponent {
 	}
 
 	static override defineSchema() {
+		// Pre-typed options variable (bead qdmc): the v13 fvtt-types omit
+		// `clean` from SchemaField's options, so an inline object literal here
+		// fails the excess-property check (TS2353). tsconfig.scoped.json (bead
+		// hleh) DOES typecheck this data file, which is how that surfaced as a
+		// red CI build. A pre-typed variable bypasses the fresh-literal
+		// excess-property check while keeping the runtime `clean` option.
+		const rangeCleanSchemaOptions: {
+			clean: (value: unknown) => ShipWeaponRange;
+			// `nullable: false` is a runtime no-op (SchemaField defaults to
+			// false); it is needed only so the variable's type overlaps the
+			// Options type — otherwise passing it fails the no-overlap check
+			// (TS2559) just as the inline literal failed the excess-property
+			// check (TS2353).
+			nullable: false;
+		} = { clean: normalizeShipWeaponRange, nullable: false };
 		return {
 			...super.defineSchema(),
 			// `strength` is inherited from ShipComponent — the same printed column,
@@ -196,11 +211,10 @@ export class ShipWeaponComponent extends ShipComponent {
 				},
 				// Legacy docs carry a bare number (world data predating epic c48r);
 				// normalise it to a symmetric band so single-number docs keep
-				// working — same `clean` convention as gear.ts availability. The
-				// v13 fvtt-types omit the runtime `clean` option that convention
-				// relies on, so this (like gear.ts) still carries an excess-property
-				// type error; the data layer is deliberately outside typecheck.
-				{ clean: normalizeShipWeaponRange },
+				// working — same `clean` convention as gear.ts availability.
+				// (The options object is passed via rangeCleanSchemaOptions — see
+				// the comment at the top of defineSchema.)
+				rangeCleanSchemaOptions,
 			),
 			slot: new foundry.data.fields.StringField({
 				// blank: true — StringField FORCES blank:false when choices are

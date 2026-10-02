@@ -14,7 +14,8 @@
         "typecheck:scoped": "tsc -p tsconfig.scoped.json",
         "typecheck": "bun run typecheck:pure && bun run typecheck:scoped",
         "format": "biome format --write",
-        "check": "biome check"
+        "check": "biome check",
+        "hooks:install": "git config core.hooksPath .githooks"
     },
     "devDependencies": {
         "@biomejs/biome": "2.5.8",

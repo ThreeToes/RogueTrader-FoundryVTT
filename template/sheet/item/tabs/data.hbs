@@ -26,6 +26,38 @@
             </div>
         </div>
         {{/if}}
+        {{#if ordnance}}
+        {{!-- Launcher ordnance block (bead 4obp): read-only display of the
+             pack-authored fire profile the launcher derives when loaded. --}}
+        <div class="stats-row">
+            <div class="stat ordnance-damage">
+                <label>{{localize "AMMUNITION.DAMAGE"}}</label>
+                <p class="static-value">{{ordnance.damage}}</p>
+            </div>
+            <div class="stat ordnance-damage-type">
+                <label>{{localize "WEAPON.DAMAGE_TYPE"}}</label>
+                <p class="static-value">{{localize (lookup damageTypeChoices ordnance.damageType)}}</p>
+            </div>
+            <div class="stat ordnance-penetration">
+                <label>{{localize "AMMUNITION.PENETRATION"}}</label>
+                <p class="static-value">{{ordnance.penetration}}</p>
+            </div>
+            <div class="stat ordnance-kind">
+                <label>{{localize "AMMUNITION.ORDNANCE_KIND"}}</label>
+                <p class="static-value">{{ordnance.kind}}</p>
+            </div>
+        </div>
+        {{#if ordnance.qualities.length}}
+        <div class="stats-row">
+            <div class="stat ordnance-qualities full-width">
+                <label>{{localize "WEAPON.SPECIAL"}}</label>
+                <p class="static-value">
+                    {{#each ordnance.qualities as |quality|}}{{localize (lookup (config "qualities") quality)}} {{/each}}
+                </p>
+            </div>
+        </div>
+        {{/if}}
+        {{/if}}
         <div class="stats-row">
             <div class="stat craftsmanship">
                 <label>{{localize "GEAR.CRAFTSMANSHIP"}}</label>

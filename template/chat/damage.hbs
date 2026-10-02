@@ -37,6 +37,18 @@
             {{#if damage.righteousFury}}
             <p class="righteous-fury"><strong>{{localize "CHAT.RIGHTEOUS_FURY"}}!</strong></p>
             {{/if}}
+            {{#if fired}}
+            {{!-- Usage chip (bead 4obp, owner decision: manual tracking): the
+                 fired item's name + remaining quantity, and the player's own
+                 one-click spend. No auto-consumption (deferred bead mrl4). --}}
+            <p class="ordnance-usage">
+                <strong>{{localize "CHAT.ORDNANCE_FIRED"}}</strong>
+                <span class="fired-name">{{fired.name}}</span>
+                <span class="fired-quantity">&times;{{fired.quantity}}</span>
+                <button class="rt-ammo-decrement" data-uuid="{{fired.uuid}}"
+                    data-tooltip="{{localize "CHAT.AMMO_SPEND_HINT"}}">{{localize "CHAT.AMMO_SPEND"}}</button>
+            </p>
+            {{/if}}
             {{#if toxic}}
             <div class="toxic-prompt">
                 <p class="toxic-note">{{toxic.prompt}}</p>

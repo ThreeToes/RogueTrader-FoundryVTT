@@ -138,6 +138,37 @@
                 {{/if}}
             </div>
         </div>
+        {{#if launcher}}
+        {{!-- Launcher load model (bead 4obp): loaded item name + remaining
+             quantity display, Load/Unload affordances, and the accepted
+             ordnance kind the homebrewer can author. --}}
+        <div class="stats-row">
+            <div class="stat loaded-ordnance grow-2">
+                <label>{{localize "RANGED_WEAPON.LOADED_ORDNANCE"}}</label>
+                {{#if launcher.loaded}}
+                <p class="static-value"><span class="loaded-name">{{launcher.loaded.name}}</span>
+                    <span class="loaded-quantity">&times;{{launcher.loaded.quantity}}</span></p>
+                {{else}}
+                <p class="static-value">{{localize "RANGED_WEAPON.LOADED_NONE"}}</p>
+                {{/if}}
+            </div>
+            {{#if editable}}
+            <div class="stat ordnance-actions">
+                <label>{{localize "RANGED_WEAPON.ORDNANCE_ACTIONS"}}</label>
+                {{#if launcher.loaded}}
+                <button type="button" data-action="unloadOrdnance">{{localize "RANGED_WEAPON.UNLOAD"}}</button>
+                {{else}}
+                <button type="button" data-action="loadOrdnance">{{localize "RANGED_WEAPON.LOAD"}}</button>
+                {{/if}}
+            </div>
+            <div class="stat accepts-ammo">
+                <label>{{localize "RANGED_WEAPON.ACCEPTS_AMMO"}}</label>
+                <input name="system.acceptsAmmo" type="text" value="{{launcher.acceptsAmmo}}"
+                    data-tooltip="{{localize "RANGED_WEAPON.ACCEPTS_AMMO_HINT"}}" />
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
         {{/if}}
 
         <div class="stats-row">

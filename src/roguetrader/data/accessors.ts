@@ -32,3 +32,17 @@ export {
 export function systemOf(actor: { system: unknown }): Character {
 	return actor.system as Character;
 }
+
+/**
+ * Actor-side launcher-ordnance resolver (bead 4obp, design D4i): wraps an
+ * actor's items collection as the `ammoResolver` attackProfileOf consumes —
+ * an owned item id → owned item document, null when the id resolves to
+ * nothing (deleted/foreign item). Foundry documents pass structurally; the
+ * domain layer stays Foundry-free.
+ */
+export function ownedItemResolver(
+	actor: unknown,
+): (id: string) => object | null {
+	const items = (actor as { items?: Map<string, object> } | null)?.items;
+	return (id) => items?.get(id) ?? null;
+}

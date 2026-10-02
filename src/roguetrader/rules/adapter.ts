@@ -1,4 +1,4 @@
-import { equipStateOf, systemOf } from "../data/accessors";
+import { equipStateOf, ownedItemResolver, systemOf } from "../data/accessors";
 import {
 	locationForHit,
 	parseDamageFormula,
@@ -83,8 +83,10 @@ export async function rollWeaponDamage(
 	const ports = getPorts();
 	const item = actor.items.get(weaponId);
 	// Bead kam1: a MUTATION with a printed attack block (Corrosive Bile) is an
-	// attack too, so it resolves through the same profile as a weapon.
-	const profile = attackProfileOf(item as never);
+	// attack too, so it resolves through the same profile as a weapon. Bead
+	// 4obp: the launcher's fire profile derives from its LOADED ordnance —
+	// unloaded = unusable and the damage roll below refuses.
+	const profile = attackProfileOf(item as never, ownedItemResolver(actor));
 	if (!item || !profile) {
 		ports.notify.warn("ROLL.UNKNOWN_ITEM");
 		return;
@@ -122,8 +124,17 @@ export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
 	const weapon = data.weaponUuid
 		? (documentFromUuid(data.weaponUuid) as foundry.documents.Item | null)
 		: null;
-	const profile = attackProfileOf(weapon as never);
+	// Bead 4obp: resolve the launcher's loaded ordnance against its owning
+	// actor (embedded weapons carry .actor; unowned items cannot have loaded
+	// ordnance resolved at all).
+	const owner = (weapon as { actor?: foundry.documents.Actor | null } | null)
+		?.actor;
+	const profile = attackProfileOf(weapon as never, owner ? ownedItemResolver(owner) : undefined);
 	if (!attacker || !profile) return;
+	if (profile.unusable) {
+		getPorts().notify.warn("ROLL.LAUNCHER_UNLOADED", { weapon: profile.name });
+		return;
+	}
 	const target = data.targetUuid
 		? (documentFromUuid(data.targetUuid) as Actor | null)
 		: null;
@@ -154,6 +165,14 @@ async function postWeaponDamage(
 	isCritical = false,
 ): Promise<void> {
 	const ports = getPorts();
+	// Bead 4obp: an UNLOADED launcher has no damage of its own (the book
+	// prints "—"; the profile carries damage from the loaded ordnance only).
+	// Warn and refuse — no "—" garbage card, no prompt fallback (owner
+	// decision, epic nlsh D5).
+	if (profile.unusable) {
+		ports.notify.warn("ROLL.LAUNCHER_UNLOADED", { weapon: profile.name });
+		return;
+	}
 	// RT notation allows a trailing damage-type suffix ("1d10+4 E") which
 	// Foundry's Roll parser rejects - strip it first (bead 6tr); the parsed
 	// type also backfills profiles that never had a type set. A mutation attack
@@ -360,6 +379,10 @@ async function postWeaponDamage(
 				: null,
 			isCriticalHit: isCritical,
 			targetUuid: target.uuid,
+			// Bead 4obp: the usage chip — what fired + the remaining quantity
+			// (the fired item's Gear.quantity), with the one-click spend button.
+			// Manual tracking: the chip never auto-consumes (bead mrl4 owns that).
+			fired: profile.fired ?? null,
 		},
 		// Apply-damage button data (bead ncc): the card stays a data-only
 		// kernel consumer - the flag carries the displayed outcome so the

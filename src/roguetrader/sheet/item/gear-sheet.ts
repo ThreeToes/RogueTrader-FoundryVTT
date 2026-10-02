@@ -3,6 +3,7 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 
 import { effectActions, effectEditorChoices } from "./effect-actions";
 import { ITEM_DATA_TABS } from "../tabs";
+import { DamageType } from "../../data/item/damage-types";
 import { sheetContext } from "../context";
 import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
@@ -53,6 +54,36 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 				),
 				hardPointCost: system.hardPointCost ?? 0,
 			};
+		}
+
+		// Launcher ordnance block (bead 4obp): read-only display of the fire
+		// profile the launching weapon derives when this ammunition is loaded.
+		// Plain ammunition (no block) renders exactly as before.
+		if (this.document.type === "ammunition") {
+			const system = this.document.system as unknown as {
+				ordnance?: {
+					kind?: string;
+					damage?: string;
+					damageType?: string;
+					penetration?: number;
+					qualities?: string[];
+				};
+			};
+			if (system.ordnance?.damage) {
+				context.ordnance = {
+					kind: system.ordnance.kind ?? "",
+					damage: system.ordnance.damage,
+					damageType: system.ordnance.damageType ?? "",
+					penetration: system.ordnance.penetration ?? 0,
+					qualities: (system.ordnance.qualities ?? []).map(String),
+				};
+			}
+			context.damageTypeChoices = Object.fromEntries(
+				Object.values(DamageType).map((value) => [
+					value,
+					`DAMAGE_TYPE.${value.toUpperCase()}`,
+				]),
+			);
 		}
 
 		context.descriptionHTML = await itemDescriptionHTML(this.document);

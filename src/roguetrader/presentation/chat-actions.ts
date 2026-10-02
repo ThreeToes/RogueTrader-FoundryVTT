@@ -177,3 +177,42 @@ export async function rollDamageButton(
 		},
 	});
 }
+
+/**
+ * Spend one unit of the fired ordnance from the damage card's usage chip
+ * (bead 4obp, owner decision 2026-10-02): DECREMENT ONLY — the card shows
+ * what fired and the remaining quantity, but NOTHING auto-consumes (bead
+ * mrl4 owns that toggle). The fired item's uuid rides the button's data-uuid
+ * (stamped by the profile funnel at damage time); the chip is the shooter's
+ * tool, so the fired item's owner (or a GM) may spend it.
+ */
+export async function spendOrdnanceFromCard(
+	button: HTMLButtonElement,
+): Promise<void> {
+	const uuid = button.dataset.uuid;
+	if (!uuid) return;
+	const item = foundry.utils.fromUuidSync(uuid as never) as unknown as
+		| {
+				name?: string;
+				system?: { quantity?: number };
+				isOwner?: boolean;
+				update?: (data: object) => Promise<void>;
+		  }
+		| null;
+	if (!item) return;
+	// Spend permission = the fired item's owner or a GM (mirrors the
+	// apply-damage ownership gate).
+	const user = (game as unknown as { user?: { isGM?: boolean } }).user;
+	if (!item.isOwner && !user?.isGM) return;
+	const current = Number(item.system?.quantity ?? 0);
+	if (!Number.isFinite(current)) return;
+	button.disabled = true;
+	const next = Math.max(0, current - 1);
+	await item.update?.({
+		system: { quantity: next },
+	});
+	getPorts().notify.info("CHAT.AMMO_SPENT", {
+		name: item.name ?? "",
+		quantity: next,
+	});
+}

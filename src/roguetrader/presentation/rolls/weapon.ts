@@ -10,7 +10,7 @@
 
 import { attackProfileOf } from "../../../ffg/domain/model/attack";
 import { messageFlagNamespace } from "../../../ffg/application/chat-flags";
-import { equipStateOf, systemOf } from "../../data/accessors";
+import { equipStateOf, ownedItemResolver, systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollHandler } from "../../rules/roll-contract";
 import { resolveEvasion } from "./evasion";
@@ -23,7 +23,10 @@ export const weaponHandler: RollHandler<"weapon"> = {
 		const item = actor.items.get(request.itemId);
 		// Bead kam1: a mutation carrying a printed attack block (Corrosive Bile,
 		// Core p369) attacks exactly like a weapon, from the same profile.
-		const profile = attackProfileOf(item as never);
+		// Bead 4obp: launchers derive their fire profile from the LOADED ordnance
+		// (missile ammunition or a throw-family grenade weapon); an unloaded
+		// launcher resolves an unusable profile the damage path refuses.
+		const profile = attackProfileOf(item as never, ownedItemResolver(actor));
 		if (!item || !profile) {
 			ports.notify.warn("ROLL.UNKNOWN_ITEM");
 			return null;

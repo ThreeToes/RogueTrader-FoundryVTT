@@ -82,14 +82,11 @@ interface Violation {
 const KNOWN_GAPS: Readonly<
 	Record<string, { matches: number; reason: string }>
 > = {
-	// Core Rulebook Table 5-6 (printed p127) prints "—" for the missile class
-	// (launcher ordnance, cannot be thrown); RangedWeapon.class is required
-	// with choices basic|pistol|heavy|thrown and no blank. Needs a "—"
-	// (or nullable) choice.
-	"equipment/weapons.yaml::ranged-weapon::class": {
-		matches: 2,
-		reason: 'class "—" on Frag/Krak Missile — the book prints an em-dash there; awaiting owner decision on the ranged class field (sweep bead 1e7h, escalated item 2)',
-	},
+	// "Deceive (+30)" prints ladder 4 on the statblock, but ladder is
+	// min 1 max 3 (Known/+10/+20, Core Rulebook printed p74 — the owner
+	// confirmed the three-step cap 2026-10-02, bead i1f4). The Stryxis
+	// supplement quirk stays AS PRINTED in the data (Edge of the Abyss
+	// printed p78) — a deliberate, allowlisted data quirk, not an error.
 	// "Deceive (+30)" prints ladder 4 on the statblock, but ladder is
 	// min 1 max 3 (Known/+10/+20). Downgrading the data is silent wrong data;
 	// allowing 4 is a schema change.
@@ -99,7 +96,7 @@ const KNOWN_GAPS: Readonly<
 	},
 };
 
-const EXPECTED_KNOWN_GAPS = 2;
+const EXPECTED_KNOWN_GAPS = 1;
 
 function packDirs(): string[] {
 	return readdirSync(PACK_ROOT)

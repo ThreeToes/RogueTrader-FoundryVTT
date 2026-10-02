@@ -25,6 +25,20 @@ describe("Ammunition data model", () => {
 		expect(schema.availability).toBeDefined();
 		expect(schema.weight).toBeDefined();
 	});
+	// Bead 4obp: the launcher-ordnance block — present ONLY on ammunition
+	// that is real attack ordnance; launchers derive their fire profile from
+	// it when loaded. Plain ammunition leaves it blank (initials).
+	test("ordnance block: blank initial means 'plain ammunition'", () => {
+		const ordnance = schema.ordnance as StubField;
+		expect(ordnance).toBeDefined();
+		const fields = ordnance.fields as unknown as Record<string, StubField>;
+		expect(fields.kind.opts.initial).toBe("");
+		expect(fields.damage.opts.initial).toBe("");
+		expect(fields.damageType.opts.initial).toBe("");
+		expect(fields.penetration.opts.initial).toBe(0);
+		expect(fields.penetration.opts.min).toBe(0);
+		expect(fields.penetration.opts.integer).toBe(true);
+	});
 });
 
 describe("ForceField data model", () => {
@@ -91,6 +105,27 @@ describe("Gear-derived models inherit quantity", () => {
 		const opts = quantityOf(WeaponModification);
 		expect(opts.initial).toBe(1);
 		expect(opts.min).toBe(0);
+	});
+});
+
+describe("RangedWeapon load-model fields (bead 4obp)", () => {
+	const schema = RangedWeapon.defineSchema() as unknown as Record<
+		string,
+		StubField
+	>;
+	test("acceptsAmmo defaults to empty (a launcher accepts NOTHING until authored)", () => {
+		const accepts = schema.acceptsAmmo as StubField;
+		expect(accepts).toBeDefined();
+		expect(accepts.opts.initial).toBe("");
+		expect(accepts.opts.required).toBe(true);
+		expect(accepts.opts.nullable).toBe(false);
+	});
+	test("loadedAmmoId defaults to empty (compendium launchers ship unloaded)", () => {
+		const loaded = schema.loadedAmmoId as StubField;
+		expect(loaded).toBeDefined();
+		expect(loaded.opts.initial).toBe("");
+		expect(loaded.opts.required).toBe(true);
+		expect(loaded.opts.nullable).toBe(false);
 	});
 });
 

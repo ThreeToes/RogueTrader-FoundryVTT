@@ -5,7 +5,7 @@
  * Split out of the former sheet/init.ts composition root.
  */
 
-import { applyDamageFromCard, rollDamageButton, toxicToughnessTestFromCard } from "../presentation/chat-actions";
+import { applyDamageFromCard, rollDamageButton, spendOrdnanceFromCard, toxicToughnessTestFromCard } from "../presentation/chat-actions";
 import { registerCreatorMenus } from "../presentation/creator-menus";
 import { missingSkillGrants } from "../rules/default-skills";
 import { vehicleTokenFootprint } from "../rules/vehicle-tokens";
@@ -51,9 +51,22 @@ function registerChatActions(): void {
 			const toxicButton = target?.closest<HTMLButtonElement>(
 				"button.rt-toxic-test",
 			);
-			if (!toxicButton || toxicButton.disabled) return;
-			toxicToughnessTestFromCard(toxicButton).catch((error) =>
-				console.error("rogue-trader: toxic toughness test failed", error),
+			if (toxicButton) {
+				if (!toxicButton.disabled) {
+					toxicToughnessTestFromCard(toxicButton).catch((error) =>
+						console.error("rogue-trader: toxic toughness test failed", error),
+					);
+				}
+				return;
+			}
+			// Ordnance spend on the damage card's usage chip (bead 4obp): a
+			// DECREMENT only — manual tracking, no auto-consumption (bead mrl4).
+			const spendButton = target?.closest<HTMLButtonElement>(
+				"button.rt-ammo-decrement",
+			);
+			if (!spendButton || spendButton.disabled) return;
+			spendOrdnanceFromCard(spendButton).catch((error) =>
+				console.error("rogue-trader: ordnance spend failed", error),
 			);
 		});
 	});

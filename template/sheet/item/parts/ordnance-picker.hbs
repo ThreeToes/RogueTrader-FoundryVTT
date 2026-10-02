@@ -1,0 +1,15 @@
+<div class="ordnance-picker">
+    <div class="catalog">
+        <h2>{{localize "RANGED_WEAPON.LOADED_ORDNANCE"}}</h2>
+        {{#each candidates as |c|}}
+        <div class="catalog-row">
+            <span class="name">{{c.name}} <em>&times;{{c.quantity}}</em></span>
+            <a class="add-row" data-action="pick" data-item-id="{{c.id}}"
+                data-tooltip="{{localize "RANGED_WEAPON.LOAD"}}"><i class="fas fa-plus"></i></a>
+        </div>
+        {{else}}
+        <p class="hint">{{#if accepted}}{{localize "RANGED_WEAPON.LOAD_NO_CANDIDATES"}}{{else}}{{localize "RANGED_WEAPON.ACCEPTS_NONE"}}{{/if}}
+        </p>
+        {{/each}}
+    </div>
+</div>

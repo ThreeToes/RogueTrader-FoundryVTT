@@ -24,7 +24,8 @@ type DirectoryEntryOption = {
 	label: string;
 	icon: string;
 	onClick: (event?: PointerEvent, element?: HTMLElement) => void;
-	condition?: (element?: HTMLElement) => boolean;
+	/** v14 name — the old `condition` logs a deprecation warning at render. */
+	visible?: (element?: HTMLElement) => boolean;
 };
 
 type CreatorActor = foundry.documents.Actor | undefined;
@@ -141,7 +142,7 @@ export function registerCreatorMenus(): void {
 			entryOptions.push({
 				label: creator.labelKey,
 				icon: creator.icon,
-				condition: (element) =>
+				visible: (element) =>
 					isType(resolveEntryActor(element), creator.actorType),
 				onClick: (_event, element) => {
 					const candidate = resolveEntryActor(element);

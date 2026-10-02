@@ -15,6 +15,7 @@ import {
 	rollSkillUntrained,
 	rollSnapOut,
 	rollTest,
+	rollToxicToughnessTest,
 	rollWeaponAttack,
 } from "../rules/adapter";
 
@@ -31,4 +32,5 @@ export function registerRollApi(): void {
 	git.rogueTrader.rollNavigatorPower = rollNavigatorPower;
 	git.rogueTrader.rollFearTest = rollFearTest;
 	git.rogueTrader.rollSnapOut = rollSnapOut;
+	git.rogueTrader.rollToxicToughnessTest = rollToxicToughnessTest;
 }

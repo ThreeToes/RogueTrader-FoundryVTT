@@ -54,6 +54,7 @@ const ROLL_FUNCTIONS = [
 	"rollSnapOut",
 	"rollShipSalvo",
 	"rollShipRepair",
+	"rollToxicToughnessTest",
 	"performRoll",
 	"rollSkillOutcome",
 ] as const;

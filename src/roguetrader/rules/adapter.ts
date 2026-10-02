@@ -17,6 +17,7 @@ import {
 	targetToughnessMultiplier,
 } from "./talent-effects";
 import { postCard, type DamageRollFlag } from "./chat-flags";
+import { toxicActivates, toxicToughnessPenalty } from "./toxic";
 import { messageFlagNamespace } from "../../ffg/application/chat-flags";
 import { type AttackProfile, attackProfileOf } from "../../ffg/domain/model/attack";
 
@@ -43,6 +44,7 @@ export {
 	rollSnapOut,
 	rollShipSalvo,
 	rollShipRepair,
+	rollToxicToughnessTest,
 	performRoll,
 } from "./roll-system";
 export type {
@@ -223,7 +225,8 @@ async function postWeaponDamage(
 	}
 	// Toxic is conditional on the hit actually wounding (book: "anyone that
 	// takes Damage from a Toxic weapon, after reduction for Armour and
-	// Toughness Bonus"); the note is added after resolveDamage below.
+	// Toughness Bonus"); the note + test button are added after resolveDamage
+	// below (the gate is toxicActivates, rules/toxic.ts).
 
 	// Bead yojf: the kernel profile resolves through ports.config.profile()
 	// instead of a direct rtCore import, so a sibling module swaps one binding.
@@ -314,9 +317,16 @@ async function postWeaponDamage(
 	});
 
 	const locationLabelKey = bodyLocationLabelKey(location);
-	// Toxic (bead gci0, book wording): the Toughness-test prompt only when
-	// the hit dealt damage after armour + Toughness reduction.
-	if (mechanics.toxic && damage.wounds > 0) {
+	// Toxic (beads gci0 + d8bc, owner rule text): the Toughness-test gate only
+	// when the hit dealt damage after Armour + Toughness reduction (zero
+	// damage = no poison). The card carries the computed −5-per-damage-point
+	// penalty and a button that routes the victim's Toughness Test through
+	// the shared Test machinery (visible funnel contributor); the GM-facing
+	// note on secondary effects is the CHAT.QUALITY_TOXIC line (1d10 Impact,
+	// no reduction — Core Rulebook printed p117; per-toxin extras stay
+	// GM-facing prose).
+	const toxicActivated = toxicActivates(mechanics.toxic, damage.wounds);
+	if (toxicActivated) {
 		qualityNotes.push(getPorts().i18n.t("CHAT.QUALITY_TOXIC"));
 	}
 	await postCard(
@@ -334,6 +344,20 @@ async function postWeaponDamage(
 			// Bead gci0: roll-mechanic quality notes (Tearing/Toxic/Blast);
 			// Toxic only when the hit dealt damage after soak.
 			qualityNotes,
+			// Bead d8bc: the Toughness-test prompt behind the damage-dealt
+			// gate — the penalty is computed once (−5 per damage point) and
+			// the button routes through the shared Test machinery.
+			toxic: toxicActivated
+				? {
+						targetUuid: target.uuid,
+						wounds: damage.wounds,
+						penalty: toxicToughnessPenalty(damage.wounds),
+						prompt: getPorts().i18n.t("CHAT.TOXIC_PROMPT", {
+							penalty: toxicToughnessPenalty(damage.wounds),
+							wounds: damage.wounds,
+						}),
+					}
+				: null,
 			isCriticalHit: isCritical,
 			targetUuid: target.uuid,
 		},

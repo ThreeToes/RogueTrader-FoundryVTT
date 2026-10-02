@@ -40,6 +40,7 @@ export {
 	rollSkillUntrained,
 	rollSnapOut,
 	rollTest,
+	rollToxicToughnessTest,
 	rollWeaponAttack,
 } from "../presentation/rolls/perform";
 export type { RollTestOptions } from "../presentation/rolls/perform";

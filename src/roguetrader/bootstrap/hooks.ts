@@ -5,7 +5,7 @@
  * Split out of the former sheet/init.ts composition root.
  */
 
-import { applyDamageFromCard, rollDamageButton } from "../presentation/chat-actions";
+import { applyDamageFromCard, rollDamageButton, toxicToughnessTestFromCard } from "../presentation/chat-actions";
 import { registerCreatorMenus } from "../presentation/creator-menus";
 import { missingSkillGrants } from "../rules/default-skills";
 import { vehicleTokenFootprint } from "../rules/vehicle-tokens";
@@ -37,9 +37,23 @@ function registerChatActions(): void {
 			const damageButton = target?.closest<HTMLButtonElement>(
 				"button.rt-roll-damage",
 			);
-			if (!damageButton || damageButton.disabled) return;
-			rollDamageButton(damageButton).catch((error) =>
-				console.error("rogue-trader: damage roll failed", error),
+			if (damageButton) {
+				if (!damageButton.disabled) {
+					rollDamageButton(damageButton).catch((error) =>
+						console.error("rogue-trader: damage roll failed", error),
+					);
+				}
+				return;
+			}
+			// Toxic Toughness Test on the damage card (bead d8bc): the victim's
+			// test runs through the shared Test machinery with the −5-per-damage
+			// penalty as a visible funnel contributor.
+			const toxicButton = target?.closest<HTMLButtonElement>(
+				"button.rt-toxic-test",
+			);
+			if (!toxicButton || toxicButton.disabled) return;
+			toxicToughnessTestFromCard(toxicButton).catch((error) =>
+				console.error("rogue-trader: toxic toughness test failed", error),
 			);
 		});
 	});

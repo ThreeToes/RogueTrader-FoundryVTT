@@ -212,6 +212,7 @@ describe("composition root (beads mnky + 1dj1)", () => {
 			"rollNavigatorPower",
 			"rollFearTest",
 			"rollSnapOut",
+			"rollToxicToughnessTest",
 		]) {
 			expect(typeof api?.[name]).toBe("function");
 		}

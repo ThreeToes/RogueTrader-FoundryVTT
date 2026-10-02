@@ -14,7 +14,7 @@ import {
 	readMessageFlag,
 } from "../../ffg/application/chat-flags";
 import { applyDamageWithCriticals, postCriticalCard } from "../rules/criticals";
-import { rollDamageForCard } from "../rules/adapter";
+import { rollDamageForCard, rollToxicToughnessTest } from "../rules/adapter";
 
 /**
  * Apply the wounds shown on a damage chat card to the flagged target
@@ -117,6 +117,29 @@ async function applyToTarget(
 		},
 	);
 	getPorts().notify.info("DAMAGE.APPLIED", { wounds: outcome.woundsApplied });
+}
+
+/**
+ * Toxic Toughness Test from the damage card (bead d8bc): the card button
+ * carries the target, hit location outcome and the damage taken so the
+ * victim's Toughness Test (−5 per damage point) runs through the shared Test
+ * machinery with the penalty as a visible funnel contributor. Ownership is
+ * enforced by performRoll (a loud warn, not a silent no-op); the button
+ * disables once clicked so a second click cannot double-fire while the
+ * dialog is open.
+ */
+export async function toxicToughnessTestFromCard(
+	button: HTMLButtonElement,
+): Promise<void> {
+	const targetUuid = button.dataset.target;
+	const wounds = Number(button.dataset.wounds ?? 0);
+	if (!targetUuid || !Number.isFinite(wounds) || wounds < 1) return;
+	const target = foundry.utils.fromUuidSync(targetUuid) as unknown as
+		| (Actor & { isOwner?: boolean })
+		| null;
+	if (!target) return;
+	button.disabled = true;
+	await rollToxicToughnessTest(target, wounds);
 }
 
 /**

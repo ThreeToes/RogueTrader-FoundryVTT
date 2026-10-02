@@ -128,6 +128,16 @@ const QUALITIES = {
 	razorSharp: "QUALITY.RAZOR_SHARP",
 	storm: "QUALITY.STORM",
 	tearing: "QUALITY.TEARING",
+	// Toxic — a weapon quality, NOT a damage type (bead mp6g, owner rule text
+	// 2026-10-02): the target must suffer at least 1 point of Damage from the
+	// initial strike (after Armour and Toughness reductions) before the poison
+	// activates, then immediately makes a Toughness Test at –5 per point of
+	// Damage taken from that hit; failure inflicts the toxin's secondary
+	// effects. Book wording (Core Rulebook printed p117): a failed test deals
+	// an immediate 1d10 Impact Damage with no reduction — the canonical basic
+	// toxin. Mechanics: sibling bead d8bc (damage gate + Toughness Test). The
+	// Into the Storm grenades (Bloodfire/Toxin, Table 3-2 printed p117 prose)
+	// carry the quality via their prose, not via damageType.
 	toxic: "QUALITY.TOXIC",
 	unbalanced: "QUALITY.UNBALANCED",
 	unreliable: "QUALITY.UNRELIABLE",

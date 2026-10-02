@@ -16,6 +16,7 @@ import { getPorts } from "../../infrastructure/foundry/ports";
 import { postCard } from "../../rules/chat-flags";
 import { carriedConditions, snapOutReady } from "../../rules/conditions";
 import { talentConditions } from "../../registry";
+import { toxicToughnessModifier } from "../../rules/toxic";
 import { collectConditionKeys, collectTestModifiers } from "../../rules/funnel";
 import type {
 	RollHandler,
@@ -254,6 +255,32 @@ export async function rollSkill(
 		itemId: skillItemId,
 		modifiers: options.modifiers,
 		skipDialog: options.skipDialog,
+	});
+}
+
+/**
+ * Toxic quality Toughness Test (bead d8bc, owner rule text; Core Rulebook
+ * printed p117): the victim immediately makes a Toughness Test at −5 per
+ * point of Damage taken from the toxic hit; failure inflicts the toxin's
+ * secondary effects. The penalty is a VISIBLE funnel modifier (breakdown in
+ * the TestDialog and on the card) via toxicToughnessModifier. Rolled for the
+ * TARGET actor — typically the GM presses the damage card's button — so the
+ * ownership gate in performRoll enforces it loudly when someone else tries.
+ */
+export async function rollToxicToughnessTest(
+	target: Actor,
+	woundsAfterSoak: number,
+): Promise<void> {
+	await performRoll({
+		kind: "characteristic",
+		actor: target,
+		key: "t",
+		modifiers: [
+			toxicToughnessModifier(
+				woundsAfterSoak,
+				getPorts().i18n.t("CHAT.TOXIC_MODIFIER"),
+			),
+		],
 	});
 }
 

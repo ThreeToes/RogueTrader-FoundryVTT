@@ -257,10 +257,10 @@ export function originEntryFromDoc(doc: {
 		col: num(s, "col"),
 		// Species binding: blank = the human Origin Path (bead ghmn).
 		species: optionalStr(s, "species"),
-		// Alternate substitution (bead b03f): a core key, or an array of them.
-		replaces: Array.isArray(s.replaces)
-			? (s.replaces as string[])
-			: optionalStr(s, "replaces"),
+		// Alternate substitution (bead b03f): a core key, or an array of them
+		// (bead w4gt). Normalised here so every runtime entry carries the same
+		// shape — see normaliseReplaces.
+		replaces: normaliseReplaces(s.replaces),
 		name: doc.name ?? "",
 		description: str(s, "description"),
 		effect: optionalStr(s, "effect"),
@@ -269,6 +269,24 @@ export function originEntryFromDoc(doc: {
 			? (s.variants as OriginVariant[])
 			: undefined,
 	};
+}
+
+/**
+ * Normalise an authored `replaces` value to the runtime shape (bead w4gt).
+ *
+ * The pack authors BOTH shapes: the single string (Frontier World for Death
+ * World, ITS p28) and the array (Fringe Survivor for Scavenger OR Savant,
+ * p17). Both arrive as a string[]; absent / blank / an empty array collapses
+ * to undefined, so an ordinary entry always stays FALSY (an ArrayField's
+ * initial is [], and `![]` is false — without this collapse every ordinary
+ * origin would look like an alternate to a truthiness check).
+ */
+function normaliseReplaces(value: unknown): string[] | undefined {
+	const values = Array.isArray(value) ? value : [value];
+	const keys = values.filter(
+		(v): v is string => typeof v === "string" && v.trim() !== "",
+	);
+	return keys.length > 0 ? keys : undefined;
 }
 
 /** A path entry's species binding: blank = human. */

@@ -24,13 +24,16 @@ export class Origin extends Gear {
 	declare row: string;
 	declare col: number;
 	/**
-	 * Core origin key this entry SUBSTITUTES for (bead b03f). Splatbook
+	 * Core origin key(s) this entry SUBSTITUTES for (bead b03f). Splatbook
 	 * alternates are not extra chart columns: the book says "On the Origin Path
 	 * chart, Frontier World may be taken instead of Death World", and the chart
 	 * is a +/-1 column-adjacency graph (rules/origins.ts allowedColumns), so
-	 * appending a column would corrupt every pick. Blank = an ordinary entry.
+	 * appending a column would corrupt every pick. Blank/empty = an ordinary
+	 * entry. Bead w4gt: Into the Storm's expanded origins may substitute EITHER
+	 * of two core entries (p17 "instead of the Scavenger or Savant entry"), so
+	 * the authored shape is a key OR an array of keys — see the field below.
 	 */
-	declare replaces: string;
+	declare replaces: string | string[];
 	/**
 	 * Species this path entry belongs to (bead ghmn); blank = human. Xenos have
 	 * their own path (Into the Storm p48: the Kroot "do not use the Origin
@@ -118,12 +121,23 @@ export class Origin extends Gear {
 			/** Column index (0-based) on the p16 chart; adjacency uses this. */
 			col: new fields.NumberField({ min: 0, integer: true, initial: 0 }),
 			/**
-			 * Splatbook alternate: the core origin key it may be taken INSTEAD of
-			 * (bead b03f). Blank on every core entry. The creator offers such an
-			 * entry as an alternative AT that column rather than as a new column,
-			 * because the chart's reachability is column adjacency.
+			 * Splatbook alternate: the core origin key(s) this entry may be taken
+			 * INSTEAD of (bead b03f). Blank on every core entry. The creator offers
+			 * such an entry as an alternative AT that column rather than as a new
+			 * column, because the chart's reachability is column adjacency.
+			 *
+			 * BEAD w4gt: an ArrayField of strings, not a bare string, because the
+			 * ITS expanded origins substitute EITHER of two chart slots (p17
+			 * "instead of the Scavenger or Savant entry") — 13 pack docs author the
+			 * array form, 6 author the single form. Foundry's ArrayField._cast turns
+			 * a single string into a one-element array at clean, so both shapes
+			 * validate and normalise identically. Every reader goes through
+			 * rules/origins.ts's replacedKeys — read the field raw only via the
+			 * documented mapper (originEntryFromDoc).
 			 */
-			replaces: textField(),
+			replaces: new fields.ArrayField(textField(), {
+				initial: () => [],
+			}),
 			/** Species path binding (bead ghmn); blank = the human Origin Path. */
 			species: textField(),
 			/** Verbatim effect text for options without variants. */

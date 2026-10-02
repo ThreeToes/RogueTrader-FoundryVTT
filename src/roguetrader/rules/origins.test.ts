@@ -6,6 +6,7 @@ import {
 	characteristicDeltas,
 	effectiveMechanics,
 	entryColumns,
+	type OriginEntry,
 	evaluateOriginDice,
 	fateFromTable,
 	getOriginEntries,
@@ -15,6 +16,7 @@ import {
 	originRowChoices,
 	originRowsForSpecies,
 	originsInRow,
+	replacedKeys,
 	resolveOrigins,
 	setOriginEntries,
 	speciesKeyOfEntry,
@@ -618,5 +620,84 @@ describe("stored origin picks (bead 58js)", () => {
 				],
 			}),
 		).toEqual({ klan: { key: "klan-bad-moons" } });
+	});
+});
+
+// Bead w4gt: the schema (Origin.replaces) accepts BOTH authored shapes — a
+// single core key and an array of them — because the ITS expanded origins
+// substitute EITHER of two chart columns. The consumers normalise both to a
+// string[] so no reader forks on the shape.
+describe("replaces: single string and array shapes normalise identically (bead w4gt)", () => {
+	// Fixture pool run everywhere (pure): a core entry plus two alternates of
+	// it, one authored bare, one as a one-element array. Restored afterwards so
+	// the pack-driven suites keep working against the real content.
+	const restore = () => setOriginEntries(ORIGIN_ENTRIES);
+
+	test("replacedKeys normalises both shapes to the same array", () => {
+		expect(replacedKeys({ replaces: "death-world" })).toEqual(["death-world"]);
+		expect(replacedKeys({ replaces: ["death-world"] })).toEqual([
+			"death-world",
+		]);
+		expect(replacedKeys({ replaces: ["scavenger", "savant"] })).toEqual([
+			"scavenger",
+			"savant",
+		]);
+	});
+
+	test("absent / blank / empty-array entries are ordinary (falsy)", () => {
+		expect(replacedKeys({})).toEqual([]);
+		expect(replacedKeys({ replaces: "" })).toEqual([]);
+		expect(replacedKeys({ replaces: [] })).toEqual([]);
+	});
+
+	test("entryColumns treats a single-string alternate like a one-element array", () => {
+		const entry = (key: string, col: number, replaces: string | string[]): OriginEntry => ({
+			key,
+			row: "birthright",
+			col,
+			replaces,
+			name: key,
+			description: "",
+			mechanics: {},
+		});
+		setOriginEntries([
+			entry("fixture-core", 3, ""),
+			entry("fixture-alt-bare", 1, "fixture-core"),
+			entry("fixture-alt-array", 2, ["fixture-core"]),
+		]);
+		try {
+			expect(entryColumns(originByKey("fixture-alt-bare")!)).toEqual([1, 3]);
+			expect(entryColumns(originByKey("fixture-alt-array")!)).toEqual([2, 3]);
+		} finally {
+			restore();
+		}
+	});
+});
+
+packDescribe("replaces pack normalisation (bead w4gt)", () => {
+	// The 6 single-string docs and the 13 array docs must both come through the
+	// mapper as a string[] (the DataModel's ArrayField casts a single string to
+	// a one-element array in the live world; the mapper mirrors that here).
+	test("single-string docs normalise to a one-element array", () => {
+		const frontier = originByKey("frontier-world");
+		expect(frontier?.replaces).toEqual(["death-world"]);
+	});
+
+	test("array docs keep every key", () => {
+		expect(originByKey("fringe-survivor")?.replaces).toEqual([
+			"scavenger",
+			"savant",
+		]);
+	});
+
+	test("ordinary entries stay falsy despite the ArrayField initial", () => {
+		for (const entry of ORIGIN_ENTRIES) {
+			if (entry.replaces) {
+				expect(entry.replaces.length, entry.key).toBeGreaterThan(0);
+				for (const key of entry.replaces) {
+					expect(typeof key, entry.key).toBe("string");
+				}
+			}
+		}
 	});
 });

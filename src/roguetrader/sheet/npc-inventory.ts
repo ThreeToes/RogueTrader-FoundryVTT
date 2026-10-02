@@ -59,6 +59,10 @@ const GROUP_ORDER: ReadonlyArray<{ types: readonly string[]; labelKey: string }>
 		{ types: ["melee-weapon"], labelKey: "TYPES.Item.melee-weapon" },
 		{ types: ["talent"], labelKey: "TYPES.Item.talent" },
 		{ types: ["gear"], labelKey: "TYPES.Item.gear" },
+		// Ammunition (bead 8uc7): owned ordnance must be visible on the tab
+		// so the GM can drag it onto a launcher's weapon sheet. NOT equippable
+		// (stow/carry does not apply) — it gets no toggle anchor.
+		{ types: ["ammunition"], labelKey: "TYPES.Item.ammunition" },
 	];
 
 /** Types handled elsewhere on the tab (armour panel) or other tabs. */

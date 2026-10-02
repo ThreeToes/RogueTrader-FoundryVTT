@@ -36,6 +36,17 @@
             {{#> "rt/weapon-row" id=item.id uuid=item.uuid name=item.name
                 weight=item.weight equipped=item.equipped equipStateLabel=item.equipStateLabel}}
             {{/"rt/weapon-row"}}
+            {{else if item.isAmmunition}}
+            {{!-- Ammunition row (bead 8uc7): owned ordnance must be visible +
+                 draggable out of the inventory (core {type, uuid} drag the
+                 weapon sheet's _onDrop resolves and loads). NOT equippable,
+                 so no equip toggle; the weight slot shows the Gear-base
+                 quantity as the xN usage count instead. --}}
+            {{#> "rt/inv-row" id=item.id uuid=item.uuid name=item.name draggable=true gripVertical=true
+                openItem=true openItemTooltip=(localize "GEAR.OPEN_SHEET")
+                weight=(concat "×" item.quantity) weightTooltip=(localize "AMMUNITION.QUANTITY")
+                deleteAction="deleteItem" deleteTooltip=(localize "GEAR.DELETE")}}
+            {{/"rt/inv-row"}}
             {{else}}
             {{#> "rt/inv-row" id=item.id uuid=item.uuid name=item.name draggable=true gripVertical=true
                 openItem=true openItemTooltip=(localize "GEAR.OPEN_SHEET")

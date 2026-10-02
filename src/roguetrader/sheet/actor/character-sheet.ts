@@ -913,6 +913,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 						name: item.name,
 						uuid: item.uuid,
 						weight: (item.system as unknown as { weight?: number }).weight ?? 0,
+						// Gear-base quantity (bead 1sxq) - only the ammunition
+						// group renders it (xN usage count, bead 8uc7).
+						quantity:
+							(item.system as unknown as { quantity?: number }).quantity ?? 0,
 						equipState: stateKey,
 						equipStateLabel: label,
 						equipped: equipState === "carried" || equipState === "worn",
@@ -930,6 +934,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				equipState: string;
 				equipStateLabel: string;
 				equipped: boolean;
+				/** Only set on the ammunition group's rows (bead 8uc7). */
+				quantity?: number;
+				isAmmunition?: boolean;
 			}>;
 			addLabel?: string;
 			addAction?: string;
@@ -940,6 +947,19 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			},
 			{ label: "ARMOUR.HEADER", items: byType(["armour"]) },
 			{ label: "GEAR.HEADER", items: byType(["gear"]) },
+			// Ammunition group (bead 8uc7): owned ordnance was invisible on
+			// the inventory (no group in this context), so it could not be
+			// dragged onto a launcher. Rows stay draggable (core {type,
+			// uuid}); they show xN quantity in the weight slot and carry NO
+			// equip toggle (ammo is not equippable; the inventory template's
+			// isAmmunition branch renders them).
+			{
+				label: "AMMUNITION.HEADER",
+				items: byType(["ammunition"]).map((row) => ({
+					...row,
+					isAmmunition: true,
+				})),
+			},
 		];
 
 		// Armour: highest AP per body location across WORN armour items (bead

@@ -34,14 +34,34 @@ describe("npcInventoryGroups (no more all-types-in-one list)", () => {
 			{ id: "w1", name: "Lasgun", type: "ranged-weapon" },
 			{ id: "w2", name: "Chainsword", type: "melee-weapon" },
 			{ id: "g1", name: "Rope", type: "gear" },
+			{ id: "a1", name: "Frag Missile", type: "ammunition" },
 		]);
 		expect(groups.map((g) => g.labelKey)).toEqual([
 			"TYPES.Item.ranged-weapon",
 			"TYPES.Item.melee-weapon",
 			"TYPES.Item.talent",
 			"TYPES.Item.gear",
+			// Ammunition gets its OWN group (bead 8uc7): with no group it
+			// fell into OTHER and could not be dragged onto a launcher.
+			"TYPES.Item.ammunition",
 		]);
 		expect(groups[0].items.map((i) => i.name)).toEqual(["Lasgun"]);
+	});
+
+	it("ammunition is grouped but NOT equippable (no stow/carry toggle, bead 8uc7)", () => {
+		const groups = npcInventoryGroups([
+			{ id: "a1", name: "Frag Missile", type: "ammunition" },
+		]);
+		expect(groups.map((g) => g.labelKey)).toEqual([
+			"TYPES.Item.ammunition",
+		]);
+		expect(groups[0].items[0]).toMatchObject({
+			id: "a1",
+			name: "Frag Missile",
+			type: "ammunition",
+			equippable: false,
+			ready: false,
+		});
 	});
 
 	it("marks weapons/gear equippable with ready = carried", () => {

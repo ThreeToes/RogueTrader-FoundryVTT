@@ -49,6 +49,21 @@ export class Gear extends foundry.abstract.TypeDataModel<
 				initial: 0,
 				required: true,
 			}),
+			/**
+			 * Stack count (bead 1sxq, owner decision 2026-10-02): every physical
+			 * item family inherits quantity from this Gear base. An item exists
+			 * at quantity 1; 0 means spent/depleted (e.g. fired ordnance).
+			 * Introduced for the launcher-ammunition usage epic — grenade
+			 * weapons count as consumable ordnance that depletes with use —
+			 * but it is a general Items field, not launcher-specific:
+			 * homebrewers can stack any physical item.
+			 */
+			quantity: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 1,
+				required: true,
+			}),
 			shortDescription: new foundry.data.fields.StringField(),
 			description: new foundry.data.fields.HTMLField(),
 			effects: effectsField(),

@@ -547,26 +547,38 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		tabs: {
 			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
 		},
+		// Each tab part's root <section class="tab"> is the scroll container
+		// (.rogue-trader .tab { overflow-y: auto }): the scrollable descriptor
+		// makes ApplicationV2 preserve scrollTop across part replacement
+		// (bead ss1d) so a delete/re-render no longer jumps the sheet to the
+		// top. "" = the part's own root element (core _syncPartState).
 		stats: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/stats.hbs",
+			scrollable: [""],
 		},
 		combat: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/combat.hbs",
+			scrollable: [""],
 		},
 		inventory: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/inventory.hbs",
+			scrollable: [""],
 		},
 		background: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/background.hbs",
+			scrollable: [""],
 		},
 		skills: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/skills.hbs",
+			scrollable: [""],
 		},
 		psychic: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/psychic.hbs",
+			scrollable: [""],
 		},
 		notes: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/notes.hbs",
+			scrollable: [""],
 		},
 	};
 
@@ -1143,6 +1155,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				CharacterSheet.#madnessRows() as never,
 				system as unknown as MadnessPoints,
 				this.actor.items.map((item) => ({
+					id: item.id ?? "",
 					name: item.name ?? "",
 					type: item.type,
 					system: item.system as unknown as OwnedAfflictionLike["system"],

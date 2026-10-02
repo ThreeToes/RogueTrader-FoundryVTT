@@ -7,6 +7,7 @@ import {
 	mutationTestsDue,
 	nextDisorderThreshold,
 	nextMutationThreshold,
+	madnessSheetContext,
 	traumaRoll,
 	type TrackRowLike,
 } from "./madness";
@@ -114,5 +115,44 @@ describe("malignancy and mutation tests (p299)", () => {
 		expect(mutationTestsDue(29)).toBe(0);
 		expect(mutationTestsDue(30)).toBe(1);
 		expect(mutationTestsDue(60)).toBe(2);
+	});
+});
+
+describe("madnessSheetContext (bead chsi regression)", () => {
+	// The character sheet passes owned Items in so the chips can target them
+	// (delete anchor, bead fjtr; mutation attack roll, bead kam1). A context
+	// mapping that drops `id` renders data-item-id="" and both handlers
+	// early-return on the empty string — pin the pass-through.
+	test("affliction entries echo the ids of the owned items", () => {
+		const context = madnessSheetContext(
+			[],
+			{},
+			[
+				{
+					id: "mutation-id-1",
+					type: "mutation",
+					system: { description: "A mutation" },
+				},
+				{
+					id: "disorder-id-2",
+					type: "madnessentry",
+					system: { kind: "disorder", acquiredSeverity: "Minor" },
+				},
+			],
+			{},
+		);
+		const ids = context.madness.afflictionGroups.flatMap((g) =>
+			g.entries.map((e) => e.id),
+		);
+		expect(ids).toContain("mutation-id-1");
+		expect(ids).toContain("disorder-id-2");
+	});
+
+	test("missing ids fall back to the empty string the template guards against", () => {
+		const context = madnessSheetContext([], {}, [{ type: "mutation" }], {});
+		const ids = context.madness.afflictionGroups.flatMap((g) =>
+			g.entries.map((e) => e.id),
+		);
+		expect(ids).toEqual([""]);
 	});
 });

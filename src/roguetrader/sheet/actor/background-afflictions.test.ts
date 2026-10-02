@@ -37,4 +37,21 @@ describe("background tab affliction delete affordance (bead fjtr)", () => {
 	test("the attack-mutation roll chip is kept alongside the delete anchor", () => {
 		expect(afflictions).toContain('data-action="rollWeapon"');
 	});
+
+	// Context-side half of the pin (bead chsi): the anchors above read
+	// {{a.id}}, so the sheet must actually PUT an item id on each chip —
+	// #madnessContext's item mapping dropped it once and every chip rendered
+	// data-item-id="" (delete + attack roll both silently no-op'd).
+	test("the character sheet passes item ids into madnessSheetContext", () => {
+		const sheet = readFileSync(
+			"src/roguetrader/sheet/actor/character-sheet.ts",
+			"utf8",
+		);
+		const start = sheet.indexOf("madnessSheetContext(");
+		const end = sheet.indexOf("this.actor as unknown as never", start);
+		const call = sheet.slice(start, end);
+		expect(start).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+		expect(call).toContain("id: item.id ??");
+	});
 });

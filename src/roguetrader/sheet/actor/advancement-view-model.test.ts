@@ -10,6 +10,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	buildAdvancementViewModel,
 	filterAdvancementRows,
+	skillAtCapReason,
 	type AdvancementViewModelInput,
 	type PackSkillLike,
 	type PackTalentLike,
@@ -257,7 +258,20 @@ describe("advancement view model — skill ladder preview", () => {
 		}
 	});
 
-	test("a maxed (ladder 4) owned skill reports maxed, capping nextLadder", () => {
+	test("a maxed (ladder 3) owned skill reports maxed, capping nextLadder (bead i1f4)", () => {
+		const rows = rowsFor(
+			makeInput({
+				ownedSkills: [{ key: "awareness", name: "Awareness", ladder: 3 }],
+			}),
+		);
+		const preview = rows.find((r) => r.key === "awareness")!.skill;
+		expect(preview!.maxed).toBe(true);
+		expect(preview!.nextLadder).toBe(3);
+	});
+
+	test("out-of-range ladder 4 data (Stryxis quirk) clamps to the cap and reports maxed", () => {
+		// The Edge of the Abyss statblock prints ladder 4; the view model must
+		// clamp it to the three-step ladder and still treat it as maxed.
 		const rows = rowsFor(
 			makeInput({
 				ownedSkills: [{ key: "awareness", name: "Awareness", ladder: 4 }],
@@ -265,12 +279,59 @@ describe("advancement view model — skill ladder preview", () => {
 		);
 		const preview = rows.find((r) => r.key === "awareness")!.skill;
 		expect(preview!.maxed).toBe(true);
-		expect(preview!.nextLadder).toBe(4);
+		expect(preview!.currentLadder).toBe(3);
+		expect(preview!.nextLadder).toBe(3);
 	});
 
 	test("talent rows carry no skill preview", () => {
 		const rows = rowsFor(makeInput());
 		expect(rows.find((r) => r.key === "furious-charge")!.skill).toBeNull();
+	});
+});
+
+describe("skillAtCapReason — at-cap purchase guard (bead i1f4)", () => {
+	test("a maxed owned row yields the soft-confirm reason", () => {
+		const awareness = row({ key: "awareness", type: "skill", cost: 100 });
+		const reason = skillAtCapReason(
+			awareness,
+			[{ key: "awareness", name: "Awareness", ladder: 3 }],
+			"Awareness",
+		);
+		expect(reason).not.toBeNull();
+		expect(reason).toContain("ladder cap");
+	});
+
+	test("below-cap owned and unowned rows yield no reason", () => {
+		const awareness = row({ key: "awareness", type: "skill", cost: 100 });
+		expect(
+			skillAtCapReason(
+				awareness,
+				[{ key: "awareness", name: "Awareness", ladder: 2 }],
+				"Awareness",
+			),
+		).toBeNull();
+		expect(skillAtCapReason(awareness, [], "Awareness")).toBeNull();
+	});
+
+	test("non-skill rows never yield a reason", () => {
+		expect(
+			skillAtCapReason(
+				row({ key: "furious-charge", type: "talent", cost: 200 }),
+				[{ key: "furious-charge", name: "Furious Charge", ladder: 3 }],
+				"Furious Charge",
+			),
+		).toBeNull();
+	});
+
+	test("the reason resolves through the shared matcher (keyless name match)", () => {
+		// Same matcher semantics as the preview: case/trim-insensitive name
+		// match against a keyless owned item still counts as at cap.
+		const reason = skillAtCapReason(
+			row({ key: "awareness", type: "skill", cost: 100 }),
+			[{ key: "", name: " awareness ", ladder: 3 }],
+			"Awareness",
+		);
+		expect(reason).not.toBeNull();
 	});
 });
 

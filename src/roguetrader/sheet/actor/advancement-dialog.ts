@@ -1,6 +1,10 @@
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { systemOf } from "../../data/accessors";
-import { characteristicValues, findOwnedSkillForRow } from "../skills-domain";
+import {
+	characteristicValues,
+	findOwnedSkillForRow,
+	LADDER_MAX,
+} from "../skills-domain";
 import { sheetContext } from "../context";
 import { getCharacterOptionDocs } from "../pack-resolve";
 import {
@@ -22,6 +26,7 @@ import {
 import {
 	buildAdvancementViewModel,
 	filterAdvancementRows,
+	skillAtCapReason,
 } from "./advancement-view-model";
 import { CHARACTERISTIC_KEYS } from "../../data/actor/character";
 import { talentGrant, promptParameterisedSubject } from "./grant-helpers";
@@ -607,6 +612,22 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		for (const unmet of unmetPrereqs) {
 			validation.reasons.push(`Prerequisite: ${unmet}`);
 		}
+		// Bead i1f4: a skill row whose owned skill is already at the ladder cap
+		// (+20, Core Rulebook p74) soft-confirms instead of silently charging xp
+		// for a no-op bump — same shared matcher as the preview (maxed flag)
+		// and the live application; the helper self-guards on row.type.
+		const atCap = skillAtCapReason(
+			row,
+			this.actor.items
+				.filter((item) => (item.type as string) === "skill")
+				.map((item) => ({
+					key: (item.system as unknown as { key?: string }).key ?? "",
+					name: item.name ?? "",
+					ladder: (item.system as unknown as { ladder?: number }).ladder ?? 1,
+				})),
+			row.name, // data-name is already the resolved display name
+		);
+		if (atCap) validation.reasons.push(atCap);
 		if (!(await this.#confirmReasons(validation.reasons))) return;
 
 		const entry = ledgerEntryFor(row, source ?? this.#career.key);
@@ -682,7 +703,8 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		)?.item;
 		if (owned) {
 			const system = owned.system as unknown as { ladder: number };
-			const ladder = Math.min(4, (system.ladder ?? 1) + 1);
+			// Shared cap (bead i1f4): the three-step ladder, Core Rulebook p74.
+			const ladder = Math.min(LADDER_MAX, (system.ladder ?? 1) + 1);
 			if (ladder === (system.ladder ?? 1)) return true; // already maxed
 			await owned.update({ system: { ladder } });
 			return true;

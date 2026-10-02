@@ -37,6 +37,7 @@ import {
 
 import {
 	findOwnedSkillForRow,
+	LADDER_MAX,
 } from "../skills-domain";
 
 // --------------------------------------------------------------- input shapes
@@ -105,7 +106,7 @@ export interface SkillLadderPreview {
 	currentLadder: number | null;
 	/** The ladder the purchase lands on: current+1, or 1 for a new skill. */
 	nextLadder: number;
-	/** Owned skill already at ladder 4 — no bump possible. */
+	/** Owned skill already at the ladder cap (+20, Core Rulebook p74) — no bump possible. */
 	maxed: boolean;
 	/** Pack characteristic for the grant path (unowned rows); "" if unknown. */
 	characteristic: string;
@@ -224,11 +225,32 @@ export interface AdvancementViewModel {
 
 // ---------------------------------------------------------------- the builder
 
-/** Ladder cap shared with the dialog's live application (min(4, ...)). */
-const LADDER_MAX = 4;
-
 /** Benefit tooltip slice length (creator acquisition-chip convention). */
 const BENEFIT_SLICE = 300;
+
+// --------------------------------------------------------------------- at-cap guard
+
+/**
+ * At-cap purchase guard (bead i1f4): the reason string for a soft confirm
+ * when the row's owned skill is already at the ladder cap (ladder 3 = +20,
+ * Core Rulebook p74) — buying again is a no-op bump that would still spend
+ * the row's xp. The dialog joins this onto its validation.reasons so the
+ * purchase proceeds only through the GM-override confirm, mirroring
+ * cost-over-pool and unmet prerequisites. Null when the skill is unowned or
+ * below the cap, and for non-skill (talent) rows. Pure: same shared matcher as the preview and the live
+ * application, so the guard agrees with both.
+ */
+export function skillAtCapReason(
+	row: AdvanceRowLike,
+	ownedSkills: OwnedSkillLadderLike[],
+	resolvedName?: string | null,
+): string | null {
+	const owned = findOwnedSkillForRow(ownedSkills, row, resolvedName);
+	if (!owned) return null;
+	if (row.type !== "skill") return null;
+	if ((owned.ladder ?? 1) < LADDER_MAX) return null;
+	return "Skill already at the ladder cap (+20): buying again spends xp without changing the ladder.";
+}
 
 function nameByKeyFromDocs(
 	skillDocs: PackSkillLike[],

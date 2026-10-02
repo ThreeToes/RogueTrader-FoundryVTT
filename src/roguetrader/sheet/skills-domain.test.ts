@@ -1,13 +1,35 @@
 import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
 import {
 	buildCharacteristicViews,
 	CHAR_SHORTS,
 	characteristicValues,
 	findOwnedSkillForRow,
+	LADDER_MAX,
 	LADDER_OPTIONS,
 	mergeOwnedAndCatalogRows,
 	skillNameKey,
 } from "./skills-domain";
+
+describe("LADDER_MAX (bead i1f4 — three-step ladder, Core Rulebook p74)", () => {
+	it("is 3 (Known / +10 / +20)", () => {
+		expect(LADDER_MAX).toBe(3);
+	});
+
+	it("equals the LADDER_OPTIONS length (never drifts)", () => {
+		expect(LADDER_MAX).toBe(LADDER_OPTIONS.length);
+	});
+
+	it("is mirrored by the Skill schema's ladder NumberField max (source guard)", () => {
+		// The schema module touches `foundry` at load, so guard the source
+		// text instead (advancement-dialog-guard precedent).
+		const source = readFileSync("src/roguetrader/data/item/skill.ts", "utf8");
+		const ladderField = source.slice(
+			source.indexOf("ladder: new foundry.data.fields.NumberField"),
+		);
+		expect(ladderField).toContain("max: 3");
+	});
+});
 
 describe("skillNameKey (t093 semantics)", () => {
 	it("trims and lowercases", () => {

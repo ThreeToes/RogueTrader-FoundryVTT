@@ -30,7 +30,11 @@ export class Skill extends foundry.abstract.TypeDataModel<
 				required: true,
 				nullable: false,
 			}),
-			/** 1 = Known, 2 = +10, 3 = +20. */
+			/**
+			 * 1 = Known, 2 = +10, 3 = +20 — the THREE-step ladder, Core Rulebook
+			 * p74 ("Training and Skill Mastery": "An Explorer cannot acquire the
+			 * same skill more than three times"); max 3 is correct (bead i1f4).
+			 */
 			ladder: new foundry.data.fields.NumberField({
 				min: 1,
 				max: 3,

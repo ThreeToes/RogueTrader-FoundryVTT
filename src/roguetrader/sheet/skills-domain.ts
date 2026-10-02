@@ -26,6 +26,17 @@ export const LADDER_OPTIONS = [
 export type LadderOption = (typeof LADDER_OPTIONS)[number];
 
 /**
+ * The ladder cap (bead i1f4): THREE steps — Known / +10 / +20 (Core
+ * Rulebook p74 "Training and Skill Mastery": "An Explorer cannot acquire
+ * the same skill more than three times") — so the single shared constant
+ * replaces every scattered literal (the view model's min(4, ...) and the
+ * dialog's live application). Derived from LADDER_OPTIONS so the two can
+ * never drift; the Skill schema's NumberField max mirrors it (see
+ * data/item/skill.ts).
+ */
+export const LADDER_MAX = LADDER_OPTIONS.length;
+
+/**
  * Name comparison key with the t093 grant-merge semantics: trimmed +
  * case-insensitive. Catalog and owned names may differ in casing/spacing;
  * they are the same skill for every merge in the system.

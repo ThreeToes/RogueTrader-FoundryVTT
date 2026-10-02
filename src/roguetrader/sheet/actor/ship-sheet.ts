@@ -20,6 +20,8 @@ import {
 	rollShipSalvo,
 } from "../../rules/adapter";
 import { cloneItemFromDrop } from "../drop-clone";
+import { formatShipWeaponRange, normalizeShipWeaponRange } from "../../data/item/ship-weapon-range";
+import type { ShipWeaponRange } from "../../data/item/ship-weapon-range";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { enrichText } from "../rich-text";
@@ -317,7 +319,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				strength?: number;
 				damage?: string;
 				critRating?: number;
-				range?: number;
+				range?: ShipWeaponRange | number; // legacy single-number docs
 				state?: string;
 				depressurised?: boolean;
 			};
@@ -328,7 +330,10 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			Object.assign(w, {
 				damage: s.damage ?? "",
 				critRating: s.critRating ?? 0,
-				range: s.range ?? 0,
+				range: normalizeShipWeaponRange(s.range),
+				// Display string for the battery card (bead gq2g): one number
+				// when min === max, 'min-max' for a banded range.
+				rangeLabel: formatShipWeaponRange(s.range),
 				state: s.state ?? "intact",
 				depressurised: s.depressurised === true,
 				slotLabel: w.slot

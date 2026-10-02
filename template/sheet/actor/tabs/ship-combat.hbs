@@ -63,7 +63,7 @@
                     <span class="stat"><label>{{localize "SHIP_COMBAT.STRENGTH"}}</label><span class="value">{{w.strength}}</span></span>
                     <span class="stat"><label>{{localize "SHIP_COMBAT.DAMAGE"}}</label><span class="value">{{w.damage}}</span></span>
                     <span class="stat"><label>{{localize "SHIP_COMBAT.CRIT"}}</label><span class="value">{{w.critRating}}</span></span>
-                    <span class="stat"><label>{{localize "SHIP_COMBAT.RANGE"}}</label><span class="value">{{w.range}}</span></span>
+                    <span class="stat"><label>{{localize "SHIP_COMBAT.RANGE"}}</label><span class="value">{{w.rangeLabel}}</span></span>
                 </div>
                 <button type="button" class="sc-fire" data-action="fireWeapon" data-item-id="{{w.id}}"
                     {{#if (ne w.state "intact")}}disabled{{/if}}

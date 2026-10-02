@@ -7,6 +7,7 @@
  * (SP-cost based for SP-carrying kinds; fixed for archeotech/xeno-tech).
  */
 import { textField } from "../fields";
+import { normalizeShipWeaponRange, type ShipWeaponRange } from "./ship-weapon-range";
 import { sourceField } from "./source";
 
 export class ShipComponent extends foundry.abstract.TypeDataModel<
@@ -144,13 +145,26 @@ export class ShipWeaponComponent extends ShipComponent {
 	declare strengthRoll: string;
 	declare damage: string;
 	declare critRating: number;
-	declare range: number;
+	/** Min/max VU band (epic c48r, bead 3atc — see defineSchema + ship-weapon-range.ts). */
+	declare range: ShipWeaponRange;
 	/**
 	 * Weapon capacity slot this weapon occupies (bead om4j, Table 8-4 book
 	 * p202): dorsal/prow/port/starboard. Assigned at install on the ship
 	 * sheet; broadsides must take port or starboard.
 	 */
 	declare slot: string;
+
+	static override migrateData(source: { range?: unknown } & Record<string, unknown>) {
+		// Legacy single-number range (docs authored before epic c48r) →
+		// symmetric band (min = max = that number). Runs in _initializeSource
+		// BEFORE schema validation touches the raw source, which is what keeps
+		// old single-number world docs from failing strict init and bricking
+		// the world load (raw-source validation precedes field clean — the
+		// gear.ts h7wl finding — so a `clean` option alone is not enough here).
+		// No super call needed: the parent migrateData is a no-op identity.
+		source.range = normalizeShipWeaponRange(source.range);
+		return source;
+	}
 
 	static override defineSchema() {
 		return {
@@ -167,11 +181,27 @@ export class ShipWeaponComponent extends ShipComponent {
 				integer: true,
 				initial: 0,
 			}),
-			range: new foundry.data.fields.NumberField({
-				min: 0,
-				integer: true,
-				initial: 0,
-			}),
+			range: new foundry.data.fields.SchemaField(
+				{
+					min: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					max: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+				},
+				// Legacy docs carry a bare number (world data predating epic c48r);
+				// normalise it to a symmetric band so single-number docs keep
+				// working — same `clean` convention as gear.ts availability. The
+				// v13 fvtt-types omit the runtime `clean` option that convention
+				// relies on, so this (like gear.ts) still carries an excess-property
+				// type error; the data layer is deliberately outside typecheck.
+				{ clean: normalizeShipWeaponRange },
+			),
 			slot: new foundry.data.fields.StringField({
 				// blank: true — StringField FORCES blank:false when choices are
 				// set (core source: "If choices are provided, the field should

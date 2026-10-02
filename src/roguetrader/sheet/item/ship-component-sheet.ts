@@ -1,4 +1,10 @@
 import { effectActions, effectEditorChoices } from "./effect-actions";
+
+import {
+	formatShipWeaponRange,
+	normalizeShipWeaponRange,
+	type ShipWeaponRange,
+} from "../../data/item/ship-weapon-range";
 import { enrichText, itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 
@@ -91,7 +97,7 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 			strengthRoll?: string;
 			damage?: string;
 			critRating?: number;
-			range?: number;
+			range?: ShipWeaponRange;
 			slot?: string;
 		};
 		const isWeapon = this.document.type === "ship-weapon-component";
@@ -111,6 +117,13 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 			([value, key]) => ({ value, label: localize(key) }),
 		);
 		context.stateLabel = localize(STATE_LABELS[String(sys.state ?? "")] ?? "");
+		// Weapon range band (bead gq2g): normalise legacy single-number docs
+		// once here — the template binds min/max inputs to the computed pair
+		// and renders the display string ('min-max', or one number when equal).
+		const range = normalizeShipWeaponRange(sys.range);
+		context.rangeMin = range.min;
+		context.rangeMax = range.max;
+		context.rangeLabel = formatShipWeaponRange(range);
 		context.specialHTML =
 			await enrichText(
 				String(sys.special ?? ""),

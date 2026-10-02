@@ -589,6 +589,21 @@
 	min-width: 3.5em;
 }
 
+/* Ship weapon range band (epic c48r, bead gq2g): the single Range label
+   carries a min/max input pair — one number apart when the band is
+   symmetric. */
+.rogue-trader.sheet .stat .range-pair {
+	display: flex;
+	gap: 4px;
+	width: 100%;
+}
+
+.rogue-trader.sheet .stat .range-pair input {
+	width: 50%;
+	min-width: 0;
+	border-radius: var(--rt-radius-sm);
+}
+
 .rogue-trader.sheet .stats-row .stat.short-description {
 	flex: 1;
 }

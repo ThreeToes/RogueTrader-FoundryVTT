@@ -55,6 +55,39 @@ describe("ship component schema (bead f5xu)", () => {
 		}
 	});
 
+	test("range is a min/max number-pair SchemaField (bead 3atc, epic c48r)", () => {
+		const schema = ShipWeaponComponent.defineSchema() as Record<
+			string,
+			{ fields: Record<string, unknown> }
+		>;
+		const range = schema.range.fields as Record<
+			string,
+			{ opts: Record<string, unknown> }
+		>;
+		// Battlefleet Koronus prints extended-range weapons as VU bands
+		// (Nova Cannon "6-40"/"6-36"/"6-35", BFK p34/p42), so the old single
+		// NumberField became a min/max pair — integer VU bounds ≥ 0,
+		// defaulting to 0/0.
+		for (const bound of ["min", "max"]) {
+			expect(range[bound]).toBeDefined();
+			expect(range[bound].opts).toMatchObject({ min: 0, integer: true, initial: 0 });
+		}
+	});
+
+	test("legacy single-number range migrates to a symmetric band (bead 3atc)", () => {
+		// Old world docs carry a bare number for range; migrateData (called by
+		// _initializeSource, before schema validation) turns it into the band.
+		const migrated = ShipWeaponComponent.migrateData({
+			range: 9,
+		}) as { range: { min: number; max: number } };
+		expect(migrated.range).toEqual({ min: 9, max: 9 });
+		// A pair already in band shape passes through unchanged.
+		const kept = ShipWeaponComponent.migrateData({
+			range: { min: 6, max: 40 },
+		}) as { range: { min: number; max: number } };
+		expect(kept.range).toEqual({ min: 6, max: 40 });
+	});
+
 	test("Table 8-8 availability tokens are valid vocabulary", () => {
 		// scarce (SP "-" / 1 SP), rare (+1 / 2 SP), very-rare (+2 / 3 SP),
 		// extremely-rare (archeotech), near-unique (xeno-tech).

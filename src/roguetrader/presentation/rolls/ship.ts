@@ -30,6 +30,7 @@ import type {
 	ShipWeaponRollRequest,
 } from "../../rules/roll-contract";
 import { crewQualityEffects } from "../../rules/ship-crew";
+import { normalizeShipWeaponRange, type ShipWeaponRange } from "../../data/item/ship-weapon-range";
 import { promptShieldAbsorption, promptTargetComponent } from "../roll-prompts";
 
 /** Ship weapon salvo (rollWeaponSalvo, bead xfta, Core Rulebook pp220-222). */
@@ -47,7 +48,7 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 			strengthRoll?: string;
 			damage?: string;
 			critRating?: number;
-			range?: number;
+			range?: ShipWeaponRange | number; // legacy single-number docs
 			slot?: string;
 			special?: string;
 			state?: string;
@@ -103,7 +104,7 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 				strength,
 				damage: weapon.damage ?? "1d5",
 				critRating: weapon.critRating ?? 0,
-				range: weapon.range ?? 0,
+				range: normalizeShipWeaponRange(weapon.range),
 				rangeBand: request.rangeBand ?? "normal",
 				weaponUuid: item.uuid,
 			},

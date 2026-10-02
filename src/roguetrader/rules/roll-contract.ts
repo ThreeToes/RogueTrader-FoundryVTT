@@ -25,6 +25,7 @@ import type {
 } from "../../ffg/application/roll-contract";
 import type { RtMessageFlags } from "./chat-flags";
 import type { StrengthLevel } from "./psychic";
+import type { ShipWeaponRange } from "../data/item/ship-weapon-range";
 
 // The generic plumbing types are re-exported as-is.
 export type RollContext = GenericRollContext;
@@ -177,7 +178,7 @@ export interface RollKindData {
 		strength: number;
 		damage: string;
 		critRating: number;
-		range: number;
+		range: ShipWeaponRange;
 		rangeBand: "half" | "normal" | "long";
 		weaponUuid?: string;
 	};

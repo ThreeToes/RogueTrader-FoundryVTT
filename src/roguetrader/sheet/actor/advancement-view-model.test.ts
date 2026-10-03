@@ -298,7 +298,9 @@ describe("skillAtCapReason — at-cap purchase guard (bead i1f4)", () => {
 			"Awareness",
 		);
 		expect(reason).not.toBeNull();
-		expect(reason).toContain("ladder cap");
+		// Bead kcmz: the helper is pure/Foundry-free, so it returns the LANG
+		// KEY — the dialog call site resolves it with game.i18n.localize.
+		expect(reason).toBe("ADVANCE.AT_CAP_REASON");
 	});
 
 	test("below-cap owned and unowned rows yield no reason", () => {

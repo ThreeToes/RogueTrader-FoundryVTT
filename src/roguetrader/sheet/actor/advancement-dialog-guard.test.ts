@@ -239,6 +239,10 @@ describe("advancement dialog i18n completeness (bead 8aba)", () => {
 		expect(keys.length).toBeGreaterThan(10);
 		expect(keys).toContain("ADVANCE.TITLE");
 		expect(keys).toContain("ADVANCE.BUY");
+		// Bead kcmz: the soft-confirm prereq prefix is localized at the call
+		// site. (ADVANCE.AT_CAP_REASON lives in the view model — see the
+		// dynamic key-family test below.)
+		expect(keys).toContain("ADVANCE.PREREQ_PREFIX");
 	});
 
 	test("every referenced key exists in ALL FOUR language files", () => {
@@ -269,14 +273,15 @@ describe("advancement dialog i18n completeness (bead 8aba)", () => {
 			"ADVANCE.TIER_TRAINED",
 			"ADVANCE.TIER_EXPERT",
 		];
-		const characteristicKeys = [
+		const atCapKeys = ["ADVANCE.AT_CAP_REASON"];
+	const characteristicKeys = [
 			"WS", "BS", "S", "T", "AG", "INT", "PER", "WP", "FEL",
 		].map((key) => `CHARACTERISTIC.${key}`);
 		for (const lang of ["en", "es", "fr", "pl"]) {
 			const dict = JSON.parse(
 				readFileSync(`lang/${lang}.json`, "utf8"),
 			) as Record<string, string>;
-			for (const key of [...tierKeys, ...characteristicKeys]) {
+			for (const key of [...tierKeys, ...atCapKeys, ...characteristicKeys]) {
 				expect(dict[key], `lang/${lang}.json missing ${key}`).toBeDefined();
 			}
 		}

@@ -24,6 +24,8 @@
   "ADVANCE.REFUND": "Refund (GM): remove the last purchase of this advance",
   "ADVANCE.CONFIRM_TITLE": "Confirm Advance",
   "ADVANCE.CONFIRM_HINT": "This advance needs GM confirmation (soft enforcement):",
+  "ADVANCE.AT_CAP_REASON": "Skill already at the ladder cap (+20): buying again spends xp without changing the ladder.",
+  "ADVANCE.PREREQ_PREFIX": "Prerequisite: {prereq}",
   "ADVANCE.BOUGHT": "Bought {name} for {cost} xp.",
   "ADVANCE.RANK_UP": "Rank increased to {rank}!",
   "ADVANCE.RANK_HINT": "Derived rank from xp spent: {rank}",

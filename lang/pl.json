@@ -51,6 +51,8 @@
   "ADVANCE.REFUND": "Zwrot (MG): usuń ostatni zakup tego rozwoju",
   "ADVANCE.CONFIRM_TITLE": "Potwierdź rozwój",
   "ADVANCE.CONFIRM_HINT": "Ten rozwój wymaga potwierdzenia MG (miękkie wymuszanie):",
+  "ADVANCE.AT_CAP_REASON": "Umiejętność jest już na szczycie drabinki (+20): ponowny zakup wydaje pd bez podnoszenia drabinki.",
+  "ADVANCE.PREREQ_PREFIX": "Wymaganie wstępne: {prereq}",
   "ADVANCE.BOUGHT": "Kupiono {name} za {cost} pd.",
   "ADVANCE.RANK_UP": "Ranga podniesiona do {rank}!",
   "ADVANCE.RANK_HINT": "Wyprowadzona ranga z wydanych pd: {rank}",

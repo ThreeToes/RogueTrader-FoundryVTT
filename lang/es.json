@@ -23,6 +23,8 @@
   "ADVANCE.REFUND": "Reembolsar (DJ): elimina la última compra de este avance",
   "ADVANCE.CONFIRM_TITLE": "Confirmar avance",
   "ADVANCE.CONFIRM_HINT": "Este avance necesita confirmación del DJ (aplicación flexible):",
+  "ADVANCE.AT_CAP_REASON": "Habilidad ya al tope de la escala (+20): comprarla de nuevo gasta pe sin subir un escalón.",
+  "ADVANCE.PREREQ_PREFIX": "Requisito previo: {prereq}",
   "ADVANCE.BOUGHT": "Comprado {name} por {cost} pe.",
   "ADVANCE.RANK_UP": "¡Rango elevado a {rank}!",
   "ADVANCE.RANK_HINT": "Rango derivado de los pe gastados: {rank}",

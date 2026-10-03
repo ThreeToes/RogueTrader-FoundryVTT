@@ -610,7 +610,11 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			prereqSnapshot,
 		);
 		for (const unmet of unmetPrereqs) {
-			validation.reasons.push(`Prerequisite: ${unmet}`);
+			validation.reasons.push(
+				game.i18n!.format("ADVANCE.PREREQ_PREFIX", {
+					prereq: unmet,
+				}),
+			);
 		}
 		// Bead i1f4: a skill row whose owned skill is already at the ladder cap
 		// (+20, Core Rulebook p74) soft-confirms instead of silently charging xp
@@ -627,7 +631,11 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				})),
 			row.name, // data-name is already the resolved display name
 		);
-		if (atCap) validation.reasons.push(atCap);
+		// The helper is pure and returns the LANG KEY: localize here so the
+		// confirm bullet renders in the character's language.
+		if (atCap) {
+			validation.reasons.push(game.i18n!.localize(atCap));
+		}
 		if (!(await this.#confirmReasons(validation.reasons))) return;
 
 		const entry = ledgerEntryFor(row, source ?? this.#career.key);

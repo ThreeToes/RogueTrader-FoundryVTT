@@ -239,6 +239,10 @@ const BENEFIT_SLICE = 300;
  * cost-over-pool and unmet prerequisites. Null when the skill is unowned or
  * below the cap, and for non-skill (talent) rows. Pure: same shared matcher as the preview and the live
  * application, so the guard agrees with both.
+ *
+ * Returns the i18n LANG KEY `ADVANCE.AT_CAP_REASON` (not a translated
+ * string): the helper is deliberately pure/Foundry-free, so the dialog call
+ * site resolves the key with `game.i18n.localize`.
  */
 export function skillAtCapReason(
 	row: AdvanceRowLike,
@@ -249,7 +253,7 @@ export function skillAtCapReason(
 	if (!owned) return null;
 	if (row.type !== "skill") return null;
 	if ((owned.ladder ?? 1) < LADDER_MAX) return null;
-	return "Skill already at the ladder cap (+20): buying again spends xp without changing the ladder.";
+	return "ADVANCE.AT_CAP_REASON";
 }
 
 function nameByKeyFromDocs(

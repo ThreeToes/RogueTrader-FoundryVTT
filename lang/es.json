@@ -296,6 +296,7 @@
   "EQUIP_STATE.CARRIED": "Llevado",
   "EQUIP_STATE.WORN": "Vestida",
   "ROLL.NOT_CARRIED": "{weapon} no se lleva consigo - equípalo primero.",
+  "ROLL.LAUNCHER_UNLOADED": "{weapon} no está cargado - carga la munición antes de disparar.",
   "ROLL.NOT_OWNER": "No eres el propietario de {actor} - no puedes tirar por él.",
   "HEADER.DESCRIPTION": "Descripción",
   "INITIATIVE": "Iniciativa",

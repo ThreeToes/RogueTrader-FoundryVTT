@@ -11,7 +11,11 @@
  * 2. Static references — every i18n key referenced by a string literal in
  *    code or template exists in lang/en.json (and, via parity, in all four).
  *    Scans: `{{localize "KEY"}}` in template HBS files, and
- *    localize("KEY") / format("KEY") / t("KEY") calls in src files (test
+ *    localize("KEY") / format("KEY") / t("KEY") calls in src files, and the
+ *    notify announcement port's info/warn/error("KEY") calls (bead 78tb:
+ *    src/ffg/infrastructure/foundry/ports.ts localises those, so their keys
+ *    are real references — the scan originally skipped them, which hid the
+ *    missing ROLL.LAUNCHER_UNLOADED key).  (test
  *    files excluded: they assert ON keys rather than render them).
  *    Keys composed at runtime are invisible to the scan; those live in
  *    DYNAMIC_KEY_FAMILIES below with a pointer to their composing site, and
@@ -88,9 +92,16 @@ describe("i18n key parity (bead qgtz)", () => {
 			const source = readFileSync(file, "utf8");
 			// localize("KEY") / format("KEY") / *.t("KEY") in code — game.i18n,
 			// ports.i18n and the injected-pure-function variants all use these
-			// method names with a string-literal key.
+			// method names with a string-literal key. notify.info/warn/error(
+			// "KEY") are collected too: the notify port localises its key
+			// argument (bead 78tb).
 			for (const match of source.matchAll(
 				/(?:\blocalize|\bformat|\bt)\(\s*"([A-Z][A-Z0-9_.]+)"/g,
+			)) {
+				staticRefs.add(match[1]!);
+			}
+			for (const match of source.matchAll(
+				/\bnotify\.(?:info|warn|error)\(\s*"([A-Z][A-Z0-9_.]+)"/g,
 			)) {
 				staticRefs.add(match[1]!);
 			}
@@ -98,6 +109,11 @@ describe("i18n key parity (bead qgtz)", () => {
 		// Sanity-pin the scan so it cannot silently degrade to an empty set.
 		expect(staticRefs.size).toBeGreaterThan(100);
 		expect(staticRefs).toContain("ADVANCE.BUY");
+		// Sanity-pin the notify extension (bead 78tb): adapter.ts warns with
+		// ROLL.LAUNCHER_UNLOADED — a notify.* key invisible to the original
+		// localize/format/t scan, which is exactly the shape this extension
+		// exists to catch.
+		expect(staticRefs).toContain("ROLL.LAUNCHER_UNLOADED");
 
 		const missing = [...staticRefs]
 			.filter((key) => !KEY_SHAPE.test(key) || dictionaries.en[key] === undefined)

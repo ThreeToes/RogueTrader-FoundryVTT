@@ -344,6 +344,7 @@
   "EQUIP_STATE.CARRIED": "Carried",
   "EQUIP_STATE.WORN": "Worn",
   "ROLL.NOT_CARRIED": "{weapon} is not carried - equip it first.",
+  "ROLL.LAUNCHER_UNLOADED": "{weapon} is not loaded - load ordnance before firing.",
   "ROLL.NOT_OWNER": "You do not own {actor} - you cannot roll for it.",
   "ROGUE_TRADER.GEAR.SHEET": "Rogue Trader Gear",
   "ROGUE_TRADER.WEAPON.SHEET": "Rogue Trader Weapon",

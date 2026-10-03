@@ -304,6 +304,7 @@
   "EQUIP_STATE.CARRIED": "Porté",
   "EQUIP_STATE.WORN": "Porture",
   "ROLL.NOT_CARRIED": "{weapon} n'est pas porté - équipez-le d'abord.",
+  "ROLL.LAUNCHER_UNLOADED": "{weapon} n'est pas chargé - chargez une munition avant de tirer.",
   "ROLL.NOT_OWNER": "Vous ne possédez pas {actor} - vous ne pouvez pas lancer de jet pour lui.",
   "HEADER.DESCRIPTION": "Description",
   "INITIATIVE": "Initiative",

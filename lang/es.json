@@ -19,7 +19,7 @@
   "ADVANCE.EXHAUSTED": "Esquema agotado",
   "ADVANCE.BUY": "Comprar",
   "ADVANCE.BUY_AGAIN": "Comprar de nuevo",
-  "ADVANCE.OWNED": "en propiedad",
+  "ADVANCE.OWNED": "adquirido",
   "ADVANCE.REFUND": "Reembolsar (DJ): elimina la última compra de este avance",
   "ADVANCE.CONFIRM_TITLE": "Confirmar avance",
   "ADVANCE.CONFIRM_HINT": "Este avance necesita confirmación del DJ (aplicación flexible):",

@@ -8,6 +8,7 @@
  *   bootstrap/config.ts    registries, partials, statuses, extension points, settings
  *   bootstrap/api.ts       the game.rogueTrader.* roll API
  *   bootstrap/sheets.ts    the document-type + sheet registry (bead 6a1x)
+ *   bootstrap/combat-tracker.ts  the tracker's Wounds resource default (bead nc3q)
  *   bootstrap/warmers.ts   ready-time content caches + legacy-type migration
  *   bootstrap/hooks.ts     actor hooks, chat-button delegation, creator menus
  *
@@ -16,6 +17,7 @@
  * then the warmers and runtime hooks.
  */
 
+import { registerCombatTrackerDefault } from "./combat-tracker";
 import { registerRollApi } from "./api";
 import { registerSystemConfig } from "./config";
 import { registerRuntimeHooks } from "./hooks";
@@ -29,6 +31,7 @@ export function sheetInit(): void {
 		registerRollApi();
 		registerDocumentTypes();
 		registerContentWarmers();
+		registerCombatTrackerDefault();
 		registerRuntimeHooks();
 	});
 }

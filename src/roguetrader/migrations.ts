@@ -49,6 +49,36 @@ export function withoutLegacyCharacterTypes(registry: unknown): unknown {
 	return registry;
 }
 
+/**
+ * Strip the legacy character types from a live registry IN PLACE (bead aicd).
+ * `withoutLegacyCharacterTypes` cannot be used at the call site any more:
+ * Foundry v14 freezes `game.documentTypes` itself (foundry.mjs:206129), so
+ * `registry.Actor = ...` throws `TypeError: Cannot assign to read only
+ * property 'Actor'` on every world load. The outer object is frozen but its
+ * VALUES are not — the type-name arrays and the `game.system.documentTypes`
+ * object map are ordinary mutable objects — so mutating them in place works
+ * identically on v13 and v14. Shapes follow `withoutLegacyCharacterTypes`:
+ *
+ *   - an ARRAY (e.g. `game.documentTypes.Actor`) -> filtered in place via
+ *     the pure helper
+ *   - an OBJECT MAP (e.g. `game.system.documentTypes.Actor`) -> legacy keys
+ *     deleted
+ *   - anything else -> ignored (fail soft; fail loudly upstream)
+ */
+export function removeLegacyCharacterTypes(registry: unknown): void {
+	if (Array.isArray(registry)) {
+		const kept = withoutLegacyCharacterTypes(registry) as string[];
+		registry.length = 0;
+		registry.push(...kept);
+		return;
+	}
+	if (registry && typeof registry === "object") {
+		for (const legacy of LEGACY_CHARACTER_TYPES) {
+			delete (registry as Record<string, unknown>)[legacy];
+		}
+	}
+}
+
 /** The payload a legacy actor carries over (id included for logging). */
 interface LegacyActorLike {
 	type: string;

@@ -4,6 +4,7 @@ import {
 	TARGET_CHARACTER_TYPE,
 	explorerClonePayload,
 	needsTypeMigration,
+	removeLegacyCharacterTypes,
 	withoutLegacyCharacterTypes,
 } from "./migrations";
 
@@ -106,5 +107,68 @@ describe("legacy types are stripped from the type registry (bead vnz3)", () => {
 				"explorer",
 			]);
 		}
+	});
+});
+
+// Bead aicd: Foundry v14 freezes the game.documentTypes OBJECT (its VALUES —
+// the type-name arrays — stay mutable), so the call site must mutate in place
+// instead of assigning. This is the regression guard for
+// "Cannot assign to read only property 'Actor'" — the fixture reproduces the
+// frozen outer object exactly as core builds it (Game.setupPackages).
+describe("legacy types are mutated in place (bead aicd)", () => {
+	test("frozen registry: array value is filtered IN PLACE and never assigned", () => {
+		// The exact v14 shape: frozen outer object, mutable Object.keys arrays.
+		const registry = Object.freeze({
+			Actor: ["pc", "acolyte", "explorer", "npc", "planet"],
+			Item: ["skill", "gear"],
+		} as Record<string, unknown>);
+		expect(() =>
+			removeLegacyCharacterTypes(registry.Actor),
+		).not.toThrow();
+		const actor = registry.Actor as unknown as string[];
+		expect(actor).toEqual(["explorer", "npc", "planet"]);
+		// Same array identity: the frozen registry now exposes the cleaned list.
+		expect(registry.Actor as unknown as string[]).toBe(actor);
+	});
+
+	test("frozen registry: object-map value loses its legacy keys IN PLACE", () => {
+		// Same shape core builds for game.system.documentTypes: the OUTER
+		// container freeze must never make the call site assign — the map
+		// value is an ordinary mutable object and is edited in place.
+		const systemDocumentTypes = Object.freeze({
+			Actor: {
+				pc: { htmlFields: ["description"] },
+				npc: { htmlFields: ["description"] },
+			},
+			Item: {
+				gear: { htmlFields: ["description"] },
+			},
+		} as Record<string, unknown>);
+		const map = systemDocumentTypes.Actor as Record<string, unknown>;
+		expect(() => removeLegacyCharacterTypes(map)).not.toThrow();
+		expect(map.pc).toBeUndefined();
+		expect(map.npc).toEqual({ htmlFields: ["description"] });
+		expect(systemDocumentTypes.Actor as Record<string, unknown>).toBe(map);
+	});
+
+	test("an already-clean registry is left alone", () => {
+		const types = ["explorer", "npc"];
+		removeLegacyCharacterTypes(types);
+		expect(types).toEqual(["explorer", "npc"]);
+		const map: Record<string, unknown> = { npc: {} };
+		removeLegacyCharacterTypes(map);
+		expect(map).toEqual({ npc: {} });
+	});
+
+	test("anything that is neither shape is ignored, not thrown", () => {
+		for (const value of [undefined, null, 42, "explorer"]) {
+			expect(() => removeLegacyCharacterTypes(value)).not.toThrow();
+		}
+	});
+
+	test("every legacy type is removed from a live array", () => {
+		const types = [...LEGACY_CHARACTER_TYPES, "explorer"];
+		removeLegacyCharacterTypes(types);
+		expect(types).toEqual(["explorer"]);
 	});
 });

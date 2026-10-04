@@ -9,7 +9,10 @@
  * Split out of the former sheet/init.ts composition root.
  */
 
-import { migrateLegacyActors, withoutLegacyCharacterTypes } from "../migrations";
+import {
+	migrateLegacyActors,
+	removeLegacyCharacterTypes,
+} from "../migrations";
 import {
 	firstStr,
 	nested,
@@ -229,25 +232,32 @@ function migrateLegacyTypes(): void {
 				delete cfg.Actor?.dataModels?.pc;
 				// Bead vnz3: deleting the dataModel does NOT rebuild the type
 				// registry the Create Actor dropdown reads, so "pc" kept showing
-				// up as a raw, unlocalised entry. The registry is
-				// game.documentTypes (an ARRAY of names) — NOT
-				// game.system.documentTypes (an object MAP), which is what the
-				// previous code filtered behind an `Array.isArray` guard that
-				// was therefore always false and silently did nothing. Strip the
-				// legacy names from both, so either source is covered.
+				// up as a raw, unlocalised entry. Strip the legacy names from
+				// BOTH registries:
+				//
+				//   - game.documentTypes.Actor — an ARRAY of names (the one the
+				//     dropdown reads). The registry object ITSELF is frozen in
+				//     Foundry v14 (Object.freeze in Game.setupPackages), so it
+				//     must NOT be assigned — that threw "Cannot assign to read
+				//     only property 'Actor'" on every world load (bead aicd).
+				//   - game.system.documentTypes.Actor — an object MAP (the
+				//     manifest ObjectField, bead vnz3).
+				//
+				// Both registries' VALUES stay mutable, so the mutation happens
+				// in place via removeLegacyCharacterTypes and works on v13 and
+				// v14 alike. `withoutLegacyCharacterTypes` remains the pure,
+				// copy-returning half of the pair.
 				const registry = game.documentTypes as unknown as
 					| Record<string, unknown>
 					| undefined;
 				if (registry) {
-					registry.Actor = withoutLegacyCharacterTypes(registry.Actor);
+					removeLegacyCharacterTypes(registry.Actor);
 				}
 				const system = game.system as unknown as {
 					documentTypes?: Record<string, unknown>;
 				};
 				if (system.documentTypes) {
-					system.documentTypes.Actor = withoutLegacyCharacterTypes(
-						system.documentTypes.Actor,
-					);
+					removeLegacyCharacterTypes(system.documentTypes.Actor);
 				}
 			});
 	});

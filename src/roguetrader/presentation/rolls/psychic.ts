@@ -34,6 +34,7 @@ import {
 } from "./psychic-support";
 import type { RollHandler } from "../../rules/roll-contract";
 import { collectSorceryRank } from "../../rules/talent-effects";
+import { chatCardTitleDoc } from "../chat-doc-links";
 import { promptStrength } from "../roll-prompts";
 
 /** Psychic power activation (rollPsychicPower). */
@@ -139,6 +140,15 @@ export const psychicHandler: RollHandler<"psychic"> = {
 		);
 		return {
 			title: `${actor.name} — ${item.name} (${strengthLabel})`,
+			// Bead qg4z: the power name in the card title links to its pack doc.
+			templateVars: {
+				titleDoc: await chatCardTitleDoc({
+					prefix: `${actor.name} — `,
+					name: item.name ?? "",
+					kind: "psychicpower",
+					suffix: ` (${strengthLabel})`,
+				}),
+			},
 			baseTarget: characteristic.value,
 			testKind: "focus-power",
 			testKey,

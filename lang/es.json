@@ -191,6 +191,7 @@
   "CHAT.RIGHTEOUS_FURY": "Furia Virtuosa",
   "CHAT.REMAINING_NUMBER_OF_HIT": "Golpes restantes",
   "CHAT.REROLL": "Repetir con Destino",
+  "CHAT.OPEN_DOC_FAIL": "No se pudo abrir la entrada del compendio ({uuid}) — mira la consola (F12) para más detalles",
   "CHAT.ROLL_DAMAGE": "Tirar daño",
   "CHAT.RELOAD": "¡Recarga! Sin munición!",
   "DIALOG.ROLL_WITH": "Tirar con",

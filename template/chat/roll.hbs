@@ -1,6 +1,16 @@
 <div class="rogue-trader chat roll">
     <div class="background border">
-        <h1>{{title}}</h1>
+        <h1>
+{{!-- Bead qg4z: the four linking cards (weapon attack, damage, psychic,
+     navigator) decompose the title into prefix + name + suffix; the name
+     becomes an anchor to the item's compendium doc, and an unresolvable name
+     stays plain text. Other roll kinds keep the plain title. --}}
+{{#if titleDoc}}
+            {{titleDoc.prefix}}{{#if titleDoc.link}}<a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}">{{titleDoc.link.name}}</a>{{else}}{{titleDoc.name}}{{/if}}{{titleDoc.suffix}}
+{{else}}
+            {{title}}
+{{/if}}
+        </h1>
         <div class="roll-summary">
             <div class="roll-target">
                 <span class="label">{{localize "ROLL.TARGET"}}</span>

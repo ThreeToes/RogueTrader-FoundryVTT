@@ -7,7 +7,7 @@ import {
 } from "../skills-domain";
 import { sheetContext } from "../context";
 import {
-	getCharacterOptionDocs,
+	characterOptionDocsOnce,
 	openDocumentSheet,
 	resolvePackDocument,
 } from "../pack-resolve";
@@ -43,24 +43,10 @@ const { ApplicationV2 } = foundry.applications.api;
 
 /**
  * Session cache for the compendium pack fetches (bead j4io, owner-approved
- * 2026-09-29): the compendium does not change mid-session, so memoizing the
- * getCharacterOptionDocs PROMISES (keyed by doc type) also dedupes concurrent
- * renders. A rejected fetch is evicted so the next render retries.
+ * 2026-09-29): MEMOIZE lived here; bead qg4z moved it into pack-resolve.ts
+ * (shared with the chat-card doc-link catalogs) — the behaviour is pinned by
+ * pack-doc-links.test.ts and this file's usages below are unchanged.
  */
-const characterOptionDocsCache = new Map<string, Promise<unknown[]>>();
-
-function characterOptionDocsOnce(type: string): Promise<unknown[]> {
-	let promise = characterOptionDocsCache.get(type);
-	if (!promise) {
-		promise = getCharacterOptionDocs(type).catch((error: unknown) => {
-			characterOptionDocsCache.delete(type);
-			throw error;
-		});
-		characterOptionDocsCache.set(type, promise);
-	}
-	return promise;
-}
-
 /**
  * Player-facing Spend-XP dialog (bead clng). The single Foundry-coupled
  * layer of the advancement engine: the math is pure (rules/advancement).

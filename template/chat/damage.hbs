@@ -1,6 +1,14 @@
 <div class="rogue-trader chat damage">
     <div class="background border">
-        <h1>{{title}}</h1>
+        <h1>
+{{!-- Bead qg4z: the weapon name (last title segment) links to its pack doc;
+     the attacker → target part stays plain text. Card buttons are untouched. --}}
+{{#if titleDoc}}
+            {{titleDoc.prefix}}{{#if titleDoc.link}}<a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}">{{titleDoc.link.name}}</a>{{else}}{{titleDoc.name}}{{/if}}{{titleDoc.suffix}}
+{{else}}
+            {{title}}
+{{/if}}
+        </h1>
         {{#if hitSuccess}}
         <div class="damage-body">
             <p class="damage-location">

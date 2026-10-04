@@ -1,5 +1,18 @@
 /* Chat roll cards */
 
+/* Bead qg4z (epic 61pk): the card title's pack-doc link — same subdued
+   tokens as the advancement dialog's links (sheet-character.css). */
+.rogue-trader.chat .adv-doc-link {
+	color: var(--rt-muted);
+	text-decoration: underline dotted;
+	text-underline-offset: 2px;
+	cursor: pointer;
+}
+
+.rogue-trader.chat .adv-doc-link:hover {
+	color: var(--rt-gold-soft);
+}
+
 .rogue-trader.chat.roll .roll-summary {
 	display: flex;
 	gap: 12px;

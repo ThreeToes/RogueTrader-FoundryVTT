@@ -48,7 +48,12 @@ export async function resolvePackDocument(
 		console.warn(`rogue-trader | compendium pack ${parts[1]}.${parts[2]} not found`);
 		return null;
 	}
-	return (await foundry.utils.fromUuid(uuid)) ?? null;
+	// fvtt-types types fromUuid's parameter as a template-literal UUID union,
+	// but a uuid here is an arbitrary string — cast at this one boundary (the
+	// rules/adapter documentFromUuid precedent). This module entered the
+	// scoped type graph in bead qg4z, when the damage-adapter started pulling
+	// the doc-link catalogs through this file.
+	return (await foundry.utils.fromUuid(uuid as never)) ?? null;
 }
 
 /**
@@ -67,6 +72,35 @@ export async function getPackDocuments(packId: string): Promise<unknown[]> {
 	return docs;
 }
 
+/**
+ * Session cache for the compendium pack fetches (bead j4io, owner-approved
+ * 2026-09-29): the compendium does not change mid-session, so memoizing the
+ * pack-fetch PROMISES (keyed per caller) also dedupes concurrent loads. A
+ * rejected fetch is evicted so the next caller retries.
+ *
+ * LIVES here (bead qg4z): the chat-card doc links resolve their weapon/power
+ * names against pack catalogs, so the memoize moved off the advancement
+ * dialog into the open path every surface imports from — one cache, one
+ * eviction semantics.
+ */
+const packDocsCache = new Map<string, Promise<unknown[]>>();
+
+/** Memoize a pack fetch under `key` (bead j4io's cache, now shared). */
+export function packDocsOnce(
+	key: string,
+	load: () => Promise<unknown[]>,
+): Promise<unknown[]> {
+	let promise = packDocsCache.get(key);
+	if (!promise) {
+		promise = load().catch((error: unknown) => {
+			packDocsCache.delete(key);
+			throw error;
+		});
+		packDocsCache.set(key, promise);
+	}
+	return promise;
+}
+
 /** Concept pack holding the character-option Items (bead 4tj1). */
 export const CHARACTER_OPTIONS_PACK = "rogue-trader.character-options";
 
@@ -79,6 +113,13 @@ export const CHARACTER_OPTIONS_PACK = "rogue-trader.character-options";
 export async function getCharacterOptionDocs(type: string): Promise<unknown[]> {
 	const docs = await getPackDocuments(CHARACTER_OPTIONS_PACK);
 	return docs.filter((doc) => (doc as { type?: string }).type === type);
+}
+
+/** Memoized once-per-session character-option pack fetch (bead j4io). */
+export function characterOptionDocsOnce(type: string): Promise<unknown[]> {
+	return packDocsOnce(`character-options:${type}`, () =>
+		getCharacterOptionDocs(type),
+	);
 }
 
 /** Open a resolved document's sheet, loudly reporting a missing binding.

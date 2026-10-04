@@ -18,6 +18,7 @@ import {
 } from "./talent-effects";
 import { postCard, type DamageRollFlag } from "./chat-flags";
 import { resolveAmmoAutoConsume, type HomebrewProfile } from "./homebrew";
+import { chatCardTitleDoc } from "../presentation/chat-doc-links";
 import {
 	type FireMode,
 	type RateOfFireLike,
@@ -468,6 +469,13 @@ async function postWeaponDamage(
 		"systems/rogue-trader/template/chat/damage.hbs",
 		{
 			title: `${attacker.name} → ${target.name} — ${profile.name}`,
+			// Bead qg4z: the weapon name (last title segment) links to its pack
+			// doc; the attacker → target part stays plain text.
+			titleDoc: await chatCardTitleDoc({
+				prefix: `${attacker.name} → ${target.name} — `,
+				name: profile.name,
+				kind: "weapon",
+			}),
 			hitSuccess: true,
 			locationLabelKey,
 			damageTypeLabelKey,

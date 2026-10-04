@@ -5,13 +5,14 @@
  * Split out of the former sheet/init.ts composition root.
  */
 
-import { applyDamageFromCard, rollDamageButton, spendOrdnanceFromCard, toxicToughnessTestFromCard } from "../presentation/chat-actions";
+import { applyDamageFromCard, openPackDocFromCard, rollDamageButton, spendOrdnanceFromCard, toxicToughnessTestFromCard } from "../presentation/chat-actions";
 import { registerCombatEncounterEndHook } from "../presentation/combat-end";
 import { registerCreatorMenus } from "../presentation/creator-menus";
 import { registerTokenContextMenus } from "../presentation/token-menus";
 import { missingSkillGrants } from "../rules/default-skills";
 import { vehicleTokenFootprint } from "../rules/vehicle-tokens";
 import { trackDefaultGrants } from "../sheet/default-grants";
+import { OPEN_PACK_DOC_ACTION } from "../sheet/pack-resolve";
 import { getCommonSkillCatalog } from "./warmers";
 
 /**
@@ -24,6 +25,18 @@ function registerChatActions(): void {
 	Hooks.once("ready", () => {
 		document.body.addEventListener("click", (event) => {
 			const target = event.target as HTMLElement | null;
+			// Card title doc link (epic 61pk, bead qg4z): the weapon/power name
+			// anchor opens the pack item's sheet read-only. The card's buttons
+			// (damage, apply, evade, toxic test) are untouched by this branch.
+			const docLinkAnchor = target?.closest<HTMLAnchorElement>(
+				`a[data-action="${OPEN_PACK_DOC_ACTION}"]`,
+			);
+			if (docLinkAnchor) {
+				openPackDocFromCard(docLinkAnchor).catch((error) =>
+					console.error("rogue-trader: chat doc link failed", error),
+				);
+				return;
+			}
 			const applyButton = target?.closest<HTMLButtonElement>(
 				"button.apply-damage",
 			);

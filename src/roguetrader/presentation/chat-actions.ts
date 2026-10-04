@@ -16,6 +16,10 @@ import {
 import { applyDamageWithCriticals, postCriticalCard } from "../rules/criticals";
 import { rollDamageForCard, rollToxicToughnessTest } from "../rules/adapter";
 import { decrementQuantity } from "../rules/ordnance";
+import {
+	openDocumentSheet,
+	resolvePackDocument,
+} from "../sheet/pack-resolve";
 
 /**
  * Apply the wounds shown on a damage chat card to the flagged target
@@ -212,4 +216,34 @@ export async function spendOrdnanceFromCard(
 	button.disabled = true;
 	const next = await decrementQuantity(item, { onEmpty: "clamp" });
 	if (next === null) return;
+}
+
+/**
+ * Card title doc link (epic 61pk, bead qg4z): the pack-doc link library's
+ * OPEN path for CHAT — the anchor the roll/damage templates stamp with
+ * data-uuid opened the pack item's sheet read-only. Chat is not an
+ * ApplicationV2, so this is NOT a data-action table entry: bootstrap/hooks.ts
+ * delegates the click to this handler the same way it delegates the card
+ * buttons. The loud-fail posture is the advancement dialog's precedent
+ * (#onOpenPackDoc): console + notify, { uuid } so the placeholder interpolates.
+ */
+export async function openPackDocFromCard(
+	anchor: HTMLAnchorElement,
+): Promise<void> {
+	const uuid = anchor.dataset.uuid ?? "";
+	if (!uuid) return;
+	try {
+		const doc = await resolvePackDocument(uuid);
+		if (!doc) {
+			console.warn(`rogue-trader | chat doc link: "${uuid}" did not resolve`);
+			getPorts().notify.error("CHAT.OPEN_DOC_FAIL", { uuid });
+			return;
+		}
+		await openDocumentSheet(doc, "chat doc link", "CHAT.OPEN_DOC_FAIL", {
+			uuid,
+		});
+	} catch (error) {
+		console.error("rogue-trader | chat doc link failed:", error);
+		getPorts().notify.error("CHAT.OPEN_DOC_FAIL", { uuid });
+	}
 }

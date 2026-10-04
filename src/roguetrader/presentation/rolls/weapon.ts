@@ -13,6 +13,7 @@ import { messageFlagNamespace } from "../../../ffg/application/chat-flags";
 import { equipStateOf, ownedItemResolver, systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollHandler } from "../../rules/roll-contract";
+import { chatCardTitleDoc } from "../chat-doc-links";
 import { resolveEvasion } from "./evasion";
 
 /** Weapon attack to-hit test (rollWeaponAttack). */
@@ -55,7 +56,15 @@ export const weaponHandler: RollHandler<"weapon"> = {
 				: {}),
 			// Damage flow (b02/1h2, owner redesign): the to-hit card carries a
 			// "Roll Damage" button; damage rolls on click, not automatically.
-			templateVars: { showDamageButton: true },
+			// Bead qg4z: the weapon name in the title links to its pack doc.
+			templateVars: {
+				showDamageButton: true,
+				titleDoc: await chatCardTitleDoc({
+					prefix: `${actor.name} — `,
+					name: profile.name,
+					kind: "weapon",
+				}),
+			},
 		};
 	},
 	dialogConfig(_request, prepared) {

@@ -7,6 +7,7 @@ import type { Modifier } from "../../../rules-engine/index";
 import { systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollHandler } from "../../rules/roll-contract";
+import { chatCardTitleDoc } from "../chat-doc-links";
 
 /** Navigator power activation (rollNavigatorPower). */
 export const navigatorHandler: RollHandler<"navigator"> = {
@@ -50,6 +51,15 @@ export const navigatorHandler: RollHandler<"navigator"> = {
 		};
 		return {
 			title: `${actor.name} — ${item.name} (${masteryLabel})`,
+			// Bead qg4z: the power name in the card title links to its pack doc.
+			templateVars: {
+				titleDoc: await chatCardTitleDoc({
+					prefix: `${actor.name} — `,
+					name: item.name ?? "",
+					kind: "navigatorpower",
+					suffix: ` (${masteryLabel})`,
+				}),
+			},
 			baseTarget: characteristic.value,
 			testKind: "characteristic",
 			testKey: key,

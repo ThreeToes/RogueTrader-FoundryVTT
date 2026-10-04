@@ -245,6 +245,7 @@
   "CHAT.REROLL": "Fate Reroll",
   "CHAT.AIMING": "Aiming",
   "CHAT.ROLL_EVASION": "Roll Evasion",
+  "CHAT.OPEN_DOC_FAIL": "Could not open the compendium entry ({uuid}) — see the console (F12) for details",
   "CHAT.ROLL_DAMAGE": "Roll Damage",
   "CHAT.ROLL_TITLE": "Individual Damage Rolls",
   "CHAT.MUTATION_ROLL_TITLE": "{mutation} — Mutation Table",

@@ -228,6 +228,7 @@
   "CHAT.RIGHTEOUS_FURY": "Sprawiedliwy Gniew",
   "CHAT.REMAINING_NUMBER_OF_HIT": "Pozostałe trafienia",
   "CHAT.REROLL": "Pyrzucenie Przeznaczeniem",
+  "CHAT.OPEN_DOC_FAIL": "Nie można otworzyć wpisu z compendium ({uuid}) — szczegóły w konsoli (F12)",
   "CHAT.ROLL_DAMAGE": "Rzut na obrażenia",
   "CHAT.RELOAD": "Przeładuj! Brak amunicji!",
   "DIALOG.AMMO": "Amunicja",

@@ -196,6 +196,7 @@
   "CHAT.TEST_MODIFIER": "Modificateur",
   "CHAT.REMAINING_NUMBER_OF_HIT": "Coups restants",
   "CHAT.REROLL": "Relance au Destin",
+  "CHAT.OPEN_DOC_FAIL": "Impossible d'ouvrir l'entrée du compendium ({uuid}) — voir la console (F12) pour plus de détails",
   "CHAT.ROLL_DAMAGE": "Jet de dégâts",
   "CHAT.RELOAD": "Rechargez ! Plus de munitions !",
   "DIALOG.AMMO": "Munitions",

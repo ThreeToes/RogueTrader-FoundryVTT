@@ -72,6 +72,13 @@ export interface HomebrewProfile {
 	 * without touching core rules.
 	 */
 	pushCap?: { sanctioned: number; other: number };
+	/**
+	 * Launcher ammunition auto-consume (epic ui4b): firing a loaded launcher
+	 * decrements the loaded ordnance's quantity by the shots spent. Book-
+	 * accurate default is FALSE (absent = core rule, the manual −1 chip); the
+	 * funnel application lives in the sibling bead (65sq).
+	 */
+	ammoAutoConsume?: boolean;
 }
 
 /** Core book values (Core Rulebook p237) — RT profile data (bead yszf). */
@@ -116,6 +123,16 @@ export function resolvePushCap(
 	if (!override) return core;
 	const value = sanctioned ? override.sanctioned : override.other;
 	return Number.isFinite(value) ? Math.max(1, Math.floor(value)) : core;
+}
+
+/**
+ * Resolve the ammo auto-consume toggle (epic ui4b). Pure: null/undefined/
+ * missing flag all resolve to FALSE — the book-accurate default.
+ */
+export function resolveAmmoAutoConsume(
+	profile: HomebrewProfile | null | undefined,
+): boolean {
+	return profile?.ammoAutoConsume === true;
 }
 
 /** Default settings key storing the JSON-serialized profile. */

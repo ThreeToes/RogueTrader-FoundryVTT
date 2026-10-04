@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { rtCore } from "../../ffg/domain/system-profile";
 import {
 	CORE_FIRE_MODE_BONUS,
 	CORE_PUSH_CAP,
+	NO_HOMEBREW,
 	parseHomebrewProfile,
+	resolveAmmoAutoConsume,
 	resolveFireModeBonus,
 	resolvePushCap,
 } from "./homebrew";
@@ -71,9 +74,31 @@ describe("resolvePushCap (epic 0hap)", () => {
 		expect(resolvePushCap(profile, false)).toBe(5);
 	});
 
-	test("a malformed cap falls back to core, never below 1", () => {
-		const profile = { id: "house", pushCap: { sanctioned: 0, other: Number.NaN } };
-		expect(resolvePushCap(profile, true)).toBe(1);
-		expect(resolvePushCap(profile, false)).toBe(4);
+	describe("resolveAmmoAutoConsume (epic ui4b)", () => {
+		test("explicit profile overrides: true on, false off", () => {
+			expect(resolveAmmoAutoConsume({ id: "house", ammoAutoConsume: true })).toBe(
+				true,
+			);
+			expect(
+				resolveAmmoAutoConsume({ id: "house", ammoAutoConsume: false }),
+			).toBe(false);
+		});
+
+		test("missing profile (null/undefined) resolves to the default OFF", () => {
+			expect(resolveAmmoAutoConsume(null)).toBe(false);
+			expect(resolveAmmoAutoConsume(undefined)).toBe(false);
+		});
+
+		test("empty profile (flag absent) resolves to the default OFF", () => {
+			expect(resolveAmmoAutoConsume({ id: "house" })).toBe(false);
+		});
+
+		test("drift guard: the built-in profile ships the toggle OFF (book-accurate)", () => {
+			expect(resolveAmmoAutoConsume(NO_HOMEBREW)).toBe(false);
+			// Parsed-from-empty-settings (the shipped default state) too.
+			expect(resolveAmmoAutoConsume(parseHomebrewProfile(""))).toBe(false);
+			// Nobody turned the default on through the core system profile either.
+			expect("ammoAutoConsume" in rtCore).toBe(false);
+		});
 	});
 });

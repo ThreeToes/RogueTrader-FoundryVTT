@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 import {
 	carriedConditions,
 	conditionEffectData,
+	encounterEndRemovals,
+	encounterLengthStatusIds,
+	isEncounterLength,
 	snapOutReady,
 	shockCondition,
 	SYSTEM_STATUSES,
@@ -197,5 +200,57 @@ describe("carriedConditions / snapOutReady", () => {
 				effects: [{ id: "x", name: "Shaken", statuses: ["shaken"], flags: {} }],
 			}),
 		).toBe(false);
+	});
+});
+
+describe("encounter-end mapping (bead cneb)", () => {
+	test("isEncounterLength: no rounds/hours = encounter-length", () => {
+		expect(isEncounterLength(shockCondition(30))).toBe(true); // shaken
+		expect(isEncounterLength(shockCondition(70))).toBe(true); // frozen
+		expect(isEncounterLength(unnervedCondition())).toBe(true);
+		expect(isEncounterLength(shockCondition(10))).toBe(false); // 1 round
+		expect(isEncounterLength(shockCondition(110))).toBe(false); // 1d5 rounds
+		expect(isEncounterLength(shockCondition(170))).toBe(false); // hours
+	});
+
+	test("encounterLengthStatusIds derives from the condition table (no drift)", () => {
+		const ids = encounterLengthStatusIds();
+		// Every id is a real registry status.
+		for (const id of ids) expect(SYSTEM_STATUSES.some((s) => s.id === id)).toBe(true);
+		// The book's encounter-length outcomes: shaken/frozen/fleeing/frenzied
+		// (p295) + non-combat unnerved (p296). NOT startled/unconscious/frozen's
+		// timed/catatonic/hallucinating rounds-and-hours flavours.
+		expect(new Set(ids)).toEqual(
+			new Set(["shaken", "frozen", "fleeing", "frenzied", "unnerved"]),
+		);
+	});
+
+	test("encounterEndRemovals: picks encounter-length status effects only", () => {
+		const removals = encounterEndRemovals([
+			{ id: "ae-shaken", statuses: ["shaken"] },
+			{ id: "ae-unrelated", statuses: ["dead"] },
+			{ id: "ae-timed", statuses: ["startled"] }, // non-encounter status
+			{ statuses: ["fleeing"] }, // no id — nothing to delete
+		]);
+		expect(removals).toEqual([{ id: "ae-shaken", statusId: "shaken" }]);
+	});
+
+	test("encounterEndRemovals: a TIMED variant of an encounter status stays", () => {
+		// Frozen comes in both flavours (p295); Foundry self-expires the timed
+		// one, so encounter end must not delete it.
+		const removals = encounterEndRemovals([
+			{ id: "ae-frozen-timed", statuses: ["frozen"], duration: { rounds: 5 } },
+			{ id: "ae-shaken", statuses: ["frozen", "shaken"], duration: { seconds: 0 } },
+		]);
+		// The second effect carries frozen (encounter-length flavour) and a
+		// null seconds — still removed, both statuses reported as one removal.
+		expect(removals).toEqual([{ id: "ae-shaken", statusId: "frozen" }]);
+	});
+
+	test("encounterEndRemovals: one removal per effect even with several statuses", () => {
+		const removals = encounterEndRemovals([
+			{ id: "ae1", statuses: ["shaken", "fleeing", "blind"] },
+		]);
+		expect(removals).toEqual([{ id: "ae1", statusId: "shaken" }]);
 	});
 });

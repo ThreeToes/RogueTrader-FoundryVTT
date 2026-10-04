@@ -6,6 +6,7 @@
  */
 
 import { applyDamageFromCard, rollDamageButton, spendOrdnanceFromCard, toxicToughnessTestFromCard } from "../presentation/chat-actions";
+import { registerCombatEncounterEndHook } from "../presentation/combat-end";
 import { registerCreatorMenus } from "../presentation/creator-menus";
 import { registerTokenContextMenus } from "../presentation/token-menus";
 import { missingSkillGrants } from "../rules/default-skills";
@@ -128,11 +129,14 @@ function registerSkillGrantHook(): void {
 	});
 }
 
-/** Actor lifecycle hooks, chat actions and the creator context menus. */
+/** Actor lifecycle hooks, chat actions, combat-end cleanup and creator menus. */
 export function registerRuntimeHooks(): void {
 	registerChatActions();
 	registerVehicleTokenHooks();
 	registerSkillGrantHook();
+	// Encounter-end status cleanup (bead cneb): deleteCombat removes
+	// encounter-length conditions from every combatant (presentation/combat-end).
+	registerCombatEncounterEndHook();
 	// Character/ship/planet/warrant creators (epic kof0, phase 5): the
 	// directory context-menu entries live in presentation/creator-menus.ts.
 	registerCreatorMenus();

@@ -253,3 +253,88 @@ export function carriedConditions(
 export function snapOutReady(actor: unknown): boolean {
 	return carriedConditions(actor).some((c) => c.snapOut);
 }
+
+// ---------------------------------------------------------------------------
+// Encounter-end cleanup (bead cneb): "encounter-length conditions carry no
+// expiry — removed when the GM ends the encounter or via snap-out" (header
+// comment, p295-296). The duration semantics below are PURE; the document
+// writes live in the adapter (presentation/combat-end.ts) behind the deleteCombat hook.
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether a condition's book duration is encounter-length (no rounds, no
+ * hours — p295-296): such conditions carry no expiry and persist until the
+ * encounter ends, a snap-out ends them, or the GM removes them by hand.
+ */
+export function isEncounterLength(condition: ConditionData): boolean {
+	return (
+		condition.duration.rounds === undefined && condition.duration.hours === undefined
+	);
+}
+
+/**
+ * Status ids an encounter-length condition CAN produce, derived from the
+ * condition table above plus the non-combat unnerved condition — no
+ * hand-maintained copy that can drift. Frozen lands in BOTH flavours
+ * (encounter-length and 1d5/6 rounds), which is why encounter-end removal
+ * also checks the carried effect's duration (encounterEndRemovals below).
+ */
+const ENCOUNTER_LENGTH_STATUSES: Set<string> = new Set([
+	...SHOCK_CONDITIONS.filter((row) => isEncounterLength({
+		statusId: row.statusId,
+		duration: row.duration,
+		textKey: "",
+		insanity: "0",
+	})).map((row) => row.statusId),
+	unnervedCondition().statusId,
+]);
+
+/** The encounter-length status ids, for logging/tests (order: table order). */
+export function encounterLengthStatusIds(): string[] {
+	return [...ENCOUNTER_LENGTH_STATUSES];
+}
+
+/** The ActiveEffect-shaped records the encounter-end mapping reads. */
+export interface EncounterEndEffectLike {
+	/** ActiveEffect id (delete key). */
+	id?: string;
+	/** Status ids the effect carries. */
+	statuses?: string[];
+	/** Foundry self-expiry window (`rounds`/`seconds` set = self-expiring). */
+	duration?: { rounds?: number | null; seconds?: number | null } | null;
+}
+
+export interface EncounterEndRemoval {
+	/** ActiveEffect id to delete. */
+	id: string;
+	/** The carried status id (logging/diagnostics). */
+	statusId: string;
+}
+
+/**
+ * Pure selection for the encounter-end cleanup: of the given carried
+ * ActiveEffect shapes, return the ones holding an encounter-length status
+ * with NO expiry window. An effect with duration.rounds / duration.seconds
+ * is self-expiring (Foundry expires it when the window passes) and must NOT
+ * go at encounter end (timed frozen, p295). Unmatched effects (core
+ * statuses, owned-buff effects) are left alone.
+ */
+export function encounterEndRemovals(
+	effects: EncounterEndEffectLike[],
+): EncounterEndRemoval[] {
+	const removals: EncounterEndRemoval[] = [];
+	for (const effect of effects) {
+		const id = effect.id ?? "";
+		if (id === "") continue;
+		const rounds = effect.duration?.rounds ?? null;
+		const seconds = effect.duration?.seconds ?? null;
+		if (rounds || seconds) continue; // timed variant: Foundry self-expires
+		for (const statusId of effect.statuses ?? []) {
+			if (ENCOUNTER_LENGTH_STATUSES.has(statusId)) {
+				removals.push({ id, statusId });
+				break;
+			}
+		}
+	}
+	return removals;
+}

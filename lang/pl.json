@@ -313,6 +313,7 @@
   "EQUIP_STATE.WORN": "Założony",
   "ROLL.NOT_CARRIED": "{weapon} nie jest noszony - wyposaż go najpierw.",
   "ROLL.LAUNCHER_UNLOADED": "{weapon} nie jest załadowany - załaduj amunicję przed strzałem.",
+  "ROLL.AMMO_ROF_UNRESOLVED": "Nie można ustalić liczby strzałów oddanych przez {weapon} na podstawie tempa strzelania - amunicja NIE została automatycznie zużyta.",
   "ROLL.NOT_OWNER": "Nie jesteś właścicielem {actor} - nie możesz za niego rzucać.",
   "HEADER.DESCRIPTION": "Opis",
   "INITIATIVE": "Inicjatywa",

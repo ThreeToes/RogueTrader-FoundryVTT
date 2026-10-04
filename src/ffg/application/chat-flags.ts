@@ -33,6 +33,13 @@ export interface DamageRollFlag {
 	hitRoll?: number;
 	/** To-hit outcome was critical (gates critical-damage talent effects). */
 	critical?: boolean;
+	/**
+	 * The fire mode selected in the attack dialog at to-hit time (bead 9b95
+	 * F6): the auto-consume computes the shots spent from it; absent when the
+	 * to-hit was fast-forwarded (skipDialog) — then the consume falls back to
+	 * the launcher's RoF (single-shot-only = 1, else refuse).
+	 */
+	fireMode?: "single" | "burst" | "full";
 	rolled?: boolean;
 }
 

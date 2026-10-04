@@ -143,7 +143,12 @@ export interface RollHandler<
 		prepared: PreparedRoll<K, KindDataMap>,
 		outcome: TestOutcome,
 		messageId: string | null,
-		/** Resolved test numbers + final modifier list (bead jpbm). */
-		info?: { target: number; modifiers: Modifier[] },
+		/**
+		 * Resolved test numbers + final modifier list (bead jpbm). `context` is
+		 * the funnel context the test actually ran with (bead 9b95 F6) — the
+		 * weapon after-hook stamps its fire mode onto the damageRoll flag so the
+		 * auto-consume can compute the shots spent.
+		 */
+		info?: { target: number; modifiers: Modifier[]; context?: RollContext },
 	): Promise<void>;
 }

@@ -188,6 +188,16 @@ export interface ConfigPort {
 	profile(): SystemProfile;
 }
 
+/**
+ * Item document writes the rules perform (bead 65sq): embedded items an actor
+ * carries (ordnance consumption, ...). Never a read — reads use ActorView or
+ * the domain resolvers.
+ */
+export interface Items {
+	/** Apply an update patch to an item document. */
+	update(item: unknown, patch: Record<string, unknown>): Promise<void>;
+}
+
 /** Document writes the rules perform (never a read — reads use ActorView). */
 export interface Actors {
 	/** Apply an update patch to a document. */
@@ -209,5 +219,6 @@ export interface Ports {
 	config: ConfigPort;
 	content: ContentPort;
 	actors: Actors;
+	items: Items;
 	permissions: Permissions;
 }

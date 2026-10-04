@@ -160,6 +160,7 @@ export async function performRoll(request: RollRequest): Promise<void> {
 	await handler.after?.(request, prepared, outcome, messageId, {
 		target,
 		modifiers,
+		context,
 	});
 }
 

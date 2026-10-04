@@ -103,7 +103,7 @@ export const weaponHandler: RollHandler<"weapon"> = {
 			flags: dialog.attack.flags,
 		};
 	},
-	async after(request, _prepared, outcome, messageId) {
+	async after(request, _prepared, outcome, messageId, info) {
 		const ports = getPorts();
 		// Attach the damage-button flag now that the to-hit outcome exists
 		// (data-only kernel: the displayed roll feeds the damage location).
@@ -123,6 +123,9 @@ export const weaponHandler: RollHandler<"weapon"> = {
 							// Bead fjw: critical hits (success + double, per the
 							// profile's critOnDouble) gate critical-damage talents.
 							critical: outcome.critical,
+							// Bead 9b95 F6: the dialog fire mode rides the flag
+							// so the auto-consume computes the shots spent.
+							fireMode: info?.context?.fireMode,
 							rolled: false,
 						},
 					},

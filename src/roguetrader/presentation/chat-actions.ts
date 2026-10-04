@@ -15,6 +15,7 @@ import {
 } from "../../ffg/application/chat-flags";
 import { applyDamageWithCriticals, postCriticalCard } from "../rules/criticals";
 import { rollDamageForCard, rollToxicToughnessTest } from "../rules/adapter";
+import { decrementQuantity } from "../rules/ordnance";
 
 /**
  * Apply the wounds shown on a damage chat card to the flagged target
@@ -184,7 +185,14 @@ export async function rollDamageButton(
  * what fired and the remaining quantity, but NOTHING auto-consumes (bead
  * mrl4 owns that toggle). The fired item's uuid rides the button's data-uuid
  * (stamped by the profile funnel at damage time); the chip is the shooter's
- * tool, so the fired item's owner (or a GM) may spend it.
+ * tool, so the fired item's owner (or a GM, folded into isOwner by the
+ * port) may spend it.
+ *
+ * The read/write/announce goes through the SHARED decrementQuantity helper
+ * (bead 9b95 F1) so the manual chip and the auto-consume funnel cannot
+ * drift apart: the chip's manual-spend semantics are `onEmpty: "clamp"`
+ * (empty spends book a 0 and still report, non-finite quantity is refused
+ * without a write); the funnel's are `onEmpty: "refuse"`.
  */
 export async function spendOrdnanceFromCard(
 	button: HTMLButtonElement,
@@ -192,27 +200,16 @@ export async function spendOrdnanceFromCard(
 	const uuid = button.dataset.uuid;
 	if (!uuid) return;
 	const item = foundry.utils.fromUuidSync(uuid as never) as unknown as
-		| {
-				name?: string;
-				system?: { quantity?: number };
-				isOwner?: boolean;
-				update?: (data: object) => Promise<void>;
-		  }
+		| { name?: string; isOwner?: boolean }
 		| null;
 	if (!item) return;
-	// Spend permission = the fired item's owner or a GM (mirrors the
-	// apply-damage ownership gate).
-	const user = (game as unknown as { user?: { isGM?: boolean } }).user;
-	if (!item.isOwner && !user?.isGM) return;
-	const current = Number(item.system?.quantity ?? 0);
-	if (!Number.isFinite(current)) return;
+	// Spend permission = the fired item's owner or a GM — the same fails-
+	// closed qiuo gate the auto-consume funnel uses (bead 9b95 F5), and the
+	// same posture the apply-damage ownership gate keeps.
+	if (!getPorts().permissions.canRoll(item)) return;
+	// Disable BEFORE the helper: a second click while the write is in flight
+	// must not double-spend.
 	button.disabled = true;
-	const next = Math.max(0, current - 1);
-	await item.update?.({
-		system: { quantity: next },
-	});
-	getPorts().notify.info("CHAT.AMMO_SPENT", {
-		name: item.name ?? "",
-		quantity: next,
-	});
+	const next = await decrementQuantity(item, { onEmpty: "clamp" });
+	if (next === null) return;
 }

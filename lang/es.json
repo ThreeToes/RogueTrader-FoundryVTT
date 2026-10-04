@@ -299,6 +299,7 @@
   "EQUIP_STATE.WORN": "Vestida",
   "ROLL.NOT_CARRIED": "{weapon} no se lleva consigo - equípalo primero.",
   "ROLL.LAUNCHER_UNLOADED": "{weapon} no está cargado - carga la munición antes de disparar.",
+  "ROLL.AMMO_ROF_UNRESOLVED": "No se pudo calcular la munición gastada por {weapon} según su cadencia de fuego - la munición NO se consumió automáticamente.",
   "ROLL.NOT_OWNER": "No eres el propietario de {actor} - no puedes tirar por él.",
   "HEADER.DESCRIPTION": "Descripción",
   "INITIATIVE": "Iniciativa",

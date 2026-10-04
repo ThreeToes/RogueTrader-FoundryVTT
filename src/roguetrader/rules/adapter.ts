@@ -17,6 +17,13 @@ import {
 	targetToughnessMultiplier,
 } from "./talent-effects";
 import { postCard, type DamageRollFlag } from "./chat-flags";
+import { resolveAmmoAutoConsume, type HomebrewProfile } from "./homebrew";
+import {
+	type FireMode,
+	type RateOfFireLike,
+	decrementQuantity,
+	shotsForFireMode,
+} from "./ordnance";
 import { toxicActivates, toxicToughnessPenalty } from "./toxic";
 import { messageFlagNamespace } from "../../ffg/application/chat-flags";
 import { type AttackProfile, attackProfileOf } from "../../ffg/domain/model/attack";
@@ -98,14 +105,14 @@ export async function rollWeaponDamage(
 		return;
 	}
 	// Hit location needs a d100; a direct damage roll has no to-hit test, so
-	// roll a throwaway d100 purely for the location table.
-	const locationRoll = await ports.dice.roll("1d100");
+	// the throwaway d100 is rolled INSIDE postWeaponDamage (bead 9b95 F7:
+	// after the consume/refuse gates) — pass null to let it roll.
 	const target = ports.targets.actor() as Actor | null;
 	await postWeaponDamage(
 		actor,
 		(target ?? actor) as Actor,
 		profile,
-		locationRoll.total,
+		null,
 	);
 }
 
@@ -144,7 +151,96 @@ export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
 		profile,
 		data.hitRoll ?? 0,
 		data.critical === true,
+		// Bead 9b95 F6: the to-hit dialog's fire mode, stamped onto the flag.
+		data.fireMode,
 	);
+}
+
+/**
+ * Ammo auto-consume funnel application (epic ui4b, bead 65sq): with the
+ * toggle ON (ports.config.homebrew(), the same seam as the fire-mode bonus),
+ * the fired ordnance's quantity is decremented by the shots spent THROUGH
+ * the items port (loud-failure convention, bead c9s3 — a failed write
+ * throws), via the shared decrementQuantity helper (bead 9b95 F1 — one
+ * read/write/announce path for the auto-consume AND the manual −1 chip).
+ *
+ * "Shots spent" (bead 9b95 F6, book RoF semantics — Core Rulebook Tables
+ * 5-5/5-6): single = 1; burst / full = the launcher's own rateOfFire value
+ * when the attack context carries the mode (threaded from the to-hit dialog
+ * onto the damageRoll flag); with NO mode available (the sheet quick-damage
+ * path) it is 1 ONLY for a single-shot-only launcher, otherwise the consume
+ * is REFUSED LOUDLY (ROLL.AMMO_ROF_UNRESOLVED + no write) — we never
+ * silently consume 1 for a launcher whose printed RoF says otherwise.
+ *
+ * Permission posture (bead 9b95 F5): the write is the shooter's bookkeeping,
+ * with the SAME gate as the manual −1 chip — port.permissions.canRoll on
+ * the attacker (owner/GM; fails closed, bead qiuo). A NON-owner clicking the
+ * damage button still rolls and posts the card (today's behaviour) but the
+ * consume is SKIPPED: no write, no permission throw, no permanently
+ * unrollable (dead) card.
+ *
+ * Returns false ONLY when the toggle is ON and the ordnance is exhausted
+ * (quantity <= 0) or the item cannot resolve: the caller must refuse the hit
+ * via the SAME warn-and-refuse path an unloaded launcher takes
+ * (ROLL.LAUNCHER_UNLOADED). Every other "no" in here (toggle off, non-owner,
+ * unresolvable RoF) still returns true — the damage rolls as before.
+ */
+async function consumeFiredOrdnance(
+	attacker: Actor,
+	profile: AttackProfile,
+	fireMode: FireMode | null | undefined,
+): Promise<boolean> {
+	const fired = profile.fired;
+	if (!fired?.uuid) return true;
+	const ports = getPorts();
+	const homebrew = ports.config.homebrew() as HomebrewProfile | null;
+	if (!resolveAmmoAutoConsume(homebrew)) return true;
+	// F5 (bead 9b95): the ownership gate — a non-owner firing skips the
+	// consume (no write, no card death); the damage itself still posts.
+	if (!ports.permissions.canRoll(attacker)) return true;
+	const item = documentFromUuid(fired.uuid) as
+		| {
+				name?: string;
+				system?: { quantity?: number };
+				update?: (data: object) => Promise<void>;
+		  }
+		| null;
+	// Loud, not silent: the profile claims a fired item that no longer
+	// resolves — refusing to pretend the shot was free (bead c9s3).
+	if (typeof item?.update !== "function") {
+		throw new Error(
+			`consumeFiredOrdnance — fired item "${fired.uuid}" did not resolve to an updatable document; the shot was NOT consumed`,
+		);
+	}
+	// The launcher's own RoF block rides the profile's source item (the fire
+	// profile derives from the loaded ordnance, but RoF stays on the
+	// launcher — bead 4obp).
+	const rateOfFire = (
+		profile.source as {
+			system?: { rateOfFire?: RateOfFireLike };
+		}
+	).system?.rateOfFire;
+	const shots = shotsForFireMode(fireMode, rateOfFire);
+	if (shots === null) {
+		// Loud refusal (bead 9b95 F6): the shots cannot be resolved honestly,
+		// so the auto-consume is skipped — never a silent "1" for a burst
+		// launcher. The damage still rolls (today's behaviour).
+		ports.notify.warn("ROLL.AMMO_ROF_UNRESOLVED", {
+			weapon: profile.name,
+		});
+		return true;
+	}
+	const next = await decrementQuantity(item, {
+		onEmpty: "refuse",
+		shots,
+		weaponName: profile.name,
+	});
+	if (next === null) return false;
+	// The damage card's usage chip renders straight from profile.fired —
+	// keep the stamp in step with the write so the chip shows the
+	// post-consume remainder rather than a stale pre-shot quantity.
+	fired.quantity = next;
+	return true;
 }
 
 /**
@@ -161,8 +257,15 @@ async function postWeaponDamage(
 	attacker: Actor,
 	target: Actor,
 	profile: AttackProfile,
-	hitRoll = 0,
+	// Card damage: the to-hit roll feeds the location table. Sheet quick
+	// damage: null — the throwaway 1d100 location die is rolled HERE, below
+	// (bead 9b95 F7) so an exhausted launcher refuses without burning a die.
+	hitRoll: number | null,
 	isCritical = false,
+	// F6 (bead 9b95): the attack dialog's fire mode, threaded via the
+	// damageRoll flag; absent on the sheet quick-damage path — then the
+	// consume falls back to the launcher's RoF (single-shot-only = 1).
+	fireMode?: FireMode | null,
 ): Promise<void> {
 	const ports = getPorts();
 	// Bead 4obp: an UNLOADED launcher has no damage of its own (the book
@@ -173,6 +276,17 @@ async function postWeaponDamage(
 		ports.notify.warn("ROLL.LAUNCHER_UNLOADED", { weapon: profile.name });
 		return;
 	}
+	// Epic ui4b (bead 65sq): both fire paths (card damage button + sheet quick
+	// damage) converge HERE, where the profile already carries the fired
+	// ordnance stamp (bead 4obp) — so the auto-consume write lives at this one
+	// hook. A refusal (toggle ON, quantity exhausted) aborts the damage the
+	// same way an unloaded launcher does.
+	if (!(await consumeFiredOrdnance(attacker, profile, fireMode))) return;
+	// Bead 9b95 F7: the sheet quick-damage path's throwaway 1d100 location
+	// die is rolled only AFTER the consume/refuse gates — an exhausted
+	// launcher refuses without burning a die.
+	const resolvedHitRoll =
+		hitRoll ?? (await ports.dice.roll("1d100")).total;
 	// RT notation allows a trailing damage-type suffix ("1d10+4 E") which
 	// Foundry's Roll parser rejects - strip it first (bead 6tr); the parsed
 	// type also backfills profiles that never had a type set. A mutation attack
@@ -250,7 +364,7 @@ async function postWeaponDamage(
 	// Bead yojf: the kernel profile resolves through ports.config.profile()
 	// instead of a direct rtCore import, so a sibling module swaps one binding.
 	const ruleProfile = getPorts().config.profile();
-	const location = locationForHit(hitRoll ?? 0, ruleProfile);
+	const location = locationForHit(resolvedHitRoll ?? 0, ruleProfile);
 	const wornArmour = target.items.filter(
 		(i) =>
 			(i.type as string) === "armour" &&

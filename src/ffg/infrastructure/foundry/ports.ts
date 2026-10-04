@@ -21,6 +21,7 @@ import type {
 	Dice,
 	DiceResult,
 	I18n,
+	Items,
 	Notify,
 	Permissions,
 	Ports,
@@ -208,51 +209,58 @@ const config: ConfigPort = {
 	},
 };
 
+/**
+ * Shared loud-failure writer guard (bead c9s3, deduped by bead 9b95/F3):
+ * these ports used to optional-chain, so an unresolvable document turned the
+ * write into an invisible no-op and the caller went on posting cards claiming
+ * the write had landed. Throws unless the document exposes the writer method;
+ * the message names the port and the method (some tests pin them).
+ */
+function requireDocumentWriter(
+	doc: unknown,
+	label: string,
+	method: string,
+): Record<string, unknown> {
+	const candidate = doc as Record<string, unknown> | null;
+	if (typeof candidate?.[method] !== "function") {
+		throw new Error(
+			`${label} — document is missing or has no ${method}(); the write was NOT applied`,
+		);
+	}
+	return candidate;
+}
+
 const actors: Actors = {
 	async update(actor, patch) {
-		const doc = actor as
-			| { update?: (update: object) => Promise<void> }
-			| null;
-		// Loud, not silent (bead c9s3): these ports used to optional-chain, so an
-		// unresolvable document turned the write into a no-op and the caller went
-		// on to post a card claiming the effect had landed.
-		if (typeof doc?.update !== "function") {
-			throw new Error(
-				"actors.update — document is missing or has no update(); the write was NOT applied",
-			);
-		}
+		const doc = requireDocumentWriter(actor, "actors.update", "update") as {
+			update: (update: object) => Promise<void>;
+		};
 		await doc.update(patch);
 	},
 	async createEffects(actor, data) {
-		const doc = actor as
-			| {
-					createEmbeddedDocuments?: (
-						type: string,
-						data: object[],
-					) => Promise<unknown>;
-			  }
-			| null;
-		if (typeof doc?.createEmbeddedDocuments !== "function") {
-			throw new Error(
-				"actors.createEffects — document is missing or has no createEmbeddedDocuments(); the ActiveEffect was NOT created",
-			);
-		}
+		const doc = requireDocumentWriter(
+			actor,
+			"actors.createEffects",
+			"createEmbeddedDocuments",
+		) as {
+			createEmbeddedDocuments: (
+				type: string,
+				data: object[],
+			) => Promise<unknown>;
+		};
 		await doc.createEmbeddedDocuments("ActiveEffect", data);
 	},
 	async deleteEffects(actor, ids) {
-		const doc = actor as
-			| {
-					deleteEmbeddedDocuments?: (
-						type: string,
-						ids: string[],
-					) => Promise<unknown>;
-			  }
-			| null;
-		if (typeof doc?.deleteEmbeddedDocuments !== "function") {
-			throw new Error(
-				"actors.deleteEffects — document is missing or has no deleteEmbeddedDocuments(); the ActiveEffect was NOT deleted",
-			);
-		}
+		const doc = requireDocumentWriter(
+			actor,
+			"actors.deleteEffects",
+			"deleteEmbeddedDocuments",
+		) as {
+			deleteEmbeddedDocuments: (
+				type: string,
+				ids: string[],
+			) => Promise<unknown>;
+		};
 		await doc.deleteEmbeddedDocuments("ActiveEffect", ids);
 	},
 };
@@ -273,6 +281,20 @@ const permissions: Permissions = {
 	},
 };
 
+/**
+ * Item document writes (bead 65sq): the ammo auto-consume funnel decrements
+ * a launcher's loaded ordnance through here; mirrors actors.update's
+ * loud-failure contract (bead c9s3).
+ */
+const items: Items = {
+	async update(item, patch) {
+		const doc = requireDocumentWriter(item, "items.update", "update") as {
+			update: (update: object) => Promise<void>;
+		};
+		await doc.update(patch);
+	},
+};
+
 /** The Foundry port set (the production default). */
 export const foundryPorts: Ports = {
 	dice,
@@ -288,6 +310,7 @@ export const foundryPorts: Ports = {
 		return foundryContent;
 	},
 	actors,
+	items,
 	permissions,
 };
 

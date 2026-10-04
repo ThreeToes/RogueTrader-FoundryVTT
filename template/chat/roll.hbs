@@ -6,7 +6,7 @@
      becomes an anchor to the item's compendium doc, and an unresolvable name
      stays plain text. Other roll kinds keep the plain title. --}}
 {{#if titleDoc}}
-            {{titleDoc.prefix}}{{#if titleDoc.link}}<a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}">{{titleDoc.link.name}}</a>{{else}}{{titleDoc.name}}{{/if}}{{titleDoc.suffix}}
+            {{titleDoc.prefix}}{{#if titleDoc.link}}<a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}" data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{titleDoc.link.name}}</a>{{else}}{{titleDoc.name}}{{/if}}{{titleDoc.suffix}}
 {{else}}
             {{title}}
 {{/if}}

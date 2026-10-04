@@ -59,6 +59,30 @@ function titleDocAnchor(code: string, label: string): void {
 	);
 }
 
+/**
+ * NON-HIJACK guard, strengthened (bead oo5b F2): the anchor must not sit
+ * inside a <button>. The old regex /<button[^>]*adv-doc-link/g only caught a
+ * doc-link in a button's OPENING tag — an anchor nested in a button BODY
+ * passed. Instead: between the anchor and the card's first <button there must
+ * be no </button> close tag — a nested-in-button-body layout leaves that
+ * close tag in the slice, and fails here (for both roll.hbs and damage.hbs).
+ */
+function anchorNotInButton(code: string, label: string): void {
+	const anchorStart = code.search(/<a class="adv-doc-link"/);
+	expect(anchorStart, `${label}: the doc-link anchor exists`).toBeGreaterThan(
+		-1,
+	);
+	const firstButton = code.indexOf("<button", anchorStart);
+	expect(
+		firstButton,
+		`${label}: a card button follows the anchor (the region is real)`,
+	).toBeGreaterThan(-1);
+	expect(
+		code.slice(anchorStart, firstButton),
+		`${label}: the anchor is not nested inside a button body`,
+	).not.toContain("</button>");
+}
+
 describe("chat card doc links — template guards (bead qg4z)", () => {
 	test("roll.hbs: the to-hit/psychic/navigator title links its name", () => {
 		const code = templateCode("template/chat/roll.hbs");
@@ -73,6 +97,7 @@ describe("chat card doc links — template guards (bead qg4z)", () => {
 		expect(code).toContain(
 			'{{#if (and showDamageButton (eq outcomeClass "success"))}}',
 		);
+		anchorNotInButton(code, "roll.hbs");
 	});
 
 	test("damage.hbs: the damage title links the weapon name", () => {
@@ -93,22 +118,45 @@ describe("chat card doc links — template guards (bead qg4z)", () => {
 		).toBe(1);
 		// The anchor lives in the title, NOT inside any button (no hijack).
 		expect(code.match(/<button[^>]*adv-doc-link/g)).toBeNull();
+		anchorNotInButton(code, "damage.hbs");
 	});
 
-	test("the open action is dispatched from the chat click delegation (hooks.ts)", () => {
+	test("the open action is dispatched through the chat click delegation (hooks.ts)", () => {
 		// Chat is not an ApplicationV2: the anchor's click reaches
 		// openPackDocFromCard through the SAME delegated listener the card
 		// buttons use (registerChatActions) — not a data-action table.
 		const hooks = readFileSync("src/roguetrader/bootstrap/hooks.ts", "utf8");
 		expect(hooks).toContain("openPackDocFromCard");
 		expect(hooks).toContain("OPEN_PACK_DOC_ACTION");
+		// CHAT-SCOPED (bead oo5b F1): the doc-link branch only fires when the
+		// anchor sits inside a chat .message — the advancement dialog stamps
+		// the same data-action on its anchors and dispatches them through its
+		// own actions table, so an unscoped branch double-fired (two renders;
+		// two failure toasts with different keys). This pins the scoping.
+		expect(hooks).toMatch(/docLinkAnchor[\s\S]*?\.closest\("\.message"\)/);
 		const actions = readFileSync(
 			"src/roguetrader/presentation/chat-actions.ts",
 			"utf8",
 		);
 		expect(actions).toContain("openPackDocFromCard");
-		// Loud-fail: the open path notifies the genuine failure key.
+		// Loud-fail (bead oo5b F4): the chat surface passes its own failure key
+		// into the shared openPackDocUuid helper (which lives in pack-resolve).
 		expect(actions).toContain('"CHAT.OPEN_DOC_FAIL"');
+		const resolve = readFileSync(
+			"src/roguetrader/sheet/pack-resolve.ts",
+			"utf8",
+		);
+		expect(resolve).toContain("openPackDocUuid");
+		// All three surfaces delegate the BODY (no per-surface copies):
+		expect(
+			readFileSync(
+				"src/roguetrader/sheet/actor/advancement-dialog.ts",
+				"utf8",
+			),
+		).toContain("openPackDocUuid");
+		expect(
+			readFileSync("src/roguetrader/sheet/actor/character-creator.ts", "utf8"),
+		).toContain("openPackDocUuid");
 	});
 });
 

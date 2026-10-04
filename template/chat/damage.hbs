@@ -4,7 +4,7 @@
 {{!-- Bead qg4z: the weapon name (last title segment) links to its pack doc;
      the attacker → target part stays plain text. Card buttons are untouched. --}}
 {{#if titleDoc}}
-            {{titleDoc.prefix}}{{#if titleDoc.link}}<a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}">{{titleDoc.link.name}}</a>{{else}}{{titleDoc.name}}{{/if}}{{titleDoc.suffix}}
+            {{titleDoc.prefix}}{{#if titleDoc.link}}<a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}" data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{titleDoc.link.name}}</a>{{else}}{{titleDoc.name}}{{/if}}{{titleDoc.suffix}}
 {{else}}
             {{title}}
 {{/if}}

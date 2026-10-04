@@ -144,6 +144,44 @@ export async function openDocumentSheet(
 	await sheet.render({ force: true });
 }
 /**
+ * The shared doc-link open-path BODY (bead oo5b F4): resolve a stamped uuid
+ * and open the doc's sheet read-only, loudly failing (console + notify) under
+ * the CALLER'S key and { uuid } toast vars. All three link surfaces (the
+ * advancement dialog, the creator, the chat card) delegate here — one copy of
+ * the resolve->open->loud-fail flow, so a fix lands on every surface at once.
+ * Surfaces keep their own action registration/dispatch and only contribute
+ * their notifyKey + console label.
+ */
+export async function openPackDocUuid(
+	uuid: string,
+	{
+		notifyKey,
+		label,
+	}: {
+		notifyKey: string;
+		label: string;
+	},
+): Promise<void> {
+	if (!uuid) return;
+	try {
+		const doc = await resolvePackDocument(uuid);
+		if (!doc) {
+			console.warn(`rogue-trader | ${label}: "${uuid}" did not resolve`);
+			getPorts().notify.error(notifyKey, { uuid });
+			return;
+		}
+		await openDocumentSheet(doc, label, notifyKey, {
+			// Same vars as the !doc path: otherwise the sheet-less branch renders
+			// the key's {uuid} placeholder literally (bead e72x B2).
+			uuid,
+		});
+	} catch (error) {
+		console.error(`rogue-trader | ${label} failed:`, error);
+		getPorts().notify.error(notifyKey, { uuid });
+	}
+}
+
+/**
  * Sheet action: open the compendium source of an owned item (bead kwm9,
  * shared by CharacterSheet + NpcSheet). Reads data-uuid off the target —
  * the packer stamps the compendiumSource flag under the system's chat-flag

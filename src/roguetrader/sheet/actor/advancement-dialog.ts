@@ -8,8 +8,7 @@ import {
 import { sheetContext } from "../context";
 import {
 	characterOptionDocsOnce,
-	openDocumentSheet,
-	resolvePackDocument,
+	openPackDocUuid,
 } from "../pack-resolve";
 // Shared doc-link library (epic 61pk, bead n2b2): the resolvers live there,
 // re-exported through pack-resolve (see below); no local copies.
@@ -751,35 +750,19 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 	 * Document — and the repo's resolvePackDocument (bead wwuc) additionally
 	 * fixes the LevelDB packs where fromUuid no-opped in-world, so resolution
 	 * goes through that shared primitive + openDocumentSheet's loud failure.
+	 *
+	 * bead oo5b F4: the BODY is the shared openPackDocUuid helper — this
+	 * action only contributes its failure key + console label.
 	 */
 	static async #onOpenPackDoc(
 		this: AdvancementDialog,
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const uuid = target.dataset.uuid ?? "";
-		if (!uuid) return;
-		try {
-			const doc = await resolvePackDocument(uuid);
-			if (!doc) {
-				console.warn(
-					`rogue-trader | advancement doc link: "${uuid}" did not resolve`,
-				);
-				getPorts().notify.error("ADVANCE.OPEN_DOC_FAIL", { uuid });
-				return;
-			}
-			await openDocumentSheet(
-				doc,
-				"advancement doc link",
-				"ADVANCE.OPEN_DOC_FAIL",
-				// Same vars as the !doc path/catch (bead e72x B2): otherwise the
-				// sheet-less branch renders the key's {uuid} placeholder literally.
-				{ uuid },
-			);
-		} catch (error) {
-			console.error("rogue-trader | advancement doc link failed:", error);
-			getPorts().notify.error("ADVANCE.OPEN_DOC_FAIL", { uuid });
-		}
+		await openPackDocUuid(target.dataset.uuid ?? "", {
+			notifyKey: "ADVANCE.OPEN_DOC_FAIL",
+			label: "advancement doc link",
+		});
 	}
 
 	/** GM refund: remove the newest matching ledger entry. */

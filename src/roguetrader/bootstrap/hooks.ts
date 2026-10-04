@@ -25,13 +25,17 @@ function registerChatActions(): void {
 	Hooks.once("ready", () => {
 		document.body.addEventListener("click", (event) => {
 			const target = event.target as HTMLElement | null;
-			// Card title doc link (epic 61pk, bead qg4z): the weapon/power name
-			// anchor opens the pack item's sheet read-only. The card's buttons
-			// (damage, apply, evade, toxic test) are untouched by this branch.
+			// Card title doc link (epic 61pk, bead qg4z; oo5b F1): the weapon/
+			// power name anchor opens the pack item's sheet read-only. CHAT-SCOPED:
+			// the anchor must sit inside a .message — the advancement dialog and
+			// creator stamp the SAME data-action on their anchors and dispatch
+			// those through their own actions tables, so an unscoped branch fired
+			// BOTH handlers (double render; two failure toasts with different
+			// keys). The card's buttons are untouched by this branch.
 			const docLinkAnchor = target?.closest<HTMLAnchorElement>(
 				`a[data-action="${OPEN_PACK_DOC_ACTION}"]`,
 			);
-			if (docLinkAnchor) {
+			if (docLinkAnchor?.closest(".message")) {
 				openPackDocFromCard(docLinkAnchor).catch((error) =>
 					console.error("rogue-trader: chat doc link failed", error),
 				);

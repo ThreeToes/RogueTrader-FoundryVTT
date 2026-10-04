@@ -58,15 +58,18 @@ import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { readRtFlag } from "../../rules/chat-flags";
 import { waitForDefaultGrants } from "../default-grants";
-import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
+import {
+	characterOptionDocsOnce,
+	getCharacterOptionDocs,
+	getPackDocuments,
+} from "../pack-resolve";
 // The pack-doc link library (epic 61pk, bead hjve): one import point for the
 // pure anchor helper + the open path (pack-resolve re-exports pack-doc-links).
 import {
 	OPEN_PACK_DOC_ACTION,
 	packDocAnchor,
 	type PackDocLike,
-	openDocumentSheet,
-	resolvePackDocument,
+	openPackDocUuid,
 } from "../pack-resolve";
 // The warmed talent-doc link catalog (bead hjve): the creator resolves its
 // talent pick chips against this pool — warmed at ready (bootstrap/warmers);
@@ -359,7 +362,10 @@ export class CharacterCreator extends CreatorApplication {
 		if (getTalentLinkDocs().length > 0) return getTalentLinkDocs();
 		setTalentLinkDocs(
 			(
-				(await getCharacterOptionDocs("talent")) as unknown as Array<{
+				// The CACHED fetch (bead oo5b F5): getCharacterOptionDocs would
+				// re-fetch the whole pack on EVERY re-render while the pack is
+				// absent — with an empty catalog the guard above always re-runs.
+				(await characterOptionDocsOnce("talent")) as unknown as Array<{
 					name?: string;
 					uuid?: string;
 					system?: unknown;
@@ -1111,38 +1117,19 @@ export class CharacterCreator extends CreatorApplication {
 
 	/**
 	 * The chip doc-link action (epic 61pk, bead hjve): open the chip's pack
-	 * doc read-only. Same shape as the advancement dialog's #onOpenPackDoc —
-	 * resolvePackDocument + openDocumentSheet; loud missing-doc notify, the
-	 * { uuid } toast vars keeping the placeholder interpolating.
+	 * doc read-only. Delegates to the SHARED open path (bead oo5b F4) — the
+	 * creator contributes its failure key + console label; the { uuid } toast
+	 * vars and the loud missing-doc notify are the helper's convention.
 	 */
 	static async #onOpenPackDoc(
 		this: CharacterCreator,
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const uuid = target.dataset.uuid ?? "";
-		if (!uuid) return;
-		try {
-			const doc = await resolvePackDocument(uuid);
-			if (!doc) {
-				console.warn(
-					`rogue-trader | creator doc link: "${uuid}" did not resolve`,
-				);
-				getPorts().notify.error("CREATOR.OPEN_DOC_FAIL", { uuid });
-				return;
-			}
-			await openDocumentSheet(
-				doc,
-				"creator doc link",
-				"CREATOR.OPEN_DOC_FAIL",
-				// Same vars as the !doc path: otherwise the sheet-less branch
-				// renders the key's {uuid} placeholder literally (bead e72x B2).
-				{ uuid },
-			);
-		} catch (error) {
-			console.error("rogue-trader | creator doc link failed:", error);
-			getPorts().notify.error("CREATOR.OPEN_DOC_FAIL", { uuid });
-		}
+		await openPackDocUuid(target.dataset.uuid ?? "", {
+			notifyKey: "CREATOR.OPEN_DOC_FAIL",
+			label: "creator doc link",
+		});
 	}
 
 	/**

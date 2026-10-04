@@ -78,8 +78,11 @@ async function loadCatalog(kind: ChatDocKind): Promise<PackDocLike[]> {
 	}
 	// Weapons live in the equipment concept pack (ranged + melee-weapon
 	// resolved by the folder rule); mutation attacks (bead kam1) live in the
-	// afflictions pack. Both fetches share the packDocsOnce cache with the
-	// other surfaces.
+	// afflictions pack. These packDocsOnce keys are chat-doc-links-LOCAL —
+	// the warmers fetch the equipment pack directly (uncached), so there is
+	// NO cache-share on this branch; the SHARED cache is the character-
+	// options fetch (characterOptionDocsOnce) the psychic/navigator branch
+	// above uses (bead oo5b F5).
 	const [equipment, afflictions] = await Promise.all([
 		packDocsOnce("chat-doc-links:equipment", () =>
 			getPackDocuments(EQUIPMENT_PACK),

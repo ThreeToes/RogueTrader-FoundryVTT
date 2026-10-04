@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { acceptsOrdnance, attackProfileOf } from "./attack";
+import { acceptsOrdnance, attackProfileOf, ordnanceFamilyOf } from "./attack";
 
 // Bead kam1: weapons and printed mutation attacks resolve to ONE profile shape
 // so the to-hit handler and damage pipeline do not fork.
@@ -134,6 +134,102 @@ describe("attackProfileOf (bead kam1)", () => {
 		expect(profile?.attackType).toBe("melee-weapon");
 		expect(profile?.damageTypes).toEqual(["R"]);
 		expect(profile?.qualities).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Standalone-fire launchers (bead pht2): a launcher WITHOUT acceptsAmmo
+// carries its own COMPLETE printed profile (Core Rulebook p114: default
+// ammunition is an abstract included supply, only unusual ammo is itemised;
+// Into the Storm p113 forbids unusual ammo on these launchers) — it resolves
+// as a normal ranged weapon and NOTHING load side is consulted.
+// ---------------------------------------------------------------------------
+
+const rokkitLauncha = {
+	id: "w4",
+	name: "Rokkit Launcha",
+	type: "ranged-weapon",
+	system: {
+		damage: "3d10+5",
+		damageType: "Explosive",
+		penetration: 4,
+		weaponFamily: "launcher",
+		class: "basic",
+		special: ["unreliable"],
+		// Even a stale load id must not resurrect the load machinery.
+		loadedAmmoId: "a1",
+		// acceptsAmmo ABSENT — the book models no swappable ordnance here.
+	},
+};
+
+describe("attackProfileOf standalone-launcher branch (bead pht2)", () => {
+	test("a launcher without acceptsAmmo fires its OWN printed profile", () => {
+		const profile = attackProfileOf(rokkitLauncha, () => fragMissile);
+		expect(profile?.damage).toBe("3d10+5");
+		expect(profile?.damageTypes).toEqual(["Explosive"]);
+		expect(profile?.penetration).toBe(4);
+		expect(profile?.qualities).toEqual(["unreliable"]);
+		expect(profile?.characteristic).toBe("bs");
+		expect(profile?.attackType).toBe("ranged-weapon");
+		// No load machinery: no fired stamp, no unusable refusal.
+		expect(profile?.fired ?? null).toBe(null);
+		expect(profile?.unusable ?? false).toBe(false);
+	});
+
+	test("a launcher with WHITESPACE acceptsAmmo is standalone (trim-gate)", () => {
+		const profile = attackProfileOf({
+			...rokkitLauncha,
+			system: { ...rokkitLauncha.system, acceptsAmmo: "   " },
+		});
+		expect(profile?.damage).toBe("3d10+5");
+		expect(profile?.unusable ?? false).toBe(false);
+	});
+
+	test("a launcher WITH acceptsAmmo never takes the standalone path", () => {
+		// Even though the weapon row carries a damage value (a data-entry
+		// mistake), the load branch replaces it: an EMPTY load refuses (the
+		// book prints "—"/"Varies with ammunition" for this launcher).
+		const profile = attackProfileOf({
+			...missileLauncher,
+			system: {
+				...missileLauncher.system,
+				damage: "9d9",
+				loadedAmmoId: "",
+			},
+		});
+		expect(profile?.unusable).toBe(true);
+		expect(profile?.damage).toBe("");
+	});
+});
+
+describe("damageless ordnance loads but refuses fire (bead pht2)", () => {
+	// Web Missile (Hostile Acquisitions Table 2-11, printed p52) and the
+	// Starflare Round (Into the Storm Table 3-2, printed p117): the book
+	// prints Dam "—" — the KIND is the load compatibility, but there is no
+	// damage formula to roll. A proper no-damage attack path is an owner
+	// follow-up; the model keeps the established warn-and-refuse semantics.
+	const webMissile = {
+		id: "a4",
+		name: "Web Missile",
+		type: "ammunition",
+		uuid: "Actor.x.Item.a4",
+		system: {
+			quantity: 2,
+			ordnance: { kind: "missile", qualities: ["blast-6", "snare"] },
+		},
+	};
+
+	test("a damageless missile-kind round IS accepted ordnance", () => {
+		expect(ordnanceFamilyOf(webMissile)).toBe("missile");
+		expect(acceptsOrdnance(missileLauncher, webMissile)).toBe(true);
+	});
+
+	test("a loaded damageless round is unusable (no damage formula to roll)", () => {
+		const profile = attackProfileOf({
+			...missileLauncher,
+			system: { ...missileLauncher.system, loadedAmmoId: "a4" },
+		},	(id) => (id === "a4" ? webMissile : null));
+		expect(profile?.unusable).toBe(true);
 	});
 });
 

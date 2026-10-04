@@ -154,7 +154,11 @@ export type AmmoResolver = (id: string) => LoadableOrdnance | null | undefined;
 /**
  * The weaponFamily key the load model gates on (epic nlsh): launchers fire
  * LOADED ordnance — missiles (ammunition items) or grenades (thrown-family
- * ranged-weapon items) — and have no damage of their own.
+ * ranged-weapon items). Launchers WITH an acceptsAmmo key carry the printed
+ * "—" damage and have no profile of their own; launchers WITHOUT one carry
+ * their own COMPLETE printed profile and fire standalone (bead pht2 — Core
+ * Rulebook p114: default ammunition is an abstract included supply, only
+ * UNUSUAL ammo is itemised and loadable).
  */
 export const LAUNCHER_FAMILY = "launcher";
 
@@ -171,7 +175,12 @@ export const LAUNCHER_FAMILY = "launcher";
 export function ordnanceFamilyOf(item: LoadableOrdnance): string | null {
 	if (item.type === "ammunition") {
 		const block = item.system?.ordnance;
-		if (!block?.damage || !block.kind) return null;
+		// The block's KIND is the load compatibility (bead pht2): the book
+		// prints "—" Dam for no-damage rounds too (Web Missile, Hostile
+		// Acquisitions Table 2-11 p52), so damage is NOT part of the gate —
+		// FIELDS still require it (ordnanceFieldsOf: a damageless load stays
+		// warn-and-refuse, like the established damage-less grenade case).
+		if (!block?.kind) return null;
 		return String(block.kind);
 	}
 	if (item.type === "ranged-weapon") {
@@ -283,12 +292,20 @@ export function launcherProfile(
 /**
  * Resolve an Item's attack profile, or null when it has no attack.
  *
- * A weapon resolves from its own system data — except a LAUNCHER, whose fire
- * profile derives from its loaded ordnance through the optional actor-side
- * `ammoResolver` (bead 4obp): unloaded, a launcher yields an unusable profile
- * the damage path refuses. A mutation resolves ONLY from an authored `attack`
- * block — a mutation without one is not an attack, however combat-flavoured
- * its prose. Anything else returns null.
+ * A weapon resolves from its own system data — except a LAUNCHER WITH
+ * `acceptsAmmo` (bead 4obp): its fire profile derives from the loaded
+ * ordnance through the optional actor-side `ammoResolver`, and unloaded it
+ * yields an unusable profile the damage path refuses (the book prints "—"
+ * for launcher damage there — "Varies with ammunition"). A launcher WITHOUT
+ * `acceptsAmmo` (bead pht2) carries its own COMPLETE printed profile and
+ * resolves as a normal ranged weapon: Core Rulebook p114 makes default
+ * ammunition an ABSTRACT included supply, and Into the Storm p113 prose
+ * forbids unusual ammo on these launchers — there is nothing to load, so
+ * no load machinery and no warn apply.
+ *
+ * A mutation resolves ONLY from an authored `attack` block — a mutation
+ * without one is not an attack, however combat-flavoured its prose.
+ * Anything else returns null.
  */
 export function attackProfileOf(
 	item: AttackSource | null | undefined,
@@ -317,15 +334,25 @@ export function attackProfileOf(
 			innate: false,
 			source: item as DamageSource,
 		};
-		// Launchers fire LOADED ordnance (bead 4obp): the base weapon profile
-		// (damage "—") is replaced by the loaded item's fire profile, or
-		// marked unusable when nothing usable is loaded.
+		// Launchers (bead 4obp): a launcher WITH acceptsAmmo fires LOADED
+		// ordnance — the base weapon profile (damage "—") is replaced by the
+		// loaded item's fire profile, or marked unusable when nothing usable
+		// is loaded. WITHOUT acceptsAmmo (bead pht2) the launcher is a
+		// standalone weapon: its own printed profile wins, and nothing load
+		// side is consulted (the empty acceptance means it accepts nothing —
+		// epic nlsh compatibility card).
 		if (
 			!melee &&
 			String(
 				((item.system ?? {}) as { weaponFamily?: string }).weaponFamily ?? "",
 			).toLowerCase() === LAUNCHER_FAMILY
 		) {
+			const accepts = String(
+				((item.system ?? {}) as { acceptsAmmo?: string }).acceptsAmmo ?? "",
+			)
+				.trim()
+				.toLowerCase();
+			if (!accepts) return base;
 			return launcherProfile(
 				base,
 				String(

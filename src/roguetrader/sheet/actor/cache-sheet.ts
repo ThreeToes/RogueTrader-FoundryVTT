@@ -236,7 +236,10 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		takenCount: number,
 	): void {
 		const items = taker.items ?? [];
-		const bonus = Number(taker.system?.characteristicBonus?.("s") ?? 0);
+		// Core Rulebook p267: SB + TB through Table 9-33 (matches the load bar).
+		const bonus =
+			Number(taker.system?.characteristicBonus?.("s") ?? 0) +
+			Number(taker.system?.characteristicBonus?.("t") ?? 0);
 		const outcome = actorEncumbrance(items, bonus);
 		if (outcome.state === "ok") return;
 		getPorts().notify.warn("CACHE.OVERLOADED", {

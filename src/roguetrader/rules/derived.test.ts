@@ -44,6 +44,26 @@ describe("derived character values", () => {
 			expect(withTalent).toBe(16);
 		});
 
+		// Bead qhkv: the advancement "+5 Wounds" sources ride the same wounds-max
+		// effect machinery as Sound Constitution — one effect with value 5 adds 5
+		// to the stored creation base (no Toughness recompute at runtime).
+		test("advancement +5 Wounds (wounds-max value 5) adds to the stored base", () => {
+			expect(
+				woundsMax(
+					buildActorView({
+						system: char,
+						items: [
+							{
+								type: "talent",
+								name: "Advancement: +5 Wounds",
+								system: { effects: [{ kind: "wounds-max", value: 5 }] },
+							},
+						],
+					}),
+				),
+			).toBe(19); // 14 stored base + 5
+		});
+
 		// Bead yb6: gear-family items count only when equipped.
 		test("equipped gear contributes, stowed does not", () => {
 			const gearItem = (equipState: string) => ({

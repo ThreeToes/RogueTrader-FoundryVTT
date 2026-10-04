@@ -1157,15 +1157,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	/** Combat tab read-outs: encumbrance + the derived (read-only) values. */
 	#derivedContext(context: Record<string, unknown>, system: Character): void {
-		// Encumbrance: carried weight vs capacity derived from Strength Bonus
-		// (rules/encumbrance.ts deriveCapacity, VERIFY book rule). Only READY
-		// items count (bead yar): carried weapons/gear, worn armour.
-		// Carried load (rules/encumbrance.ts): one shared definition of which
-		// items count — STOWED counts too (owner decision 2026-09-08, bead xhcc,
-		// which superseded yar's READY-only rule).
+		// Core Rulebook p267: capacity keys on the SUM of Strength Bonus and
+		// Toughness Bonus through Table 9-33 — SB+TB here; quantity stacks count
+		// (bead qhkv; bead 1sxq).
 		context.encumbrance = actorEncumbrance(
 			this.actor.items,
-			system.characteristicBonus("s"),
+			system.characteristicBonus("s") + system.characteristicBonus("t"),
 		);
 		// Derived values (read-only): definitional + rules-layer, no writeback.
 		context.derived = {

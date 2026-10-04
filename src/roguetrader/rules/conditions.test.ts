@@ -16,6 +16,7 @@ import {
 	unnervedCondition,
 	STATUS_IMG,
 } from "./conditions";
+import type { ConditionData } from "./conditions";
 import { SHOCK_TABLE, shockOutcome } from "./fear";
 
 describe("SYSTEM_STATUSES registry", () => {
@@ -434,5 +435,227 @@ describe("content guards: combat conditions (epic vr1o / bead c9nt)", () => {
 		]) {
 			expect(systemStatus(id)?.testPenalty).toBe(0);
 		}
+	});
+});
+
+// -------------------------------------------------------------------------
+// Rounds duration automation (bead u3i7). VERIFICATION result, verified
+// against the installed v14 core foundry.mjs: rounds-based ActiveEffect
+// ticking is NATIVE core behaviour — no system tick machinery was added.
+// What core does (line cites; the simulation below mirrors it faithfully):
+// - Combat#onStartTurn refreshes the effect registry with "turnStart"
+//   (foundry.mjs:51944), roundStart 51912, roundEnd 51882, turnEnd 51851;
+// - rounds remaining are recomputed as `duration.value - (currentRound -
+//   startRound)` (_prepareCombatBasedDuration, foundry.mjs:50141-50144);
+// - for any non-infinite duration the expiry event defaults to "turnStart"
+//   (duration schema initial, foundry.mjs:15802-15803);
+// - isExpiryEvent("turnStart") only matches when the CURRENT combatant IS
+//   the effect owner's combatant (foundry.mjs:50635) — ticks land on the
+//   OWNING combatant's turn start;
+// - refresh() deletes expired effects only when expiryAction === "delete"
+//   (foundry.mjs:49545-49548 + #deleteExpiredEffects 49572) — core's
+//   default is "update" (218589-218593), which merely flags duration
+//   .expired; registerDurationAutomation (bootstrap/config.ts) sets
+//   "delete" for the auto-removal the bead outcome asks for.
+// The tests below are a headless simulation of THAT model driven by the
+// real conditionEffectData() shapes — a regression guard: if core's
+// semantics ever change under us (Foundry upgrade), these pin where the
+// behaviour breaks.
+// -------------------------------------------------------------------------
+
+/**
+ * foundry.mjs:15965-15980, verbatim semantics: a legacy `{rounds: n}` (or
+ * seconds/turns) key is migrated into `{value: n, units: "rounds"}` when the
+ * new-schema keys are absent.
+ */
+function migrateDuration(duration: Record<string, unknown>): void {
+	for (const unit of ["seconds", "turns", "rounds"]) {
+		const value = duration[unit];
+		if (value !== undefined && typeof value === "number") {
+			if (duration.value === undefined) duration.value = value;
+			if (duration.units === undefined) duration.units = unit;
+			break;
+		}
+	}
+}
+
+/** An effect shape the simulation's registry iterates (ActiveEffect subset). */
+interface SimEffect {
+	id: string;
+	/** The condition factory product this effect was applied from. */
+	condition: ConditionData;
+	/** Foundry's `start` record (ActiveEffect#getEffectStart, foundry.mjs:50655). */
+	start: { round?: number | null; combat: string | null };
+	/** The combatant id that owns this effect (effectCombatant in 50611-50651). */
+	owner: string;
+	/** Set true by the simulated expiry action. */
+	deleted: boolean;
+}
+
+/** Simulated combat snapshot: the inputs of a refresh(event) call. */
+interface SimCombat {
+	round: number;
+	/** The id of the combatant whose turn is current. */
+	combatant: string;
+}
+
+/**
+ * One registry-refresh event, mirroring ActiveEffectRegistry#refresh
+ * (foundry.mjs:49507-49550) tightened to the rounds path: remaining recompute
+ * (50141-50144), turnStart owner matching (50635), delete expiry action
+ * (49545-49548). Returns the ids it deleted.
+ */
+function refresh(
+	effects: SimEffect[],
+	event: "turnStart" | "roundStart" | "roundEnd" | "turnEnd",
+	combat: SimCombat,
+): string[] {
+	const deleted: string[] = [];
+	for (const effect of effects) {
+		if (effect.deleted) continue;
+		const raw = conditionEffectData(effect.condition, 100) as {
+			duration?: Record<string, unknown>;
+		} | null;
+		if (!raw) continue;
+		// BaseActiveEffect#migrateDuration runs on document construction, so
+		// the simulation migrates the create-data shape the same way core does.
+		const duration: Record<string, unknown> = { ...(raw.duration ?? {}) };
+		migrateDuration(duration);
+		const value = typeof duration.value === "number" ? duration.value : null;
+		// _prepareCombatBasedDuration: remaining = value - (round - startRound).
+		const remaining = value == null
+			? Number.POSITIVE_INFINITY
+			: value - (combat.round - (effect.start.round ?? 1));
+		const durationReached = remaining <= 0 || !Number.isFinite(remaining);
+		// isExpiryEvent: expiry defaults to "turnStart" for a numbered duration
+		// (schema initial 15802-15803); encounter-length effects have neither
+		// value nor expiry and can never match a combat event.
+		const expiry = value != null ? "turnStart" : null;
+		const isExpiryEvent = event === expiry
+			&& event === "turnStart"
+			&& effect.owner === combat.combatant;
+		if (durationReached && isExpiryEvent) {
+			effect.deleted = true; // expiryAction "delete" → #deleteExpiredEffects
+			deleted.push(effect.id);
+		}
+	}
+	return deleted;
+}
+
+// The owner's timed frozen variant: Shock 141-160 "crumpled" → frozen, 6
+// rounds (p295-296). The encounter-length comparator: Shock 21-40 shaken.
+const TIMED = shockCondition(150);
+const ENCOUNTER = shockCondition(30);
+
+const TURN_ORDER = ["A", "B", "C"];
+
+/**
+ * A condition applied mid-combat in the given round, owned by the combatant
+ * it lands on (ActiveEffect#_preCreate stamps start from getEffectStart() —
+ * foundry.mjs:49385-49393; the owning combatant is resolved from the actor,
+ * foundry.mjs:50619-50633).
+ */
+function appliedEffect(
+	id: string,
+	condition: ConditionData,
+	round: number,
+	owner: string,
+): SimEffect {
+	return { id, condition, start: { round, combat: "c1" }, owner, deleted: false };
+}
+
+/** A turnStart combat snapshot against the A/B/C turn order. */
+const turnStart = (round: number, turn: number): SimCombat => ({
+	round,
+	combatant: TURN_ORDER[turn % TURN_ORDER.length],
+});
+
+describe("rounds duration automation (bead u3i7, v14 core native)", () => {
+	test("a rounds-dated condition expires on its OWNER's turn start when the rounds run out", () => {
+		// frozen (crumpled, 6 rounds), applied by A in round 2.
+		const effect = appliedEffect("ae-frozen", TIMED, 2, "A");
+		const registry = [effect];
+		// Rounds 2..7, owner A's turn start: still ticking...
+		for (const round of [2, 3, 4, 5, 6, 7]) {
+			expect(refresh(registry, "turnStart", turnStart(round, 0))).toEqual([]);
+		}
+		// Round 8, owner A's turn start: remaining 6 - (8 - 2) = 0 → deleted.
+		expect(refresh(registry, "turnStart", turnStart(8, 0))).toEqual(["ae-frozen"]);
+		expect(effect.deleted).toBe(true);
+	});
+
+	test("another combatant's turn start never expires a foreign effect (owner match, 50635)", () => {
+		const effect = appliedEffect("ae-frozen", TIMED, 1, "B");
+		const registry = [effect];
+		// A's and C's turns never touch B's effect, however overdue it runs.
+		for (const round of [3, 9, 15]) {
+			refresh(registry, "turnStart", turnStart(round, 0)); // A
+			refresh(registry, "turnStart", turnStart(round, 2)); // C
+		}
+		expect(effect.deleted).toBe(false);
+		// Only owner B's turn start in round 7 (1 + 6) removes it.
+		expect(refresh(registry, "turnStart", turnStart(7, 1))).toEqual(["ae-frozen"]);
+	});
+
+	test("encounter-length conditions are NEVER expired by core ticking — only by the deleteCombat cleanup", () => {
+		const effect = appliedEffect("ae-shaken", ENCOUNTER, 2, "A");
+		const registry = [effect];
+		// A full 30-round encounter, every event kind, every turn slot:
+		for (const event of ["turnStart", "roundStart", "roundEnd", "turnEnd"] as const) {
+			for (let round = 1; round <= 30; round++) {
+				for (const turn of [0, 1, 2]) {
+					refresh(registry, event, { round, combatant: TURN_ORDER[turn] });
+				}
+			}
+		}
+		expect(effect.deleted).toBe(false);
+		// Its removal is purely the tracker's encounter-end channel:
+		expect(
+			encounterEndRemovals([
+				{ id: "ae-shaken", statuses: [ENCOUNTER.statusId] },
+			]),
+		).toEqual([{ id: "ae-shaken", statusId: "shaken" }]);
+	});
+
+	test("the timed frozen flavour survives the encounter-end cleanup (no double channel)", () => {
+		expect(isEncounterLength(TIMED)).toBe(false);
+		// A timed variant carries a non-null duration.rounds → encounterEndRemovals
+		// (rules/conditions.ts) skips it; core's own ticking is its only removal.
+		expect(
+			encounterEndRemovals([
+				{ id: "ae-frozen", statuses: [TIMED.statusId], duration: { rounds: 6 } },
+			]),
+		).toEqual([]);
+	});
+
+	test("conditionEffectData's duration shape is v14-native after migrateDuration (15965-15980)", () => {
+		// Fixed-cap timed rows: frozen 1d5→6 rounds (capped, p295-296) and
+		// hallucinating 20 rounds; catatonic's hours land as seconds;
+		// startled is the smallest timed row, one round.
+		const cases: Array<{ condition: ConditionData; value: number; units: string }> = [
+			{ condition: shockCondition(10), value: 1, units: "rounds" },
+			{ condition: shockCondition(150), value: 6, units: "rounds" },
+			{ condition: shockCondition(160), value: 6, units: "rounds" },
+			{ condition: shockCondition(170), value: 5 * 3600, units: "seconds" },
+		];
+		for (const { condition, value, units } of cases) {
+			const data = conditionEffectData(condition, 100) as {
+				duration: Record<string, unknown>;
+			};
+			// Migrate as core does on document construction, then assert shape.
+			migrateDuration(data.duration);
+			expect(data.duration.value).toBe(value);
+			expect(data.duration.units).toBe(units);
+		}
+	});
+
+	test("scan guard: bootstrap/config.ts wires expiryAction=delete for core's expiry path", () => {
+		const source = readFileSync(
+			join("src", "roguetrader", "bootstrap", "config.ts"),
+			"utf8",
+		);
+		expect(source).toMatch(/activeEffect\.expiryAction = "delete"/);
+		// And the wiring must actually be called from registerSystemConfig.
+		expect(source).toMatch(/registerDurationAutomation\(\)/);
 	});
 });

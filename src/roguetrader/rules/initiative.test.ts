@@ -79,6 +79,13 @@ afterAll(() => {
 		test("zero bonus stays a valid formula", () => {
 			expect(initiativeFormula(0)).toBe("1d10 + 0");
 		});
+
+		// Belt (bead nt34 F4): a NaN model value would interpolate into "1d10
+		// + NaN", which core's Roll.create would throw on — degrade to the
+		// unmodified roll instead.
+		test("a NaN bonus degrades to the unmodified roll, not '1d10 + NaN'", () => {
+			expect(initiativeFormula(Number.NaN)).toBe("1d10 + 0");
+		});
 	});
 
 	describe("rollInitiativeAction wiring (bead dt8t)", () => {
@@ -157,5 +164,37 @@ describe("initiative wiring guards (bead dt8t)", () => {
 		// v14 ContextMenuEntry field (creator-menus.test.ts precedent).
 		expect(menusSource).toContain("visible: (element) => canRollToken(element)");
 		expect(menusSource).not.toMatch(/\bcondition\??\s*:/);
+	});
+
+	// Bead nt34 F1: the menu entry must be gated MORE than ownership — the
+	// adapter (rules/adapter.ts rollInitiativeAction) only accepts
+	// character-shaped systems whose model carries initiativeBonus(), so an
+	// owned vehicle/starship token must not see a dead entry whose click
+	// silently no-ops. Source-scan guard: the visible() gate mirrors the
+	// adapter's typeof shape gate.
+	test("the token menu gate mirrors the adapter's initiativeBonus shape gate", () => {
+		expect(menusSource).toContain(
+			'if (!token?.actor?.isOwner) return false;',
+		);
+		expect(menusSource).toContain(
+			'typeof token.actor.system?.initiativeBonus === "function"',
+		);
+	});
+
+	// Bead nt34 F11: the v14 ContextMenuEntry option shape lives in ONE place,
+	// consumed by both menu modules (creator-menus' triple-hook registration
+	// stays its own deliberate divergence).
+	test("the menu option type is shared via context-menu-entry.ts", () => {
+		const shared = readFileSync(
+			"src/roguetrader/presentation/context-menu-entry.ts",
+			"utf8",
+		);
+		expect(shared).toContain("export type ContextMenuEntryOption");
+		expect(menusSource).not.toMatch(/\btype\s+\w*EntryOption\s*=/);
+		const creatorSource = readFileSync(
+			"src/roguetrader/presentation/creator-menus.ts",
+			"utf8",
+		);
+		expect(creatorSource).not.toMatch(/\btype\s+\w*EntryOption\s*=/);
 	});
 });

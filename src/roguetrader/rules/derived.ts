@@ -70,7 +70,10 @@ export function fatigueThreshold(character: CharacterSystemLike): number {
  * CONFIG.Combat.initiative.formula || game.system.initiative.
  */
 export function initiativeFormula(bonus: number): string {
-	return `1d10 + ${bonus}`;
+	// Belt (bead nt34 F4): a non-finite model value would interpolate into
+	// "1d10 + NaN", which core's Roll.create throws on — fall back to plain
+	// 1d10 instead so a NaN bonus degrades to an unmodified roll.
+	return `1d10 + ${Number.isFinite(bonus) ? bonus : 0}`;
 }
 
 /**

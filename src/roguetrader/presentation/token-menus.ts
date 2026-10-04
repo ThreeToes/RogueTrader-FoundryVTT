@@ -13,25 +13,22 @@
  * parentClassHooks: false). That is the entry this module registers; the
  * character-sheet button covers rolling straight from the sheet.
  *
- * The entry is offered ONLY on tokens the current user owns (bead qiuo fails
- * closed): core's Combat#rollInitiative only rolls combatants where
- * `combatant.isOwner`, so a non-owner could never complete the roll anyway.
+ * The entry is offered ONLY where a roll can actually happen (bead qiuo fails
+ * closed, extended by bead nt34 F1): core's Combat#rollInitiative only rolls
+ * combatants where `combatant.isOwner`, so a non-owner could never complete
+ * the roll anyway — AND the adapter's shape gate (rules/adapter.ts
+ * rollInitiativeAction) only accepts character-shaped systems that carry an
+ * initiativeBonus() model, so owned vehicle/starship tokens must not see a
+ * dead entry whose click silently no-ops. canRollToken mirrors both gates.
  */
 
 import { rollInitiativeAction } from "../rules/adapter";
-
-/** Tokens-tab context-menu entry (v14 ContextMenuEntry shape). */
-type TokensTabEntryOption = {
-	label: string;
-	icon: string;
-	onClick: (event?: PointerEvent, element?: HTMLElement) => void;
-	/** v14 name — the old `condition` logs a deprecation warning at render. */
-	visible?: (element?: HTMLElement) => boolean;
-};
+import { type ContextMenuEntryOption } from "./context-menu-entry";
 
 type TokenMenuDocument = {
 	actor?: {
 		isOwner?: boolean;
+		system?: { initiativeBonus?: unknown };
 	} | null;
 };
 
@@ -54,17 +51,30 @@ function resolveToken(element?: HTMLElement): TokenMenuDocument | undefined {
 /** Can the current user roll THIS token's initiative? */
 function canRollToken(element?: HTMLElement): boolean {
 	const token = resolveToken(element);
-	return Boolean(token?.actor?.isOwner);
+	if (!token?.actor?.isOwner) return false;
+	// Mirror the adapter's shape gate (rules/adapter.ts rollInitiativeAction):
+	// only character-shaped systems carry an initiativeBonus() model, so an
+	// owned vehicle/starship token does not get a dead entry whose click
+	// silently no-ops (bead nt34 F1).
+	return (
+		typeof token.actor.system?.initiativeBonus === "function"
+	);
 }
 
 /** Register the token context-menu combat entries. */
 export function registerTokenContextMenus(): void {
+	// The Hooks-as-unknown cast is LOAD-BEARING (bead nt34 F11 review):
+	// getTokenPlaceableContextOptions is a v14-only PlaceableTab hook that
+	// fvtt-types v13 does not declare, so plain Hooks.on (as combat-end.ts
+	// gets away with for the typed "deleteCombat" document hook) fails
+	// typecheck. Same pattern as creator-menus.ts; aligned when v13/v14
+	// types agree.
 	const hooksOn = Hooks as unknown as {
 		on: (name: string, fn: unknown) => void;
 	};
 	hooksOn.on(
 		"getTokenPlaceableContextOptions",
-		(_app: unknown, options: TokensTabEntryOption[]) => {
+		(_app: unknown, options: ContextMenuEntryOption[]) => {
 			options.push({
 				label: "COMBAT.ROLL_INITIATIVE",
 				icon: "fa-solid fa-dice-d10",

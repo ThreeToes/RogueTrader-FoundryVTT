@@ -14,20 +14,14 @@
  */
 
 import { getPorts } from "../infrastructure/foundry/ports";
+import { type ContextMenuEntryOption } from "./context-menu-entry";
 import { CharacterCreator } from "../sheet/actor/character-creator";
 import { PlanetCreator } from "../sheet/actor/planet-creator";
 import { ShipCreator } from "../sheet/actor/ship-creator";
 import { WarrantCreator } from "../sheet/actor/warrant-creator";
 
-/** Actor-directory context-menu entry (v14 ContextMenuEntry shape). */
-type DirectoryEntryOption = {
-	label: string;
-	icon: string;
-	onClick: (event?: PointerEvent, element?: HTMLElement) => void;
-	/** v14 name — the old `condition` logs a deprecation warning at render. */
-	visible?: (element?: HTMLElement) => boolean;
-};
-
+/** Actor-directory context-menu entry: the shared v14 ContextMenuEntry shape. */
+// (type lives in context-menu-entry.ts, bead nt34 F11)
 type CreatorActor = foundry.documents.Actor | undefined;
 
 /**
@@ -130,7 +124,7 @@ export function registerCreatorMenus(): void {
 		on: (name: string, fn: unknown) => void;
 	};
 	const register = (
-		entry: (app: unknown, options: DirectoryEntryOption[]) => void,
+		entry: (app: unknown, options: ContextMenuEntryOption[]) => void,
 	) => {
 		hooksOn.on("getActorContextOptions", entry);
 		hooksOn.on("getEntryContextAbstractSidebarTab", entry);

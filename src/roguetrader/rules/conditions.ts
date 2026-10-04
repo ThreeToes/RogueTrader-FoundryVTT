@@ -278,6 +278,12 @@ export function isEncounterLength(condition: ConditionData): boolean {
  * hand-maintained copy that can drift. Frozen lands in BOTH flavours
  * (encounter-length and 1d5/6 rounds), which is why encounter-end removal
  * also checks the carried effect's duration (encounterEndRemovals below).
+ * NOT SOURCE OF TRUTH (bead nt34 F9): the status REGISTRY ids themselves
+ * (stunned, on-fire, …) are NOT what this set reads — only the condition
+ * factories feeding conditionEffectData() above are covered here. Any future
+ * condition-applying machinery (criticals, fear stages, …) must add its
+ * conditions to this derivation CONSCIOUSLY: a status id applied by an
+ * unregistered factory silently misses encounter-end removal.
  */
 const ENCOUNTER_LENGTH_STATUSES: Set<string> = new Set([
 	...SHOCK_CONDITIONS.filter((row) => isEncounterLength({

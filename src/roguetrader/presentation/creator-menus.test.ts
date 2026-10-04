@@ -17,10 +17,23 @@ const SOURCE = readFileSync(
 	"utf8",
 );
 
+// Bead nt34 F11: the ContextMenuEntry option TYPE moved to one shared place,
+// consumed by both menu modules — the declared field now lives and is
+// asserted there.
+const SHARED_TYPE = readFileSync(
+	"src/roguetrader/presentation/context-menu-entry.ts",
+	"utf8",
+);
+
 describe("creator-menus source guard (bead r5zz)", () => {
 	it("declares the entry predicate under the v14 `visible` field", () => {
-		expect(SOURCE).toContain("visible?: (element?: HTMLElement) => boolean");
+		expect(SHARED_TYPE).toContain(
+			"visible?: (element?: HTMLElement) => boolean",
+		);
 		expect(SOURCE).toContain("visible: (element) =>");
+		// The menu consumes the shared ContextMenuEntryOption type, not a
+		// module-local duplicate.
+		expect(SOURCE).toContain('from "./context-menu-entry"');
 	});
 
 	it("does not use the deprecated `condition` context-menu field", () => {

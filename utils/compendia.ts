@@ -1347,8 +1347,9 @@ function nameKey(name: string): string {
  * This is the SINGLE SOURCE of the convention: emit-careers-yaml.ts consumes
  * it directly (bead dgei — the old local slugify's curly-apostrophe fold was
  * dead code, no skills/talents/careers name contains an apostrophe before
- * 'g'), and the guard test advance-key-resolution.test.ts pins the whole
- * algorithm against the real pack data.
+ * 'g'), and the guard test advance-key-resolution.test.ts pins the
+ * resolution contract against the real pack data (the slug-convention branch
+ * behaviour is pinned closer to the function by compendia.test.ts).
  */
 export function slugKey(name: string): string {
 	return name

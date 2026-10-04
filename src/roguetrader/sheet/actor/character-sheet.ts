@@ -233,9 +233,6 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		target: HTMLElement,
 	): Promise<void> {
 		const uuid = target.dataset.uuid;
-		// Bead wwuc: trace entry so an in-world attempt distinguishes
-		// "action never dispatched" from "handler ran and failed".
-		console.log("[career-link] clicked, uuid =", uuid);
 		if (!uuid) {
 			console.warn("rogue-trader | career link: no data-uuid on the clicked element");
 			return;
@@ -252,7 +249,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				console.warn(`rogue-trader | career link: "${uuid}" did not resolve`);
 				return;
 			}
-			await openDocumentSheet(item, "career link");
+			await openDocumentSheet(item, "career link", undefined, { uuid });
 		} catch (error) {
 			// Surface render failures visibly instead of dying silently —
 			// CareerSheet._prepareContext errors land here.

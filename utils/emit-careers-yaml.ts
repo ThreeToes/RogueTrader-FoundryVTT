@@ -23,12 +23,13 @@ import { readFileSync, existsSync } from "node:fs";
 import yaml from "yaml";
 // Bead dgei (A2): the slug algorithm is single-sourced in compendia.ts
 // slugKey. The old local slugify additionally folded a curly apostrophe
-// before 'g' — dead code: no skills/talents/careers name in the packs
-// contains an apostrophe immediately followed by 'g' (verified 2026-10-04
-// by grep over all packs YAML — the only apostrophe-bearing names are
-// "Mont'ka", "Trader's Cant", "Opportunist's Evasion", "Veteran's
-// Reflexes", none of which match the fold), so slugify ≡ slugKey on every
-// real input and the fold is dropped rather than documented.
+// (U+2019) before 'g' — dead code: no name emitted here contains an
+// apostrophe immediately followed by 'g' (verified 2026-10-04 by grep over
+// all packs YAML — the only apostrophe-bearing skills/talents names are
+// "Speak Language (Trader’s Cant)" (skills.yaml) and "Disciple of
+// Mont’ka", "Opportunist’s Evasion", "Veteran’s Reflexes" (talents.yaml);
+// careers.yaml's apostrophe names are display `name`s, never slug inputs),
+// so the fold is dropped rather than documented.
 import { slugKey } from "./compendia";
 
 const PARSED = "src/packs/.extraction-src/careers-parsed.json";
@@ -57,12 +58,8 @@ function namesFrom(path: string): Set<string> {
 	return new Set(docs.map((d) => d.name));
 }
 
-/** Book name -> slug key: compendia.ts slugKey directly (bead dgei A2).
- * The guard test advance-key-resolution.test.ts pins the convention. */
-export function slugify(name: string): string {
-	return slugKey(name);
-}
-
+// (slugKey is consumed directly at each call site below — bead hoep F8:
+// the intermediate `slugify` export had no external importers.)
 /** Table 2-2 (p38): XP level at which each rank begins. */
 const RANK_XP: Record<number, number> = {
 	1: 5000,
@@ -307,7 +304,7 @@ function keyAdvance(
 		const generic = base.replace(/\s*\([^)]*\)\s*$/, "").trim();
 		for (const candidate of [clean, base, generic]) {
 			const match = matchesPack(candidate, skillNames);
-			if (match) return { key: slugify(match), name: "", multiplier };
+			if (match) return { key: slugKey(match), name: "", multiplier };
 		}
 		// Book-typos + ladder suffix ("Decieve +10", VERIFIED p71-72).
 		for (const [typo, key] of Object.entries(TYPO_KEY_MAP)) {
@@ -319,20 +316,20 @@ function keyAdvance(
 		// Xenos careers print Trait advances (Kroot "Brutal Charge", "Unnatural
 		// Perception (x3)", Glimpse From Beyond "From Beyond").
 		const match = matchesPack(clean, traitNames);
-		if (match) return { key: slugify(match), name: "", multiplier };
+		if (match) return { key: slugKey(match), name: "", multiplier };
 		const generic = clean.replace(/\s*\([^)]*\)\s*$/, "").trim();
 		if (generic !== clean) {
 			const baseMatch = matchesPack(generic, traitNames);
-			if (baseMatch) return { key: slugify(baseMatch), name: "", multiplier };
+			if (baseMatch) return { key: slugKey(baseMatch), name: "", multiplier };
 		}
 	} else {
 		const match = matchesPack(clean, talentNames);
-		if (match) return { key: slugify(match), name: "", multiplier };
+		if (match) return { key: slugKey(match), name: "", multiplier };
 		// Specialized talents ("Hatred (Pirates)") resolve to the base talent.
 		const generic = clean.replace(/\s*\([^)]*\)\s*$/, "").trim();
 		if (generic !== clean) {
 			const baseMatch = matchesPack(generic, talentNames);
-			if (baseMatch) return { key: slugify(baseMatch), name: "", multiplier };
+			if (baseMatch) return { key: slugKey(baseMatch), name: "", multiplier };
 		}
 	}
 	// Specializations not in the packs ("Speak Language (Trader's Cant)") stay

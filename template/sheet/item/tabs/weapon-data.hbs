@@ -25,7 +25,11 @@
             <div class="stat range">
                 <label>{{localize "WEAPON.RANGE"}}</label>
                 {{#if editable}}
-                <input name="system.range" type="number" value="{{source.system.range}}" />
+                {{!-- range is a STRING schema field (weapon.ts): metres
+                     ("90"), a formula ("SBx3") or "—" — text, not number
+                     (number-typed it makes Foundry's parsePartHTML reject the
+                     value, same class of bug as reload, bead g7j0). --}}
+                <input name="system.range" type="text" value="{{source.system.range}}" />
                 {{else}}
                 <p class="static-value">{{source.system.range}}</p>
                 {{/if}}
@@ -132,7 +136,15 @@
             <div class="stat reload">
                 <label>{{localize "RANGED_WEAPON.RELOAD"}}</label>
                 {{#if editable}}
-                <input name="system.reload" type="number" min="0" value="{{source.system.reload}}" />
+                {{!-- reload is a STRING schema field (ranged-weapon.ts): book
+                     notation "Full", "2 Full", "Half", "—", "N/A", "Free".
+                     It is a free-form StringField with no choices constraint
+                     (homebrew may add notation), so it gets a text input like
+                     the other choice-less string fields (system.damage) — a
+                     type="number" input made Foundry's parsePartHTML log 'The
+                     specified value "Full" cannot be parsed' for most of the
+                     arsenal (bead g7j0; the guard test pins this). --}}
+                <input name="system.reload" type="text" value="{{source.system.reload}}" />
                 {{else}}
                 <p class="static-value">{{source.system.reload}}</p>
                 {{/if}}

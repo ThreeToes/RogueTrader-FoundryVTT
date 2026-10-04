@@ -867,6 +867,8 @@
   "CRITICAL.BATTLESUIT_OVERRIDE": "El traje de combate absorbió el impacto: la Tabla 1-5 decide qué se rompe en lugar de una herida crítica.",
   "CRITICAL.TABLE_MISSING": "Tabla de críticos no disponible",
   "CRITICAL.APPLY_MANUALLY": "Contenido de la tabla no instalado: aplica el efecto manualmente.",
+  "CHAT.CONDITION_APPLY_HINT": "Marca al objetivo con esta condición. La duración del efecto impreso varía, así que retírala a mano cuando termine (se ofrece una prueba de Voluntad de recuperación en la hoja).",
+  "CHAT.CONDITION_TARGET_MISSING": "El objetivo de la condición ya no existe en este mundo.",
   "CRITICAL.SOURCE_CORE": "Tabla de impactos críticos",
   "CRITICAL.SOURCE_BATTLESUIT": "Traje de combate (Tabla 1-5)",
   "CRITICAL.ROLL": "Tirada",

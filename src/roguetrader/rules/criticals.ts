@@ -416,13 +416,37 @@ export function repairSkillFor(actor: unknown): ItemLike | undefined {
 	return named("Tech-Use") ?? named("Trade", true);
 }
 
-/** Post the resolved critical (or the plain-damage result) to chat. */
+/**
+ * Post the resolved critical (or the plain-damage result) to chat.
+ *
+ * Condition auto-suggest (epic vr1o, bead ronn): a landed effect row whose
+ * PRINTED text mentions "stunned" offers a one-click Stunned-apply button
+ * on the card. This is the accurate trigger available from what the table
+ * machinery carries — rows are free prose with no structured condition
+ * column, so a row→condition map would be a new extraction guess; a text
+ * match against the page-cited row content is not. Rows that make the stun
+ * conditional ("Toughness Test or become Stunned...") still show the
+ * button: the card auto-suggests, the GM decides (the printed row — visible
+ * right above the button — carries the conditionality). Durations are
+ * per-row prose, so the applied status carries no expiry (see
+ * stunnedCondition in rules/conditions.ts).
+ *
+ * The victim's uuid rides the card so the button's data-target resolves
+ * later (applyConditionFromCard enforces ownership).
+ */
 export async function postCriticalCard(
 	actor: { uuid?: string },
 	retort: CriticalOutcome,
 	outcome: { damageType: string; location: string },
 ): Promise<void> {
 	const effects = retort.effects;
+	// Text-based stun detection over landed (non-manual) rows whose printed
+	// effect text names the condition (Stunned/"Stuns him"). Empty on
+	// manual (table-missing) rows — those cards carry NO button. Word-boundary
+	// prefix match, no trailing \b: "Stunned"/"Stuns" both extend the stem.
+	const conditionSuggestions = effects
+		.filter((e) => !e.manual && /\bstun/i.test(e.text))
+		.map(() => ({ statusId: "stunned", labelKey: "STATUS.STUNNED" }));
 	await postCard(
 		actor,
 		"systems/rogue-trader/template/chat/critical.hbs",
@@ -437,6 +461,10 @@ export async function postCriticalCard(
 				...effect,
 				locationLabelKey: `BODY_LOCATION.${effect.location.toUpperCase()}`,
 			})),
+			// The auto-suggested conditions + the target the button applies
+			// them to (bead ronn).
+			conditionSuggestions,
+			targetUuid: actor.uuid ?? "",
 		},
 		undefined,
 	);

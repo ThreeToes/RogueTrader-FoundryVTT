@@ -38,6 +38,20 @@
                 {{/each}}
             </ul>
             {{/if}}
+            {{#if conditionSuggestions.length}}
+            {{!-- Condition auto-suggest (epic vr1o, bead ronn): the landed
+                 critical row implies this registry condition (its printed
+                 text names it). One-click apply through the existing adapter
+                 write path; the printed per-row duration is handled by hand,
+                 so the status carries no expiry. --}}
+            <div class="condition-suggest">
+                <div class="centerBtn">
+                    {{#each conditionSuggestions as |s|}}
+                    <button class="rt-apply-condition" data-condition="{{s.statusId}}" data-target="{{targetUuid}}" data-tooltip="{{localize "CHAT.CONDITION_APPLY_HINT"}}">{{localize s.labelKey}}</button>
+                    {{/each}}
+                </div>
+            </div>
+            {{/if}}
         </div>
     </div>
 </div>

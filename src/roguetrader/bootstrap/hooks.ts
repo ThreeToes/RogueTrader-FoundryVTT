@@ -5,7 +5,7 @@
  * Split out of the former sheet/init.ts composition root.
  */
 
-import { applyDamageFromCard, openPackDocFromCard, rollDamageButton, spendOrdnanceFromCard, toxicToughnessTestFromCard } from "../presentation/chat-actions";
+import { applyConditionFromCard, applyDamageFromCard, openPackDocFromCard, rollDamageButton, spendOrdnanceFromCard, toxicToughnessTestFromCard } from "../presentation/chat-actions";
 import { registerCombatEncounterEndHook } from "../presentation/combat-end";
 import { registerCreatorMenus } from "../presentation/creator-menus";
 import { registerTokenContextMenus } from "../presentation/token-menus";
@@ -74,6 +74,20 @@ function registerChatActions(): void {
 				if (!toxicButton.disabled) {
 					toxicToughnessTestFromCard(toxicButton).catch((error) =>
 						console.error("rogue-trader: toxic toughness test failed", error),
+					);
+				}
+				return;
+			}
+			// One-click condition apply on cards whose outcome implies it
+			// (epic vr1o, bead ronn): the critical card's Stunned suggestion
+			// walks the shared condition write path (chat-actions.ts).
+			const conditionButton = target?.closest<HTMLButtonElement>(
+				"button.rt-apply-condition",
+			);
+			if (conditionButton) {
+				if (!conditionButton.disabled) {
+					applyConditionFromCard(conditionButton).catch((error) =>
+						console.error("rogue-trader: condition apply failed", error),
 					);
 				}
 				return;

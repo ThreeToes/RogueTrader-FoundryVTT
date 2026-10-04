@@ -277,6 +277,36 @@ export function shockCondition(shockTotal: number): ConditionData {
 	);
 }
 
+/**
+ * Critical-hit Stun condition (epic vr1o, bead ronn). The critical tables
+ * have no structured condition column — only printed prose — so the CARD
+ * suggestion (critical.hbs) is derived by bead ronn from landed rows whose
+ * printed text mentions "stunned"; when the victim's owner presses the
+ * button, the apply path lands here. The book's stun DURATION is printed per
+ * row and varies (1 Round .. 2d10 Turns, tables 9-11 to 9-26); parsing prose
+ * durations would be a guess, so the status carries NO expiry (no rounds, no
+ * hours) and is removed by hand to match the printed row — the same
+ * manual-until-duration-automation posture the epic fixes.
+ * Deliberately NOT added to ENCOUNTER_LENGTH_STATUSES below: most stun rows
+ * are round-timed, so encounter-end removal would over-delete.
+ */
+export function stunnedCondition(): ConditionData {
+	return makeCondition("stunned", "STATUS.STUNNED", "0", {});
+}
+
+/**
+ * The One-CLICK condition a chat card can carry (epic vr1o, bead ronn).
+ * Known suggested status ids resolve to their condition; anything else — an
+ * unknown id, or a card outcome that implies NO registry condition (Toxic
+ * failure is damage + per-toxin prose, p117, and "poisoned" is deliberately
+ * not a registry status) — returns null so the card button is a loud no-op
+ * rather than an invented status.
+ */
+export function cardSuggestedCondition(statusId: string): ConditionData | null {
+	if (statusId === "stunned") return stunnedCondition();
+	return null;
+}
+
 /** Non-combat Fear failure condition (p296): built over the shared maker. */
 export function unnervedCondition(): ConditionData {
 	return makeCondition(

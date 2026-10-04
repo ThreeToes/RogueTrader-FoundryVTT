@@ -67,8 +67,12 @@ async function rollInsanityGain(formula: string): Promise<number> {
  * (one transient condition at a time), create the ActiveEffect (token marker
  * + system.testModifier change via the funnel's "effect" contributor), and
  * apply the book's Insanity gain to system.insanity (visible on the card).
+ *
+ * EXPORTED (bead ronn): the critical card's one-click Stunned suggestion
+ * walks the SAME write path, so card-applied conditions and fear/shock
+ * conditions cannot drift apart.
  */
-async function applyCondition(
+export async function applyCondition(
 	actor: Actor,
 	condition: ConditionData,
 	rollTotal: number,

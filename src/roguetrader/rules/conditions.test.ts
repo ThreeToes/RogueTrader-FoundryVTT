@@ -3,12 +3,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	carriedConditions,
+	cardSuggestedCondition,
 	conditionEffectData,
 	encounterEndRemovals,
 	encounterLengthStatusIds,
 	isEncounterLength,
 	snapOutReady,
 	shockCondition,
+	stunnedCondition,
 	SYSTEM_STATUSES,
 	systemStatus,
 	unnervedCondition,
@@ -166,6 +168,28 @@ describe("conditionEffectData", () => {
 			{ key: "system.testModifier", mode: 2, value: -10 },
 		]);
 		expect(data.duration).toBeUndefined();
+	});
+
+	// Card auto-suggest (epic vr1o, bead ronn): the critical card's one-click
+	// Stunned apply rides the same conditionEffectData shape.
+	test("stunned condition: registry status, snap-out, no expiry, no silent modifier", () => {
+		const condition = stunnedCondition();
+		expect(condition.statusId).toBe("stunned");
+		expect(systemStatus("stunned")).not.toBeNull();
+		const data = conditionEffectData(condition, 0) as Record<string, unknown>;
+		expect(data.statuses).toEqual(["stunned"]);
+		expect(data["flags.rogue-trader.snapOut"]).toBe(true);
+		expect(data.changes).toBeUndefined(); // testPenalty 0 (no-actions convention)
+		// The printed per-row durations vary; removal is manual, no AE expiry.
+		expect(data.duration).toBeUndefined();
+	});
+
+	test("cardSuggestedCondition: known ids resolve, foreign ids return null", () => {
+		expect(cardSuggestedCondition("stunned")?.statusId).toBe("stunned");
+		// 'poisoned' is deliberately NOT a registry status: the book's Toxic
+		// failure (p117) is damage/fatigue, not a condition.
+		expect(cardSuggestedCondition("poisoned")).toBeNull();
+		expect(cardSuggestedCondition("nonexistent")).toBeNull();
 	});
 });
 

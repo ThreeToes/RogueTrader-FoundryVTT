@@ -16,6 +16,8 @@ import {
 import { applyDamageWithCriticals, postCriticalCard } from "../rules/criticals";
 import { rollDamageForCard, rollToxicToughnessTest } from "../rules/adapter";
 import { decrementQuantity } from "../rules/ordnance";
+import { cardSuggestedCondition } from "../rules/conditions";
+import { applyCondition } from "./rolls/fear";
 import { openPackDocUuid } from "../sheet/pack-resolve";
 
 /**
@@ -142,6 +144,59 @@ export async function toxicToughnessTestFromCard(
 	if (!target) return;
 	button.disabled = true;
 	await rollToxicToughnessTest(target, wounds);
+}
+
+/**
+ * One-click condition apply from a chat card (epic vr1o, bead ronn): the
+ * critical card stamps a button only where the LANDED outcome mechanically
+ * implies a registry condition (its printed effect text names it); the
+ * button carries the status id (data-condition) and the victim's uuid
+ * (data-target) and applies through the SHARED condition write path
+ * (rules/conditions.ts conditionEffectData -> ports.actors.createEffects via
+ * rolls/fear.ts applyCondition), the same path the fear/shock flow uses.
+ *
+ * Trigger decisions recorded here so the card machinery stays honest:
+ * - Stun on the critical card: postCriticalCard suggests "stunned" from
+ *   landed rows whose PRINTED text names it — a text match against
+ *   page-cited content, not a new extraction guess.
+ * - NOT on Toxic cards: the book's Toxic failure (Core Rulebook p117) is
+ *   an immediate 1d10 Impact Damage with no reduction plus per-toxin GM
+ *   prose — damage/fatigue outcomes, NOT a registry condition ("poisoned"
+ *   is deliberately NOT in SYSTEM_STATUSES), so the toxic card keeps only
+ *   its Toughness-Test button.
+ *
+ * A missing/unresolvable target LOUD-FAILS (notify warn, never a silent
+ * no-op) — the button was printed with an outcome on it, so a dead target
+ * must be explained. Ownership mirrors applyToTarget: only the victim's
+ * owner or a GM may apply. The button disables before the write so a second
+ * click while the apply is in flight cannot double-apply (same posture as
+ * the other card buttons; re-rendered cards may re-enable, but a carried
+ * duplicate is idempotent at most).
+ */
+export async function applyConditionFromCard(
+	button: HTMLButtonElement,
+): Promise<void> {
+	if (button.disabled) return;
+	const targetUuid = button.dataset.target ?? "";
+	const condition = cardSuggestedCondition(button.dataset.condition ?? "");
+	if (!targetUuid || !condition) return;
+	// Loud-fail on a missing target: fromUuidSync resolves only documents
+	// present in the current world/compendia.
+	const target = foundry.utils.fromUuidSync(targetUuid as never) as unknown as
+		| (Actor & { isOwner?: boolean })
+		| null;
+	if (!target) {
+		getPorts().notify.warn("CHAT.CONDITION_TARGET_MISSING", {
+			target: targetUuid,
+		});
+		return;
+	}
+	// Only the victim's owner (or a GM) may apply a condition — the same
+	// ownership gate the apply-damage path keeps (bead ncc).
+	const user = game as unknown as { user?: { isGM?: boolean } };
+	if (!target.isOwner && !user.user?.isGM) return;
+	button.disabled = true;
+	await applyCondition(target, condition, 0);
 }
 
 /**

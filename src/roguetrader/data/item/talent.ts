@@ -24,6 +24,11 @@ export class Talent extends foundry.abstract.TypeDataModel<
 	declare category: string;
 	declare tier: number;
 	declare prereqTalent: string;
+	/** Stable slug ("air-of-authority", bead 4z81): the key careers.yaml
+	 *  advances reference and the advancement dialog's name map resolves
+	 *  through. Authored as `system.key` or derived by the packer from the
+	 *  book name. */
+	declare key: string;
 	declare shortDescription: string;
 	/** Long prose description (rulebook talent descriptions, p93-99). */
 	declare description: string;
@@ -35,6 +40,16 @@ export class Talent extends foundry.abstract.TypeDataModel<
 
 	static override defineSchema() {
 		return {
+			/**
+			 * Stable slug ("air-of-authority", bead 4z81): the key the
+			 * advancement dialog resolves careers.yaml rank rows through.
+			 * Derived by the packer from the book name (slugKey) unless authored.
+			 */
+			key: new foundry.data.fields.StringField({
+				initial: "",
+				required: true,
+				nullable: false,
+			}),
 			/** Grouping bucket from the talentCategories registry. */
 			category: new foundry.data.fields.StringField({
 				choices: Talent.categoryChoices,

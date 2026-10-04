@@ -20,6 +20,8 @@ import {
 	resolveEntryType,
 	resolveLinks,
 	sourceKey,
+	slugKey,
+	toSourceDocument,
 	toTableSourceDocument,
 	type ItemSourceIndex,
 	toActorSourceDocument,
@@ -235,6 +237,53 @@ describe("toTableSourceDocument", () => {
 		});
 		expect(doc.results).toHaveLength(1);
 		expect((doc.results[0] as { text: string }).text).toBe("done");
+	});
+});
+
+describe("toSourceDocument", () => {
+	// Bead 4z81: skills/talents carry a stable slug key (system.key) derived
+	// from the book name, so careers.yaml's key-only advance rows resolve in
+	// the advancement dialog's name map.
+	test("derives system.key = slug(name) for skill and talent entries", () => {
+		const skill = toSourceDocument(
+			{ name: "Forbidden Lore", type: "Item" },
+			"skills",
+		) as { system: { key?: string } };
+		expect(skill.system.key).toBe("forbidden-lore");
+		const talent = toSourceDocument(
+			{ name: "Air of Authority", type: "Item" },
+			"talents",
+		) as { system: { key?: string } };
+		expect(talent.system.key).toBe("air-of-authority");
+	});
+
+	test("does not derive key for non-skill/talent entries", () => {
+		const gear = toSourceDocument(
+			{ name: "Lascannon", type: "Item", system: {} },
+			"equipment",
+		) as { system: { key?: string } };
+		expect(gear.system.key).toBeUndefined();
+	});
+
+	test("an authored system.key wins over derivation", () => {
+		const doc = toSourceDocument(
+			{ name: "Common Lore", type: "Item", system: { key: "authored-key" } },
+			"skills",
+		) as { system: { key?: string } };
+		expect(doc.system.key).toBe("authored-key");
+	});
+});
+
+describe("slugKey", () => {
+	// Same convention as utils/emit-careers-yaml.ts slugify and the
+	// careers.yaml advance keys (bead 4z81).
+	test("matches the careers.yaml advance-key convention", () => {
+		expect(slugKey("Awareness")).toBe("awareness");
+		expect(slugKey("Forbidden Lore")).toBe("forbidden-lore");
+		expect(slugKey("Speak Language (Low Gothic)")).toBe(
+			"speak-language-low-gothic",
+		);
+		expect(slugKey("  Melee Weapon Training ")).toBe("melee-weapon-training");
 	});
 });
 
@@ -486,8 +535,16 @@ describe("actor packs (bead et3x)", () => {
 			index,
 		);
 		expect(embedded[0].name).toBe("Common Lore (Imperium)");
-		// characteristic from the base catalog entry, ladder from the override.
-		expect(embedded[0].system).toEqual({ characteristic: "int", ladder: 2 });
+		// characteristic from the base catalog entry, ladder from the override;
+		// key now rides along (bead 4z81: embedded items are shaped by
+		// toSourceDocument too) and is the SLUG OF THE CLONE'S OWN NAME, not the
+		// base entry's — advancement rows resolve through base pack docs, and
+		// the wxkw matcher falls back to name for specialisation clones.
+		expect(embedded[0].system).toEqual({
+			characteristic: "int",
+			ladder: 2,
+			key: "common-lore-imperium",
+		});
 		const flags = (embedded[0].flags as Record<string, Record<string, unknown>>)[
 			"rogue-trader"
 		];

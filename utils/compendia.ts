@@ -1071,11 +1071,12 @@ export function toTableSourceDocument(entry: Record<string, unknown>) {
 }
 
 /** Shape a YAML entry into a Foundry Item source document. */
-function toSourceDocument(entry: Record<string, unknown>, folder: string) {
+export function toSourceDocument(entry: Record<string, unknown>, folder: string) {
 	const id = documentId(
 		String(entry.name ?? "unnamed"),
 		entry._id as string | undefined,
 	);
+	const type = resolveEntryType(entry, folder);
 	// Top-level `description` is authoring sugar: Foundry item sheets read
 	// `system.description` (Gear/itemDescription template), so nest it there
 	// when the entry didn't already provide one.
@@ -1089,10 +1090,24 @@ function toSourceDocument(entry: Record<string, unknown>, folder: string) {
 	}
 	const entryFlags = (entry.flags ?? {}) as Record<string, unknown>;
 	const rtFlags = (entryFlags["rogue-trader"] ?? {}) as Record<string, unknown>;
+	// Stable slug key for skills/talents (bead 4z81): careers.yaml ranks
+	// reference advances by slug key with an empty book name, and the
+	// advancement dialog's name map is keyed on `doc.system.key`. The slug
+	// convention (trim+lowercase, [^a-z0-9]+ -> '-', trim '-') resolves ALL
+	// 2,707 empty-name careers.yaml advance rows against the skills/talents
+	// packs with zero exceptions — derivation beats hand-authoring 232 keys,
+	// and advance-key-resolution.test.ts fails loudly if authoring drifts.
+	if (
+		(type === "skill" || type === "talent") &&
+		!system.key &&
+		typeof entry.name === "string"
+	) {
+		system.key = slugKey(entry.name);
+	}
 	return {
 		_id: id,
 		name: entry.name,
-		type: resolveEntryType(entry, folder),
+		type,
 		system,
 		effects: Array.isArray(entry.effects) ? entry.effects : [],
 		_stats: entry._stats ?? { coreVersion: 14 },
@@ -1314,6 +1329,24 @@ const KNOWN_MISSING_PACK_ENTRIES = new Set([
  */
 function nameKey(name: string): string {
 	return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Book name -> slug key, the same convention careers.yaml advances use
+ * ("Forbidden Lore" -> "forbidden-lore"): trim + lowercase, every run of
+ * non-[a-z0-9] becomes one '-', trailing/leading '-' trimmed.
+ *
+ * Deliberately NOT the same as nameKey above (that one strips separators
+ * entirely for fuzzy name matching); this one is the STORAGE convention,
+ * shared with utils/emit-careers-yaml.ts slugify (which only additionally
+ * folds a curly apostrophe before 'g' — the guard test proves the plain
+ * convention covers every skills/talents entry, so keep them in sync).
+ */
+export function slugKey(name: string): string {
+	return name
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
 }
 
 /**

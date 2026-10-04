@@ -21,6 +21,21 @@ describe("Talent data model", () => {
 		);
 	});
 
+	// Bead 4z81: careers.yaml ranks reference talents by slug key with an
+	// empty book name; the dialog's name map resolves doc.system.key. The
+	// schema must therefore declare the slug key (parity with Skill/Career).
+	test("schema declares key as a slug string defaulting to ''", () => {
+		const schema = Talent.defineSchema() as unknown as Record<
+			string,
+			StubField
+		>;
+		const key = schema.key as StubField;
+		expect(key).toBeDefined();
+		expect(key.opts.initial).toBe("");
+		expect(key.opts.required).toBe(true);
+		expect(key.opts.nullable).toBe(false);
+	});
+
 	test("effects are array-of-schema with the expected fields", () => {
 		const schema = Talent.defineSchema() as unknown as Record<
 			string,

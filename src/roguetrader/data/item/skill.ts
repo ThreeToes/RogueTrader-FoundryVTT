@@ -16,6 +16,11 @@ export class Skill extends foundry.abstract.TypeDataModel<
 
 	declare characteristic: string;
 	declare ladder: number;
+	/** Stable slug ("forbidden-lore"); the key careers.yaml advances
+	 *  reference (bead 4z81) and the key the advancement dialog's name map
+	 *  resolves rows through. Authored as `system.key` or derived by the
+	 *  packer from the book name. */
+	declare key: string;
 
 	/** Short-form characteristic labels, from the registry. */
 	static get characteristicChoices(): Record<string, string> {
@@ -24,6 +29,16 @@ export class Skill extends foundry.abstract.TypeDataModel<
 
 	static override defineSchema() {
 		return {
+			/**
+			 * Stable slug ("forbidden-lore", bead 4z81): the key the advancement
+			 * dialog resolves careers.yaml rank rows through. Derived by the
+			 * packer from the book name (slugKey) unless authored.
+			 */
+			key: new foundry.data.fields.StringField({
+				initial: "",
+				required: true,
+				nullable: false,
+			}),
 			characteristic: new foundry.data.fields.StringField({
 				choices: Skill.characteristicChoices,
 				initial: "int",

@@ -1093,10 +1093,13 @@ export function toSourceDocument(entry: Record<string, unknown>, folder: string)
 	// Stable slug key for skills/talents (bead 4z81): careers.yaml ranks
 	// reference advances by slug key with an empty book name, and the
 	// advancement dialog's name map is keyed on `doc.system.key`. The slug
-	// convention (trim+lowercase, [^a-z0-9]+ -> '-', trim '-') resolves ALL
+	// convention (lowercase, [^a-z0-9]+ -> '-', trim '-') resolves ALL
 	// 2,707 empty-name careers.yaml advance rows against the skills/talents
 	// packs with zero exceptions — derivation beats hand-authoring 232 keys,
 	// and advance-key-resolution.test.ts fails loudly if authoring drifts.
+	// `!system.key` is deliberate: an AUTHORED empty-string key means
+	// "derive it" (YAML can't express a meaningful empty key), so it is
+	// overwritten with the derived slug (compendia.test.ts asserts this).
 	if (
 		(type === "skill" || type === "talent") &&
 		!system.key &&
@@ -1333,14 +1336,19 @@ function nameKey(name: string): string {
 
 /**
  * Book name -> slug key, the same convention careers.yaml advances use
- * ("Forbidden Lore" -> "forbidden-lore"): trim + lowercase, every run of
- * non-[a-z0-9] becomes one '-', trailing/leading '-' trimmed.
+ * ("Forbidden Lore" -> "forbidden-lore"): lowercase, every run of
+ * non-[a-z0-9] becomes one '-', leading/trailing '-' trimmed. There is no
+ * explicit .trim() — surrounding whitespace first folds to '-' and is then
+ * trimmed with the other leading/trailing hyphens (compendia.test.ts asserts
+ * "  Melee Weapon Training " -> "melee-weapon-training").
  *
  * Deliberately NOT the same as nameKey above (that one strips separators
- * entirely for fuzzy name matching); this one is the STORAGE convention,
- * shared with utils/emit-careers-yaml.ts slugify (which only additionally
- * folds a curly apostrophe before 'g' — the guard test proves the plain
- * convention covers every skills/talents entry, so keep them in sync).
+ * entirely for fuzzy name matching); this one is the STORAGE convention.
+ * This is the SINGLE SOURCE of the convention: emit-careers-yaml.ts consumes
+ * it directly (bead dgei — the old local slugify's curly-apostrophe fold was
+ * dead code, no skills/talents/careers name contains an apostrophe before
+ * 'g'), and the guard test advance-key-resolution.test.ts pins the whole
+ * algorithm against the real pack data.
  */
 export function slugKey(name: string): string {
 	return name

@@ -22,13 +22,9 @@ describe("Skill data model", () => {
 		expect(key.opts.required).toBe(true);
 		expect(key.opts.nullable).toBe(false);
 	});
-
-	test("a document with a key round-trips (declared field)", () => {
-		// Structural round-trip: the stub TypeDataModel doesn't run Foundry's
-		// validation, so prove the field is declared and assigned on an
-		// instance — mirror of the character.test.ts instance pattern.
-		const s = Object.create(Skill.prototype) as { key: string };
-		s.key = "forbidden-lore";
-		expect(s.key).toBe("forbidden-lore");
-	});
+	// Bead dgei (A5): the former "round-trip" assign-and-read-back test was
+	// dropped — it could only fail if the field were absent, which the
+	// defineSchema test above already covers; derivation is asserted in
+	// utils/compendia.test.ts (toSourceDocument) and the guard in
+	// advance-key-resolution.test.ts.
 });

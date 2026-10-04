@@ -21,6 +21,15 @@
  */
 import { readFileSync, existsSync } from "node:fs";
 import yaml from "yaml";
+// Bead dgei (A2): the slug algorithm is single-sourced in compendia.ts
+// slugKey. The old local slugify additionally folded a curly apostrophe
+// before 'g' — dead code: no skills/talents/careers name in the packs
+// contains an apostrophe immediately followed by 'g' (verified 2026-10-04
+// by grep over all packs YAML — the only apostrophe-bearing names are
+// "Mont'ka", "Trader's Cant", "Opportunist's Evasion", "Veteran's
+// Reflexes", none of which match the fold), so slugify ≡ slugKey on every
+// real input and the fold is dropped rather than documented.
+import { slugKey } from "./compendia";
 
 const PARSED = "src/packs/.extraction-src/careers-parsed.json";
 const ALT_PARSED = "src/packs/.extraction-src/alt-careers-parsed.json";
@@ -48,13 +57,10 @@ function namesFrom(path: string): Set<string> {
 	return new Set(docs.map((d) => d.name));
 }
 
-/** Book name -> slug key, matching the registry/talent prereq convention. */
+/** Book name -> slug key: compendia.ts slugKey directly (bead dgei A2).
+ * The guard test advance-key-resolution.test.ts pins the convention. */
 export function slugify(name: string): string {
-	return name
-		.toLowerCase()
-		.replace(/[’']g/g, "g")
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "");
+	return slugKey(name);
 }
 
 /** Table 2-2 (p38): XP level at which each rank begins. */

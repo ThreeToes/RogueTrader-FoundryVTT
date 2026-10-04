@@ -272,11 +272,25 @@ describe("toSourceDocument", () => {
 		) as { system: { key?: string } };
 		expect(doc.system.key).toBe("authored-key");
 	});
+
+	// Bead dgei (A4): an authored EMPTY-string key is treated as "derive"
+	// — YAML cannot express an authored-but-meaningless key, so `!system.key`
+	// lets derivation overwrite `""`.
+	test("an authored empty-string system.key is derived over", () => {
+		const doc = toSourceDocument(
+			{ name: "Awareness", type: "Item", system: { key: "" } },
+			"skills",
+		) as { system: { key?: string } };
+		expect(doc.system.key).toBe("awareness");
+	});
 });
 
 describe("slugKey", () => {
-	// Same convention as utils/emit-careers-yaml.ts slugify and the
-	// careers.yaml advance keys (bead 4z81).
+	// The STORAGE slug convention (bead 4z81): the same one careers.yaml
+	// advance keys use. THIS is the single-source algorithm —
+	// emit-careers-yaml.ts consumes it (bead dgei collapsed the local
+	// slugify) and advance-key-resolution.test.ts pins it against the real
+	// pack data.
 	test("matches the careers.yaml advance-key convention", () => {
 		expect(slugKey("Awareness")).toBe("awareness");
 		expect(slugKey("Forbidden Lore")).toBe("forbidden-lore");

@@ -10,6 +10,8 @@ import { describe, expect, test } from "bun:test";
 import {
 	buildAdvancementViewModel,
 	filterAdvancementRows,
+	resolveSkillDoc,
+	resolveTalentDoc,
 	skillAtCapReason,
 	type AdvancementViewModelInput,
 	type PackSkillLike,
@@ -596,7 +598,39 @@ describe("advancement view model — pack doc links (bead ha1y)", () => {
 		);
 		expect(rows[0]!.uuid).toBe(
 			"Compendium.rogue-trader.character-options.Item.techUseId",
-			);
+		);
+	});
+
+	// Shared resolvers directly (bead e72x B1): the extraction must keep the
+	// documented matching policy — talents key-then-case-insensitive-name,
+	// skills key-then-exact-name, both with the mirrored empty guards.
+	test("resolveTalentDoc: key first, then case-insensitive name; empty name matches nothing (mirrored guard)", () => {
+		expect(
+			resolveTalentDoc(row({ key: "furious-charge" }), LINKED_TALENT_DOCS),
+		).toBe(LINKED_TALENT_DOCS[0]);
+		expect(
+			resolveTalentDoc(
+				row({ key: "", name: "furious charge" }),
+				LINKED_TALENT_DOCS,
+			),
+		).toBe(LINKED_TALENT_DOCS[0]);
+		expect(resolveTalentDoc(row(), LINKED_TALENT_DOCS)).toBeUndefined();
+	});
+
+	test("resolveSkillDoc: key first, then exact name; empty key/name match nothing (mirrored guard)", () => {
+		expect(
+			resolveSkillDoc(row({ key: "tech-use" }), LINKED_SKILL_DOCS),
+		).toBe(LINKED_SKILL_DOCS[1]);
+		expect(
+			resolveSkillDoc(
+				row({ key: "", name: "Tech-Use" }),
+				LINKED_SKILL_DOCS,
+			),
+		).toBe(LINKED_SKILL_DOCS[1]);
+		expect(
+			resolveSkillDoc(row({ key: "", name: "tech-use" }), LINKED_SKILL_DOCS),
+		).toBeUndefined(); // exact match only — case differences miss, grant parity
+		expect(resolveSkillDoc(row(), LINKED_SKILL_DOCS)).toBeUndefined();
 	});
 
 	test("unresolvable rows carry an empty uuid (psy-rating, parameterised talents)", () => {

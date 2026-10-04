@@ -27,6 +27,7 @@ import {
 	buildAdvancementViewModel,
 	filterAdvancementRows,
 	skillAtCapReason,
+	resolveSkillDoc,
 } from "./advancement-view-model";
 import { CHARACTERISTIC_KEYS } from "../../data/actor/character";
 import { talentGrant, promptParameterisedSubject } from "./grant-helpers";
@@ -730,9 +731,9 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			await owned.update({ system: { ladder } });
 			return true;
 		}
-		// New skill: clone the pack doc's characteristic.
-		const doc = this.#skillDocs.find((d) => d.key === row.key) ??
-			this.#skillDocs.find((d) => d.name === row.name);
+		// New skill: clone the pack doc's characteristic — through THE shared
+		// skill matcher (bead e72x B1), matching the preview and the uuid link.
+		const doc = resolveSkillDoc(row, this.#skillDocs);
 		await this.actor.createEmbeddedDocuments("Item", [
 			{
 				name: row.name,
@@ -775,7 +776,14 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				getPorts().notify.error("ADVANCE.OPEN_DOC_FAIL", { uuid });
 				return;
 			}
-			await openDocumentSheet(doc, "advancement doc link", "ADVANCE.OPEN_DOC_FAIL");
+			await openDocumentSheet(
+				doc,
+				"advancement doc link",
+				"ADVANCE.OPEN_DOC_FAIL",
+				// Same vars as the !doc path/catch (bead e72x B2): otherwise the
+				// sheet-less branch renders the key's {uuid} placeholder literally.
+				{ uuid },
+			);
 		} catch (error) {
 			console.error("rogue-trader | advancement doc link failed:", error);
 			getPorts().notify.error("ADVANCE.OPEN_DOC_FAIL", { uuid });

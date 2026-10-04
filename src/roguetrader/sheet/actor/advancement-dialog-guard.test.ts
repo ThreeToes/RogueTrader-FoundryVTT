@@ -212,7 +212,11 @@ describe("advancement dialog doc links (bead ha1y)", () => {
 	 * sheets without extra machinery.
 	 */
 	test("resolved rows render the openPackDoc anchor with its uuid", () => {
-		// One anchor in the shown rank table, one in the locked preview.
+		// One anchor in the shown rank table, one in the locked preview. The
+		// anchor/else markup IS duplicated between those two template blocks
+		// (the surrounding rows differ enough that unfusing cost more than it
+		// buys — bead e72x B5); this count deliberately codifies that
+		// duplication: adding or removing a link site fails loudly here.
 		expect((code.match(/data-action="openPackDoc"/g) ?? []).length).toBe(2);
 		for (const anchor of code.matchAll(/<a class="adv-doc-link"[^>]*>/g)) {
 			expect(anchor[0]).toContain('data-action="openPackDoc"');

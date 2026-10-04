@@ -282,6 +282,42 @@ function nameByKeyFromDocs(
 	return byKey;
 }
 
+/**
+ * The pack talent doc behind a row — THE shared talent matcher (bead e72x
+ * B1): key match first (only when the row has one), then a case-insensitive
+ * name match against the catalog display name. Consumed by benefitTooltip
+ * and docLinkUuid; parameterised rows (key + name never equal a real doc,
+ * e.g. "Peer (choose one)") match nothing.
+ */
+export function resolveTalentDoc(
+	row: AdvanceRowLike,
+	talentDocs: PackTalentLike[],
+): PackTalentLike | undefined {
+	// Empty-name guard mirrored from the skill branch (bead e72x B4): "" can
+	// never equal a doc name, so skip the full-catalog scan.
+	return (row.key ? talentDocs.find((d) => d.key === row.key) : undefined) ??
+		(row.name
+			? talentDocs.find(
+				(d) => d.name.toLowerCase() === row.name.toLowerCase(),
+			)
+			: undefined);
+}
+
+/**
+ * The pack skill doc behind a row — THE shared skill matcher (bead e72x
+ * B1): key match first (only when the row has one), then an EXACT name
+ * match against the catalog display name (#applySkillAdvance grant parity,
+ * bead wxkw). Consumed by skillPreview's doc lookup, docLinkUuid and the
+ * dialog's grant path.
+ */
+export function resolveSkillDoc(
+	row: AdvanceRowLike,
+	skillDocs: PackSkillLike[],
+): PackSkillLike | undefined {
+	return (row.key ? skillDocs.find((d) => d.key === row.key) : undefined) ??
+		(row.name ? skillDocs.find((d) => d.name === row.name) : undefined);
+}
+
 function skillPreview(
 	row: AdvanceRowLike,
 	resolvedName: string,
@@ -292,8 +328,7 @@ function skillPreview(
 	const owned = findOwnedSkillForRow(input.ownedSkills, row, resolvedName);
 	if (!owned) {
 		// New skill: the grant clones the pack doc's characteristic.
-		const doc = input.skillDocs.find((d) => d.key === row.key) ??
-			input.skillDocs.find((d) => d.name === row.name);
+		const doc = resolveSkillDoc(row, input.skillDocs);
 		return {
 			newSkill: true,
 			currentLadder: null,
@@ -314,11 +349,17 @@ function skillPreview(
 
 /**
  * The pack document behind a row, for the compendium link (bead ha1y):
- * key match first, then the same name matcher each resolver already uses —
- * talents case-insensitively (benefitTooltip parity), skills exactly
- * (#applySkillAdvance parity). Parameterised rows (key + name never equal a
- * real doc, e.g. "Peer (choose one)") match nothing → "" → plain text in
- * the template. Pure: the uuid is just a string, no Foundry here.
+ * shared row→doc resolvers above — talents case-insensitively, skills
+ * exactly, the same matchers benefitTooltip, the preview and the grant use.
+ * Parameterised rows match nothing → "" → plain text in the template. Pure:
+ * the uuid is just a string, no Foundry here.
+ *
+ * Resolution is TYPE-SCOPED (by row.type), deliberately diverging from the
+ * name map's "talents first, skills override" single-key scheme (bead e72x
+ * B3): a talent row must link to the TALENT doc even if a skill shares its
+ * key. The guard test proves no real skill/talent slug collision exists in
+ * the packs, so the divergence is defensive-only — the name map serves
+ * display-name resolution, not link resolution.
  */
 function docLinkUuid(
 	row: AdvanceRowLike,
@@ -326,26 +367,16 @@ function docLinkUuid(
 	talentDocs: PackTalentLike[],
 ): string {
 	if (row.type === "talent") {
-		const doc =
-			(row.key ? talentDocs.find((d) => d.key === row.key) : undefined) ??
-			talentDocs.find(
-				(d) => d.name.toLowerCase() === (row.name ?? "").toLowerCase(),
-			);
-		return doc?.uuid ?? "";
+		return resolveTalentDoc(row, talentDocs)?.uuid ?? "";
 	}
-	const doc = (row.key ? skillDocs.find((d) => d.key === row.key) : undefined) ??
-		(row.name ? skillDocs.find((d) => d.name === row.name) : undefined);
-	return doc?.uuid ?? "";
+	return resolveSkillDoc(row, skillDocs)?.uuid ?? "";
 }
 
 function benefitTooltip(
 	row: AdvanceRowLike,
 	talentDocs: PackTalentLike[],
 ): string {
-	const doc = (row.key ? talentDocs.find((d) => d.key === row.key) : undefined) ??
-		talentDocs.find(
-			(d) => d.name.toLowerCase() === (row.name ?? "").toLowerCase(),
-		);
+	const doc = resolveTalentDoc(row, talentDocs);
 	return (doc?.description ?? "").slice(0, BENEFIT_SLICE);
 }
 

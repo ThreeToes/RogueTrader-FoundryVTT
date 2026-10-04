@@ -8,6 +8,24 @@
  */
 import { getPorts } from "../../ffg/infrastructure/foundry/ports";
 import { packDocuments } from "../infrastructure/foundry/content";
+/**
+ * The OPEN layer of the pack-doc link library (epic 61pk, bead n2b2):
+ * this module pairs the pure resolvers/anchor helper (sheet/pack-doc-links.ts,
+ * Foundry-free) with the Foundry-coupled open path below — one import point
+ * for adopters, no duplicated resolver definitions. Adopters that need only
+ * resolution (no opening, e.g. pure view models) import pack-doc-links
+ * directly; adopters that open sheets import here.
+ */
+export {
+	docLinkUuid,
+	packDocAnchor,
+	resolveSkillDoc,
+	resolveTalentDoc,
+	OPEN_PACK_DOC_ACTION,
+	type PackDocAnchor,
+	type PackDocLike,
+	type DocLinkRowLike,
+} from "./pack-doc-links";
 export async function resolvePackDocument(
 	uuid: string,
 ): Promise<unknown | null> {

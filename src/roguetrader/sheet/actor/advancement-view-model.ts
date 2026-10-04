@@ -39,6 +39,15 @@ import {
 	findOwnedSkillForRow,
 	LADDER_MAX,
 } from "../skills-domain";
+// The shared doc-link library (epic 61pk, bead n2b2): the row→pack-doc
+// resolvers + uuid stamp live in sheet/pack-doc-links.ts — this module is a
+// CONSUMER, not a second definition (behaviour-preserving extraction; the
+// parity tests moved with the library, pack-doc-links.test.ts).
+import {
+	docLinkUuid,
+	resolveSkillDoc,
+	resolveTalentDoc,
+} from "../pack-doc-links";
 
 // --------------------------------------------------------------- input shapes
 
@@ -282,42 +291,6 @@ function nameByKeyFromDocs(
 	return byKey;
 }
 
-/**
- * The pack talent doc behind a row — THE shared talent matcher (bead e72x
- * B1): key match first (only when the row has one), then a case-insensitive
- * name match against the catalog display name. Consumed by benefitTooltip
- * and docLinkUuid; parameterised rows (key + name never equal a real doc,
- * e.g. "Peer (choose one)") match nothing.
- */
-export function resolveTalentDoc(
-	row: AdvanceRowLike,
-	talentDocs: PackTalentLike[],
-): PackTalentLike | undefined {
-	// Empty-name guard mirrored from the skill branch (bead e72x B4): "" can
-	// never equal a doc name, so skip the full-catalog scan.
-	return (row.key ? talentDocs.find((d) => d.key === row.key) : undefined) ??
-		(row.name
-			? talentDocs.find(
-				(d) => d.name.toLowerCase() === row.name.toLowerCase(),
-			)
-			: undefined);
-}
-
-/**
- * The pack skill doc behind a row — THE shared skill matcher (bead e72x
- * B1): key match first (only when the row has one), then an EXACT name
- * match against the catalog display name (#applySkillAdvance grant parity,
- * bead wxkw). Consumed by skillPreview's doc lookup, docLinkUuid and the
- * dialog's grant path.
- */
-export function resolveSkillDoc(
-	row: AdvanceRowLike,
-	skillDocs: PackSkillLike[],
-): PackSkillLike | undefined {
-	return (row.key ? skillDocs.find((d) => d.key === row.key) : undefined) ??
-		(row.name ? skillDocs.find((d) => d.name === row.name) : undefined);
-}
-
 function skillPreview(
 	row: AdvanceRowLike,
 	resolvedName: string,
@@ -348,29 +321,12 @@ function skillPreview(
 }
 
 /**
- * The pack document behind a row, for the compendium link (bead ha1y):
- * shared row→doc resolvers above — talents case-insensitively, skills
- * exactly, the same matchers benefitTooltip, the preview and the grant use.
- * Parameterised rows match nothing → "" → plain text in the template. Pure:
- * the uuid is just a string, no Foundry here.
- *
- * Resolution is TYPE-SCOPED (by row.type), deliberately diverging from the
- * name map's "talents first, skills override" single-key scheme (bead e72x
- * B3): a talent row must link to the TALENT doc even if a skill shares its
- * key. The guard test proves no real skill/talent slug collision exists in
- * the packs, so the divergence is defensive-only — the name map serves
- * display-name resolution, not link resolution.
+ * The pack document behind a row, for the compendium link (bead ha1y): the
+ * SHARED library uuid stamp (bead n2b2, pack-doc-links.docLinkUuid) — the
+ * same matchers benefitTooltip, the preview and the grant use. Parameterised
+ * rows match nothing → "" → plain text in the template. Pure: the uuid is
+ * just a string, no Foundry here.
  */
-function docLinkUuid(
-	row: AdvanceRowLike,
-	skillDocs: PackSkillLike[],
-	talentDocs: PackTalentLike[],
-): string {
-	if (row.type === "talent") {
-		return resolveTalentDoc(row, talentDocs)?.uuid ?? "";
-	}
-	return resolveSkillDoc(row, skillDocs)?.uuid ?? "";
-}
 
 function benefitTooltip(
 	row: AdvanceRowLike,

@@ -6,7 +6,14 @@ import {
 	LADDER_MAX,
 } from "../skills-domain";
 import { sheetContext } from "../context";
-import { getCharacterOptionDocs, openDocumentSheet, resolvePackDocument } from "../pack-resolve";
+import {
+	getCharacterOptionDocs,
+	openDocumentSheet,
+	resolvePackDocument,
+} from "../pack-resolve";
+// Shared doc-link library (epic 61pk, bead n2b2): the resolvers live there,
+// re-exported through pack-resolve (see below); no local copies.
+import { resolveSkillDoc } from "../pack-doc-links";
 import {
 	characteristicNextAdvance,
 	derivedRank,
@@ -27,7 +34,6 @@ import {
 	buildAdvancementViewModel,
 	filterAdvancementRows,
 	skillAtCapReason,
-	resolveSkillDoc,
 } from "./advancement-view-model";
 import { CHARACTERISTIC_KEYS } from "../../data/actor/character";
 import { talentGrant, promptParameterisedSubject } from "./grant-helpers";

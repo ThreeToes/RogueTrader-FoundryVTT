@@ -50,7 +50,108 @@ export const SYSTEM_STATUSES: SystemStatus[] = [
 	{ id: "catatonic", labelKey: "STATUS.CATATONIC", icon: "fa-solid fa-bed", testPenalty: 0, snapOut: false },
 	{ id: "unconscious", labelKey: "STATUS.UNCONSCIOUS", icon: "fa-solid fa-moon", testPenalty: 0, snapOut: false },
 	{ id: "stunned", labelKey: "STATUS.STUNNED", icon: "fa-solid fa-star", testPenalty: 0, snapOut: true },
+	// On Fire, printed p260-261 (files 0261-0262): at EACH Round start the
+	// blazing character suffers 1d10 Energy damage (NO armour reduction, p261)
+	// AND gains 1 level of Fatigue, until the fire is extinguished — per-round
+	// damage/fatigue ticks are NOT expressible in the one-shot status change
+	// channel and are recorded here for the duration-automation machinery
+	// (bead u3i7). Also per Turn start: a Challenging (+0) Willpower Test to
+	// act normally, else the character may only "run around and scream" (a
+	// Full Action, p262). SELF-EXTINGUISH (p262): dropping Prone + a Hard
+	// (−20) Agility Test as a Full Action puts the flames out (GM may adjust);
+	// that is an Agility roll, not a Willpower snap-out test, so snapOut
+	// stays false — the book escape route is documented, not automated.
 	{ id: "on-fire", labelKey: "STATUS.ON_FIRE", icon: "fa-solid fa-fire", testPenalty: 0, snapOut: false },
+	// ---------------------------------------------------------------------
+	// Combat-chapter conditions (epic vr1o, verified by bead t2ak; owner
+	// spot-check passed 2026-10-04). Encoding notes:
+	// - system.testModifier is a single victim-side value applied to ALL
+	//   tests. Where the book prints a victim penalty we carry the closest
+	//   single number; attacker-side bonuses and per-round/auto-fail
+	//   categories are NOT expressible in this channel and are recorded
+	//   below as book rules for future effect-kind machinery.
+	// - "Can take no Actions" conditions carry testPenalty 0 (matching
+	//   stunned, kept at 0 by owner decision): the victim cannot act at all,
+	//   and the attacker-side hit bonuses are the book's real penalty.
+	// ---------------------------------------------------------------------
+	// Prone, printed p249 (file 0250; the ToC/Index "p248" is the book's own
+	// index error - confirmed against the body footer, bead t2ak spot-check):
+	// victim -10 WS / -20 Dodge; attacker-side +10 WS (Ordinary) / -10 BS
+	// (Difficult, waived at Point Blank) vs prone targets - attacker-side,
+	// not victim-testPenalty, so only the -10 WS number rides the funnel
+	// (the Dodge -20 and attacker modifiers recorded, not automated).
+	// Duration: static until Stands. Dropping Prone is a Free Action unless
+	// engaged in a Grapple (p249); Knock-Down (p242) applies it on success.
+	{ id: "prone", labelKey: "STATUS.PRONE", icon: "fa-solid fa-person-falling", testPenalty: -10, snapOut: false },
+	// Pinned, printed p248-249 (files 0249-0250): Half Actions only; -20 to
+	// all Ballistic Skill Tests; may not leave cover except to retreat.
+	// The -20 BS number rides the funnel; the action economy is not
+	// expressible in the test channel. Escape: a Willpower Test at the end
+	// of the victim's Turn (Easy +30 when no longer under fire, melee
+	// auto-escapes, p249) -> snapOut true. Applied by a failed Hard (-20)
+	// Willpower Pinning Test against suppressive fire (p248).
+	{ id: "pinned", labelKey: "STATUS.PINNED", icon: "fa-solid fa-crosshairs", testPenalty: -20, snapOut: true },
+	// Grappled, printed p246-247 (files 0247-0248): grapple participants
+	// cannot use Reactions, may only use the Grapple Action, count as
+	// engaged in melee, and other attackers gain +20 WS to hit them
+	// (attacker-side, not automated). No victim test penalty is printed;
+	// the funnel value is 0. Escape: Break Free = Opposed Strength Test
+	// (p247), not a Willpower snap-out -> snapOut false. The controller can
+	// end the Grapple as a Free Action; larger grapplers count extra
+	// degrees of success per size difference (p242).
+	{ id: "grappled", labelKey: "STATUS.GRAPPLED", icon: "fa-solid fa-link", testPenalty: 0, snapOut: false },
+	// Helpless, printed p248 (file 0249; Status Conditions overview p241): a
+	// Helpless character can take no Actions and is no longer Helpless at
+	// the GM's discretion (waking up, breaking free, etc.). Helpless
+	// Targets (p248): WS Tests to hit auto-succeed and damage is rolled
+	// twice (both dice added) - the auto-hit is the "real" penalty and the
+	// victim rolls no defence anyway, so testPenalty 0 (stunned convention).
+	{ id: "helpless", labelKey: "STATUS.HELPLESS", icon: "fa-solid fa-user-slash", testPenalty: 0, snapOut: false },
+	// Blinded, printed p260 (file 0261): auto-fail ALL vision-based tests
+	// and ALL Ballistic Skill Tests; -30 WS and most other tests that
+	// benefit from vision. The -30 rides the funnel; the auto-fail
+	// categories (vision tests, BS) are recorded, not automated.
+	{ id: "blinded", labelKey: "STATUS.BLINDED", icon: "fa-solid fa-eye-slash", testPenalty: -30, snapOut: false },
+	// Deafened, printed p260 (file 0261): cannot hear well enough to
+	// communicate; auto-fails any Skill/Characteristic Test relying on
+	// hearing until he recovers or the disability is repaired; the GM is
+	// free to decide further effects. Auto-fail is the book mechanism, so
+	// the funnel value is 0.
+	{ id: "deafened", labelKey: "STATUS.DEAFENED", icon: "fa-solid fa-ear-deaf", testPenalty: 0, snapOut: false },
+	// Blood Loss, printed p260 (file 0261), a Critical Effect from Critical
+	// Damage: 10% chance of dying each Round unless treated; a conscious
+	// sufferer may attempt a Difficult (-10) Medicae Test each Round to
+	// staunch the bleeding (Very Hard -30 if also engaged in strenuous
+	// activity; another character may attempt it if the victim is
+	// unconscious or unwilling). The per-round death check and the
+	// Medicae-only staunch test are per-round machinery, not a victim test
+	// penalty -> 0, rules recorded here for future automation.
+	{ id: "blood-loss", labelKey: "STATUS.BLOOD_LOSS", icon: "fa-solid fa-droplet", testPenalty: 0, snapOut: false },
+	// Unaware, printed p249 (file 0250; overview p241): can take no Actions
+	// and is no longer Unaware once he has been attacked (successfully or
+	// otherwise). Attackers gain +30 WS AND BS to hit an Unaware target
+	// (Easy, p249) - attacker-side, so testPenalty 0 (stunned convention).
+	{ id: "unaware", labelKey: "STATUS.UNAWARE", icon: "fa-solid fa-low-vision", testPenalty: 0, snapOut: false },
+	// Surprised, printed p235 (file 0236): a Surprised character loses his
+	// Turn in the first Round (can do nothing but stand dumbfounded) and
+	// attackers gain +30 WS/BS vs him; after the Surprise Round resolves
+	// he recovers and all combatants re-roll Initiative - automatic end,
+	// not a snap-out. Recorded duration one Round (startled precedent: a
+	// 1-round "stand dumbfounded" condition carries no test penalty).
+	{ id: "surprised", labelKey: "STATUS.SURPRISED", icon: "fa-solid fa-circle-question", testPenalty: 0, snapOut: false },
+	// ---------------------------------------------------------------------
+	// FATIGUE IS A TRACK, NOT A STATUS (Core Rulebook p250-251, files
+	// 0251-0252): levels gained from attacks, Grappling and some Critical
+	// Effects; ANY level causes -10 to ALL tests; a number of levels in
+	// excess of the Toughness Bonus collapses the character, unconscious
+	// for 10-TB minutes (levels revert to TB after waking); one level is
+	// removed per quiet rest hour, all after 8 consecutive hours. There is
+	// no Fatigue SystemStatus here on purpose - the Character data model
+	// already carries the `fatigue` level counter (data/actor/character.ts)
+	// and the TB threshold is computed in rules/derived.ts. The -10 all-test
+	// penalty above any level and the collapse are candidate funnelling
+	// work for a future machinery bead, NOT a one-click status.
+	// ---------------------------------------------------------------------
 ];
 
 const STATUSES_BY_ID = new Map(SYSTEM_STATUSES.map((s) => [s.id, s]));
@@ -72,6 +173,19 @@ export const STATUS_IMG: Record<string, string> = {
 	unconscious: "icons/svg/unconscious.svg",
 	stunned: "icons/svg/stun.svg",
 	"on-fire": "icons/svg/aura.svg",
+	// Combat-chapter conditions (epic vr1o): Foundry CORE icons ONLY
+	// (game-icons.net CC-BY, shipped in public/icons/svg/ — the 6ts8
+	// constraint; NO book or third-party art). Each path is verified to
+	// exist on disk by the content guard in conditions.test.ts.
+	prone: "icons/svg/falling.svg",
+	pinned: "icons/svg/target.svg",
+	grappled: "icons/svg/net.svg",
+	helpless: "icons/svg/paralysis.svg",
+	blinded: "icons/svg/blind.svg",
+	deafened: "icons/svg/deaf.svg",
+	"blood-loss": "icons/svg/blood.svg",
+	unaware: "icons/svg/light-off.svg",
+	surprised: "icons/svg/daze.svg",
 };
 
 export function systemStatus(id: string): SystemStatus | null {

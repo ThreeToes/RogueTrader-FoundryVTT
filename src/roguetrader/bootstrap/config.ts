@@ -45,6 +45,22 @@ function registerSystemStatuses(): void {
 			name: game.i18n?.localize(status.labelKey) ?? status.id,
 			img: STATUS_IMG[status.id] ?? "icons/svg/aura.svg",
 			statuses: [status.id],
+			// Foundry copies the status config onto the AE the HUD toggle
+			// creates, so the test-penalty change rides along and the funnel's
+			// "effect" contributor applies it with a visible breakdown — no
+			// silent modifiers even when a condition is applied from the HUD
+			// rather than via conditionEffectData (epic vr1o / bead c9nt).
+			...(status.testPenalty !== 0
+				? {
+						changes: [
+							{
+								key: "system.testModifier",
+								mode: 2, // CONST.ACTIVE_EFFECT_MODES.ADD
+								value: status.testPenalty,
+							},
+						],
+					}
+				: {}),
 		}));
 }
 

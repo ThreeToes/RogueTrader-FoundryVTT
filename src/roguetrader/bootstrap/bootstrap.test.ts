@@ -166,6 +166,7 @@ describe("composition root (beads mnky + 1dj1)", () => {
 			name: string;
 			img: string;
 			statuses: string[];
+			changes?: Array<{ key: string; mode: number; value: number }>;
 		}>;
 		expect(statuses.length).toBeGreaterThan(0);
 		expect(statuses.some((s) => s.id === "core-thing")).toBe(false);
@@ -175,6 +176,28 @@ describe("composition root (beads mnky + 1dj1)", () => {
 			expect(status.img).toBeTruthy();
 			expect(status.statuses).toEqual([status.id]);
 		}
+	});
+
+	test("penalised statuses carry the testModifier change so HUD applies hit the funnel (c9nt)", () => {
+		const statuses = config.statusEffects as Array<{
+			id: string;
+			changes?: Array<{ key: string; mode: number; value: number }>;
+		}>;
+		const byId = new Map(statuses.map((s) => [s.id, s]));
+		// Book penalties ride the config: Foundry copies it onto the AE the
+		// HUD toggle creates, so the funnel's "effect" contributor sees it.
+		expect(byId.get("prone")?.changes).toEqual([
+			{ key: "system.testModifier", mode: 2, value: -10 },
+		]);
+		expect(byId.get("pinned")?.changes).toEqual([
+			{ key: "system.testModifier", mode: 2, value: -20 },
+		]);
+		expect(byId.get("blinded")?.changes).toEqual([
+			{ key: "system.testModifier", mode: 2, value: -30 },
+		]);
+		// No-penalty statuses carry no changes key.
+		expect(byId.get("startled")?.changes).toBeUndefined();
+		expect(byId.get("grappled")?.changes).toBeUndefined();
 	});
 
 	test("registers every SHEET_REGISTRY type as a data model", () => {

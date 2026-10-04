@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
 	carriedConditions,
 	conditionEffectData,
@@ -10,6 +12,7 @@ import {
 	SYSTEM_STATUSES,
 	systemStatus,
 	unnervedCondition,
+	STATUS_IMG,
 } from "./conditions";
 import { SHOCK_TABLE, shockOutcome } from "./fear";
 
@@ -252,5 +255,160 @@ describe("encounter-end mapping (bead cneb)", () => {
 			{ id: "ae1", statuses: ["shaken", "fleeing", "blind"] },
 		]);
 		expect(removals).toEqual([{ id: "ae1", statusId: "shaken" }]);
+	});
+});
+
+// -------------------------------------------------------------------------
+// Content guards: combat-chapter conditions (epic vr1o, bead c9nt). Every
+// row carries its printed-page cite in conditions.ts source comments (the
+// extraction-convention cite); ids, label keys and icon paths are verified
+// as data rather than trusted by hand.
+// -------------------------------------------------------------------------
+
+/** The combat-chapter status ids this bead added + on-fire (extended). */
+const COMBAT_CONDITION_IDS = [
+	"prone",
+	"pinned",
+	"grappled",
+	"helpless",
+	"blinded",
+	"deafened",
+	"blood-loss",
+	"unaware",
+	"surprised",
+	"on-fire",
+] as const;
+
+/**
+ * The Core status ids the registry INTENTIONALLY shadows
+ * (foundry.mjs default statusEffects; registerSystemStatuses REPLACES
+ * CONFIG.statusEffects wholesale — p0af, bead q1ql). Any other collision
+ * would be a slug accident, not a shadow.
+ */
+const INTENTIONAL_CORE_SHADOWS = new Set([
+	"unconscious",
+	"stunned",
+	"frozen",
+	"prone",
+]);
+
+/** Foundry CORE's default status ids (verified against foundry.mjs). */
+const CORE_STATUS_IDS = new Set([
+	"bleeding",
+	"blind",
+	"burning",
+	"corrode",
+	"curse",
+	"dead",
+	"deaf",
+	"disease",
+	"fear",
+	"fly",
+	"frozen",
+	"paralysis",
+	"poison",
+	"prone",
+	"regen",
+	"restrain",
+	"shock",
+	"silence",
+	"sleep",
+	"stun",
+	"unconscious",
+]);
+
+/** Core-icons install root ends at the icons/ directory (6ts8 convention). */
+const CORE_ICONS_DIR =
+	process.env.FOUNDRYVTT_ICONS_DIR ??
+	"/home/stephen/apps/foundryvtt/public/icons";
+
+describe("content guards: combat conditions (epic vr1o / bead c9nt)", () => {
+	test("every registry id is unique and STATUS_IMG covers all of them exactly", () => {
+		const ids = SYSTEM_STATUSES.map((s) => s.id);
+		expect(new Set(ids).size).toBe(ids.length);
+		expect(new Set(Object.keys(STATUS_IMG).sort())).toEqual(new Set(ids));
+	});
+
+	test("registry ids never collide with a Core status id except the documented shadows", () => {
+		for (const id of SYSTEM_STATUSES.map((s) => s.id)) {
+			if (!CORE_STATUS_IDS.has(id)) continue;
+			expect(
+				INTENTIONAL_CORE_SHADOWS.has(id),
+				`status id '${id}' collides with a Core status id but is not a documented shadow`,
+			).toBeTrue();
+		}
+	});
+
+	test("every combat condition's labelKey exists in ALL FOUR languages", () => {
+		for (const id of COMBAT_CONDITION_IDS) {
+			const status = systemStatus(id);
+			expect(status, `status '${id}' is in the registry`).not.toBeNull();
+			expect(status?.labelKey).toMatch(/^STATUS\.[A-Z]/);
+			for (const lang of ["en", "es", "fr", "pl"] as const) {
+				const dict = JSON.parse(
+					readFileSync(`lang/${lang}.json`, "utf8"),
+				) as Record<string, string>;
+				expect(
+					dict[status!.labelKey],
+					`${lang}.json has a non-empty ${status!.labelKey}`,
+				).toBeTruthy();
+			}
+		}
+	});
+
+	test("every combat condition's STATUS_IMG icon exists on disk (core icons only)", () => {
+		expect(existsSync(CORE_ICONS_DIR)).toBeTrue();
+		for (const id of COMBAT_CONDITION_IDS) {
+			const img = STATUS_IMG[id];
+			expect(img).toBeTruthy();
+			expect(img).toMatch(/^icons\/svg\/[a-z0-9-]+\.svg$/);
+			const onDisk = join(CORE_ICONS_DIR, img.replace(/^icons\//, ""));
+			expect(
+				existsSync(onDisk),
+				`icon path '${img}' for '${id}' missing on disk`,
+			).toBeTrue();
+		}
+	});
+
+	test(
+	"every combat row carries a printed-page cite comment (extraction convention)",
+	async () => {
+		const source = await Bun.file(
+			new URL("./conditions.ts", import.meta.url),
+		).text();
+		const rowMarker = '{ id: "';
+		for (const id of COMBAT_CONDITION_IDS) {
+			const rowAt = source.indexOf(`{ id: "${id}"`);
+			expect(rowAt, `row for '${id}' exists in conditions.ts`).toBeGreaterThan(
+				-1,
+			);
+			// The cite lives in the comment block directly above the row: from
+			// the previous `{ id:` row up to this row.
+			const prevRow = source.lastIndexOf(rowMarker, rowAt - 1);
+			const block = source.slice(prevRow + 1, rowAt);
+			expect(
+				block,
+				`'${id}' has a printed-page cite (p<NNN>) in its row comments`,
+			).toMatch(/\bp2\d\d(\b|-)/);
+		}
+	});
+
+	test("penalised combat conditions carry their book penalty (funnel-visible)", () => {
+		expect(systemStatus("prone")?.testPenalty).toBe(-10); // -10 WS, p249
+		expect(systemStatus("pinned")?.testPenalty).toBe(-20); // -20 BS, p248
+		expect(systemStatus("blinded")?.testPenalty).toBe(-30); // -30 WS, p260
+		expect(systemStatus("pinned")?.snapOut).toBe(true); // Willpower escape, p249
+		// No-action conditions carry 0 (stunned convention, owner decision).
+		for (const id of [
+			"grappled",
+			"helpless",
+			"deafened",
+			"blood-loss",
+			"unaware",
+			"surprised",
+			"on-fire",
+		]) {
+			expect(systemStatus(id)?.testPenalty).toBe(0);
+		}
 	});
 });

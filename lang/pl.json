@@ -893,6 +893,8 @@
   "TAB.INVENTORY": "Ekwipunek",
   "TAB.WEAPONS": "Bron",
   "COMBAT.NO_WEAPONS": "Nie nosi żadnej broni.",
+  "COMBAT.ROLL_INITIATIVE": "Rzuć inicjatywę",
+  "COMBAT.ROLL_INITIATIVE_HINT": "1k10 + Inicjatywa (Bonus ze Zwinności) w aktywnym starciu.",
   "CRITICAL.TITLE": "Obrażenia krytyczne",
   "CRITICAL.HEADER": "Obrażenia krytyczne",
   "CRITICAL.LOCATION_HINT": "Skumulowane obrażenia krytyczne w tej lokalizacji; tabelę krytyków otwiera się na tym poziomie.",

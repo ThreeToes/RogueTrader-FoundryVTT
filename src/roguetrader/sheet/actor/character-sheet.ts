@@ -46,6 +46,7 @@ import {
 import type { Modifier } from "../../../rules-engine/modifier";
 import {
 	performRoll,
+	rollInitiativeAction,
 	rollSnapOut,
 	toggleSustainedPower,
 } from "../../rules/adapter";
@@ -130,6 +131,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			rollTraumaTest: CharacterSheet.#onRollTraumaTest,
 			rollMalignancyTest: CharacterSheet.#onRollMalignancyTest,
 			snapOut: CharacterSheet.#onSnapOut,
+			rollInitiative: CharacterSheet.#onRollInitiative,
 			repairBattlesuit: CharacterSheet.#onRepairBattlesuit,
 		},
 	};
@@ -150,6 +152,17 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		actor: foundry.documents.Actor;
 	}): Promise<void> {
 		await rollSnapOut(this.actor);
+	}
+
+	/**
+	 * Roll initiative (epic wjpi, bead dt8t, Core Rulebook): 1d10 + the derived
+	 * initiative bonus into the active encounter via the DEFAULT CombatTracker
+	 * (rules/adapter.ts rollInitiativeAction → core Actor#rollInitiative).
+	 */
+	static async #onRollInitiative(this: {
+		actor: foundry.documents.Actor;
+	}): Promise<void> {
+		await rollInitiativeAction(this.actor);
 	}
 
 	/** Delete an owned inventory item. */

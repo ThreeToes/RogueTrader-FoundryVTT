@@ -856,6 +856,8 @@
   "TAB.INVENTORY": "Inventario",
   "TAB.WEAPONS": "Armas",
   "COMBAT.NO_WEAPONS": "No se transportan armas.",
+  "COMBAT.ROLL_INITIATIVE": "Tirar iniciativa",
+  "COMBAT.ROLL_INITIATIVE_HINT": "1d10 + Iniciativa (el Bono de Agilidad) en el combate activo.",
   "CRITICAL.TITLE": "Daño crítico",
   "CRITICAL.HEADER": "Daño crítico",
   "CRITICAL.LOCATION_HINT": "Daño crítico acumulado en esta localización; se entra en la tabla de críticos con esta severidad.",

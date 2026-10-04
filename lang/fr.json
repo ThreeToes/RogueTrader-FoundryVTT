@@ -869,6 +869,8 @@
   "TAB.INVENTORY": "Inventaire",
   "TAB.WEAPONS": "Armes",
   "COMBAT.NO_WEAPONS": "Aucune arme portée.",
+  "COMBAT.ROLL_INITIATIVE": "Tirer l'initiative",
+  "COMBAT.ROLL_INITIATIVE_HINT": "1d10 + Initiative (le Bonus d'Agilité) dans le combat actif.",
   "CRITICAL.TITLE": "Dégâts critiques",
   "CRITICAL.HEADER": "Dégâts critiques",
   "CRITICAL.LOCATION_HINT": "Dégâts critiques accumulés dans cette localisation ; la table des critiques est entrée à cette sévérité.",

@@ -61,6 +61,19 @@ export function fatigueThreshold(character: CharacterSystemLike): number {
 }
 
 /**
+ * Initiative formula (epic wjpi, bead dt8t; Core Rulebook): 1d10 + the derived
+ * initiative bonus (the Agility Bonus, plus origin/talent modifiers already
+ * folded into the model's initiativeBonus()). Foundry core consumes this as
+ * Combatant#getInitiativeRoll(formula) — our system.json carries no default
+ * `initiative` value, so the formula is passed explicitly to Actor#rollInitiative
+ * (rules/adapter.ts rollInitiativeAction) instead of relying on
+ * CONFIG.Combat.initiative.formula || game.system.initiative.
+ */
+export function initiativeFormula(bonus: number): string {
+	return `1d10 + ${bonus}`;
+}
+
+/**
  * Corruption/Insanity thresholds per the book: NOT modelled - the raw fields
  * stay manual until the rules are verified (returns null; no guessing).
  */

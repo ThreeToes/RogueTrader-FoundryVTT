@@ -44,6 +44,10 @@
                 <span class="chip-label">{{localize "DERIVED.INITIATIVE"}}</span>
                 <div class="chip-value">
                     <span class="derived-value">+{{derived.initiative}}</span>
+                    {{!-- Initiative roll action (epic wjpi, bead dt8t): 1d10 +
+                         the derived bonus through the default CombatTracker. --}}
+                    <button type="button" class="ladder-option initiative-roll" data-action="rollInitiative"
+                        data-tooltip="{{localize "COMBAT.ROLL_INITIATIVE_HINT"}}">{{localize "COMBAT.ROLL_INITIATIVE"}}</button>
                 </div>
             </div>
             <div class="stat-chip">

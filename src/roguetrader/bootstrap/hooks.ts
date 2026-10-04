@@ -7,6 +7,7 @@
 
 import { applyDamageFromCard, rollDamageButton, spendOrdnanceFromCard, toxicToughnessTestFromCard } from "../presentation/chat-actions";
 import { registerCreatorMenus } from "../presentation/creator-menus";
+import { registerTokenContextMenus } from "../presentation/token-menus";
 import { missingSkillGrants } from "../rules/default-skills";
 import { vehicleTokenFootprint } from "../rules/vehicle-tokens";
 import { trackDefaultGrants } from "../sheet/default-grants";
@@ -135,4 +136,7 @@ export function registerRuntimeHooks(): void {
 	// Character/ship/planet/warrant creators (epic kof0, phase 5): the
 	// directory context-menu entries live in presentation/creator-menus.ts.
 	registerCreatorMenus();
+	// Token "Roll Initiative" entry (epic wjpi, bead dt8t): the core Tokens-tab
+	// context menu lives in presentation/token-menus.ts.
+	registerTokenContextMenus();
 }

@@ -944,6 +944,8 @@
   "TAB.INVENTORY": "Inventory",
   "TAB.WEAPONS": "Weapons",
   "COMBAT.NO_WEAPONS": "No weapons carried.",
+  "COMBAT.ROLL_INITIATIVE": "Roll Initiative",
+  "COMBAT.ROLL_INITIATIVE_HINT": "1d10 + Initiative (the Agility Bonus) into the active combat encounter.",
   "CRITICAL.TITLE": "Critical Damage",
   "CRITICAL.HEADER": "Critical Damage",
   "CRITICAL.LOCATION_HINT": "Accumulated Critical Damage in this location; the critical table is entered at this severity.",

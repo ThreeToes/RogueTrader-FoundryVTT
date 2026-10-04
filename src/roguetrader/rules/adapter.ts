@@ -25,6 +25,7 @@ import {
 	shotsForFireMode,
 } from "./ordnance";
 import { toxicActivates, toxicToughnessPenalty } from "./toxic";
+import { initiativeFormula } from "./derived";
 import { messageFlagNamespace } from "../../ffg/application/chat-flags";
 import { type AttackProfile, attackProfileOf } from "../../ffg/domain/model/attack";
 
@@ -533,4 +534,40 @@ export async function toggleSustainedPower(
 		? current.filter((p) => p.itemUuid !== itemUuid)
 		: [...current, { itemUuid, name: itemName }];
 	await actor.update({ system: { sustainedPowers: next } });
+}
+
+/**
+ * Initiative roll action (epic wjpi, bead dt8t; Core Rulebook): rolls
+ * 1d10 + the actor's derived initiative bonus (the Agility Bonus) into the
+ * active combat encounter through Foundry's DEFAULT CombatTracker — no custom
+ * tracker UI.
+ *
+ * This is a thin wrapper over the CORE document method, verified against the
+ * installed core (v14.366, foundry.mjs Actor#rollInitiative):
+ * • no combat and the user is a GM with canvas.scene → core CREATES the
+ *   encounter (scene-linked, active);
+ * • no combat and the user is NOT a GM → core warns COMBAT.NoneActive itself;
+ * • createCombatants → core joins every active token of the actor as a
+ *   Combatant (skipping tokens already in combat), exactly as core does for
+ *   the HUD combat toggle;
+ * • rerollInitiative → an explicit re-press re-rolls instead of silently
+ *   keeping a previous score;
+ * • initiativeOptions.formula → forwarded to Combat#rollInitiative →
+ *   Combatant#getInitiativeRoll(formula), because the RT system.json defines
+ *   no default initiative formula (game.system.initiative is unset).
+ *
+ * Fails closed for actors whose system is not character-shaped (vehicles,
+ * starships…): those have no initiativeBonus on the model and never roll.
+ */
+export async function rollInitiativeAction(actor: Actor): Promise<unknown> {
+	const system = actor?.system as
+		| { initiativeBonus?: () => number }
+		| undefined;
+	if (typeof system?.initiativeBonus !== "function") return undefined;
+	const bonus = system.initiativeBonus() ?? 0;
+	return actor.rollInitiative({
+		createCombatants: true,
+		rerollInitiative: true,
+		initiativeOptions: { formula: initiativeFormula(bonus) },
+	});
 }

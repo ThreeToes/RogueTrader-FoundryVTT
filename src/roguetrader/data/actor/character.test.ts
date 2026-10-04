@@ -36,14 +36,39 @@ describe("Character derived values (definitional)", () => {
 		expect(c.movement().full).toBe(1);
 	});
 
-	test("initiative bonus equals Agility bonus", () => {
-		expect(charWith({ ag: 40 }).initiativeBonus()).toBe(4);
-		expect(charWith({ ag: 0 }).initiativeBonus()).toBe(0);
+	// Bead jpt3: a GETTER, not a method — core's roll interpolation reads it as
+	// a property (Roll.replaceFormulaData → getProperty, foundry.mjs:34727 +
+	// 2389-2404), so these assertions exercise the property read itself.
+	test("initiative bonus equals Agility bonus (property read)", () => {
+		expect(charWith({ ag: 40 }).initiativeBonus).toBe(4);
+		expect(charWith({ ag: 0 }).initiativeBonus).toBe(0);
 	});
 
 	test("missing characteristics read as zero", () => {
 		const c = charWith({});
-		expect(c.initiativeBonus()).toBe(0);
+		expect(c.initiativeBonus).toBe(0);
+	});
+
+	// Bead jpt3: the roll-data face — core's roll interpolation resolves
+	// @initiativeBonus with a prototype-chain property read
+	// (Roll.replaceFormulaData → foundry.utils.getProperty,
+	// foundry.mjs:34727 + 2389-2404) against getRollData() === the system
+	// instance (foundry.mjs:47128). Guard that the getter really lives on the
+	// prototype, so an instance created like a live model (Object.create) —
+	// and therefore a live DataModel — resolves it.
+	test("initiativeBonus is a PROTOTYPE getter, resolvable as a roll-data property", () => {
+		const descriptor = Object.getOwnPropertyDescriptor(
+			Character.prototype,
+			"initiativeBonus",
+		);
+		expect(descriptor?.get).toBeTypeOf("function");
+		// The exact read core's getProperty performs: `key in object` then
+		// `object[key]` — must invoke the getter and yield the number.
+		const c = charWith({ ag: 55 });
+		expect("initiativeBonus" in c).toBe(true);
+		expect((c as unknown as { initiativeBonus: number }).initiativeBonus).toBe(
+			5,
+		);
 	});
 });
 
@@ -73,7 +98,7 @@ describe("effective characteristic values (bead xu83)", () => {
 		expect(c.effectiveCharacteristicValue("ag")).toBe(25);
 		expect(c.characteristicBonus("ag")).toBe(2);
 		expect(c.movement().full).toBe(2);
-		expect(c.initiativeBonus()).toBe(2);
+		expect(c.initiativeBonus).toBe(2);
 	});
 
 	test("without a parent (raw data-in tests) the base value is returned", () => {

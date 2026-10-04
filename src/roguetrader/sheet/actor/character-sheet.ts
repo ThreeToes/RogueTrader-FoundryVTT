@@ -1170,7 +1170,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Derived values (read-only): definitional + rules-layer, no writeback.
 		context.derived = {
 			...system.movement(),
-			initiative: system.initiativeBonus(),
+			initiative: system.initiativeBonus,
 			woundsMax: woundsMax(actorView(this.actor)),
 			fatigueMax: fatigueThreshold(system),
 		};

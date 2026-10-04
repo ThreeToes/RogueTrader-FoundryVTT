@@ -8,7 +8,8 @@
  *   bootstrap/config.ts    registries, partials, statuses, extension points, settings
  *   bootstrap/api.ts       the game.rogueTrader.* roll API
  *   bootstrap/sheets.ts    the document-type + sheet registry (bead 6a1x)
- *   bootstrap/combat-tracker.ts  the tracker's Wounds resource default (bead nc3q)
+ *   bootstrap/combat-tracker.ts  the tracker's Wounds resource default (bead nc3q) +
+ *                              the tracker's default initiative formula (bead jpt3)
  *   bootstrap/warmers.ts   ready-time content caches + legacy-type migration
  *   bootstrap/hooks.ts     actor hooks, chat-button delegation, creator menus
  *

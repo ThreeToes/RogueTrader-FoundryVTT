@@ -43,7 +43,9 @@ for (const key of ["game", "ui", "foundry"]) {
 };
 
 const { rollInitiativeAction } = await import("./adapter");
-const { initiativeFormula } = await import("./derived");
+		const { initiativeFormula, INITIATIVE_FORMULA } = await import(
+			"./derived"
+		);
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -56,10 +58,18 @@ afterAll(() => {
 });
 
 	/** A faked character-shaped actor recording the core rollInitiative call. */
-	function actorFixture(bonus: number, options: { withModel?: boolean } = {}) {
-		const system = options.withModel === false ? { psyker: false } : {
-			initiativeBonus: () => bonus,
-		};
+	function actorFixture(
+		bonus: number,
+		options: { withModel?: boolean; valueShape?: "getter" | "method" } = {},
+	) {
+		// Bead jpt3: the live model exposes initiativeBonus as a (getter-valued)
+		// NUMBER property; legacy stubs are function-valued. The adapter's gate
+		// must accept both. "getter" exercises the number shape.
+		const system = options.withModel === false ? { psyker: false } : (
+			options.valueShape === "getter"
+				? { initiativeBonus: bonus }
+				: { initiativeBonus: () => bonus }
+		);
 		const calls: Array<Record<string, unknown>> = [];
 		return {
 			system,
@@ -72,6 +82,10 @@ afterAll(() => {
 	}
 
 	describe("initiative formula (bead dt8t)", () => {
+		test("the shared shape is the @placeholder form (bead jpt3)", () => {
+			expect(INITIATIVE_FORMULA).toBe("1d10 + @initiativeBonus");
+		});
+
 		test("1d10 + the derived bonus", () => {
 			expect(initiativeFormula(6)).toBe("1d10 + 6");
 		});
@@ -113,6 +127,30 @@ afterAll(() => {
 			const actor = actorFixture(5, { withModel: false });
 			await rollInitiativeAction(actor as never);
 			expect(actor.calls).toHaveLength(0);
+		});
+
+		// Bead jpt3: the live model exposes the getter as a NUMBER on the
+		// system instance (what getRollData() hands core); the adapter must
+		// accept that shape, not only function-valued stubs.
+		test("accepts a getter-shaped (number-valued) system like the live roll-data face", async () => {
+			const actor = actorFixture(6, { valueShape: "getter" });
+			await rollInitiativeAction(actor as never);
+			expect(actor.calls[0]?.initiativeOptions).toEqual({
+				formula: "1d10 + 6",
+			});
+		});
+
+		test("a NaN getter value degrades to the unmodified roll", async () => {
+			const calls: Array<Record<string, unknown>> = [];
+			const actor = {
+				system: { initiativeBonus: Number.NaN },
+				rollInitiative: (opts: Record<string, unknown>) => {
+					calls.push(opts);
+					return Promise.resolve(null);
+				},
+			};
+			await rollInitiativeAction(actor as never);
+			expect(calls[0]?.initiativeOptions).toEqual({ formula: "1d10 + 0" });
 		});
 	});
 
@@ -168,16 +206,33 @@ describe("initiative wiring guards (bead dt8t)", () => {
 
 	// Bead nt34 F1: the menu entry must be gated MORE than ownership — the
 	// adapter (rules/adapter.ts rollInitiativeAction) only accepts
-	// character-shaped systems whose model carries initiativeBonus(), so an
-	// owned vehicle/starship token must not see a dead entry whose click
-	// silently no-ops. Source-scan guard: the visible() gate mirrors the
-	// adapter's typeof shape gate.
+	// character-shaped systems that carry an initiativeBonus (a getter on the
+	// Character model, bead jpt3), so an owned vehicle/starship token must not
+	// see a dead entry whose click silently no-ops. Source-scan guard: the
+	// visible() gate mirrors the adapter's shape gate.
 	test("the token menu gate mirrors the adapter's initiativeBonus shape gate", () => {
 		expect(menusSource).toContain(
 			'if (!token?.actor?.isOwner) return false;',
 		);
 		expect(menusSource).toContain(
-			'typeof token.actor.system?.initiativeBonus === "function"',
+			'"initiativeBonus" in system',
+		);
+	});
+
+	// Bead jpt3: the two consumption routes read the ONE canonical formula —
+	// the adapter interpolates it with the literal bonus (initiativeFormula is
+	// a .replace on the constant) and the tracker reads it from
+	// CONFIG.Combat.initiative.formula (set by bootstrap/combat-tracker.ts —
+	// pinned over there). Guard here that the sheet path derives from the
+	// shared constant, so the routes cannot diverge.
+	test("initiativeFormula derives from the shared INITIATIVE_FORMULA", () => {
+		const derivedSource = readFileSync(
+			"src/roguetrader/rules/derived.ts",
+			"utf8",
+		);
+		expect(derivedSource).toContain('INITIATIVE_FORMULA = "1d10 + @initiativeBonus"');
+		expect(derivedSource).toContain(
+			'INITIATIVE_FORMULA.replace(\n\t\t"@initiativeBonus",',
 		);
 	});
 

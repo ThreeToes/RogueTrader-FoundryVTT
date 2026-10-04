@@ -24,6 +24,9 @@ const hooks = {
 const config: Record<string, unknown> = {
 	Item: { dataModels: {} },
 	Actor: { dataModels: {} },
+	// Bead jpt3: core ships CONFIG.Combat.initiative.formula = null
+	// (foundry.mjs:216831); the composition root overwrites it at init.
+	Combat: { initiative: { formula: null } },
 	statusEffects: [{ id: "core-thing" }],
 };
 
@@ -140,6 +143,21 @@ describe("composition root (beads mnky + 1dj1)", () => {
 		// Firing init must not throw: that alone catches a bad CONFIG shape,
 		// a missing import or an unguarded Foundry global.
 		expect(() => fire("init")).not.toThrow();
+	});
+
+	// Bead jpt3: the tracker's own Roll Initiative button reads the default
+	// formula from CONFIG.Combat.initiative.formula (core's fallback at
+	// foundry.mjs:59939-59941) — the init wiring must set it, in the shared
+	// placeholder shape (1d10 + the roll-data @initiativeBonus getter).
+	// Read from the EXISTING config object right after this file's single
+	// init firing — the sheet-registration tests below are order-sensitive
+	// (they assert exact totals), so no second fire is issued here.
+	test("sets CONFIG.Combat.initiative.formula at init", () => {
+		const formula = (
+			config.Combat as { initiative: { formula: string } }
+		).initiative.formula;
+		expect(formula).toContain("1d10");
+		expect(formula).toContain("@initiativeBonus");
 	});
 
 	test("replaces the core status list with the system statuses (p0af)", () => {

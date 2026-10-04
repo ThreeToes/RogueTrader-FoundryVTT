@@ -30,6 +30,7 @@ const globals = globalThis as Record<string, unknown>;
 const saved = {
 	Hooks: globals.Hooks,
 	game: globals.game,
+	CONFIG: globals.CONFIG,
 };
 
 /** A faked registration entry, matching core's shape for the tracker setting. */
@@ -75,12 +76,41 @@ const { registerCombatTrackerDefault, TRACKER_RESOURCE } = await import(
 await import("../../test-helpers/foundry-schema-stub");
 const { Character } = await import("../data/actor/character");
 
+// Bead jpt3 guard: the initiative formula lands on core's CONFIG. Save and
+// restore the tiny slice the assignment touches.
+const savedConfig = (globalThis as Record<string, unknown>).CONFIG as
+	| Record<string, unknown>
+	| undefined;
+const initStub = { formula: null, decimals: 2 };
+(globalThis as Record<string, unknown>).CONFIG = {
+	...(savedConfig ?? {}),
+	Combat: { initiative: initStub },
+};
+
+const { INITIATIVE_FORMULA } = await import("../rules/derived");
+
 registerCombatTrackerDefault();
 for (const fn of readyHooks) fn();
 
 // --- Tests -----------------------------------------------------------------
 
-describe("combat tracker resource default (bead nc3q)", () => {
+describe("combat tracker defaults (bead nc3q + bead jpt3)", () => {
+	// Bead jpt3: core's OWN tracker roll path reads the formula from
+	// CONFIG.Combat.initiative.formula (Combatant#getInitiativeRoll →
+	// _getInitiativeFormula, foundry.mjs:59885 + 59939-59941); with it unset
+	// the button crashed on 'Unresolved StringTerm undefined'. The bootstrap
+	// must set the shared placeholder form at init.
+	test("sets CONFIG.Combat.initiative.formula to the shared placeholder form", () => {
+		const config = (globalThis as Record<string, unknown>).CONFIG as Record<
+			string,
+			{ initiative: { formula: string | null } }
+		>;
+		const formula = config.Combat.initiative.formula;
+		expect(formula).toContain("1d10");
+		expect(formula).toContain("@initiativeBonus");
+		expect(formula).toBe(INITIATIVE_FORMULA);
+	});
+
 	test("re-registers core.combatTrackerConfig at ready", () => {
 		expect(registrations.get("core.combatTrackerConfig")).toBeDefined();
 	});

@@ -561,18 +561,25 @@ export async function toggleSustainedPower(
  * • rerollInitiative → an explicit re-press re-rolls instead of silently
  *   keeping a previous score;
  * • initiativeOptions.formula → forwarded to Combat#rollInitiative →
- *   Combatant#getInitiativeRoll(formula), because the RT system.json defines
- *   no default initiative formula (game.system.initiative is unset).
+ *   Combatant#getInitiativeRoll(formula), so the sheet path carries an explicit
+ *   pre-resolved formula (identical arithmetic to the tracker path, whose
+ *   CONFIG fallback + @initiativeBonus getter resolves the same bonus —
+ *   bead jpt3).
  *
  * Fails closed for actors whose system is not character-shaped (vehicles,
- * starships…): those have no initiativeBonus on the model and never roll.
+ * starships…): those carry no initiativeBonus and never roll.
  */
 export async function rollInitiativeAction(actor: Actor): Promise<unknown> {
 	const system = actor?.system as
-		| { initiativeBonus?: () => number }
+		| { initiativeBonus?: number | (() => number | null | undefined) }
 		| undefined;
-	if (typeof system?.initiativeBonus !== "function") return undefined;
-	const bonus = system.initiativeBonus() ?? 0;
+	const value = system?.initiativeBonus ?? undefined;
+	if (value === undefined) return undefined;
+	// A Character model exposes the getter as a number (bead jpt3); a
+	// function-valued stub/legacy shape still resolves. Non-finite degrades to
+	// the unmodified roll, matching initiativeFormula's belt.
+	const raw = typeof value === "function" ? value() : value;
+	const bonus = Number.isFinite(raw) ? (raw as number) : 0;
 	return actor.rollInitiative({
 		createCombatants: true,
 		rerollInitiative: true,

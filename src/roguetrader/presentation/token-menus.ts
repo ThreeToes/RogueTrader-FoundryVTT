@@ -18,8 +18,9 @@
  * combatants where `combatant.isOwner`, so a non-owner could never complete
  * the roll anyway — AND the adapter's shape gate (rules/adapter.ts
  * rollInitiativeAction) only accepts character-shaped systems that carry an
- * initiativeBonus() model, so owned vehicle/starship tokens must not see a
- * dead entry whose click silently no-ops. canRollToken mirrors both gates.
+ * initiativeBonus (a getter on the model, bead jpt3), so owned
+ * vehicle/starship tokens must not see a dead entry whose click silently
+ * no-ops. canRollToken mirrors both gates.
  */
 
 import { rollInitiativeAction } from "../rules/adapter";
@@ -28,7 +29,7 @@ import { type ContextMenuEntryOption } from "./context-menu-entry";
 type TokenMenuDocument = {
 	actor?: {
 		isOwner?: boolean;
-		system?: { initiativeBonus?: unknown };
+		system?: Record<string, unknown> | null;
 	} | null;
 };
 
@@ -53,12 +54,13 @@ function canRollToken(element?: HTMLElement): boolean {
 	const token = resolveToken(element);
 	if (!token?.actor?.isOwner) return false;
 	// Mirror the adapter's shape gate (rules/adapter.ts rollInitiativeAction):
-	// only character-shaped systems carry an initiativeBonus() model, so an
-	// owned vehicle/starship token does not get a dead entry whose click
+	// only character-shaped systems carry an initiativeBonus (a getter on the
+	// Character model prototype, bead jpt3) — `in` reads it straight off the
+	// model instance the same way the roll interpolation's getProperty does —
+	// so an owned vehicle/starship token does not get a dead entry whose click
 	// silently no-ops (bead nt34 F1).
-	return (
-		typeof token.actor.system?.initiativeBonus === "function"
-	);
+	const system = token.actor.system;
+	return system != null && "initiativeBonus" in system;
 }
 
 /** Register the token context-menu combat entries. */

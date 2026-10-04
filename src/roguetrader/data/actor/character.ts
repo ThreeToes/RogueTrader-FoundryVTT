@@ -501,8 +501,21 @@ export class Character extends foundry.abstract.TypeDataModel<
 		};
 	}
 
-	/** Derived initiative bonus: the Agility Bonus (talent modifiers join via the funnel). */
-	initiativeBonus(): number {
+	/**
+	 * Derived initiative bonus: the Agility Bonus (talent modifiers join via
+	 * the funnel).
+	 *
+	 * A GETTER, not a method (bead jpt3): core's tracker path interpolates the
+	 * formula "1d10 + @initiativeBonus" against actor.getRollData() === this
+	 * system instance (foundry.mjs:47128) by reading the placeholder with
+	 * foundry.utils.getProperty(data, "initiativeBonus")
+	 * (Roll.replaceFormulaData, foundry.mjs:34727) — and getProperty does a
+	 * prototype-chain `key in object` + `object[key]` read (foundry.mjs:2389),
+	 * so a prototype getter IS visible to the roll interpolation. Effective
+	 * Agility (gear/mutation deltas) flows in via characteristicBonus, so the
+	 * tracker path and the explicit sheet-roll path stay identical.
+	 */
+	get initiativeBonus(): number {
 		return this.agilityBonus();
 	}
 }

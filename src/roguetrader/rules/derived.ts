@@ -61,19 +61,37 @@ export function fatigueThreshold(character: CharacterSystemLike): number {
 }
 
 /**
- * Initiative formula (epic wjpi, bead dt8t; Core Rulebook): 1d10 + the derived
- * initiative bonus (the Agility Bonus, plus origin/talent modifiers already
- * folded into the model's initiativeBonus()). Foundry core consumes this as
- * Combatant#getInitiativeRoll(formula) — our system.json carries no default
- * `initiative` value, so the formula is passed explicitly to Actor#rollInitiative
- * (rules/adapter.ts rollInitiativeAction) instead of relying on
- * CONFIG.Combat.initiative.formula || game.system.initiative.
+ * The initiative formula in its @placeholder form (Core Rulebook): 1d10 +
+ * the derived initiative bonus. This is the ONE canonical shape — both core
+ * consumption routes derive from it (bead jpt3):
+ *
+ * • the tracker's own Rolls path reads it from CONFIG.Combat.initiative.formula
+ *   (set by bootstrap/combat-tracker.ts at init; without it core's fallback
+ *   `CONFIG.Combat.initiative.formula || game.system.initiative` resolves to
+ *   "undefined" and Roll.create throws an unresolved-StringTerm error,
+ *   foundry.mjs:59885 + 59939-59941 + 200897);
+ * • the sheet button passes an explicit formula via initiativeFormula(bonus),
+ *   whose output MUST stay arithmetically identical to resolving the
+ *   placeholder — hence interpolation is a .replace on THIS constant, not a
+ *   second string, so the two routes cannot silently diverge.
+ */
+export const INITIATIVE_FORMULA = "1d10 + @initiativeBonus";
+
+/**
+ * The explicit-formula variant of {@link INITIATIVE_FORMULA} (epic wjpi, bead
+ * dt8t): the derived initiative bonus (the Agility Bonus, plus origin/talent
+ * modifiers already folded into the model's initiativeBonus) substituted in as
+ * a literal, for the sheet-button path (rules/adapter.ts rollInitiativeAction)
+ * which passes a fully-resolved formula to Actor#rollInitiative.
  */
 export function initiativeFormula(bonus: number): string {
 	// Belt (bead nt34 F4): a non-finite model value would interpolate into
 	// "1d10 + NaN", which core's Roll.create throws on — fall back to plain
 	// 1d10 instead so a NaN bonus degrades to an unmodified roll.
-	return `1d10 + ${Number.isFinite(bonus) ? bonus : 0}`;
+	return INITIATIVE_FORMULA.replace(
+		"@initiativeBonus",
+		String(Number.isFinite(bonus) ? bonus : 0),
+	);
 }
 
 /**

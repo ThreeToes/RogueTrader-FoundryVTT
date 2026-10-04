@@ -53,6 +53,8 @@
   "ADVANCE.CONFIRM_HINT": "Ten rozwój wymaga potwierdzenia MG (miękkie wymuszanie):",
   "ADVANCE.AT_CAP_REASON": "Umiejętność jest już na szczycie drabinki (+20): ponowny zakup wydaje pd bez podnoszenia drabinki.",
   "ADVANCE.PREREQ_PREFIX": "Wymaganie wstępne: {prereq}",
+  "ADVANCE.OPEN_DOC": "Otwórz wpis z compendium",
+  "ADVANCE.OPEN_DOC_FAIL": "Nie można otworzyć wpisu z compendium ({uuid}) — szczegóły w konsoli (F12)",
   "ADVANCE.BOUGHT": "Kupiono {name} za {cost} pd.",
   "ADVANCE.RANK_UP": "Ranga podniesiona do {rank}!",
   "ADVANCE.RANK_HINT": "Ranga wyliczona z wydanych pd: {rank}",

@@ -740,6 +740,19 @@
 	color: var(--rt-muted);
 }
 
+/* Bead ha1y: compendium doc link on resolved rank rows — clickable but
+   subdued: dotted underline in the muted token, gold-soft on hover. */
+.rogue-trader .advancement .adv-doc-link {
+	color: var(--rt-muted);
+	text-decoration: underline dotted;
+	text-underline-offset: 2px;
+	cursor: pointer;
+}
+
+.rogue-trader .advancement .adv-doc-link:hover {
+	color: var(--rt-gold-soft);
+}
+
 .rogue-trader .advancement .adv-buy {
 	flex: none;
 }

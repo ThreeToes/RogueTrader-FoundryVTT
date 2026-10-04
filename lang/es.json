@@ -25,6 +25,8 @@
   "ADVANCE.CONFIRM_HINT": "Este avance necesita confirmación del DJ (aplicación flexible):",
   "ADVANCE.AT_CAP_REASON": "Habilidad ya al tope de la escala (+20): comprarla de nuevo gasta pe sin subir un escalón.",
   "ADVANCE.PREREQ_PREFIX": "Requisito previo: {prereq}",
+  "ADVANCE.OPEN_DOC": "Abrir la entrada del compendio",
+  "ADVANCE.OPEN_DOC_FAIL": "No se pudo abrir la entrada del compendio ({uuid}) — mira la consola (F12) para más detalles",
   "ADVANCE.BOUGHT": "Comprado {name} por {cost} pe.",
   "ADVANCE.RANK_UP": "¡Rango elevado a {rank}!",
   "ADVANCE.RANK_HINT": "Rango derivado de los pe gastados: {rank}",

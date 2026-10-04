@@ -204,6 +204,39 @@ describe("advancement dialog depth scoping (child-2 disabled-buttons incident)",
 	});
 });
 
+describe("advancement dialog doc links (bead ha1y)", () => {
+	/**
+	 * The next-rank PREVIEW rows link too (worker choice, bead ha1y point
+	 * 4): the preview is informational — no buy button lives there — and
+	 * the links share the enrichment path, so planning ahead can open
+	 * sheets without extra machinery.
+	 */
+	test("resolved rows render the openPackDoc anchor with its uuid", () => {
+		// One anchor in the shown rank table, one in the locked preview.
+		expect((code.match(/data-action="openPackDoc"/g) ?? []).length).toBe(2);
+		for (const anchor of code.matchAll(/<a class="adv-doc-link"[^>]*>/g)) {
+			expect(anchor[0]).toContain('data-action="openPackDoc"');
+			expect(anchor[0]).toContain('data-uuid="{{row.uuid}}"');
+		}
+	});
+
+	test("rows WITHOUT a uuid keep plain text (the else branch)", () => {
+		// Both link sites must keep the fallback so parameterised talents
+		// ("Peer (choose one)", uuid "") render as before.
+		expect(
+			(code.match(/\{\{else\}\}\{\{row\.name\}\}\{\{\/if\}\}/g) ?? []).length,
+		).toBe(2);
+	});
+
+	test("characteristic scheme rows carry NO doc link (no pack doc exists)", () => {
+		const start = code.indexOf('<h2>{{localize "ADVANCE.CHARACTERISTIC_SCHEME"}}</h2>');
+		const end = code.indexOf('class="next-rank-preview locked"');
+		expect(start).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+		expect(code.slice(start, end)).not.toContain("openPackDoc");
+	});
+});
+
 describe("advancement dialog i18n completeness (bead 8aba)", () => {
 	/** All keys the dialog template + AdvancementDialog source reference statically. */
 	function referencedKeys(): string[] {

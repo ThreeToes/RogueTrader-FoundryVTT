@@ -512,6 +512,126 @@ describe("advancement view model — talent benefit tooltips", () => {
 	});
 });
 
+describe("advancement view model — pack doc links (bead ha1y)", () => {
+	/** Fixtures with uuids: the dialog passes the {key, name, uuid} catalogs. */
+	const LINKED_SKILL_DOCS: PackSkillLike[] = [
+		{ key: "awareness", name: "Awareness", characteristic: "per", uuid: "Compendium.rogue-trader.character-options.Item.awarenessId" },
+		{ key: "tech-use", name: "Tech-Use", characteristic: "int", uuid: "Compendium.rogue-trader.character-options.Item.techUseId" },
+	];
+	const LINKED_TALENT_DOCS: PackTalentLike[] = [
+		{
+			key: "furious-charge",
+			name: "Furious Charge",
+			description: "This talent's long benefit text goes on and on.".repeat(30),
+			uuid: "Compendium.rogue-trader.character-options.Item.furiousChargeId",
+		},
+	];
+
+	test("talent rows resolve the doc uuid by key", () => {
+		const rows = rowsFor(
+			makeInput({
+				skillDocs: LINKED_SKILL_DOCS,
+				talentDocs: LINKED_TALENT_DOCS,
+			}),
+		);
+		expect(rows.find((r) => r.key === "furious-charge")!.uuid).toBe(
+			"Compendium.rogue-trader.character-options.Item.furiousChargeId",
+		);
+	});
+
+	test("skill rows resolve the doc uuid by key", () => {
+		const rows = rowsFor(
+			makeInput({
+				skillDocs: LINKED_SKILL_DOCS,
+				talentDocs: LINKED_TALENT_DOCS,
+			}),
+		);
+		expect(rows.find((r) => r.key === "awareness")!.uuid).toBe(
+			"Compendium.rogue-trader.character-options.Item.awarenessId",
+		);
+	});
+
+	test("keyless talent rows resolve by (case-insensitive) name — tooltip matcher parity", () => {
+		const rows = rowsFor(
+			makeInput({
+				skillDocs: LINKED_SKILL_DOCS,
+				talentDocs: LINKED_TALENT_DOCS,
+				career: {
+					ranks: [
+						{
+							rank: 1,
+							xpLevel: 5000,
+							advances: [
+								row({ key: "", name: "furious charge", type: "talent" }),
+							],
+						},
+					],
+					characteristicAdvances: {},
+				},
+			}),
+		);
+		expect(rows[0]!.uuid).toBe(
+			"Compendium.rogue-trader.character-options.Item.furiousChargeId",
+		);
+	});
+
+	test("keyless skill rows resolve by exact name — grant-matcher parity", () => {
+		const rows = rowsFor(
+			makeInput({
+				skillDocs: LINKED_SKILL_DOCS,
+				talentDocs: LINKED_TALENT_DOCS,
+				career: {
+					ranks: [
+						{
+							rank: 1,
+							xpLevel: 5000,
+							advances: [
+								row({ key: "", name: "Tech-Use", type: "skill" }),
+							],
+						},
+					],
+					characteristicAdvances: {},
+				},
+			}),
+		);
+		expect(rows[0]!.uuid).toBe(
+			"Compendium.rogue-trader.character-options.Item.techUseId",
+			);
+	});
+
+	test("unresolvable rows carry an empty uuid (psy-rating, parameterised talents)", () => {
+		const rows = rowsFor(
+			makeInput({
+				skillDocs: LINKED_SKILL_DOCS,
+				talentDocs: LINKED_TALENT_DOCS,
+				career: {
+					ranks: [
+						{
+							rank: 1,
+							xpLevel: 5000,
+							advances: [
+								// Key-only row with NO catalog doc.
+								row({ key: "psy-rating", type: "talent" }),
+								// Parameterised row: key empty, name never matches a doc.
+								row({ key: "", name: "Peer (choose one)", type: "talent" }),
+							],
+						},
+					],
+					characteristicAdvances: {},
+				},
+			}),
+		);
+		expect(rows.map((r) => r.uuid)).toEqual(["", ""]);
+	});
+
+	test("docs without a uuid (older fixtures) enrich to an empty uuid, not undefined", () => {
+		// uuid is an additive OPTIONAL input: plain {key, name} catalogs keep
+		// working — the template's `{{#if row.uuid}}` needs a string, though.
+		const rows = rowsFor(makeInput());
+		expect(rows.map((r) => r.uuid)).toEqual(["", ""]);
+	});
+});
+
 describe("advancement view model — rank groups and default rank chip", () => {
 	test("rank groups carry threshold, spentOnRank and rank-filtered rows", () => {
 		const vm = vmFor(makeInput({ xpTotal: 11500 }));

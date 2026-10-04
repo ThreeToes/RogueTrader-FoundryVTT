@@ -57,6 +57,8 @@ export interface PackSkillLike {
 	key: string;
 	name: string;
 	characteristic: string;
+	/** Pack document uuid (bead ha1y) — ""/absent when unknown (tests). */
+	uuid?: string;
 }
 
 /** Catalog talent doc (compendium): key, display name, benefit description. */
@@ -64,6 +66,8 @@ export interface PackTalentLike {
 	key: string;
 	name: string;
 	description?: string;
+	/** Pack document uuid (bead ha1y) — ""/absent when unknown (tests). */
+	uuid?: string;
 }
 
 /** Owned skill item shape for ladder previews (dialog adapts actor items). */
@@ -144,6 +148,13 @@ export interface AdvancementRowVM extends AdvanceRowLike {
 	ledgerIndex: number;
 	/** Talent benefit tooltip (description slice, 300 chars), "" otherwise. */
 	benefitTooltip: string;
+	/**
+	 * Resolved pack document uuid (bead ha1y) — "" when the row matches no
+	 * catalog doc (unresolvable keys, parameterised talents like
+	 * "Peer (choose one)"). The template renders an openPackDoc anchor only
+	 * when this is non-empty; a plain-text name otherwise.
+	 */
+	uuid: string;
 	/** Skill ladder preview, null for talent rows. */
 	skill: SkillLadderPreview | null;
 }
@@ -301,6 +312,32 @@ function skillPreview(
 	};
 }
 
+/**
+ * The pack document behind a row, for the compendium link (bead ha1y):
+ * key match first, then the same name matcher each resolver already uses —
+ * talents case-insensitively (benefitTooltip parity), skills exactly
+ * (#applySkillAdvance parity). Parameterised rows (key + name never equal a
+ * real doc, e.g. "Peer (choose one)") match nothing → "" → plain text in
+ * the template. Pure: the uuid is just a string, no Foundry here.
+ */
+function docLinkUuid(
+	row: AdvanceRowLike,
+	skillDocs: PackSkillLike[],
+	talentDocs: PackTalentLike[],
+): string {
+	if (row.type === "talent") {
+		const doc =
+			(row.key ? talentDocs.find((d) => d.key === row.key) : undefined) ??
+			talentDocs.find(
+				(d) => d.name.toLowerCase() === (row.name ?? "").toLowerCase(),
+			);
+		return doc?.uuid ?? "";
+	}
+	const doc = (row.key ? skillDocs.find((d) => d.key === row.key) : undefined) ??
+		(row.name ? skillDocs.find((d) => d.name === row.name) : undefined);
+	return doc?.uuid ?? "";
+}
+
 function benefitTooltip(
 	row: AdvanceRowLike,
 	talentDocs: PackTalentLike[],
@@ -402,6 +439,7 @@ export function buildAdvancementViewModel(
 			),
 			benefitTooltip:
 				row.type === "talent" ? benefitTooltip(row, input.talentDocs) : "",
+			uuid: docLinkUuid(row, input.skillDocs, input.talentDocs),
 			skill: row.type === "skill" ? skillPreview(row, resolvedName, input) : null,
 		};
 	});

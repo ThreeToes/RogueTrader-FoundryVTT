@@ -25,6 +25,8 @@
   "ADVANCE.CONFIRM_HINT": "Cette progression requiert la confirmation du MJ (application souple) :",
   "ADVANCE.AT_CAP_REASON": "Compétence déjà au plafond de l'échelle (+20) : l'acheter de nouveau dépense des xp sans changer d'échelon.",
   "ADVANCE.PREREQ_PREFIX": "Prérequis : {prereq}",
+  "ADVANCE.OPEN_DOC": "Ouvrir l'entrée du compendium",
+  "ADVANCE.OPEN_DOC_FAIL": "Impossible d'ouvrir l'entrée du compendium ({uuid}) — voir la console (F12) pour plus de détails",
   "ADVANCE.BOUGHT": "{name} acheté pour {cost} xp.",
   "ADVANCE.RANK_UP": "Rang élevé à {rank} !",
   "ADVANCE.RANK_HINT": "Rang dérivé des xp dépensés : {rank}",

@@ -6,7 +6,7 @@ import {
 	LADDER_MAX,
 } from "../skills-domain";
 import { sheetContext } from "../context";
-import { getCharacterOptionDocs } from "../pack-resolve";
+import { getCharacterOptionDocs, openDocumentSheet, resolvePackDocument } from "../pack-resolve";
 import {
 	characteristicNextAdvance,
 	derivedRank,
@@ -73,6 +73,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		actions: {
 			buy: AdvancementDialog.#onBuy,
 			buyCharacteristic: AdvancementDialog.#onBuyCharacteristic,
+			openPackDoc: AdvancementDialog.#onOpenPackDoc,
 			refund: AdvancementDialog.#onRefund,
 			selectRank: AdvancementDialog.#onSelectRank,
 			toggleFilter: AdvancementDialog.#onToggleFilter,
@@ -114,10 +115,18 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		name: string;
 		key: string;
 		characteristic: string;
+		/** Pack document uuid (bead ha1y row links). */
+		uuid: string;
 	}> = [];
 
 	/** Talent catalog docs: name resolution + benefit tooltips (lzeb child 1). */
-	#talentDocs: Array<{ key: string; name: string; description: string }> = [];
+	#talentDocs: Array<{
+		key: string;
+		name: string;
+		description: string;
+		/** Pack document uuid (bead ha1y row links). */
+		uuid: string;
+	}> = [];
 
 	constructor(options: {
 		actor: foundry.documents.Actor;
@@ -217,6 +226,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			const docs = (await characterOptionDocsOnce("skill")) as unknown as Array<{
 				id?: string;
 				name?: string;
+				uuid?: string;
 				system: { key?: string; characteristic?: string };
 			}>;
 			for (const doc of docs) {
@@ -226,6 +236,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 						name: doc.name,
 						key: doc.system.key ?? "",
 						characteristic: doc.system.characteristic ?? "int",
+						uuid: doc.uuid ?? "",
 					});
 				}
 			}
@@ -237,6 +248,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		{
 			const docs = (await characterOptionDocsOnce("talent")) as unknown as Array<{
 				name?: string;
+				uuid?: string;
 				system: { key?: string; description?: string };
 			}>;
 			for (const doc of docs) {
@@ -245,6 +257,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 						key: doc.system.key,
 						name: doc.name,
 						description: doc.system.description ?? "",
+						uuid: doc.uuid ?? "",
 					});
 				}
 			}
@@ -728,6 +741,45 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			},
 		] as never);
 		return true;
+	}
+
+	/**
+	 * Rank-row link (bead ha1y): open the resolved pack document's sheet
+	 * read-only — the group argues rules from item sheets (AGENTS.md). The
+	 * uuid is what the view model stamped on the row (matched by key, then
+	 * the existing name matchers); rows without a doc render plain text, so
+	 * a missing data-uuid is a normal no-op.
+	 *
+	 * FOUNDRY v14 API VERIFICATION (foundry.mjs): fromUuidSync (line 39467)
+	 * is WRONG here — for a CompendiumCollection it falls back to
+	 * `collection.index.get(baseId)` (line 39490), returning the pack's
+	 * INDEX ENTRY, which has no `.sheet` to render. async `fromUuid` (line
+	 * 39440) awaits `collection.getDocument(id)` and returns the real
+	 * Document — and the repo's resolvePackDocument (bead wwuc) additionally
+	 * fixes the LevelDB packs where fromUuid no-opped in-world, so resolution
+	 * goes through that shared primitive + openDocumentSheet's loud failure.
+	 */
+	static async #onOpenPackDoc(
+		this: AdvancementDialog,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const uuid = target.dataset.uuid ?? "";
+		if (!uuid) return;
+		try {
+			const doc = await resolvePackDocument(uuid);
+			if (!doc) {
+				console.warn(
+					`rogue-trader | advancement doc link: "${uuid}" did not resolve`,
+				);
+				getPorts().notify.error("ADVANCE.OPEN_DOC_FAIL", { uuid });
+				return;
+			}
+			await openDocumentSheet(doc, "advancement doc link", "ADVANCE.OPEN_DOC_FAIL");
+		} catch (error) {
+			console.error("rogue-trader | advancement doc link failed:", error);
+			getPorts().notify.error("ADVANCE.OPEN_DOC_FAIL", { uuid });
+		}
 	}
 
 	/** GM refund: remove the newest matching ledger entry. */

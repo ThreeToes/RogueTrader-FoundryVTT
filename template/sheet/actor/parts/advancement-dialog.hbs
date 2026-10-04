@@ -72,7 +72,10 @@
             <li class="advancement-row{{#unless row.affordable}} unaffordable{{/unless}}"
                 {{#if row.benefitTooltip}}data-tooltip="{{row.benefitTooltip}}"{{/if}}>
                 <span class="adv-name">
-                    {{row.name}}
+                    {{!-- Bead ha1y: resolved rows link to their pack doc's
+                    sheet; unresolvable/parameterised rows stay plain text. --}}
+                    {{#if row.uuid}}<a class="adv-doc-link" data-action="openPackDoc" data-uuid="{{row.uuid}}"
+                        data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{row.name}}</a>{{else}}{{row.name}}{{/if}}
                     {{#if row.sourceName}}<em class="adv-source">{{row.sourceName}}</em>{{/if}}
                     {{#if (gt row.multiplier 1)}}<span class="adv-multiplier{{#if row.purchased}} owned{{/if}}" data-tooltip="{{localize "ADVANCE.PURCHASED"}}">{{row.purchased}}/{{row.multiplier}}</span>{{else}}{{#if row.purchased}}<span class="adv-multiplier owned">{{localize "ADVANCE.OWNED"}}</span>{{/if}}{{/if}}
                     {{#each row.unmetPrereqs as |req|}}<span class="adv-prereq unmet">[{{req}}]</span>{{/each}}
@@ -138,7 +141,11 @@
             {{#each nextRankPreview.rows as |row|}}
             <li class="advancement-row locked">
                 <span class="adv-name">
-                    {{row.name}}
+                    {{!-- Bead ha1y: the locked next-rank preview links too —
+                    the same enrichment path, informational only (no buy
+                    button lives here), so planning ahead can open sheets. --}}
+                    {{#if row.uuid}}<a class="adv-doc-link" data-action="openPackDoc" data-uuid="{{row.uuid}}"
+                        data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{row.name}}</a>{{else}}{{row.name}}{{/if}}
                     {{#if (gt row.multiplier 1)}}<span class="adv-multiplier">{{row.purchased}}/{{row.multiplier}}</span>{{/if}}
                     {{#each row.unmetPrereqs as |req|}}<span class="adv-prereq unmet">[{{req}}]</span>{{/each}}
                     {{#if (and row.prereqText (not row.unmetPrereqs.length))}}<span class="adv-prereq">[{{row.prereqText}}]</span>{{/if}}

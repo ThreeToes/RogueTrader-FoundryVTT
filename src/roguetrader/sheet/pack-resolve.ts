@@ -63,14 +63,18 @@ export async function getCharacterOptionDocs(type: string): Promise<unknown[]> {
 	return docs.filter((doc) => (doc as { type?: string }).type === type);
 }
 
-/** Open a resolved document's sheet, loudly reporting a missing binding. */export async function openDocumentSheet(
+/** Open a resolved document's sheet, loudly reporting a missing binding.
+ * @param notifyKey  i18n key for the failure toast; defaults to the career
+ *   link key — bead ha1y's advancement rows pass their own.
+ */export async function openDocumentSheet(
 	item: unknown,
 	label: string,
+	notifyKey = "BACKGROUND.OPEN_CAREER_FAIL",
 ): Promise<void> {
 	const sheet = (item as { sheet?: { render: (o?: object) => unknown } }).sheet;
 	if (!sheet) {
 		console.error(`rogue-trader | ${label}: resolved document has no sheet:`, item);
-		getPorts().notify.error("BACKGROUND.OPEN_CAREER_FAIL");
+		getPorts().notify.error(notifyKey);
 		return;
 	}
 	await sheet.render({ force: true });

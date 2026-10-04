@@ -59,6 +59,23 @@ import { sheetContext } from "../context";
 import { readRtFlag } from "../../rules/chat-flags";
 import { waitForDefaultGrants } from "../default-grants";
 import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
+// The pack-doc link library (epic 61pk, bead hjve): one import point for the
+// pure anchor helper + the open path (pack-resolve re-exports pack-doc-links).
+import {
+	OPEN_PACK_DOC_ACTION,
+	packDocAnchor,
+	type PackDocLike,
+	openDocumentSheet,
+	resolvePackDocument,
+} from "../pack-resolve";
+// The warmed talent-doc link catalog (bead hjve): the creator resolves its
+// talent pick chips against this pool — warmed at ready (bootstrap/warmers);
+// this creator fills it on demand (#ensurePool precedent, warrant-creator).
+import {
+	getTalentLinkDocs,
+	setTalentLinkDocs,
+	talentLinkDocFromDoc,
+} from "../../rules/talent-catalog";
 import { CreatorApplication } from "./creator-application";
 import { promptParameterisedSubject, talentGrant } from "./grant-helpers";
 
@@ -72,6 +89,8 @@ let careerSuggestionCache: Map<string, string[]> | null = null;
  */
 interface CareerDocLike {
 	name?: string;
+	/** Pack document uuid (bead hjve): the career chip's doc link. */
+	uuid?: string;
 	system?: {
 		key?: string;
 		suggestedHomeWorlds?: string[];
@@ -246,6 +265,10 @@ export class CharacterCreator extends CreatorApplication {
 			chooseCorrIns: CharacterCreator.#onChooseCorrIns,
 			chooseCareer: CharacterCreator.#onChooseCareer,
 			chooseSpecies: CharacterCreator.#onChooseSpecies,
+			// Epic 61pk, bead hjve: the pick chips' pack-doc link — same
+			// non-hijack anchor as the advancement dialog; the action name is
+			// the library constant, keyed so the convention cannot drift.
+			[OPEN_PACK_DOC_ACTION]: CharacterCreator.#onOpenPackDoc,
 			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
 			toggleAcqGroup: CharacterCreator.#onToggleAcqGroup,
 			rollHeirloom: CharacterCreator.#onRollHeirloom,
@@ -322,6 +345,28 @@ export class CharacterCreator extends CreatorApplication {
 	 */
 	#originRows(): OriginRow[] {
 		return originRowsForSpecies(this.creatorState.speciesKey);
+	}
+
+	/**
+	 * Ensure the talent-doc link catalog is loaded (bead hjve): normally
+	 * warmed at ready (bootstrap/warmers through rules/talent-catalog); if
+	 * the creator opens before the pack resolves, fill it here from the same
+	 * shared mapper — loudly empty is a bug, not a feature. A successfully
+	 * EMPTY fetch means the pack is absent and the chips degrade to plain
+	 * text (the same tolerated re-fetch #ensurePool accepts).
+	 */
+	async #ensureTalentLinkDocs(): Promise<PackDocLike[]> {
+		if (getTalentLinkDocs().length > 0) return getTalentLinkDocs();
+		setTalentLinkDocs(
+			(
+				(await getCharacterOptionDocs("talent")) as unknown as Array<{
+					name?: string;
+					uuid?: string;
+					system?: unknown;
+				}>
+			).map((doc) => talentLinkDocFromDoc(doc)),
+		);
+		return getTalentLinkDocs();
 	}
 
 	async #speciesOptions(): Promise<SpeciesOption[]> {
@@ -446,6 +491,12 @@ export class CharacterCreator extends CreatorApplication {
 			await super._prepareContext(_options as never),
 		);
 		const state = this.creatorState;
+		// Bead hjve: the talent-doc link catalog for the talent pick chips —
+		// warmed at ready (bootstrap/warmers via rules/talent-catalog), filled
+		// on demand here when the creator opens pre-ready (warrant-creator's
+		// #ensurePool precedent). Empty means no links; the chips degrade to
+		// plain text.
+		const talentDocs = await this.#ensureTalentLinkDocs();
 		context.step = this.step;
 		context.name = this.name;
 		context.isRoll = state.method === "roll";
@@ -476,12 +527,18 @@ export class CharacterCreator extends CreatorApplication {
 			const pick = state.picks[row];
 			const pickEntry = pick ? originByKey(pick.key) : undefined;
 			const allowed = allowedColumns(row, prevCol);
-			const options = originsInRow(row).map((entry) => ({
+			// Bead hjve: the chip's pack-doc anchor is resolved through the
+			// LIBRARY (packDocAnchor: key-first, exact-name against the row's
+			// own warmed catalog — the uuid rides on the entries since bead
+			// hjve, originEntryFromDoc). Null degrades the chip to plain text.
+			const rowEntries = originsInRow(row);
+			const options = rowEntries.map((entry) => ({
 				...entry,
 				// An expanded entry may substitute either of two core slots
 				// (bead b03f), so check every column it may occupy.
 				enabled: entryColumns(entry).some((col) => allowed.includes(col)),
 				selected: pick?.key === entry.key,
+				link: packDocAnchor({ key: entry.key, name: entry.name }, rowEntries, []),
 			}));
 			if (pickEntry) prevCol = pickEntry.col;
 
@@ -516,6 +573,15 @@ export class CharacterCreator extends CreatorApplication {
 					options: (mechanicsForPick?.optionChoice ?? []).map((option) => ({
 						value: option,
 						selected: pick?.optionChoice === option,
+						// Bead hjve: the option-pick chips' values are TALENT names
+						// ("Jaded", "Peer (Academics)") — resolved through the library
+						// against the warmed talent catalog; a value that is not a real
+						// talent (e.g. a parameterised group) degrades to plain text.
+						link: packDocAnchor(
+							{ key: "", name: option, type: "talent" },
+							[],
+							talentDocs,
+						),
 					})),
 					hasCharChoice:
 						(mechanicsForPick?.characteristicChoice?.length ?? 0) > 0,
@@ -621,6 +687,15 @@ export class CharacterCreator extends CreatorApplication {
 		const starting = docs.filter(
 			(doc) => (doc.system?.requiredCareer ?? "").trim() === "",
 		);
+		// Bead hjve: the career catalog the chip doc links resolve against —
+		// {key, name, uuid} rows built from the same docs the chips are built
+		// FROM, so the round trip (resolve the chip through the library) cannot
+		// link a doc the player is not looking at.
+		const careerCatalog: PackDocLike[] = starting.map((doc) => ({
+			key: String(doc.system?.key ?? ""),
+			name: doc.name ?? "",
+			uuid: doc.uuid ?? "",
+		}));
 		const careerOptions = careersForSpecies(starting, state.speciesKey).map(
 			(doc) => {
 				const key = String(doc.system?.key ?? "");
@@ -629,6 +704,13 @@ export class CharacterCreator extends CreatorApplication {
 					label: doc.name ?? key,
 					selected: state.careerKey === key,
 					suggested: suggested.has(key),
+					// Bead hjve: the chip's pack-doc anchor, resolved through the
+					// library (key-first against the careers catalog above).
+					link: packDocAnchor(
+						{ key, name: doc.name ?? key },
+						careerCatalog,
+						[],
+					),
 				};
 			},
 		);
@@ -1025,6 +1107,42 @@ export class CharacterCreator extends CreatorApplication {
 	): Promise<void> {
 		this.creatorState.careerKey = target.dataset.key ?? "";
 		this.render({ force: true });
+	}
+
+	/**
+	 * The chip doc-link action (epic 61pk, bead hjve): open the chip's pack
+	 * doc read-only. Same shape as the advancement dialog's #onOpenPackDoc —
+	 * resolvePackDocument + openDocumentSheet; loud missing-doc notify, the
+	 * { uuid } toast vars keeping the placeholder interpolating.
+	 */
+	static async #onOpenPackDoc(
+		this: CharacterCreator,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const uuid = target.dataset.uuid ?? "";
+		if (!uuid) return;
+		try {
+			const doc = await resolvePackDocument(uuid);
+			if (!doc) {
+				console.warn(
+					`rogue-trader | creator doc link: "${uuid}" did not resolve`,
+				);
+				getPorts().notify.error("CREATOR.OPEN_DOC_FAIL", { uuid });
+				return;
+			}
+			await openDocumentSheet(
+				doc,
+				"creator doc link",
+				"CREATOR.OPEN_DOC_FAIL",
+				// Same vars as the !doc path: otherwise the sheet-less branch
+				// renders the key's {uuid} placeholder literally (bead e72x B2).
+				{ uuid },
+			);
+		} catch (error) {
+			console.error("rogue-trader | creator doc link failed:", error);
+			getPorts().notify.error("CREATOR.OPEN_DOC_FAIL", { uuid });
+		}
 	}
 
 	/**

@@ -1185,6 +1185,7 @@
   "AFFLICTION.GRANT_ADD": "Add",
   "AFFLICTION.GRANT_MISSING": "No \"{name}\" entry found in the compendium",
   "CREATOR.NOTES_POINTER": "Origin traits, grants and manual rules are tracked on the character sheet's Background tab.",
+  "CREATOR.OPEN_DOC_FAIL": "Could not open the compendium entry ({uuid}) — see the console (F12) for details",
   "GRANT.PARAM_TITLE": "Choose Specialisation: {name}",
   "GRANT.PARAM_PROMPT": "{name} requires a specific group or organisation. Choose one, or type your own (GM approval per the book, p92).",
   "GRANT.PARAM_CUSTOM": "Other (type below)",

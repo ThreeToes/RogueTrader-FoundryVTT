@@ -701,3 +701,26 @@ packDescribe("replaces pack normalisation (bead w4gt)", () => {
 		}
 	});
 });
+describe("origin entry pack-doc uuid (bead hjve)", () => {
+	// Pure fixtures: the mapper carries the doc's uuid straight through (real
+	// pack docs have one; parsed-YAML fixtures in the pack-driven suites don't).
+	test("the mapper carries the pack doc's uuid", () => {
+		const entry = originEntryFromDoc({
+			uuid: "Compendium.rogue-trader.character-options.Item.abc",
+			name: "Void Born",
+			system: { key: "void-born", row: "birthright", col: 1 },
+		});
+		expect(entry.uuid).toBe(
+			"Compendium.rogue-trader.character-options.Item.abc",
+		);
+	});
+
+	test("empty uuids collapse to undefined so chips degrade (never a dead anchor)", () => {
+		const entry = originEntryFromDoc({
+			uuid: "",
+			name: "Void Born",
+			system: { key: "void-born", row: "birthright", col: 1 },
+		});
+		expect(entry.uuid).toBeUndefined();
+	});
+});

@@ -136,6 +136,13 @@ export interface OriginEntry {
 	effect?: string;
 	mechanics: OriginMechanics;
 	variants?: OriginVariant[];
+	/**
+	 * Pack document uuid (bead hjve, epic 61pk): the creator's Origin Path
+	 * chips link to the doc's sheet. Absent in test fixtures (parsed YAML
+	 * carries no uuid) and when the caller doesn't link — the chip then
+	 * degrades to plain text (never an error).
+	 */
+	uuid?: string;
 }
 
 /** Chart row order, top (Home World) to bottom (Motivation then Lineage). */
@@ -248,6 +255,7 @@ export interface OriginDocSystem {
  */
 export function originEntryFromDoc(doc: {
 	name?: string;
+	uuid?: string;
 	system?: unknown;
 }): OriginEntry {
 	const s = (doc.system ?? {}) as OriginDocSystem & PackSystem;
@@ -268,6 +276,10 @@ export function originEntryFromDoc(doc: {
 		variants: Array.isArray(s.variants)
 			? (s.variants as OriginVariant[])
 			: undefined,
+		// Pack doc uuid (bead hjve, epic 61pk): read straight off the document —
+		// pack docs carry it, parsed-YAML fixtures don't. Empty collapses to
+		// undefined so an empty-string uuid never renders a dead anchor.
+		uuid: doc.uuid || undefined,
 	};
 }
 

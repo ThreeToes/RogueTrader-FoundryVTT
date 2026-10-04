@@ -101,7 +101,8 @@
             <div class="origin-options">
                 {{#each row.options as |opt|}}
                 <a class="origin-chip {{#if opt.selected}}selected{{/if}} {{#unless opt.enabled}}disabled{{/unless}}"
-                    data-action="chooseOrigin" data-row="{{row.row}}" data-key="{{#if opt.selected}}{{else}}{{opt.key}}{{/if}}">{{opt.name}}</a>
+                    data-action="chooseOrigin" data-row="{{row.row}}" data-key="{{#if opt.selected}}{{else}}{{opt.key}}{{/if}}">{{opt.name}}{{#if opt.link}}<span class="adv-doc-link chip-doc-link" data-action="{{opt.link.action}}"
+                        data-uuid="{{opt.link.uuid}}" data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}"><i class="fa-solid fa-book-open"></i></span>{{/if}}</a>
                 {{/each}}
             </div>
             {{#if row.detail}}
@@ -124,7 +125,9 @@
                     <span class="pick-label">{{localize "CREATOR.CHOOSE_ONE"}}</span>
                     {{#each row.detail.options as |option|}}
                     <a class="pick-chip {{#if option.selected}}selected{{/if}}"
-                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="option" data-value="{{option.value}}">{{option.value}}</a>
+                        data-action="choosePickOption" data-row="{{row.row}}" data-kind="option" data-value="{{option.value}}">{{option.value}}{{#if option.link}}<span class="adv-doc-link chip-doc-link"
+                            data-action="{{option.link.action}}" data-uuid="{{option.link.uuid}}"
+                            data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}"><i class="fa-solid fa-book-open"></i></span>{{/if}}</a>
                     {{/each}}
                 </div>
                 {{/if}}
@@ -180,7 +183,9 @@
             {{#each careers as |career|}}
             <a class="origin-chip {{#if career.selected}}selected{{/if}}" data-action="chooseCareer" data-key="{{career.key}}"
                 {{#if career.suggested}}data-tooltip="{{localize "CREATOR.CAREER_SUGGESTED"}}"{{/if}}>
-                {{#if career.suggested}}<i class="fa-solid fa-star suggested"></i>{{/if}}{{career.label}}
+                {{#if career.suggested}}<i class="fa-solid fa-star suggested"></i>{{/if}}{{career.label}}{{#if career.link}}<span class="adv-doc-link chip-doc-link"
+                    data-action="{{career.link.action}}" data-uuid="{{career.link.uuid}}"
+                    data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}"><i class="fa-solid fa-book-open"></i></span>{{/if}}
             </a>
             {{/each}}
         </div>

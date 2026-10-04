@@ -38,6 +38,12 @@ import {
 	type WarrantEntry,
 } from "../rules/warrant";
 import { getCharacterOptionDocs, getPackDocuments } from "../sheet/pack-resolve";
+// The talent-link pool + shared mapper (bead hjve): rules module, the
+// warrant-pool precedent.
+import {
+	setTalentLinkDocs,
+	talentLinkDocFromDoc,
+} from "../rules/talent-catalog";
 import { rogueTraderConfig } from "./config";
 
 /**
@@ -168,6 +174,27 @@ function warmWarrant(): void {
 }
 
 /**
+ * Talent-doc link catalog (epic 61pk, bead hjve): the creator's talent pick
+ * chips (origin-row optionChoice values, e.g. "Jaded") resolve their pack
+ * doc link against this warmed {key, name, uuid} catalog. The POOL, shared
+ * mapper and setter live in rules/talent-catalog.ts (the warrant-pool
+ * precedent, bead 5rk0 — one mapper so the ready warmer and the creator's
+ * on-demand fill cannot drift); the warmer only fetches + sets.
+ * Content-optional like every warmer: a missing pack leaves the catalog
+ * EMPTY and the chips degrade to plain text.
+ */
+function warmTalentLinkDocs(): void {
+	warmPool({
+		// Cast matches getCharacterOptionDocs' unknown[] signature (same cast
+		// every warmer in this file carries).
+		load: () =>
+			getCharacterOptionDocs("talent") as Promise<foundry.documents.Item[]>,
+		map: (doc: foundry.documents.Item) => talentLinkDocFromDoc(doc),
+		set: (entries) => setTalentLinkDocs(entries),
+	});
+}
+
+/**
  * Madness track rows (epic 1g2t): the sheet's trauma/malignancy tests read the
  * track rows. Afflictions are owned Items (epic nt8k) whose effects feed the
  * item-effects funnel directly, so no def cache is needed here any more.
@@ -271,5 +298,6 @@ export function registerContentWarmers(): void {
 	warmWarrant();
 	warmMadness();
 	warmSkillCatalog();
+	warmTalentLinkDocs();
 	migrateLegacyTypes();
 }

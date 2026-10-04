@@ -1156,6 +1156,7 @@
   "MADNESS.MODIFIER": "Modificador a la prueba",
   "MADNESS.ACQUIRED_SEVERITY": "Gravedad adquirida",
   "CREATOR.NOTES_POINTER": "Los rasgos, concesiones y reglas manuales de los orígenes se registran en la pestaña Trasfondo de la hoja de personaje.",
+  "CREATOR.OPEN_DOC_FAIL": "No se pudo abrir la entrada del compendio ({uuid}) — mira la consola (F12) para más detalles",
   "GRANT.PARAM_TITLE": "Elegir especialización: {name}",
   "GRANT.PARAM_PROMPT": "{name} requiere un grupo u organización concreto. Elige uno o escribe el tuyo (aprobación del GM según el libro, pág. 92).",
   "GRANT.PARAM_CUSTOM": "Otro (escribir abajo)",

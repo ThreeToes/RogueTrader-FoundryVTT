@@ -1156,6 +1156,7 @@
   "MADNESS.MODIFIER": "Modificateur au test",
   "MADNESS.ACQUIRED_SEVERITY": "Gravité acquise",
   "CREATOR.NOTES_POINTER": "Les traits, dons et règles manuelles des origines sont suivis dans l'onglet Historique de la feuille de personnage.",
+  "CREATOR.OPEN_DOC_FAIL": "Impossible d'ouvrir l'entrée du compendium ({uuid}) — voir la console (F12) pour plus de détails",
   "GRANT.PARAM_TITLE": "Choisir la spécialisation : {name}",
   "GRANT.PARAM_PROMPT": "{name} nécessite un groupe ou une organisation précis. Choisissez-en un ou saisissez le vôtre (validation du MJ selon le livre, p. 92).",
   "GRANT.PARAM_CUSTOM": "Autre (saisir ci-dessous)",

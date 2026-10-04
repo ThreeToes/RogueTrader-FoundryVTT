@@ -251,6 +251,22 @@
 	cursor: default;
 }
 
+/* Epic 61pk, bead hjve: compendium doc link ON the creator pick chips — a
+   small icon affordance carried INSIDE the chip but NOT as an <a> (nested
+   anchors are invalid HTML and the parser would break the chip apart). The
+   icon spans its own data-action, and Foundry dispatches the INNERMOST
+   [data-action] only (foundry.mjs:130371), so the chip's pick action is
+   never hijacked. Same subdued adv-doc-link tokens as the advancement rows. */
+.rogue-trader.sheet .chip-doc-link {
+	color: var(--rt-muted);
+	margin-left: 4px;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet .chip-doc-link:hover {
+	color: var(--color-text-light-highlight, var(--rt-gold-soft));
+}
+
 .rogue-trader.sheet .origin-detail {
 	border-left: 2px solid var(--rt-border-strong);
 	margin: 4px 0 0 8px;

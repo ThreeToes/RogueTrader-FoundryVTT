@@ -1156,6 +1156,7 @@
   "MADNESS.MODIFIER": "Modyfikator próby",
   "MADNESS.ACQUIRED_SEVERITY": "Nabyta dotkliwość",
   "CREATOR.NOTES_POINTER": "Cechy, nadania i ręczne zasady pochodzenia śledzone są w zakładce Pochodzenie karty postaci.",
+  "CREATOR.OPEN_DOC_FAIL": "Nie można otworzyć wpisu z compendium ({uuid}) — szczegóły w konsoli (F12)",
   "GRANT.PARAM_TITLE": "Wybierz specjalizację: {name}",
   "GRANT.PARAM_PROMPT": "{name} wymaga konkretnej grupy lub organizacji. Wybierz jedną z listy lub wpisz własną (za zgodą MG, wg podręcznika, s. 92).",
   "GRANT.PARAM_CUSTOM": "Inna (wpisz poniżej)",

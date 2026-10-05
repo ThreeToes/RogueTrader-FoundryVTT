@@ -78,6 +78,9 @@ const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
 	// Ship & Warrant Path options (Into the Storm pp33-44): a dedicated Item
 	// type so the per-row key/col + SP/PF mechanics survive Foundry's schema.
 	warrant: "warrant-option",
+	// Combat actions (bead moew): Core Rulebook Table 9-4 + Action
+	// Descriptions, one `action` item per row — the actions tab's source.
+	actions: "action",
 };
 
 /** Work out the real item type for an authored entry. */

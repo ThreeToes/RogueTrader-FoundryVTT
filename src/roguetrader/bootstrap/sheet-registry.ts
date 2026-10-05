@@ -18,6 +18,8 @@ import { Vehicle } from "../data/actor/vehicle";
 import { Ammunition } from "../data/item/ammunition";
 import { Armour } from "../data/item/armour";
 import { ArmourModification } from "../data/item/armour-modification";
+// Combat actions (bead moew): Table 9-4 rows + printed Action Descriptions.
+import { CombatAction } from "../data/item/action";
 import { Battlesuit } from "../data/item/battlesuit";
 import { BattlesuitSystem } from "../data/item/battlesuit-system";
 import { Career } from "../data/item/career";
@@ -51,6 +53,8 @@ import { PlanetSheet } from "../sheet/actor/planet-sheet";
 import { ShipSheet } from "../sheet/actor/ship-sheet";
 import { VehicleSheet } from "../sheet/actor/vehicle-sheet";
 import { ArmourSheet } from "../sheet/item/armour-sheet";
+// Combat actions (bead moew).
+import { ActionSheet } from "../sheet/item/action-sheet";
 import { CareerSheet } from "../sheet/item/career-sheet";
 import { GameTableSheet } from "../sheet/item/game-table-sheet";
 import { GearSheet } from "../sheet/item/gear-sheet";
@@ -91,6 +95,13 @@ export const SHEET_REGISTRY: Record<
 	Record<string, SheetEntry>
 > = {
 	Item: {
+		// Combat actions (bead moew): Table 9-4 + Action Descriptions; the
+		// actions tab child consumes the structured cost/roll fields.
+		action: {
+			model: CombatAction,
+			sheet: ActionSheet,
+			label: "TYPES.Item.action",
+		},
 		gear: { model: Gear, sheet: GearSheet, label: "ROGUE_TRADER.GEAR.SHEET" },
 		"ranged-weapon": {
 			model: RangedWeapon,

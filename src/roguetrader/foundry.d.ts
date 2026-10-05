@@ -38,6 +38,7 @@ import type { Vehicle } from "./data/actor/vehicle";
 import type { Ammunition } from "./data/item/ammunition";
 import type { Armour } from "./data/item/armour";
 import type { ArmourModification } from "./data/item/armour-modification";
+import type { CombatAction } from "./data/item/action";
 import type { Battlesuit } from "./data/item/battlesuit";
 import type { BattlesuitSystem } from "./data/item/battlesuit-system";
 import type { Career } from "./data/item/career";
@@ -73,6 +74,8 @@ declare global {
 declare module "fvtt-types/configuration" {
 	interface DataModelConfig {
 		Item: {
+			// Combat actions (bead moew): Table 9-4 + Action Descriptions.
+			action: typeof CombatAction;
 			gear: typeof Gear;
 			"ranged-weapon": typeof RangedWeapon;
 			"melee-weapon": typeof MeleeWeapon;

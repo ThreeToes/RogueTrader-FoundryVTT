@@ -23,6 +23,8 @@ export interface ModelEntry {
 
 /** Registered Item sub-types -> model. */
 export const ITEM_MODELS: Record<string, ModelEntry> = {
+	// Combat actions (bead moew): Table 9-4 + Action Descriptions.
+	action: { spec: "../roguetrader/data/item/action", className: "CombatAction" },
 	gear: { spec: "../roguetrader/data/item/gear", className: "Gear" },
 	"ranged-weapon": { spec: "../roguetrader/data/item/ranged-weapon", className: "RangedWeapon" },
 	"melee-weapon": { spec: "../roguetrader/data/item/melee-weapon", className: "MeleeWeapon" },

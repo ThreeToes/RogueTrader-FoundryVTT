@@ -1,0 +1,35 @@
+<section class="action-content">
+    <div class="stats border">
+        <h1>{{localize "TYPES.Item.action"}}</h1>
+        <div class="stats-row">
+            {{#each columns as |c|}}
+            <div class="stat">
+                <label>{{c.label}}</label>
+                {{#if ../editable}}
+                <input name="{{c.name}}" type="text" value="{{c.value}}" />
+                {{else}}
+                <p class="static-value">{{c.value}}</p>
+                {{/if}}
+            </div>
+            {{/each}}
+        </div>
+        <div class="stats-row">
+            <div class="stat full-width">
+                <label>{{localize "ACTION.DESCRIPTION"}}</label>
+                {{#if editable}}
+                <prose-mirror
+                    name="system.description"
+                    value="{{source.system.description}}"
+                    button="true"
+                    editable="{{editable}}"
+                    toggled="false"
+                >
+                    {{{descriptionHTML}}}
+                </prose-mirror>
+                {{else}}
+                <div class="description-readonly">{{{descriptionHTML}}}</div>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</section>

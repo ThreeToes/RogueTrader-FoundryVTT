@@ -20,7 +20,14 @@ import { Gear } from "./gear";
  * one (loud, never a silent empty profile).
  */
 export interface Ordnance {
-	/** Ordnance kind the launcher's `acceptsAmmo` resolves against ("missile"). */
+	/**
+	 * Ordnance kind(s) the launcher's `acceptsAmmo` resolves against ("missile").
+	 * Normally ONE kind; a round whose book reading is ambiguous may author a
+	 * WHITESPACE-SEPARATED LIST ("grenade missile") — the load gate is
+	 * membership (attack.ts ordnanceKindsOf/acceptsOrdnance, bead mnrm), so a
+	 * two-kind round loads into any launcher naming one of its kinds. Single-
+	 * kind strings remain the normal shape and are unchanged in behaviour.
+	 */
 	kind: string;
 	/** Damage formula in RT notation (type-suffix stripped, e.g. "2d10"). */
 	damage: string;
@@ -45,6 +52,18 @@ export class Ammunition extends Gear {
 			 * ordnanceFieldsOf). quantity stays the manual usage count (1sxq).
 			 */
 			ordnance: new foundry.data.fields.SchemaField({
+				/**
+				 * The ordnance KIND(S) (bead pht2/mnrm). A single kind stands as
+				 * before ("missile"); a whitespace-separated list ("grenade
+				 * missile") declares a round that satisfies MULTIPLE launchers
+				 * (Starflare Round, Into the Storm p116-117 — owner ruling
+				 * 2026-10-04: both readings permitted). Kept a StringField, NOT an
+				 * ArrayField: a Foundry ArrayField cannot hydrate a legacy string
+				 * source (single-kind authoring would break), and there is no hard
+				 * enum to validate entries against — `acceptsAmmo` is intentionally
+				 * homebrew-open, so kinds stay open with the ORDNANCE_KINDS registry
+				 * (attack.ts) as the documented vocabulary only.
+				 */
 				kind: new foundry.data.fields.StringField({
 					required: true,
 					nullable: false,

@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { acceptsOrdnance, attackProfileOf, ordnanceFamilyOf } from "./attack";
+import {
+	acceptsOrdnance,
+	attackProfileOf,
+	ORDNANCE_KINDS,
+	ordnanceFamilyOf,
+	ordnanceKindsOf,
+} from "./attack";
 
 // Bead kam1: weapons and printed mutation attacks resolve to ONE profile shape
 // so the to-hit handler and damage pipeline do not fork.
@@ -382,11 +388,119 @@ describe("launcher-ordnance compatibility (bead 4obp)", () => {
 		};
 		expect(acceptsOrdnance(gla, lasgun)).toBe(false);
 	});
+	// Bead mnrm, guard (c): a grenade launcher's "grenade" acceptance resolves
+	// against the candidate's kinds, which for ammunition is the ordnance
+	// block's kind — a grenade-KIND AMMUNITION item is therefore accepted too
+	// (a grenade launcher firing an unusual grenade round is book-consistent).
+	// Pinned here so a matcher rewrite never silently narrows it again.
+	test("a grenade launcher accepts grenade-kind ammunition items", () => {
+		const gla = {
+			...missileLauncher,
+			system: { ...missileLauncher.system, acceptsAmmo: "grenade" },
+		};
+		const grenadeRound = {
+			id: "a5",
+			name: "Incendiary Grenade Round",
+			type: "ammunition",
+			system: {
+				ordnance: {
+					kind: "grenade",
+					damage: "2d10",
+					damageType: "Energy",
+					penetration: 0,
+					qualities: [],
+				},
+			},
+		};
+		expect(acceptsOrdnance(gla, grenadeRound)).toBe(true);
+		// ...but a grenade launcher still refuses missile-kind ammunition: the
+		// kinds must MATCH, both being named kinds is not enough.
+		expect(acceptsOrdnance(gla, fragMissile)).toBe(false);
+	});
 	test("an empty acceptsAmmo accepts nothing", () => {
 		const unconfigured = {
 			...missileLauncher,
 			system: { ...missileLauncher.system, acceptsAmmo: "" },
 		};
 		expect(acceptsOrdnance(unconfigured, fragMissile)).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Multi-kind ordnance (bead mnrm): a round whose book reading is ambiguous
+// authors a whitespace-separated kind list and loads into ANY launcher naming
+// one of its kinds. The Starflare Round (Into the Storm p116-117) is the
+// concrete case: prose first sentence "via missile launcher or grenade
+// launcher", restriction line "mortar or grenade launchers (not missile
+// launchers)" — owner ruling 2026-10-04: both readings permitted, GMs
+// arbitrate book-vs-table at their tables.
+// ---------------------------------------------------------------------------
+
+const starflareRound = {
+	id: "a6",
+	name: "Starflare Round",
+	type: "ammunition",
+	uuid: "Actor.x.Item.a6",
+	system: {
+		quantity: 1,
+		// Damageless (Dam "—"): the kinds are the load compatibility; the
+		// fire profile still refuses (no damage formula to roll).
+		ordnance: { kind: "grenade missile", qualities: [] },
+	},
+};
+
+describe("two-kind ordnance loads into both launcher kinds (bead mnrm)", () => {
+	test("the kind registry carries the book's named kinds (mortar reserved)", () => {
+		expect(ORDNANCE_KINDS).toContain("missile");
+		expect(ORDNANCE_KINDS).toContain("grenade");
+		// mortars carry no loading machinery yet; the kind stays reserved.
+		expect(ORDNANCE_KINDS).not.toContain("mortar");
+	});
+
+	test("ordnanceKindsOf splits and normalises the authored kind list", () => {
+		expect(ordnanceKindsOf(starflareRound)).toEqual(["grenade", "missile"]);
+		// single-kind authoring is UNCHANGED:
+		expect(ordnanceKindsOf(fragMissile)).toEqual(["missile"]);
+		// whitespace + case + duplicate tokens normalise:
+		const sloppy = {
+			...starflareRound,
+			system: { ...starflareRound.system, ordnance: { kind: "  Grenade\tMISSILE missile " } },
+		};
+		expect(ordnanceKindsOf(sloppy)).toEqual(["grenade", "missile"]);
+		// no ordnance block = no kinds:
+		const plain = { id: "a3", name: "Bullets", type: "ammunition", system: {} };
+		expect(ordnanceKindsOf(plain)).toEqual([]);
+	});
+
+	test("ordnanceFamilyOf returns the PRIMARY (first authored) kind", () => {
+		expect(ordnanceFamilyOf(starflareRound)).toBe("grenade");
+		expect(ordnanceFamilyOf(fragMissile)).toBe("missile");
+	});
+
+	test("the two-kind round loads into BOTH a missile and a grenade launcher", () => {
+		const gla = {
+			...missileLauncher,
+			name: "Grenade Launcher (Mezoa)",
+			system: { ...missileLauncher.system, acceptsAmmo: "grenade" },
+		};
+		expect(acceptsOrdnance(missileLauncher, starflareRound)).toBe(true);
+		expect(acceptsOrdnance(gla, starflareRound)).toBe(true);
+		// ...but only for launchers naming one of its kinds:
+		const mortarShaped = {
+			...missileLauncher,
+			system: { ...missileLauncher.system, acceptsAmmo: "mortar" },
+		};
+		expect(acceptsOrdnance(mortarShaped, starflareRound)).toBe(false);
+	});
+
+	test("a launcher loaded with the two-kind damageless round still refuses fire", () => {
+		// The load is ACCEPTED (no load-refusal); the damage path is the
+		// established warn-and-refuse (ordnanceFieldsOf needs a formula).
+		const profile = attackProfileOf({
+			...missileLauncher,
+			system: { ...missileLauncher.system, loadedAmmoId: "a6" },
+		},	(id) => (id === "a6" ? starflareRound : null));
+		expect(profile?.unusable).toBe(true);
+		expect(profile?.fired ?? null).toBe(null);
 	});
 });

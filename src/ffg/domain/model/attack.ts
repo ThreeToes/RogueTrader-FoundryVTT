@@ -163,42 +163,80 @@ export type AmmoResolver = (id: string) => LoadableOrdnance | null | undefined;
 export const LAUNCHER_FAMILY = "launcher";
 
 /**
- * What a candidate item supplies as ordnance (bead 4obp), by KIND:
- *   - ammunition items carry the structured `ordnance` block — the kind is
- *     the block's own `kind` ("missile" in the pack);
+ * The registry of launcher-ordnance kinds (bead mnrm): what `acceptsAmmo`
+ * keys and `ordnance.kind` values name. "mortar" is reserved for the mortar
+ * loading follow-up (Into the Storm p116-117: the Minefield/Scatter/Starflare
+ * rounds are also book-legal there, but mortars carry no load machinery yet).
+ * NOT a hard enum: a homebrew launcher/kind stays data-driven (same
+ * explicit-open posture as `acceptsAmmo` itself) — this is the documented
+ * vocabulary, and `ordnanceKindsOf` parses any kind string against it.
+ */
+export const ORDNANCE_KINDS: readonly string[] = ["missile", "grenade"];
+
+/**
+ * EVERY ordnance kind a candidate item supplies (bead mnrm), as a list:
+ *   - ammunition items carry the structured `ordnance` block — the kinds are
+ *     the block's own `kind`: normally ONE kind ("missile"), but a round whose
+ *     book reading is ambiguous may author a WHITESPACE-SEPARATED LIST
+ *     ("grenade missile") and load into ANY launcher naming one of them —
+ *     e.g. the Starflare Round (Into the Storm p116-117: the prose first
+ *     sentence permits "missile launcher or grenade launcher", the restriction
+ *     line names "mortar or grenade launchers (not missile launchers)")
+ *     — owner ruling 2026-10-04: both readings permitted; individual GMs
+ *     arbitrate book-vs-table at their table;
  *   - grenade weapons STAY ranged-weapon items (hand-throwable) — the kind is
  *     "grenade", carried by the item being in the book's thrown family
  *     (class or weaponFamily "thrown"); the launcher reads their EXISTING
- *     weapon fields.
- * Anything else — plain ammunition, pistols, raw gear — is not ordnance: null.
+ *     weapon fields. The book's grenade rows sit in the thrown family
+ *     (Table 5-6); launcher-firable grenades keep class/weaponFamily thrown.
+ *   - grenade-kind AMMUNITION (a kind value of "grenade" on an ordnance
+ *     block) is also accepted by "grenade" launchers: a grenade launcher
+ *     firing an unusual grenade round is book-consistent.
+ * Anything else — plain ammunition, pistols, raw gear — is not ordnance: [].
  */
-export function ordnanceFamilyOf(item: LoadableOrdnance): string | null {
+export function ordnanceKindsOf(item: LoadableOrdnance): string[] {
 	if (item.type === "ammunition") {
 		const block = item.system?.ordnance;
-		// The block's KIND is the load compatibility (bead pht2): the book
-		// prints "—" Dam for no-damage rounds too (Web Missile, Hostile
+		// The block's KIND(S) are the load compatibility (bead pht2/mnrm): the
+		// book prints "—" Dam for no-damage rounds too (Web Missile, Hostile
 		// Acquisitions Table 2-11 p52), so damage is NOT part of the gate —
 		// FIELDS still require it (ordnanceFieldsOf: a damageless load stays
 		// warn-and-refuse, like the established damage-less grenade case).
-		if (!block?.kind) return null;
-		return String(block.kind);
+		const kinds = String(block?.kind ?? "")
+			.trim()
+			.toLowerCase()
+			.split(/\s+/)
+			.filter(Boolean);
+		return [...new Set(kinds)];
 	}
 	if (item.type === "ranged-weapon") {
 		const sys = item.system ?? {};
 		const klass = String(sys.class ?? "").toLowerCase();
 		const family = String(sys.weaponFamily ?? "").toLowerCase();
-		// The book's grenade rows sit in the thrown family (Table 5-6):
-		// launcher-firable grenades keep class/weaponFamily thrown.
-		return klass === "thrown" || family === "thrown" ? "grenade" : null;
+		return klass === "thrown" || family === "thrown" ? ["grenade"] : [];
 	}
-	return null;
+	return [];
+}
+
+/**
+ * The PRIMARY (single-kind) family of a candidate item — `ordnanceKindsOf`'s
+ * first kind, or null when the item supplies no ordnance. A multi-kind round
+ * has no single kind here (its first authored kind stands in); load
+ * COMPATIBILITY never reads this — it gates on `acceptsOrdnance` membership
+ * over the full kinds list (bead mnrm).
+ */
+export function ordnanceFamilyOf(item: LoadableOrdnance): string | null {
+	return ordnanceKindsOf(item)[0] ?? null;
 }
 
 /**
  * May `candidate` be loaded into `launcher`? The launcher names its accepted
  * kind in `acceptsAmmo` ("missile" / "grenade"); an empty acceptance means it
  * accepts nothing (explicit, homebrew-friendly — epic nlsh launcher-
- * compatibility card).
+ * compatibility card). The gate is MEMBERSHIP over the candidate's full
+ * kinds list (ordnanceKindsOf, bead mnrm): a two-kind round loads into any
+ * launcher naming one of its kinds; single-kind rounds behave exactly as
+ * before (equality is membership on a one-element list).
  */
 export function acceptsOrdnance(
 	launcher: { system?: { acceptsAmmo?: string } },
@@ -208,7 +246,7 @@ export function acceptsOrdnance(
 		.trim()
 		.toLowerCase();
 	if (!accepts) return false;
-	return ordnanceFamilyOf(candidate) === accepts;
+	return ordnanceKindsOf(candidate).includes(accepts);
 }
 
 /**

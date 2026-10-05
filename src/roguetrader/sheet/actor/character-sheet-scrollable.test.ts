@@ -45,6 +45,7 @@ afterAll(() => {
 const SCROLLING_TABS = [
 	"stats",
 	"combat",
+	"actions",
 	"inventory",
 	"background",
 	"skills",

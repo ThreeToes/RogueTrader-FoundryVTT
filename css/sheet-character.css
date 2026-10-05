@@ -190,6 +190,62 @@
 	color: var(--rt-muted);
 }
 
+/* Actions tab (epic moew, bead 9r82): the Table 9-4 combat actions as a
+   two-column chip grid — the skills screen's row + token anatomy. An unmet
+   prerequisite greys the chip (visible, never locked — the owner ruling: the
+   click itself is not gated). */
+
+.rogue-trader.sheet.character .action-list {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 4px 12px;
+	margin: 4px 0;
+	padding: 0;
+}
+
+.rogue-trader.sheet.character .action-chip {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius);
+	padding: 2px 8px;
+	background: rgba(0, 0, 0, 0.2);
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.character .action-chip:hover {
+	border-color: var(--rt-border-strong);
+	color: var(--color-text-light-highlight, var(--rt-gold-soft));
+}
+
+.rogue-trader.sheet.character .action-chip .action-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Printed Table 9-4 Type, muted small caps like the field labels. */
+.rogue-trader.sheet.character .action-chip .action-cost {
+	font-size: var(--rt-fs-sm);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rt-muted);
+	white-space: nowrap;
+}
+
+/* Roll-spec chips are child 3's wiring (bead et5a): the dice icon marks them. */
+.rogue-trader.sheet.character .action-chip .action-roll-hint {
+	color: var(--rt-gold);
+	font-size: var(--rt-fs-sm);
+}
+
+.rogue-trader.sheet.character .action-row.unmet .action-chip {
+	opacity: 0.45;
+}
+
 .rogue-trader.sheet.character .untrained-hint {
 	font-size: var(--rt-fs-sm);
 	color: var(--rt-muted);

@@ -1,0 +1,27 @@
+<div class="rogue-trader chat roll">
+    <div class="background border">
+        <h1>
+{{!-- The combat-action lookup card (epic moew, bead 9r82): the action's NAME
+     anchors its compendium doc (the qg4z titleDoc anatomy the roll card
+     carries) so the full verbatim prose is one click away; an entry without a
+     uuid degrades to plain text, never an error. --}}
+{{#if titleDoc}}
+            {{titleDoc.prefix}}{{#if titleDoc.link}}<a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}" data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{titleDoc.link.name}}</a>{{else}}{{titleDoc.name}}{{/if}}{{titleDoc.suffix}}
+{{else}}
+            {{title}}
+{{/if}}
+        </h1>
+        <div class="roll-summary">
+            <div class="roll-target">
+                <span class="label">{{costLabel}}</span>
+                <span class="value">{{cost}}</span>
+            </div>
+            {{#if description}}
+            <div class="roll-result">
+                <span class="label">{{descriptionLabel}}</span>
+                <span class="value">{{description}}</span>
+            </div>
+            {{/if}}
+        </div>
+    </div>
+</div>

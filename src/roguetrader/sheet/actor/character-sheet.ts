@@ -1,4 +1,5 @@
 import { Character } from "../../data/actor/character";
+import type { ActionOwnedItem } from "../../rules/actions";
 import { itemIdFromTarget } from "../dom";
 import {
 	equipStateOf,
@@ -86,6 +87,10 @@ import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
 import { TalentPicker } from "./talent-picker";
+import {
+	combatActionChipAction,
+	actionsChipContext,
+} from "./actions-view";
 import { enrichText } from "../rich-text";
 
 // (CharacteristicView, MAX_UNNATURAL_STEPS moved to sheet/skills-domain — bead 6l90)
@@ -133,6 +138,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			snapOut: CharacterSheet.#onSnapOut,
 			rollInitiative: CharacterSheet.#onRollInitiative,
 			repairBattlesuit: CharacterSheet.#onRepairBattlesuit,
+			combatAction: combatActionChipAction,
 		},
 	};
 
@@ -570,6 +576,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/combat.hbs",
 			scrollable: [""],
 		},
+		// Actions tab (epic moew, bead 9r82): the combat actions chip grid; the
+		// root <section class="tab"> is the scroll container like every tab part.
+		actions: {
+			template: "systems/rogue-trader/template/sheet/actor/tabs/actions.hbs",
+			scrollable: [""],
+		},
 		inventory: {
 			template: "systems/rogue-trader/template/sheet/actor/tabs/inventory.hbs",
 			scrollable: [""],
@@ -597,6 +609,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			tabs: [
 				{ id: "data", group: "primary", label: "TAB.STATS", cssClass: "" },
 				{ id: "combat", group: "primary", label: "TAB.COMBAT", cssClass: "" },
+				{
+					id: "actions",
+					group: "primary",
+					label: "TAB.ACTIONS",
+					cssClass: "",
+				},
 				{ id: "skills", group: "primary", label: "TAB.SKILLS", cssClass: "" },
 				{
 					id: "background",
@@ -831,6 +849,20 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		});
 
 		context.isPC = this.actor.type === "explorer";
+		// Actions tab (epic moew, bead 9r82): the Table 9-4 book order — the
+		// chip rows come straight from the warmed actions catalog.
+		await this.#actionsContext(context, system);
+	}
+
+	/** Actions tab (epic moew, bead 9r82): the catalog + prerequisite chips. */
+	async #actionsContext(
+		context: Record<string, unknown>,
+		_system: Character,
+	): Promise<void> {
+		context.actions = await actionsChipContext(
+			this.actor.items as unknown as ActionOwnedItem[],
+			(key) => game.i18n!.localize(key),
+		);
 	}
 
 	/** Psychic tab (bead m4me): powers, psyker status, sorcery, navigation. */

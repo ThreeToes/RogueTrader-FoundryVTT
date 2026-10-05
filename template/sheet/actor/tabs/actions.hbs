@@ -1,0 +1,25 @@
+<section class="tab {{tabs.actions.cssClass}}" data-group="primary" data-tab="actions">
+    <div class="actions border">
+        <div class="actions-header">
+            <h1>{{localize "TAB.ACTIONS"}}</h1>
+        </div>
+        {{!-- Two-column chip grid (epic moew, bead 9r82): every Table 9-4 row,
+        the skills screen's row + token anatomy. An unmet prerequisite greys the
+        chip (ACTION PREREQ) — it stays clickable (owner ruling: visible, not
+        locked; rolls route through et5a). The tooltip is composed server-side
+        (no hbs string concat, the header.hbs inline-expression precedent). --}}
+        <ol class="action-list">
+            {{#each actions as |action|}}
+            <li class="action-row{{#unless action.available}} unmet{{/unless}}">
+                <a class="action-chip" data-action="combatAction"
+                    data-action-name="{{action.name}}" data-has-roll="{{action.hasRoll}}"
+                    data-uuid="{{action.uuid}}" data-tooltip="{{action.tooltip}}">
+                    <span class="action-name">{{action.name}}</span>
+                    <span class="action-cost">{{action.cost}}</span>
+                    {{#if action.hasRoll}}<i class="fa-solid fa-dice-d10 action-roll-hint"></i>{{/if}}
+                </a>
+            </li>
+            {{/each}}
+        </ol>
+    </div>
+</section>

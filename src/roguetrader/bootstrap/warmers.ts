@@ -44,6 +44,12 @@ import {
 	setTalentLinkDocs,
 	talentLinkDocFromDoc,
 } from "../rules/talent-catalog";
+// Combat actions catalog (epic moew, bead 9r82): the shared doc→entry mapper
+// + setter live in rules/actions.ts (same shape as the talent-link pool).
+import {
+	actionEntryFromDoc,
+	setActionCatalog,
+} from "../rules/actions";
 import { rogueTraderConfig } from "./config";
 
 /**
@@ -228,6 +234,20 @@ function warmMadness(): void {
 	rogueTraderConfig().madness = { getRows: () => madnessRows };
 }
 
+/**
+ * Combat actions catalog (epic moew, bead 9r82): the ACTIONS tab reads the
+ * Table 9-4 rows here. Content-optional like every warmer: a missing pack
+ * leaves the catalog EMPTY and the tab renders no chips.
+ */
+function warmActions(): void {
+	warmPool({
+		load: () => getPackDocuments("rogue-trader.actions"),
+		keep: (doc: foundry.documents.Item) => doc.type === "action",
+		map: (doc: foundry.documents.Item) => actionEntryFromDoc(doc),
+		set: (entries) => setActionCatalog(entries),
+	});
+}
+
 /** Warm the skills pack for the createActor grant hook. */
 function warmSkillCatalog(): void {
 	warmPool({
@@ -298,6 +318,7 @@ export function registerContentWarmers(): void {
 	warmWarrant();
 	warmMadness();
 	warmSkillCatalog();
+	warmActions();
 	warmTalentLinkDocs();
 	migrateLegacyTypes();
 }

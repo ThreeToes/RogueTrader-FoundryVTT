@@ -207,6 +207,12 @@ export async function applyConditionFromCard(
 export async function rollDamageButton(
 	button: HTMLButtonElement,
 ): Promise<void> {
+	// Bead pk1j (owner ruling 2026-10-04): the card is RETRYABLE. A failed
+	// damage roll (thrown adapter pipeline, failed flag write, ...) must not
+	// dead-end the card: the rolled marker is persisted ONLY on success and
+	// the button is re-enabled on failure, so a transient error (an
+	// unresolvable doc, a failed write) can be retried instead of leaving the
+	// to-hit card with a button that either throws forever or is bricked.
 	const messageEl = button.closest<HTMLElement>(".message");
 	const messageId = messageEl?.dataset.messageId;
 	const message = messageId
@@ -225,14 +231,24 @@ export async function rollDamageButton(
 		| undefined;
 	if (!message || !data || data.rolled) return;
 	button.disabled = true;
-	await rollDamageForCard(data as never);
-	await message.update({
-		flags: {
-			[messageFlagNamespace(getPorts())]: {
-				damageRoll: { ...data, rolled: true },
+	try {
+		await rollDamageForCard(data as never);
+		// Success only: the rolled marker locks the card against a second roll.
+		await message.update({
+			flags: {
+				[messageFlagNamespace(getPorts())]: {
+					damageRoll: { ...data, rolled: true },
+				},
 			},
-		},
-	});
+		});
+	} catch (error) {
+		// Retryable failure path: undo the synchronous disable so the button
+		// lives again, NEVER persist the rolled flag, surface the error the
+		// way the sibling card actions do (console + a visible warn).
+		button.disabled = false;
+		console.error("rogue-trader: damage roll failed", error);
+		getPorts().notify.warn("CHAT.DAMAGE_ROLL_FAIL");
+	}
 }
 
 /**

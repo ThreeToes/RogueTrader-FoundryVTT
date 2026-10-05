@@ -906,6 +906,7 @@
   "CRITICAL.APPLY_MANUALLY": "Zawartość tabeli niezainstalowana — zastosuj efekt ręcznie.",
   "CHAT.CONDITION_APPLY_HINT": "Oznacza cel tą przypadłością. Czas trwania wydrukowanego efektu jest różny, więc usuń go ręcznie po jego upływie (na karcie dostępny jest test Woli pozwalający dojść do siebie).",
   "CHAT.CONDITION_TARGET_MISSING": "Cel przypadłości nie istnieje już w tym świecie.",
+  "CHAT.DAMAGE_ROLL_FAIL": "Rzut na obrażenia się nie powiódł — karta nadal pozwala rzucać; szczegóły w konsoli (F12).",
   "CRITICAL.SOURCE_CORE": "Tabela trafień krytycznych",
   "CRITICAL.SOURCE_BATTLESUIT": "Pancerz bojowy (Tabela 1-5)",
   "CRITICAL.ROLL": "Rzut",

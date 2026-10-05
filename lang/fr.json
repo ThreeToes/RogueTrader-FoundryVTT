@@ -882,6 +882,7 @@
   "CRITICAL.APPLY_MANUALLY": "Contenu de table non installé — appliquez l'effet manuellement.",
   "CHAT.CONDITION_APPLY_HINT": "Affecte cet état à la cible. La durée de l'effet imprimé varie, donc retirez-le à la main quand elle se termine (un test de Volonté de récupération est proposé sur la fiche).",
   "CHAT.CONDITION_TARGET_MISSING": "La cible de l'état n'existe plus dans ce monde.",
+  "CHAT.DAMAGE_ROLL_FAIL": "Le jet de dégâts a échoué — la carte reste utilisable ; voir la console (F12) pour plus de détails.",
   "CRITICAL.SOURCE_CORE": "Table des coups critiques",
   "CRITICAL.SOURCE_BATTLESUIT": "Exo-armure (Table 1-5)",
   "CRITICAL.ROLL": "Jet",

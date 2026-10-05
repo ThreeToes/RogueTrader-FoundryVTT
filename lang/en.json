@@ -957,6 +957,7 @@
   "CRITICAL.APPLY_MANUALLY": "Table content not installed — apply the effect manually.",
   "CHAT.CONDITION_APPLY_HINT": "Tags the target with this condition. The printed effect's duration varies, so remove it by hand when it ends (a Willpower snap-out is offered on the sheet).",
   "CHAT.CONDITION_TARGET_MISSING": "Condition target no longer exists in this world.",
+  "CHAT.DAMAGE_ROLL_FAIL": "The damage roll failed — the card is still rollable; see the console (F12) for details.",
   "CRITICAL.SOURCE_CORE": "Critical Hit table",
   "CRITICAL.SOURCE_BATTLESUIT": "Battlesuit (Table 1-5)",
   "CRITICAL.ROLL": "Roll",

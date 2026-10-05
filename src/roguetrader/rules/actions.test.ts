@@ -16,8 +16,10 @@ import type { Ports } from "../../ffg/application/ports";
 import {
 	actionAvailable,
 	actionCapabilities,
+	actionDifficulty,
 	actionEntryFromDoc,
 	actionLookupCardVars,
+	actionRollCardVars,
 	prereqKind,
 	setActionCatalog,
 	ensureActionCatalog,
@@ -27,13 +29,17 @@ import {
 	type ActionEntry,
 } from "./actions";
 
-/** One action entry, prereq text pre-classified (the mapper's contract). */
+/**
+ * One action entry, prereq + difficulty pre-classified (the mapper's
+ * contract). Extra rollDifficulty drives the classification like the real
+ * mapper does.
+ */
 function entry(
 	name: string,
 	prerequisites = "",
 	extra: Partial<ActionEntry> = {},
 ): ActionEntry {
-	return {
+	const merged = {
 		key: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
 		name,
 		uuid: "Compendium.rogue-trader.actions.Item.test",
@@ -47,6 +53,7 @@ function entry(
 		prereqKind: prereqKind(prerequisites),
 		...extra,
 	};
+	return { ...merged, difficulty: actionDifficulty(merged.rollDifficulty) };
 }
 
 describe("prereqKind (bead 9r82 data-driven mapping)", () => {
@@ -349,5 +356,51 @@ describe("the lookup card (lookup dispatch, fake ports)", () => {
 			(posted[0].vars as { titleDoc: { link: { uuid: string } } }).titleDoc
 				.link.uuid,
 		).toBe("Compendium.rogue-trader.actions.Item.test");
+	});
+});
+
+/**
+ * The printed difficulty → machine bits mapping (bead et5a). The pack
+ * prints exactly "" (no test), "Hard (–20)", "Challenging (+0)" and bare
+ * "Opposed"; the parenthesised value is the book's own number, parsed —
+ * NOT the TestDialog ladder's step values (which are unverified).
+ */
+describe("actionDifficulty (bead et5a data-driven mapping)", () => {
+	test("the printed pack labels classify to their machine bits", () => {
+		expect(actionDifficulty("")).toEqual({ kind: "none", value: 0 });
+		expect(actionDifficulty("Hard (–20)")).toEqual({
+			kind: "numeric",
+			value: -20,
+		});
+		expect(actionDifficulty("Challenging (+0)")).toEqual({
+			kind: "numeric",
+			value: 0,
+		});
+		expect(actionDifficulty("Opposed")).toEqual({ kind: "opposed", value: 0 });
+	});
+
+	test("unmapped labels fail loudly", () => {
+		expect(() => actionDifficulty("Very Hard")).toThrow(
+			/extend actionDifficulty/,
+		);
+	});
+
+	test("the roll-result card carries the lookup anatomy + the result", () => {
+		const vars = actionRollCardVars({
+			entry: entry("Called Shot", "", { rollDifficulty: "Hard (–20)" }),
+			labels: { cost: "Action Type", description: "Action Description" },
+			result: {
+				target: 80,
+				roll: 23,
+				outcomeLabel: "Success (+3 degrees)",
+				outcomeClass: "success",
+				opposedNote: "",
+			},
+		});
+		expect(vars.cost).toBe("Half");
+		expect(vars.target).toBe(80);
+		expect(vars.roll).toBe(23);
+		expect(vars.outcomeClass).toBe("success");
+		expect(vars.opposedNote).toBe("");
 	});
 });

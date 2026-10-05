@@ -26,6 +26,7 @@ import type {
 } from "../../rules/roll-contract";
 import { shipRepairHandler, shipWeaponHandler } from "./ship";
 import { TestDialog } from "../../rules/test-dialog";
+import { actionHandler } from "./action";
 import {
 	characteristicHandler,
 	skillHandler,
@@ -54,6 +55,7 @@ export const rollHandlers: {
 	"ship-weapon": shipWeaponHandler,
 	"ship-repair": shipRepairHandler,
 	fear: fearHandler,
+	action: actionHandler,
 };
 
 // ---------------------------------------------------------------------------
@@ -371,6 +373,27 @@ export async function rollShipRepair(
 		kind: "ship-repair",
 		actor,
 		itemId,
+		skipDialog: options.skipDialog,
+	});
+}
+
+/**
+ * Roll a combat action's printed test (bead et5a, epic moew): the entry is
+ * the warmed actions-catalog snapshot — the actions tab resolves it off the
+ * chip click before dispatching (see sheet/actor/actions-view.ts). The
+ * handler delegates the underlying test to the characteristic/skill paths
+ * and lands the printed difficulty as a visible modifier row.
+ */
+export async function rollAction(
+	actor: Actor,
+	entry: Extract<RollRequest, { kind: "action" }>["entry"],
+	options: RollTestOptions = {},
+): Promise<void> {
+	await performRoll({
+		kind: "action",
+		actor,
+		entry,
+		modifiers: options.modifiers,
 		skipDialog: options.skipDialog,
 	});
 }

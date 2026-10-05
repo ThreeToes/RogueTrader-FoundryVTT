@@ -63,6 +63,14 @@
 	font-size: var(--rt-fs-lg);
 	color: #4a3f31;
 }
+/* Bead et5a (epic moew): the combat-action roll card's manual-resolution
+   note (Opposed tests) — same treatment as the damage card's note rows. */
+.rogue-trader.chat.roll p.action-note {
+	margin: 4px 0 0;
+	font-size: var(--rt-fs-lg);
+	color: #4a3f31;
+}
+
 /* Bead 4obp: launcher-ordnance usage chip on the damage card - what fired,
    the remaining quantity (manual tracking, no auto-consumption) and the
    player's one-click spend button. */

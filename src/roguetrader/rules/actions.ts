@@ -47,6 +47,8 @@ export interface ActionEntry {
 	rollTest: string;
 	/** Printed difficulty label, verbatim ("" when none printed). */
 	rollDifficulty: string;
+	/** The printed difficulty classified to its machine bits (bead et5a). */
+	difficulty: ActionDifficulty;
 	/** The machine kind the printed prerequisites text classifies to. */
 	prereqKind: ActionPrereqKind;
 }
@@ -91,6 +93,50 @@ export function prereqKind(text: string): ActionPrereqKind {
 	);
 }
 
+// ------------------------------------------------- the printed difficulty (bead et5a)
+
+/**
+ * The machine kind a printed difficulty label resolves to:
+ * - `none` — the row prints no difficulty (""),
+ * - `opposed` — the book prints a bare "Opposed" test (owner ruling: the
+ *   opposed side rolls MANUALLY, so there is no numeric auto-modifier),
+ * - `numeric` — the label carries its modifier in parentheses
+ *   ("Hard (–20)", "Challenging (+0)"); the printed value is authoritative
+ *   data and does NOT go through the TestDialog's difficulty ladder, whose
+ *   Hard/Very-Hard step values are a different (still unverified) table.
+ */
+export type ActionDifficultyKind = "none" | "opposed" | "numeric";
+
+/** The printed difficulty's machine bits: kind + parsed signed value. */
+export interface ActionDifficulty {
+	kind: ActionDifficultyKind;
+	/** Parsed signed value ("Hard (–20)" → −20, "+0" → 0); 0 otherwise. */
+	value: number;
+}
+
+/**
+ * Classify a printed difficulty label. One printed form at a time; an
+ * UNMAPPED label throws (the extraction convention: loud failure, never a
+ * silently-dropped difficulty). The pack prints exactly: "" (no test),
+ * "Hard (–20)", "Challenging (+0)" and bare "Opposed"; the parenthesised
+ * value may use the en dash (–) or minus sign (−) the text layer emits, so
+ * both, plus the ASCII hyphen, are accepted.
+ */
+export function actionDifficulty(text: string): ActionDifficulty {
+	if (!text) return { kind: "none", value: 0 };
+	if (/^opposed$/i.test(text)) return { kind: "opposed", value: 0 };
+	const match = /([+\u2212\u2013-])\s*([0-9]+(?:\.[0-9]+)?)/.exec(text);
+	if (match) {
+		const negative =
+			match[1] === "\u2212" || match[1] === "\u2013" || match[1] === "-";
+		const value = Number(match[2]);
+		return { kind: "numeric", value: negative ? -value : value };
+	}
+	throw new Error(
+		`rogue-trader | action difficulty "${text}" resolves to no machine kind — extend actionDifficulty in rules/actions.ts (bead et5a)`,
+	);
+}
+
 /**
  * The SHARED doc→entry mapper (bead 5rk0 precedent): bootstrap/warmers.ts's
  * ready warmer and the sheet's on-demand ensureActionCatalog both build
@@ -120,6 +166,10 @@ export function actionEntryFromDoc(doc: {
 		shortDescription: str(system, "shortDescription"),
 		rollTest: str(roll, "test"),
 		rollDifficulty: str(roll, "difficulty"),
+		// The difficulty's machine bits ride the entry like prereqKind: an
+		// unrecognized printed label THROWS here (actionDifficulty), so it
+		// fails at map time — ready — not silently at click time.
+		difficulty: actionDifficulty(str(roll, "difficulty")),
 		// The mapper validates the printed text against the machine kinds; the
 		// kind rides every entry so evaluation never re-parses prose.
 		prereqKind: prereqKind(str(system, "prerequisites")),
@@ -270,6 +320,14 @@ export const ACTION_LOOKUP_TEMPLATE =
 	"systems/rogue-trader/template/chat/action-lookup.hbs";
 
 /**
+ * The roll-RESULT card's template (template/chat/action-roll.hbs, bead et5a):
+ * the lookup-card anatomy (doc link + cost + terse description) carrying the
+ * roll result — the after-hook's follow-up to the inline roll card.
+ */
+export const ACTION_ROLL_TEMPLATE =
+	"systems/rogue-trader/template/chat/action-roll.hbs";
+
+/**
  * Pure card vars (epic 61pk's titleDoc anatomy, template/chat/roll.hbs): the
  * h1 carries the action NAME as a pack-doc link (the OPEN_PACK_DOC_ACTION
  * convention the chat doc-link delegation reads), so the full verbatim prose
@@ -339,4 +397,33 @@ export async function postActionLookupCard(options: {
 		ACTION_LOOKUP_TEMPLATE,
 		actionLookupCardVars(options) as unknown as Record<string, unknown>,
 	);
+}
+
+// ---------------------------------------------------- the roll-result card
+
+/**
+ * Pure vars for the action ROLL card (bead et5a): the lookup-card anatomy
+ * (titleDoc + cost + terse description) with the test's result fields. The
+ * outcome label/class and the opposed note arrive pre-localised from the
+ * after-hook (labels composed through the i18n port).
+ */
+export function actionRollCardVars(options: {
+	entry: ActionEntry;
+	labels: { cost: string; description: string };
+	result: {
+		target: number;
+		roll: number;
+		outcomeLabel: string;
+		outcomeClass: string;
+		opposedNote: string;
+	};
+}): Record<string, unknown> {
+	return {
+		...actionLookupCardVars(options),
+		target: options.result.target,
+		roll: options.result.roll,
+		outcomeLabel: options.result.outcomeLabel,
+		outcomeClass: options.result.outcomeClass,
+		opposedNote: options.result.opposedNote,
+	};
 }

@@ -8,6 +8,7 @@
 
 import {
 	performRoll,
+	rollAction,
 	rollFearTest,
 	rollNavigatorPower,
 	rollPsychicPower,
@@ -33,4 +34,5 @@ export function registerRollApi(): void {
 	git.rogueTrader.rollFearTest = rollFearTest;
 	git.rogueTrader.rollSnapOut = rollSnapOut;
 	git.rogueTrader.rollToxicToughnessTest = rollToxicToughnessTest;
+	git.rogueTrader.rollAction = rollAction;
 }

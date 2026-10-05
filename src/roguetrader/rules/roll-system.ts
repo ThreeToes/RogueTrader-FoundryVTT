@@ -29,6 +29,7 @@ export { fearHandler } from "../presentation/rolls/fear";
 export { navigatorHandler } from "../presentation/rolls/navigator";
 export {
 	performRoll,
+	rollAction,
 	rollFearTest,
 	rollHandlers,
 	rollNavigatorPower,
@@ -50,6 +51,7 @@ export { shipRepairHandler, shipWeaponHandler } from "../presentation/rolls/ship
 export { weaponHandler } from "../presentation/rolls/weapon";
 
 export type {
+	ActionRollRequest,
 	CharacteristicRollRequest,
 	FearRollRequest,
 	NavigatorRollRequest,

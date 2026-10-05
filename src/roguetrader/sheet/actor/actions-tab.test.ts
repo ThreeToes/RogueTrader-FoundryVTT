@@ -173,6 +173,7 @@ describe("actionChipRows (grey wiring + tooltips)", () => {
 					shortDescription: "Prepare to fire a heavy weapon.",
 					rollTest: "",
 					rollDifficulty: "",
+					difficulty: { kind: "none", value: 0 },
 					prereqKind: "heavy-weapon",
 				},
 			],
@@ -205,6 +206,7 @@ describe("actionChipRows (grey wiring + tooltips)", () => {
 					shortDescription: "+10 bonus to hit as a Half Action…",
 					rollTest: "",
 					rollDifficulty: "",
+					difficulty: { kind: "none", value: 0 },
 					prereqKind: "none",
 				},
 				{
@@ -218,6 +220,7 @@ describe("actionChipRows (grey wiring + tooltips)", () => {
 					shortDescription: "Reload.",
 					rollTest: "",
 					rollDifficulty: "",
+					difficulty: { kind: "none", value: 0 },
 					prereqKind: "none",
 				},
 			],
@@ -235,7 +238,7 @@ describe("actionChipRows (grey wiring + tooltips)", () => {
 		expect(rows[1].cost).toBe("Varies (Varies by weapon)");
 	});
 
-	test("roll-spec chips flag the pending wiring in their tooltip", () => {
+	test("roll-spec chips carry the roll wiring note in their tooltip (bead et5a)", () => {
 		const rows = actionChipRows(
 			[
 				{
@@ -249,6 +252,21 @@ describe("actionChipRows (grey wiring + tooltips)", () => {
 					shortDescription: "Dodge an attack.",
 					rollTest: "dodge",
 					rollDifficulty: "",
+					difficulty: { kind: "none", value: 0 },
+					prereqKind: "none",
+				},
+				{
+					key: "called-shot",
+					name: "Called Shot",
+					uuid: "u2",
+					actionCost: "Full",
+					actionNote: "",
+					subtypes: "",
+					prerequisites: "",
+					shortDescription: "Hit a specific location.",
+					rollTest: "strength",
+					rollDifficulty: "Hard (–20)",
+					difficulty: { kind: "numeric", value: -20 },
 					prereqKind: "none",
 				},
 			],
@@ -262,6 +280,63 @@ describe("actionChipRows (grey wiring + tooltips)", () => {
 			localize,
 		);
 		expect(rows[0].hasRoll).toBeTrue();
-		expect(rows[0].tooltip).toContain("[i18n:ACTION.ROLL_PENDING]");
+		// No printed difficulty: the generic click-to-roll note.
+		expect(rows[0].tooltip).toContain("[i18n:ACTION.ROLL_CLICK]");
+		// A printed difficulty is shown verbatim (the book's own data).
+		expect(rows[1].tooltip).toContain("[i18n:ACTION.DIFFICULTY]: Hard (–20)");
+	});
+});
+// --- Bead et5a: the action ROLL card --------------------------------------
+
+describe("the action-roll chat card template (template-scan guard)", () => {
+	const compiled = Handlebars.compile(
+		readFileSync("template/chat/action-roll.hbs", "utf8"),
+	);
+
+	test("renders the doc link, cost, result and the manual-opposed note", () => {
+		const html = compiled({
+			titleDoc: {
+				prefix: "",
+				name: "Called Shot",
+				suffix: "",
+				link: { action: "openPackDoc", uuid: "u1", name: "Called Shot" },
+			},
+			costLabel: "Action Type",
+			cost: "Full",
+			descriptionLabel: "Action Description",
+			description: "Hit a specific location.",
+			target: 20,
+			roll: 23,
+			outcomeLabel: "Success (+3 degrees)",
+			outcomeClass: "success",
+			opposedNote: "Opposed test: the opposing side rolls their test manually.",
+		});
+		// The lookup anatomy: name as the pack-doc anchor + cost + description.
+		expect(html).toContain('data-uuid="u1"');
+		expect(html).toContain(">Called Shot</a>");
+		expect(html).toContain("Action Type");
+		expect(html).toContain("Hit a specific location.");
+		// The roll result fields (the roll card's summary anatomy).
+		expect(html).toContain('class="roll-result success"');
+		expect(html).toContain("Success (+3 degrees)");
+		// The manual-resolution note (opposed rolls stay manual).
+		expect(html).toContain(
+			"Opposed test: the opposing side rolls their test manually.",
+		);
+	});
+
+	test("no titleDoc degrades the title to text; no note hides the row", () => {
+		const html = compiled({
+			title: "Tester — Dodge",
+			costLabel: "Action Type",
+			cost: "Reaction",
+			target: 45,
+			roll: 55,
+			outcomeLabel: "Failure",
+			outcomeClass: "failure",
+		});
+		expect(html).toContain("Tester — Dodge");
+		expect(html).toContain('class="roll-result failure"');
+		expect(html).not.toContain("action-note");
 	});
 });

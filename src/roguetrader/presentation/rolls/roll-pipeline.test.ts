@@ -65,14 +65,18 @@ for (const key of ["game", "ui", "foundry"]) {
 	utils: { fromUuidSync: () => null },
 };
 
-const { performRoll, rollHandlers } = await import("./perform");
-const { characteristicHandler, skillHandler } = await import(
+const { performRoll, rollHandlers } = await import("./perform");const { characteristicHandler, skillHandler } = await import(
 	"./characteristic-skill"
 );
 const { weaponHandler } = await import("./weapon");
 const { navigatorHandler } = await import("./navigator");
 const { psychicHandler } = await import("./psychic");
 const { shipRepairHandler, shipWeaponHandler } = await import("./ship");
+const { actionHandler } = await import("./action");
+const { setActionCatalog, actionDifficulty } = await import(
+	"../../rules/actions"
+);
+const { combatActionChipAction } = await import("../../sheet/actor/actions-view");
 const { resolveEvasion } = await import("./evasion");
 const { TestDialog } = await import("../../rules/test-dialog");
 
@@ -90,6 +94,7 @@ afterAll(() => {
 import { afterAll, describe, expect, it } from "bun:test";
 
 import { actorFixture } from "../../../test-helpers/actor-fixture";
+import type { ActionEntry } from "../../rules/actions";
 
 // --- Fixtures -------------------------------------------------------------
 
@@ -115,6 +120,7 @@ describe("handler registry (bead mvu2)", () => {
 	it("is exhaustive over the RollKind union", () => {
 		expect(Object.keys(rollHandlers).sort()).toEqual(
 			[
+				"action",
 				"characteristic",
 				"fear",
 				"navigator",
@@ -839,5 +845,326 @@ describe("evasion reaction (bead nkwa)", () => {
 			foundryGlobal.applications.api.DialogV2.wait = originalWait;
 		}
 		expect(rollCalls).toHaveLength(0);
+	});
+});
+
+
+// --- Action rolls (bead et5a, epic moew) ----------------------------------
+
+/**
+ * One warmed action entry with the machine difficulty classified (the
+ * actions-rules mapper's contract — prerollKind's twin for difficulty).
+ */
+function actionEntry(
+	name: string,
+	rollTest: string,
+	rollDifficulty = "",
+): ActionEntry {
+	const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+	return {
+		key: slug,
+		name,
+		uuid: `Compendium.rogue-trader.actions.Item.${slug}`,
+		actionCost: "Full",
+		actionNote: "",
+		subtypes: "Attack",
+		prerequisites: "",
+		shortDescription: `Terse line for ${name}.`,
+		rollTest,
+		rollDifficulty,
+		difficulty: actionDifficulty(rollDifficulty),
+		prereqKind: "none",
+	};
+}
+
+/**
+ * The fixture's characteristics carry no Strength entry; the strength route
+ * needs one (the characteristic handler refuses unknown keys). Replacing
+ * `system.characteristics` wholesale is the fixture's override semantics.
+ */
+const strengthActor = actorFixture({
+	system: {
+		characteristics: {
+			ws: { value: 40, unnatural: 1 },
+			bs: { value: 50, unnatural: 1 },
+			s: { value: 45, unnatural: 1 },
+			wp: { value: 45, unnatural: 1 },
+			ag: { value: 35, unnatural: 1 },
+		},
+	},
+});
+
+const dodgeSkill = {
+	id: "d1",
+	type: "skill",
+	name: "Dodge",
+	system: { characteristic: "ag", ladder: 2 },
+};
+
+describe("action handler (bead et5a) — roll-vocabulary routing", () => {
+	it("routes weapon-skill onto the Weapon Skill characteristic", async () => {
+		resetSpies();
+		const prepared = await actionHandler.prepare({
+			kind: "action",
+			actor: fixtureActor(),
+			entry: actionEntry("All Out Attack", "weapon-skill"),
+		});
+		expect(prepared).toMatchObject({
+			title: "Tester — All Out Attack",
+			baseTarget: 40, // ws
+			testKind: "characteristic",
+			testKey: "ws",
+		});
+		expect(prepared?.initialModifiers).toEqual([]);
+	});
+
+	it("routes ballistic-skill onto the Ballistic Skill characteristic", async () => {
+		resetSpies();
+		const prepared = await actionHandler.prepare({
+			kind: "action",
+			actor: fixtureActor(),
+			entry: actionEntry("Full Auto Burst", "ballistic-skill"),
+		});
+		expect(prepared).toMatchObject({
+			baseTarget: 50, // bs
+			testKind: "characteristic",
+			testKey: "bs",
+		});
+	});
+
+	it("routes strength onto the Strength characteristic", async () => {
+		resetSpies();
+		const prepared = await actionHandler.prepare({
+			kind: "action",
+			actor: strengthActor,
+			entry: actionEntry("Grapple", "strength", "Opposed"),
+		});
+		expect(prepared).toMatchObject({
+			baseTarget: 45, // s
+			testKind: "characteristic",
+			testKey: "s",
+		});
+		// Opposed: NO numeric difficulty row (manual resolution, owner ruling).
+		expect(prepared?.initialModifiers).toEqual([]);
+		expect(prepared?.kindData).toMatchObject({ opposed: true });
+	});
+
+	it("lands the printed difficulty as a pre-dialog modifier row", async () => {
+		resetSpies();
+		const prepared = await actionHandler.prepare({
+			kind: "action",
+			actor: fixtureActor(),
+			entry: actionEntry("Called Shot", "weapon-skill", "Hard (–20)"),
+		});
+		expect(prepared?.initialModifiers).toHaveLength(1);
+		expect(prepared?.initialModifiers[0]).toMatchObject({
+			id: "action:difficulty",
+			label: "Hard (–20)",
+			value: -20,
+		});
+	});
+
+	it("lands a +0 printed difficulty as an explicit 0-value row", async () => {
+		resetSpies();
+		const prepared = await actionHandler.prepare({
+			kind: "action",
+			actor: fixtureActor(),
+			entry: actionEntry("Parry", "weapon-skill", "Challenging (+0)"),
+		});
+		expect(prepared?.initialModifiers).toHaveLength(1);
+		expect(prepared?.initialModifiers[0]).toMatchObject({
+			id: "action:difficulty",
+			value: 0,
+		});
+	});
+
+	it("routes dodge onto the trained Dodge skill when owned", async () => {
+		resetSpies();
+		const prepared = await actionHandler.prepare({
+			kind: "action",
+			actor: fixtureActor([dodgeSkill]),
+			entry: actionEntry("Dodge", "dodge"),
+		});
+		expect(prepared).toMatchObject({
+			baseTarget: 45, // ag 35 + (2 - 1) * 10
+			testKind: "skill",
+			testKey: "ag",
+		});
+		// The trained path's skillName context rides along (skill:Dodge effects).
+		expect(prepared?.context).toMatchObject({ skillName: "dodge" });
+		expect(prepared?.initialModifiers).toEqual([]);
+	});
+
+	it("falls back to the untrained Agility path when Dodge is not owned", async () => {
+		resetSpies();
+		const prepared = await actionHandler.prepare({
+			kind: "action",
+			actor: fixtureActor(),
+			entry: actionEntry("Dodge", "dodge"),
+		});
+		expect(prepared?.baseTarget).toBe(35); // raw ag
+		expect(prepared?.initialModifiers).toHaveLength(1);
+		expect(prepared?.initialModifiers[0]).toMatchObject({ value: -10 });
+	});
+
+	it("refuses an unmapped printed test loudly (warn, no silent no-op)", async () => {
+		resetSpies();
+		const prepared = await actionHandler.prepare({
+			kind: "action",
+			actor: fixtureActor(),
+			entry: actionEntry("Focus Power", "varies"),
+		});
+		expect(prepared).toBeNull();
+		expect(warnings).toContain("ACTION.ROLL_UNKNOWN");
+	});
+
+	it("stamps the pack-doc titleDoc so the roll card names the action", async () => {
+		resetSpies();
+		const prepared = await actionHandler.prepare({
+			kind: "action",
+			actor: fixtureActor(),
+			entry: actionEntry("Called Shot", "weapon-skill", "Hard (–20)"),
+		});
+		expect(prepared?.templateVars?.titleDoc).toMatchObject({
+			link: {
+				uuid: "Compendium.rogue-trader.actions.Item.called-shot",
+				name: "Called Shot",
+			},
+		});
+	});
+});
+
+describe("action after-hook (bead et5a)", () => {
+	/** Capture + stub the card renderer for the block's duration. */
+	async function captureCards(): Promise<Array<Record<string, unknown>>> {
+		const captured: Array<Record<string, unknown>> = [];
+		const originalRender = foundry.applications.handlebars.renderTemplate;
+		foundry.applications.handlebars.renderTemplate = (async (
+			_template: string,
+			vars: Record<string, unknown>,
+		) => {
+			captured.push(vars);
+			return "<div>card</div>";
+		}) as typeof originalRender;
+		return captured;
+	}
+
+	it("posts the action card with the lookup anatomy + roll result", async () => {
+		resetSpies();
+		const entry = actionEntry("Called Shot", "weapon-skill", "Hard (–20)");
+		const captured = await captureCards();
+		try {
+			await actionHandler.after?.(
+				{ kind: "action", actor: fixtureActor(), entry },
+				{ kindData: { entry, opposed: false } } as never,
+				{ success: true, roll: 23, degrees: 3, critical: false } as never,
+				"msg-1",
+				{ target: 20, modifiers: [] },
+			);
+		} finally {
+			const render = foundry.applications.handlebars;
+			render.renderTemplate = async () => "<div>card</div>";
+		}
+		expect(captured).toHaveLength(1);
+		expect(captured[0].titleDoc).toMatchObject({
+			link: { uuid: entry.uuid, name: "Called Shot" },
+		});
+		expect(captured[0].cost).toBe("Full");
+		expect(captured[0].target).toBe(20);
+		expect(captured[0].roll).toBe(23);
+		expect(captured[0].outcomeLabel).toContain("ROLL.SUCCESS");
+		expect(captured[0].opposedNote).toBe("");
+	});
+
+	it("opposed result cards carry the manual-resolution note", async () => {
+		resetSpies();
+		const entry = actionEntry("Grapple", "strength", "Opposed");
+		const captured: Array<Record<string, unknown>> = [];
+		const originalRender = foundry.applications.handlebars.renderTemplate;
+		try {
+			foundry.applications.handlebars.renderTemplate = (async (
+				_template: string,
+				vars: Record<string, unknown>,
+			) => {
+				captured.push(vars);
+				return "<div>card</div>";
+			}) as typeof originalRender;
+			await actionHandler.after?.(
+				{ kind: "action", actor: fixtureActor(), entry },
+				{ kindData: { entry, opposed: true } } as never,
+				{ success: false, roll: 88, degrees: 0, critical: false } as never,
+				"msg-1",
+				{ target: 45, modifiers: [] },
+			);
+		} finally {
+			foundry.applications.handlebars.renderTemplate = originalRender;
+		}
+		expect(captured).toHaveLength(1);
+		expect(captured[0].outcomeLabel).toBe("ROLL.FAILURE");
+		expect(captured[0].opposedNote).toBe("ACTION.OPPOSED_MANUAL");
+	});
+});
+
+// --- Actions-tab chip wiring (bead et5a) -----------------------------------
+
+describe("actions-tab chip wiring (bead et5a)", () => {
+	it("routes a roll-spec chip through the pipeline (the stub is gone)", async () => {
+		resetSpies();
+		setActionCatalog(
+			[actionEntry("Called Shot", "weapon-skill", "Hard (–20)")],
+		);
+		const originalShow = TestDialog.show;
+		// The dialog returns its contributor rows (the real dialog returns the
+		// fixed rows incl. the difficulty row); stubbing THAT keeps the test
+		// honest about the pre-dialog row reaching the funnel.
+		TestDialog.show = (async (request: {
+			contributors?: Array<unknown>;
+		}) => ({
+			modifiers: request.contributors ?? [],
+		})) as typeof TestDialog.show;
+		const captured: Array<Record<string, unknown>> = [];
+		const originalRender = foundry.applications.handlebars.renderTemplate;
+		foundry.applications.handlebars.renderTemplate = (async (
+			_template: string,
+			vars: Record<string, unknown>,
+		) => {
+			captured.push(vars);
+			return "<div>card</div>";
+		}) as typeof originalRender;
+		try {
+			await combatActionChipAction.call(
+				{ actor: fixtureActor() },
+				{},
+				{
+					dataset: { hasRoll: "true", actionName: "Called Shot" },
+				} as unknown as HTMLElement,
+			);
+		} finally {
+			TestDialog.show = originalShow;
+			foundry.applications.handlebars.renderTemplate = originalRender;
+			setActionCatalog([]);
+		}
+		// One test roll; TWO cards — the inline roll card + the action card.
+		expect(rollCalls).toHaveLength(1);
+		expect(captured).toHaveLength(2);
+		// The action card is the RESULT card: doc link + the resolved target
+		// (ws 40 + the Hard (–20) row). Its target is asserted RELATIVE to the
+		// card's own breakdown: another test file registers a global funnel
+		// contributor (funnel.test.ts's "test-only" +5 leak), so an absolute
+		// number would depend on file order in the full suite.
+		expect(captured[1].titleDoc).toMatchObject({
+			link: { name: "Called Shot" },
+		});
+		const analysis = captured[0].analysis as Array<{
+			label: string;
+			value: number;
+		}>;
+		expect(
+			analysis.some(
+				(mod) => mod.label === "Hard (–20)" && mod.value === -20,
+			),
+		).toBe(true);
+		const sum = analysis.reduce((total, mod) => total + mod.value, 0);
+		expect(captured[1].target).toBe(Math.min(100, Math.max(1, 40 + sum)));
 	});
 });

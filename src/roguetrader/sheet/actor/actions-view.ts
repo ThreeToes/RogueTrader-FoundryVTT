@@ -9,8 +9,8 @@
  *   buildCharacteristicViews precedent).
  * - `combatActionChipAction` — the shared click body (the openPackItemAction
  *   `this`-style): an action WITHOUT a printed roll posts the lookup chat
- *   card; an action WITH one is child 3's work (bead et5a) and is a
- *   deliberate stub until that wiring lands.
+ *   card; an action WITH one routes through the roll pipeline's `action`
+ *   kind (bead et5a) with the printed difficulty as a visible modifier row.
  */
 import type { ActionOwnedItem } from "../../rules/actions";
 import {
@@ -21,6 +21,7 @@ import {
 	type ActionCapabilities,
 	type ActionEntry,
 } from "../../rules/actions";
+import { performRoll } from "../../presentation/rolls/perform";
 import { getPackDocuments, packDocsOnce } from "../pack-resolve";
 
 /** The actions concept pack (manifest-packs.yaml, bead moew child 1). */
@@ -42,7 +43,7 @@ export interface ActionChipRow {
 	uuid: string;
 	/** Printed cost + the Varies note when one exists: "Half/Full", "Varies (…)" */
 	cost: string;
-	/** The action prints a test (child 3's roll wiring, bead et5a). */
+	/** The action prints a test — the roll wiring (bead et5a). */
 	hasRoll: boolean;
 	/** Prerequisites met — FALSE greys the chip (visible, never locked). */
 	available: boolean;
@@ -72,13 +73,15 @@ export function actionChipRows(
 			cost: entry.actionNote
 				? `${entry.actionCost} (${entry.actionNote})`
 				: entry.actionCost,
-			hasRoll: entry.rollTest !== "",
 			available,
-			// Roll-spec chips are child 3's wiring (bead et5a): flag the stub in
-			// the tooltip so a click that does nothing is NOT a mystery.
-			tooltip:
-				tooltip +
-				(entry.rollTest !== "" ? ` — ${localize("ACTION.ROLL_PENDING")}` : ""),
+			hasRoll: entry.rollTest !== "",
+			tooltip: entry.rollTest
+				? `${tooltip} — ${
+						entry.rollDifficulty
+							? `${localize("ACTION.DIFFICULTY")}: ${entry.rollDifficulty}`
+							: localize("ACTION.ROLL_CLICK")
+					}`
+				: tooltip,
 		};
 	});
 }
@@ -97,7 +100,7 @@ export async function actionsChipContext(
 
 /**
  * Chip click body (data-action="combatAction"): lookup cards for unrolled
- * actions, the et5a stub for roll-spec ones.
+ * actions; roll-spec actions dispatch the `action` roll kind (bead et5a).
  */
 export async function combatActionChipAction(
 	this: { actor: foundry.documents.Actor },
@@ -105,21 +108,24 @@ export async function combatActionChipAction(
 	target: HTMLElement,
 ): Promise<void> {
 	const name = target.dataset.actionName ?? "";
-	if (target.dataset.hasRoll === "true") {
-		// Bead et5a (child 3 of moew): roll-spec actions route through the roll
-		// pipeline (test/difficulty from the entry, opposed rolls manual per the
-		// owner). Not wired yet — deliberate stub, flagged in the chip tooltip.
-		return;
-	}
 	if (!name) return;
 	const entries = await ensureActionCatalog(actionCatalogLoader);
 	const entry = entries.find((candidate) => candidate.name === name);
 	if (!entry) {
 		// The chip was rendered from an entry now missing from the catalog:
-		// loud, not silent (the card would otherwise post a dead link).
+		// loud, not silent (a dead chip would otherwise be a mystery).
 		console.warn(
 			`rogue-trader | actions tab: chip "${name}" did not resolve to a pack action`,
 		);
+		return;
+	}
+	if (target.dataset.hasRoll === "true") {
+		// Bead et5a: the EXISTING roll pipeline, joined at its seam (the new
+		// `action` kind) — the handler maps the printed test vocabulary onto
+		// the characteristic/skill handlers, the printed difficulty rides the
+		// dialog as a visible modifier row, and opposed rolls stay MANUAL per
+		// the owner's ruling (the result card notes it).
+		await performRoll({ kind: "action", actor: this.actor, entry });
 		return;
 	}
 	// The card carries the action NAME as the compendium doc link, the action

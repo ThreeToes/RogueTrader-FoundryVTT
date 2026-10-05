@@ -54,6 +54,7 @@ export {
 	rollShipSalvo,
 	rollShipRepair,
 	rollToxicToughnessTest,
+	rollAction,
 	performRoll,
 } from "./roll-system";
 export type {

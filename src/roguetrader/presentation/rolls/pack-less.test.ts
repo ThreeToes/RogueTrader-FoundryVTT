@@ -222,6 +222,29 @@ describe("pack-less pipeline: every roll kind still posts a card (bead jx0w)", (
 					skipDialog: true,
 				}),
 		],
+		[
+			"combat action (bead et5a: the entry rides the request, pack-less)",
+			() =>
+				performRoll({
+					kind: "action",
+					actor: fixtureActor(),
+					entry: {
+						key: "called-shot",
+						name: "Called Shot",
+						uuid: "",
+						actionCost: "Full",
+						actionNote: "",
+						subtypes: "Attack",
+						prerequisites: "",
+						shortDescription: "Hit a specific location.",
+						rollTest: "weapon-skill",
+						rollDifficulty: "Hard (\u201320)",
+						difficulty: { kind: "numeric", value: -20 },
+						prereqKind: "none",
+					},
+					skipDialog: true,
+				}),
+		],
 	];
 
 	for (const [name, run] of cases) {

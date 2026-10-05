@@ -26,6 +26,7 @@ import type {
 import type { RtMessageFlags } from "./chat-flags";
 import type { StrengthLevel } from "./psychic";
 import type { ShipWeaponRange } from "../data/item/ship-weapon-range";
+import type { ActionEntry } from "./actions";
 
 // The generic plumbing types are re-exported as-is.
 export type RollContext = GenericRollContext;
@@ -43,7 +44,8 @@ export type RollKind =
 	| "navigator"
 	| "ship-weapon"
 	| "ship-repair"
-	| "fear";
+	| "fear"
+	| "action";
 
 /** Shared request data (generic base, narrowed to the Foundry Actor). */
 export interface RollBase extends GenericRollBase {
@@ -139,7 +141,23 @@ export type RollRequest =
 	| NavigatorRollRequest
 	| ShipWeaponRollRequest
 	| ShipRepairRollRequest
-	| FearRollRequest;
+	| FearRollRequest
+	| ActionRollRequest;
+
+/**
+ * A combat action's printed roll spec (bead et5a, epic moew): the sheet
+ * resolves the action's warmed catalog entry FIRST (the chip click surface
+ * carries only the name), so the request carries the FULL entry —
+ * verbatim name/uuid for the cards, the test vocabulary + difficulty for
+ * the prepare.
+ */
+export interface ActionRollRequest extends RollBase {
+	kind: "action";
+	/** The warmed catalog entry for the action being rolled. */
+	entry: ActionEntry;
+	/** Caller-provided modifiers, merged with the funnel collection. */
+	modifiers?: Modifier[];
+}
 
 // ---------------------------------------------------------------------------
 // Handler contract
@@ -195,6 +213,13 @@ export interface RollKindData {
 		sourceName: string;
 		/** Set on the Unshakeable Faith re-roll so it happens only once. */
 		rerolled?: boolean;
+	};
+	/** The combat-action card inputs (bead et5a, epic moew). */
+	action: {
+		/** The catalog entry snapshot: doc link + verbatim card text. */
+		entry: ActionEntry;
+		/** Printed difficulty was "Opposed" — the card notes manual resolution. */
+		opposed: boolean;
 	};
 }
 

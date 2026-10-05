@@ -1,0 +1,37 @@
+<div class="rogue-trader chat roll">
+    <div class="background border">
+        <h1>
+{{!-- The combat-action ROLL card (epic moew, bead et5a): the lookup card's
+     anatomy (the action's NAME as a compendium doc link, the action cost,
+     the book's terse description) carrying the test's roll result. The
+     opposing side of an Opposed test rolls manually (owner ruling) —
+     opposedNote says so; it is empty for ordinary tests. --}}
+{{#if titleDoc}}
+            {{titleDoc.prefix}}{{#if titleDoc.link}}<a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}" data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{titleDoc.link.name}}</a>{{else}}{{titleDoc.name}}{{/if}}{{titleDoc.suffix}}
+{{else}}
+            {{title}}
+{{/if}}
+        </h1>
+        <div class="roll-summary">
+            <div class="roll-target">
+                <span class="label">{{costLabel}}</span>
+                <span class="value">{{cost}}</span>
+            </div>
+            <div class="roll-target">
+                <span class="label">{{localize "ROLL.TARGET"}}</span>
+                <span class="value">{{target}}</span>
+            </div>
+            <div class="roll-result {{outcomeClass}}">
+                <span class="label">{{outcomeLabel}}</span>
+                <span class="value">{{roll}}</span>
+            </div>
+        </div>
+        {{#if description}}
+        <div class="roll-result">
+            <span class="label">{{descriptionLabel}}</span>
+            <span class="value">{{description}}</span>
+        </div>
+        {{/if}}
+        {{#if opposedNote}}<p class="action-note">{{opposedNote}}</p>{{/if}}
+    </div>
+</div>

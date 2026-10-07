@@ -607,6 +607,7 @@
   "CLASS.THROWN": "Thrown",
   "INITIATIVE": "Initiative",
   "INSANITY.MENTAL_DISORDER": "Mental Disorder",
+  "TYPES.Item.action": "Action",
   "TYPES.Item.ammunition": "Ammunition",
   "TYPES.Item.force-field": "Force Field",
   "TYPES.Item.weapon-modification": "Weapon Modification",

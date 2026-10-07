@@ -201,6 +201,7 @@
   "DIALOG.WARPCONDUIT": "Conducto de disformidad",
   "DIALOG.AIM": "Apuntar",
   "TYPES.Actor.npc": "PNJ",
+  "TYPES.Item.action": "Acción",
   "TYPES.Item.ammunition": "Munición",
   "TYPES.Item.force-field": "Campo de fuerza",
   "TYPES.Item.weapon-modification": "Modificación de arma",

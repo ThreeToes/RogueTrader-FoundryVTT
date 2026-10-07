@@ -1,5 +1,6 @@
 {
   "TYPES.Actor.npc": "BN",
+  "TYPES.Item.action": "Akcja",
   "TYPES.Item.ammunition": "Amunicja",
   "TYPES.Item.force-field": "Pole siłowe",
   "TYPES.Item.weapon-modification": "Modyfikacja broni",

@@ -203,6 +203,7 @@
   "DIALOG.WARPCONDUIT": "Conduit du Warp",
   "DIALOG.AIM": "Visée",
   "TYPES.Actor.npc": "PNJ",
+  "TYPES.Item.action": "Action",
   "TYPES.Item.ammunition": "Munitions",
   "TYPES.Item.force-field": "Champ de force",
   "TYPES.Item.weapon-modification": "Modification d'arme",

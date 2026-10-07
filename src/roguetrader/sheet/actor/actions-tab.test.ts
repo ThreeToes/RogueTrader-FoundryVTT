@@ -14,7 +14,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import Handlebars from "handlebars";
-import { setActionCatalog } from "../../rules/actions";
+import { actionCostGlyphs, setActionCatalog } from "../../rules/actions";
 import { actionChipRows, type ActionChipRow } from "./actions-view";
 
 beforeAll(() => {
@@ -114,7 +114,7 @@ describe("the actions tab template (31-row render)", () => {
 	const rows: ActionChipRow[] = Array.from({ length: 31 }, (_, index) => ({
 		name: `Action ${index + 1}`,
 		uuid: `Compendium.rogue-trader.actions.Item.${index}`,
-		cost: "Half",
+		costGlyph: actionCostGlyphs("Half"),
 		hasRoll: index % 3 === 0,
 		available: index % 3 !== 1,
 		tooltip: `Tooltip ${index + 1}`,
@@ -132,6 +132,10 @@ describe("the actions tab template (31-row render)", () => {
 		);
 		expect(html.match(/class="action-row/g)?.length).toBe(31);
 		expect(html.match(/class="action-chip"/g)?.length).toBe(31);
+		// The cost cell renders the glyph (◑ Half), not the printed word.
+		expect(html).toContain('class="action-cost">◑</span>');
+		// And the fixed-width right-aligned cell (consistent sizing).
+		expect(css).toContain(".action-chip .action-cost {\n\tflex: none;\n\tmin-width: 3.4em;");
 	});
 
 	test("unmet chips carry the .unmet grey class (visible, never hidden)", () => {
@@ -234,8 +238,14 @@ describe("actionChipRows (grey wiring + tooltips)", () => {
 			localize,
 		);
 		expect(rows[0].available).toBeTrue();
-		expect(rows[0].tooltip).toBe("+10 bonus to hit as a Half Action…");
-		expect(rows[1].cost).toBe("Varies (Varies by weapon)");
+		// The cost word leads the tooltip (the glyphs' accessible form).
+		expect(rows[0].tooltip).toBe(
+			"Half/Full — +10 bonus to hit as a Half Action…",
+		);
+		// The Varies COST keeps its printed word in the cell (no invented
+		// glyph) and the note rides the tooltip.
+		expect(rows[1].costGlyph).toBe("Varies");
+		expect(rows[1].tooltip).toContain("Varies (Varies by weapon)");
 	});
 
 	test("roll-spec chips carry the roll wiring note in their tooltip (bead et5a)", () => {

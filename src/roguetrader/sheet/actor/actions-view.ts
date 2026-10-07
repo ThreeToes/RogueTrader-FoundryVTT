@@ -16,6 +16,7 @@ import type { ActionOwnedItem } from "../../rules/actions";
 import {
 	actionAvailable,
 	actionCapabilities,
+	actionCostGlyphs,
 	ensureActionCatalog,
 	postActionLookupCard,
 	type ActionCapabilities,
@@ -41,8 +42,8 @@ export interface ActionChipRow {
 	name: string;
 	/** The pack document uuid the lookup card links ("" degrades to text). */
 	uuid: string;
-	/** Printed cost + the Varies note when one exists: "Half/Full", "Varies (…)" */
-	cost: string;
+	/** The cost cell's display: glyphs (◑/❍/↫) or the printed word for Varies. */
+	costGlyph: string;
 	/** The action prints a test — the roll wiring (bead et5a). */
 	hasRoll: boolean;
 	/** Prerequisites met — FALSE greys the chip (visible, never locked). */
@@ -67,21 +68,26 @@ export function actionChipRows(
 		const tooltip = available
 			? entry.shortDescription
 			: `${localize("ACTION.PREREQ_UNMET")} ${entry.prerequisites}`.trim();
+		// The glyphs are visual shorthand: the printed cost WORD (with the Varies
+		// note) leads the tooltip as their accessible form — the symbols alone
+		// are not readable text.
+		const costWord = entry.actionNote
+			? `${entry.actionCost} (${entry.actionNote})`
+			: entry.actionCost;
+		const tooltipBody = `${costWord} — ${tooltip}`;
 		return {
 			name: entry.name,
 			uuid: entry.uuid,
-			cost: entry.actionNote
-				? `${entry.actionCost} (${entry.actionNote})`
-				: entry.actionCost,
+			costGlyph: actionCostGlyphs(entry.actionCost),
 			available,
 			hasRoll: entry.rollTest !== "",
 			tooltip: entry.rollTest
-				? `${tooltip} — ${
+				? `${tooltipBody} — ${
 						entry.rollDifficulty
 							? `${localize("ACTION.DIFFICULTY")}: ${entry.rollDifficulty}`
 							: localize("ACTION.ROLL_CLICK")
 					}`
-				: tooltip,
+				: tooltipBody,
 		};
 	});
 }

@@ -16,6 +16,7 @@ import type { Ports } from "../../ffg/application/ports";
 import {
 	actionAvailable,
 	actionCapabilities,
+	actionCostGlyphs,
 	actionDifficulty,
 	actionEntryFromDoc,
 	actionLookupCardVars,
@@ -365,6 +366,22 @@ describe("the lookup card (lookup dispatch, fake ports)", () => {
  * "Opposed"; the parenthesised value is the book's own number, parsed —
  * NOT the TestDialog ladder's step values (which are unverified).
  */
+describe("actionCostGlyphs (the tab's cost glyphs, owner request)", () => {
+	test("maps the printed cost words", () => {
+		expect(actionCostGlyphs("Half")).toBe("\u25D1"); // ◑
+		expect(actionCostGlyphs("Full")).toBe("\u274D"); // ❍
+		expect(actionCostGlyphs("Reaction")).toBe("\u21AB"); // ↫
+		// Compound printed costs map part by part (Move, Aim, Grapple).
+		expect(actionCostGlyphs("Half/Full")).toBe("\u25D1/\u274D");
+		expect(actionCostGlyphs("")).toBe("");
+	});
+
+	test("an unmapped printed word keeps its word (no invented glyphs)", () => {
+		expect(actionCostGlyphs("Varies")).toBe("Varies");
+		expect(actionCostGlyphs("Varies/Full")).toBe("Varies/\u274D");
+	});
+});
+
 describe("actionDifficulty (bead et5a data-driven mapping)", () => {
 	test("the printed pack labels classify to their machine bits", () => {
 		expect(actionDifficulty("")).toEqual({ kind: "none", value: 0 });

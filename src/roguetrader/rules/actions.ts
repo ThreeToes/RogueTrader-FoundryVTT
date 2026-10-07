@@ -93,6 +93,36 @@ export function prereqKind(text: string): ActionPrereqKind {
 	);
 }
 
+// ----------------------------------------------------- the cost display glyphs
+
+/**
+ * The printed Table 9-4 Type as the tab's cost glyphs (owner request,
+ * 2026-10-05): Half → ◑, Full → ❍, Reaction → ↫, rendered in a fixed-width
+ * right-aligned cell for size consistency. Compound printed costs
+ * ("Half/Full") map part by part; anything outside the owner's glyph set
+ * (the three Varies rows, and any future word) keeps its printed WORD — no
+ * invented glyphs. The pack guard test (actions.test.ts: "the tab glyph
+ * mapping covers every printed cost word") is the loud failure for a new
+ * printed word slipping through unmapped.
+ */
+const COST_GLYPHS: Readonly<Record<string, string>> = {
+	half: "\u25D1", // ◑
+	full: "\u274D", // ❍
+	reaction: "\u21AB", // ↫
+};
+
+/** Map a printed cost to its display glyphs (word-kept for unmapped parts). */
+export function actionCostGlyphs(cost: string): string {
+	if (!cost) return "";
+	return cost
+		.split("/")
+		.map((part) => {
+			const trimmed = part.trim();
+			return COST_GLYPHS[trimmed.toLowerCase()] ?? trimmed;
+		})
+		.join("/");
+}
+
 // ------------------------------------------------- the printed difficulty (bead et5a)
 
 /**

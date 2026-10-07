@@ -226,11 +226,17 @@
 	white-space: nowrap;
 }
 
-/* Printed Table 9-4 Type, muted small caps like the field labels. */
+/* The printed cost as the owner's glyphs in a FIXED-WIDTH right-aligned cell
+   (◑ Half, ❍ Full, ↫ Reaction — ◑/❍ compounds fit; the three Varies rows keep
+   their printed word), so every chip's glyph column lines up like the table.
+   The printed word lives in the chip's tooltip (actions-view.ts) as the
+   accessible form. */
 .rogue-trader.sheet.character .action-chip .action-cost {
+	flex: none;
+	min-width: 3.4em;
+	text-align: right;
 	font-size: var(--rt-fs-sm);
 	text-transform: uppercase;
-	letter-spacing: 0.05em;
 	color: var(--rt-muted);
 	white-space: nowrap;
 }

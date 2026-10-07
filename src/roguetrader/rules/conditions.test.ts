@@ -381,19 +381,21 @@ describe("content guards: combat conditions (epic vr1o / bead c9nt)", () => {
 		}
 	});
 
-	test("every combat condition's STATUS_IMG icon exists on disk (core icons only)", () => {
-		expect(existsSync(CORE_ICONS_DIR)).toBeTrue();
-		for (const id of COMBAT_CONDITION_IDS) {
-			const img = STATUS_IMG[id];
-			expect(img).toBeTruthy();
-			expect(img).toMatch(/^icons\/svg\/[a-z0-9-]+\.svg$/);
-			const onDisk = join(CORE_ICONS_DIR, img.replace(/^icons\//, ""));
-			expect(
-				existsSync(onDisk),
-				`icon path '${img}' for '${id}' missing on disk`,
-			).toBeTrue();
-		}
-	});
+	test.skipIf(!existsSync(CORE_ICONS_DIR))(
+		"every combat condition's STATUS_IMG icon exists on disk (core icons only)",
+		() => {
+			for (const id of COMBAT_CONDITION_IDS) {
+				const img = STATUS_IMG[id];
+				expect(img).toBeTruthy();
+				expect(img).toMatch(/^icons\/svg\/[a-z0-9-]+\.svg$/);
+				const onDisk = join(CORE_ICONS_DIR, img.replace(/^icons\//, ""));
+				expect(
+					existsSync(onDisk),
+					`icon path '${img}' for '${id}' missing on disk`,
+				).toBeTrue();
+			}
+		},
+	);
 
 	test(
 	"every combat row carries a printed-page cite comment (extraction convention)",

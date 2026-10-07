@@ -14,7 +14,10 @@
                 <a class="action-chip" data-action="combatAction"
                     data-action-name="{{action.name}}" data-has-roll="{{action.hasRoll}}"
                     data-uuid="{{action.uuid}}" data-tooltip="{{action.tooltip}}">
-                    {{#if action.hasRoll}}<i class="fa-solid fa-dice-d10 action-roll-hint"></i>{{/if}}
+                    {{!-- The dice leads EVERY row (a same-width slot, owner
+                    request: the names align down the column) — unseen when the
+                    action carries no roll. --}}
+                    <i class="fa-solid fa-dice-d10 action-roll-hint{{#unless action.hasRoll}} unseen{{/unless}}"></i>
                     <span class="action-name">{{action.name}}</span>
                     {{!-- The cost marks (◑-equivalent FontAwesome discs / the
                     circular arrow for reactions; the printed word for Varies),

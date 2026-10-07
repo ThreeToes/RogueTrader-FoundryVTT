@@ -264,11 +264,19 @@
 }
 
 /* Roll-spec chips carry the dice mark, leading the row (owner request: to
-   the LEFT of the action name). */
+   the LEFT of the action name). EVERY row reserves the same-width slot —
+   the mark is merely unseen on chips without a roll — so the names align
+   down the column. */
 .rogue-trader.sheet.character .action-chip .action-roll-hint {
 	flex: none;
+	width: 1.25em;
+	font-size: 1em;
+	text-align: center;
 	color: var(--rt-gold);
-	font-size: var(--rt-fs-sm);
+}
+
+.rogue-trader.sheet.character .action-chip .action-roll-hint.unseen {
+	visibility: hidden;
 }
 
 .rogue-trader.sheet.character .action-row.unmet .action-chip {

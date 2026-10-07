@@ -136,14 +136,16 @@ describe("the actions tab template (31-row render)", () => {
 		expect(html).toContain(
 			'class="action-cost"><i class="fa-solid fa-circle-half-stroke"></i></span>',
 		);
-		// The dice mark LEADS the row (owner request: left of the name).
-		// Note: match the NAME SPAN, not "action-name" — the anchor's
-		// data-action-name attribute contains it and precedes the children.
+		// The dice mark LEADS the row (owner request: left of the name) — and
+		// EVERY row carries the same-width slot, unseen without a roll, so the
+		// names align down the column. (Match the NAME SPAN, not "action-name"
+		// — the anchor's data-action-name attribute contains it and precedes
+		// the children.)
 		const hintAt = html.indexOf("action-roll-hint");
 		expect(hintAt).toBeGreaterThan(-1);
 		expect(hintAt).toBeLessThan(html.indexOf('<span class="action-name">'));
-		// The roll dice only rides roll-spec chips.
-		expect(html.match(/action-roll-hint/g)?.length).toBe(11); // index ≡ 0 (mod 3)
+		expect(html.match(/action-roll-hint/g)?.length).toBe(31);
+		expect(html.match(/action-roll-hint unseen/g)?.length).toBe(20); // ≡1,2 (mod 3)
 		// And the fixed-width right-aligned cell (consistent sizing).
 		expect(css).toContain(".action-chip .action-cost {\n\tflex: none;\n\tmin-width: 3.4em;");
 		// The vertical rule down the middle of the two columns.

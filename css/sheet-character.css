@@ -201,21 +201,20 @@
 	gap: 4px 12px;
 	margin: 4px 0;
 	padding: 0;
+	list-style: none;
 }
 
+/* Plain rows like the skills screen — no chip boxes (the owner had them
+   removed: the list markers and borders read as clutter). */
 .rogue-trader.sheet.character .action-chip {
 	display: flex;
 	align-items: baseline;
 	gap: 6px;
-	border: 1px solid var(--rt-border);
-	border-radius: var(--rt-radius);
-	padding: 2px 8px;
-	background: rgba(0, 0, 0, 0.2);
+	padding: 2px 4px;
 	cursor: pointer;
 }
 
 .rogue-trader.sheet.character .action-chip:hover {
-	border-color: var(--rt-border-strong);
 	color: var(--color-text-light-highlight, var(--rt-gold-soft));
 }
 

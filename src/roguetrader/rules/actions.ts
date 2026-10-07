@@ -93,34 +93,43 @@ export function prereqKind(text: string): ActionPrereqKind {
 	);
 }
 
-// ----------------------------------------------------- the cost display glyphs
+// ----------------------------------------------------- the cost display marks
 
 /**
- * The printed Table 9-4 Type as the tab's cost glyphs (owner request,
- * 2026-10-05): Half → ◑, Full → ❍, Reaction → ↫, rendered in a fixed-width
- * right-aligned cell for size consistency. Compound printed costs
- * ("Half/Full") map part by part; anything outside the owner's glyph set
- * (the three Varies rows, and any future word) keeps its printed WORD — no
- * invented glyphs. The pack guard test (actions.test.ts: "the tab glyph
- * mapping covers every printed cost word") is the loud failure for a new
- * printed word slipping through unmapped.
+ * The printed Table 9-4 Type as the tab's cost marks (owner request,
+ * 2026-10-05): FontAwesome shapes in a fixed-width right-aligned cell —
+ * Half → circle-half-stroke (a half-filled disc), Full → the solid disc,
+ * Reaction → the circular arrow (owner's pick), adjacent discs for compound
+ * "Half/Full" costs. Anything outside the mapped set (the three Varies rows,
+ * and any future word) keeps its printed WORD — no invented marks; the pack
+ * guard test (actions.test.ts: "the tab cost marks cover every printed cost
+ * word") is the loud failure for a new printed word slipping through
+ * unmapped.
  */
-const COST_GLYPHS: Readonly<Record<string, string>> = {
-	half: "\u25D1", // ◑
-	full: "\u274D", // ❍
-	reaction: "\u21AB", // ↫
+const COST_ICONS: Readonly<Record<string, string>> = {
+	half: "fa-circle-half-stroke",
+	full: "fa-circle",
+	reaction: "fa-rotate-left",
 };
 
-/** Map a printed cost to its display glyphs (word-kept for unmapped parts). */
-export function actionCostGlyphs(cost: string): string {
-	if (!cost) return "";
-	return cost
-		.split("/")
-		.map((part) => {
-			const trimmed = part.trim();
-			return COST_GLYPHS[trimmed.toLowerCase()] ?? trimmed;
-		})
-		.join("/");
+/** One printed cost part: either a FontAwesome mark or the printed word. */
+export interface ActionCostPart {
+	/** "fa-solid fa-…" class string — "" for a word part. */
+	icon: string;
+	/** The printed word (Varies rows) — "" for a mark part. */
+	word: string;
+}
+
+/** Map a printed cost to its display marks (word-kept for unmapped parts). */
+export function actionCostParts(cost: string): ActionCostPart[] {
+	if (!cost) return [];
+	return cost.split("/").map((part) => {
+		const trimmed = part.trim();
+		const icon = COST_ICONS[trimmed.toLowerCase()];
+		return icon
+			? { icon: `fa-solid ${icon}`, word: "" }
+			: { icon: "", word: trimmed };
+	});
 }
 
 // ------------------------------------------------- the printed difficulty (bead et5a)

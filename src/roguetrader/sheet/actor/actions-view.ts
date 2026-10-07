@@ -16,10 +16,11 @@ import type { ActionOwnedItem } from "../../rules/actions";
 import {
 	actionAvailable,
 	actionCapabilities,
-	actionCostGlyphs,
+	actionCostParts,
 	ensureActionCatalog,
 	postActionLookupCard,
 	type ActionCapabilities,
+	type ActionCostPart,
 	type ActionEntry,
 } from "../../rules/actions";
 import { performRoll } from "../../presentation/rolls/perform";
@@ -42,8 +43,8 @@ export interface ActionChipRow {
 	name: string;
 	/** The pack document uuid the lookup card links ("" degrades to text). */
 	uuid: string;
-	/** The cost cell's display: glyphs (◑/❍/↫) or the printed word for Varies. */
-	costGlyph: string;
+	/** The cost cell's parts: the cost marks (or the printed word for Varies). */
+	costParts: ActionCostPart[];
 	/** The action prints a test — the roll wiring (bead et5a). */
 	hasRoll: boolean;
 	/** Prerequisites met — FALSE greys the chip (visible, never locked). */
@@ -78,7 +79,7 @@ export function actionChipRows(
 		return {
 			name: entry.name,
 			uuid: entry.uuid,
-			costGlyph: actionCostGlyphs(entry.actionCost),
+			costParts: actionCostParts(entry.actionCost),
 			available,
 			hasRoll: entry.rollTest !== "",
 			tooltip: entry.rollTest

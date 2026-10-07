@@ -14,7 +14,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import Handlebars from "handlebars";
-import { actionCostGlyphs, setActionCatalog } from "../../rules/actions";
+import { actionCostParts, setActionCatalog } from "../../rules/actions";
 import { actionChipRows, type ActionChipRow } from "./actions-view";
 
 beforeAll(() => {
@@ -114,7 +114,7 @@ describe("the actions tab template (31-row render)", () => {
 	const rows: ActionChipRow[] = Array.from({ length: 31 }, (_, index) => ({
 		name: `Action ${index + 1}`,
 		uuid: `Compendium.rogue-trader.actions.Item.${index}`,
-		costGlyph: actionCostGlyphs("Half"),
+		costParts: actionCostParts("Half"),
 		hasRoll: index % 3 === 0,
 		available: index % 3 !== 1,
 		tooltip: `Tooltip ${index + 1}`,
@@ -132,10 +132,22 @@ describe("the actions tab template (31-row render)", () => {
 		);
 		expect(html.match(/class="action-row/g)?.length).toBe(31);
 		expect(html.match(/class="action-chip"/g)?.length).toBe(31);
-		// The cost cell renders the glyph (◑ Half), not the printed word.
-		expect(html).toContain('class="action-cost">◑</span>');
+		// The cost cell renders the FA marks, not the printed word.
+		expect(html).toContain(
+			'class="action-cost"><i class="fa-solid fa-circle-half-stroke"></i></span>',
+		);
+		// The dice mark LEADS the row (owner request: left of the name).
+		// Note: match the NAME SPAN, not "action-name" — the anchor's
+		// data-action-name attribute contains it and precedes the children.
+		const hintAt = html.indexOf("action-roll-hint");
+		expect(hintAt).toBeGreaterThan(-1);
+		expect(hintAt).toBeLessThan(html.indexOf('<span class="action-name">'));
+		// The roll dice only rides roll-spec chips.
+		expect(html.match(/action-roll-hint/g)?.length).toBe(11); // index ≡ 0 (mod 3)
 		// And the fixed-width right-aligned cell (consistent sizing).
 		expect(css).toContain(".action-chip .action-cost {\n\tflex: none;\n\tmin-width: 3.4em;");
+		// The vertical rule down the middle of the two columns.
+		expect(css).toContain(".action-list::before {");
 	});
 
 	test("unmet chips carry the .unmet grey class (visible, never hidden)", () => {
@@ -243,8 +255,8 @@ describe("actionChipRows (grey wiring + tooltips)", () => {
 			"Half/Full — +10 bonus to hit as a Half Action…",
 		);
 		// The Varies COST keeps its printed word in the cell (no invented
-		// glyph) and the note rides the tooltip.
-		expect(rows[1].costGlyph).toBe("Varies");
+		// mark) and the note rides the tooltip.
+		expect(rows[1].costParts).toEqual([{ icon: "", word: "Varies" }]);
 		expect(rows[1].tooltip).toContain("Varies (Varies by weapon)");
 	});
 

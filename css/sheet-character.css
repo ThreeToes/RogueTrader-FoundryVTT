@@ -198,17 +198,31 @@
 .rogue-trader.sheet.character .action-list {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
-	gap: 4px 12px;
+	gap: 4px 20px;
 	margin: 4px 0;
 	padding: 0;
 	list-style: none;
+	position: relative;
+}
+
+/* The vertical rule down the middle of the two columns (owner request) —
+   the gutter's centre line, scrolling with the list. */
+.rogue-trader.sheet.character .action-list::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	width: 1px;
+	transform: translateX(-0.5px);
+	background: var(--rt-border);
 }
 
 /* Plain rows like the skills screen — no chip boxes (the owner had them
    removed: the list markers and borders read as clutter). */
 .rogue-trader.sheet.character .action-chip {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	gap: 6px;
 	padding: 2px 4px;
 	cursor: pointer;
@@ -226,23 +240,33 @@
 	white-space: nowrap;
 }
 
-/* The printed cost as the owner's glyphs in a FIXED-WIDTH right-aligned cell
-   (◑ Half, ❍ Full, ↫ Reaction — ◑/❍ compounds fit; the three Varies rows keep
-   their printed word), so every chip's glyph column lines up like the table.
-   The printed word lives in the chip's tooltip (actions-view.ts) as the
-   accessible form. */
+/* The printed cost as the owner's marks in a FIXED-WIDTH right-aligned cell
+   (fa-circle-half-stroke = Half, fa-circle = Full, fa-rotate-left = Reaction,
+   adjacent discs for the Half/Full compounds; the three Varies rows keep
+   their word) so the mark column lines up like the table. The printed word
+   lives in the chip's tooltip (actions-view.ts) as the marks' text form. */
 .rogue-trader.sheet.character .action-chip .action-cost {
 	flex: none;
 	min-width: 3.4em;
-	text-align: right;
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 4px;
+	font-size: 1em;
+	color: var(--rt-gold-soft);
+}
+
+.rogue-trader.sheet.character .action-chip .action-cost-word {
 	font-size: var(--rt-fs-sm);
 	text-transform: uppercase;
 	color: var(--rt-muted);
 	white-space: nowrap;
 }
 
-/* Roll-spec chips are child 3's wiring (bead et5a): the dice icon marks them. */
+/* Roll-spec chips carry the dice mark, leading the row (owner request: to
+   the LEFT of the action name). */
 .rogue-trader.sheet.character .action-chip .action-roll-hint {
+	flex: none;
 	color: var(--rt-gold);
 	font-size: var(--rt-fs-sm);
 }

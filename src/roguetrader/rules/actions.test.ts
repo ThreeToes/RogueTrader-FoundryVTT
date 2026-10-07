@@ -16,7 +16,7 @@ import type { Ports } from "../../ffg/application/ports";
 import {
 	actionAvailable,
 	actionCapabilities,
-	actionCostGlyphs,
+	actionCostParts,
 	actionDifficulty,
 	actionEntryFromDoc,
 	actionLookupCardVars,
@@ -366,19 +366,31 @@ describe("the lookup card (lookup dispatch, fake ports)", () => {
  * "Opposed"; the parenthesised value is the book's own number, parsed —
  * NOT the TestDialog ladder's step values (which are unverified).
  */
-describe("actionCostGlyphs (the tab's cost glyphs, owner request)", () => {
-	test("maps the printed cost words", () => {
-		expect(actionCostGlyphs("Half")).toBe("\u25D1"); // ◑
-		expect(actionCostGlyphs("Full")).toBe("\u274D"); // ❍
-		expect(actionCostGlyphs("Reaction")).toBe("\u21AB"); // ↫
+describe("actionCostParts (the tab's cost marks, owner request)", () => {
+	test("maps the printed cost words to the FontAwesome marks", () => {
+		expect(actionCostParts("Half")).toEqual([
+			{ icon: "fa-solid fa-circle-half-stroke", word: "" },
+		]);
+		expect(actionCostParts("Full")).toEqual([
+			{ icon: "fa-solid fa-circle", word: "" },
+		]);
+		expect(actionCostParts("Reaction")).toEqual([
+			{ icon: "fa-solid fa-rotate-left", word: "" },
+		]);
 		// Compound printed costs map part by part (Move, Aim, Grapple).
-		expect(actionCostGlyphs("Half/Full")).toBe("\u25D1/\u274D");
-		expect(actionCostGlyphs("")).toBe("");
+		expect(actionCostParts("Half/Full")).toEqual([
+			{ icon: "fa-solid fa-circle-half-stroke", word: "" },
+			{ icon: "fa-solid fa-circle", word: "" },
+		]);
+		expect(actionCostParts("")).toEqual([]);
 	});
 
-	test("an unmapped printed word keeps its word (no invented glyphs)", () => {
-		expect(actionCostGlyphs("Varies")).toBe("Varies");
-		expect(actionCostGlyphs("Varies/Full")).toBe("Varies/\u274D");
+	test("an unmapped printed word keeps its word (no invented marks)", () => {
+		expect(actionCostParts("Varies")).toEqual([{ icon: "", word: "Varies" }]);
+		expect(actionCostParts("Varies/Full")).toEqual([
+			{ icon: "", word: "Varies" },
+			{ icon: "fa-solid fa-circle", word: "" },
+		]);
 	});
 });
 

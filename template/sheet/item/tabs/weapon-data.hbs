@@ -223,6 +223,33 @@
                 {{/if}}
             </div>
         </div>
+        {{!-- Attached weapon modifications (bead huaf): owned mod items are
+             named here with a remove affordance; drag-install from the
+             inventory/compendium or the Install button (mod picker, with the
+             pack catalogue) are the two add paths. --}}
+        <div class="stats-row">
+            <div class="stat modifications grow-2">
+                <label>{{localize "WEAPON.MODS"}}</label>
+                {{#if mods.length}}
+                <div class="chip-select">
+                    {{#each mods as |mod|}}
+                    <span class="chip mod-chip" data-tooltip="{{mod.upgrades}}">{{mod.name}}{{#if ../editable}}<a
+                            class="mod-remove" data-action="removeMod" data-mod-id="{{mod.id}}"><i class="fas fa-link-slash"
+                                data-tooltip="{{localize "WEAPON.MODS_DELETE"}}"></i></a>{{/if}}</span>
+                    {{/each}}
+                </div>
+                {{else}}
+                <p class="static-value">{{localize "WEAPON.MODS_NONE"}}</p>
+                {{/if}}
+            </div>
+            {{#if editable}}
+            <div class="stat mod-actions">
+                <label>{{localize "WEAPON.MOD_ACTIONS"}}</label>
+                <button type="button" data-action="openModPicker">{{localize "WEAPON.MODS_ADD"}}</button>
+            </div>
+            {{/if}}
+        </div>
+
         {{#if editable}}
         <div class="stats-row">
             <div class="stat item-effects full-width">

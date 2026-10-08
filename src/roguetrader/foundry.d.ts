@@ -45,6 +45,7 @@ import type { Career } from "./data/item/career";
 import type { ForceField } from "./data/item/force-field";
 import type { GameTable } from "./data/item/game-table";
 import type { Gear } from "./data/item/gear";
+import type { Gearset as GearsetModel } from "./data/item/gearset";
 import type { Heirloom } from "./data/item/heirloom";
 import type { MadnessEntry } from "./data/item/madness";
 import type { MeleeWeapon } from "./data/item/melee-weapon";
@@ -90,6 +91,7 @@ declare module "fvtt-types/configuration" {
 			"ship-component": typeof ShipComponent;
 			"ship-weapon-component": typeof ShipWeaponComponent;
 			"game-table": typeof GameTable;
+			gearset: typeof GearsetModel;
 			psychicpower: typeof PsychicPower;
 			navigatorpower: typeof NavigatorPower;
 			origintrait: typeof OriginTrait;

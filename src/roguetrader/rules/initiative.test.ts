@@ -1,25 +1,26 @@
 /**
- * Initiative roll action (epic wjpi, bead dt8t).
+ * Initiative roll action (bead dt8t rework → bead yxm5 funnel).
  *
- * The roll goes through Foundry's DEFAULT CombatTracker: the adapter action
- * (rules/adapter.ts rollInitiativeAction) is a thin wrapper over the core
- * document method Actor#rollInitiative({createCombatants, rerollInitiative,
- * initiativeOptions.formula}) — combat creation/combatant JOINING/turn
- * bookkeeping are all core behaviour (verified against the installed core,
- * v14.366 foundry.mjs), so the unit test pins only OUR wiring:
- *   • the formula (1d10 + the derived initiative bonus) is passed explicitly —
- *     game.system.initiative is unset for RT, so core can't derive it;
- *   • combatant creation + reroll flags;
- *   • the fail-closed gate for non-character systems (no initiativeBonus).
+ * The sheet/token-menu button is FUNNEL-DRIVEN now (owner: same roll funnel
+ * as other rollable skills — talents/items modify initiative with a visible
+ * breakdown): contributors = the Agility-Bonus base row + the live
+ * `initiative`-keyed owned-item modifiers, the TestDialog shows them (no
+ * difficulty ladder, no pass/fail), then d10 + total, assigned to the
+ * combatant when the actor is on the active tracker.
  *
- * The dice convention follows the roll pipeline tests: foundry.dice.Roll is
- * NOT exercised here — core Combatant#getInitiativeRoll consumes the formula
- * string; our contract is the formula STRING reaching the core call.
+ * The combat-tracker bulk path stays core: "1d10 + @initiativeBonus" with the
+ * placeholder resolving through the model's initiativeBonus getter (which
+ * folds the same explicit rows), so both routes count that set exactly once.
  *
- * Adapter-level tests via the fake-globals harness (adapter-ammo-consume
- * / roll-pipeline pattern): Foundry globals are stubbed BEFORE the dynamic
- * import. Plus the template/action-map/context-menu source-scan guards.
+ * The funnel dialog is patched per test (TestDialog.show static); ports fakes
+ * cover dice/chat/notify (the adapter-ammo-consume pattern).
+ *
+ * Adapter-level tests via the fake-globals harness: Foundry globals are
+ * stubbed BEFORE the dynamic import. Plus the template/action-map/context-menu
+ * source-scan guards.
  */
+let dialogRequests: Array<Record<string, unknown>> = [];
+let dialogResult: { modifiers: unknown[] } | null = { modifiers: [] };
 
 const originalGlobals: Record<string, unknown> = {};
 for (const key of ["game", "ui", "foundry"]) {
@@ -43,9 +44,11 @@ for (const key of ["game", "ui", "foundry"]) {
 };
 
 const { rollInitiativeAction } = await import("./adapter");
-		const { initiativeFormula, INITIATIVE_FORMULA } = await import(
-			"./derived"
-		);
+const { INITIATIVE_FORMULA } = await import("./derived");
+const { foundryPorts, setPorts } = await import(
+	"../../ffg/infrastructure/foundry/ports"
+);
+const { TestDialog } = await import("./test-dialog");
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -57,102 +60,221 @@ afterAll(() => {
 	}
 });
 
-	/** A faked character-shaped actor recording the core rollInitiative call. */
-	function actorFixture(
-		bonus: number,
-		options: { withModel?: boolean; valueShape?: "getter" | "method" } = {},
-	) {
-		// Bead jpt3: the live model exposes initiativeBonus as a (getter-valued)
-		// NUMBER property; legacy stubs are function-valued. The adapter's gate
-		// must accept both. "getter" exercises the number shape.
-		const system = options.withModel === false ? { psyker: false } : (
-			options.valueShape === "getter"
-				? { initiativeBonus: bonus }
-				: { initiativeBonus: () => bonus }
-		);
-		const calls: Array<Record<string, unknown>> = [];
-		return {
-			system,
-			rollInitiative: (opts: Record<string, unknown>) => {
-				calls.push(opts);
-				return Promise.resolve(null);
+// --- Harness ----------------------------------------------------------------
+
+const rollCalls: string[] = [];
+const postedCards: string[] = [];
+let lastCardVars: Record<string, unknown> | null = null;
+let warnings: string[] = [];
+
+function wirePorts(d10Total = 4): void {
+	rollCalls.length = 0;
+	postedCards.length = 0;
+	lastCardVars = null;
+	warnings = [];
+	setPorts({
+		...foundryPorts,
+		dice: {
+			roll: async (formula: string) => {
+				rollCalls.push(formula);
+				return { total: d10Total, dice: [], terms: [], formula };
 			},
-			calls,
-		};
-	}
-
-	describe("initiative formula (bead dt8t)", () => {
-		test("the shared shape is the @placeholder form (bead jpt3)", () => {
-			expect(INITIATIVE_FORMULA).toBe("1d10 + @initiativeBonus");
-		});
-
-		test("1d10 + the derived bonus", () => {
-			expect(initiativeFormula(6)).toBe("1d10 + 6");
-		});
-
-		test("zero bonus stays a valid formula", () => {
-			expect(initiativeFormula(0)).toBe("1d10 + 0");
-		});
-
-		// Belt (bead nt34 F4): a NaN model value would interpolate into "1d10
-		// + NaN", which core's Roll.create would throw on — degrade to the
-		// unmodified roll instead.
-		test("a NaN bonus degrades to the unmodified roll, not '1d10 + NaN'", () => {
-			expect(initiativeFormula(Number.NaN)).toBe("1d10 + 0");
-		});
+		},
+		chat: {
+			async post(
+				_actor: unknown,
+				_template: string,
+				vars: Record<string, unknown>,
+			) {
+				lastCardVars = vars;
+				postedCards.push("card");
+				return { id: "msg-1" };
+			},
+			async postHtml() {
+				postedCards.push("html");
+				return { id: "msg-1" };
+			},
+			// chat amendments are not exercised here — keep the contract explicit.
+			async update() {
+				await Promise.resolve();
+			},
+		},
+		notify: {
+			warn: (key: string) => {
+				warnings.push(key);
+			},
+			info: () => undefined,
+			error: () => undefined,
+		},
 	});
+}
 
-	describe("rollInitiativeAction wiring (bead dt8t)", () => {
-		test("calls the core Actor#rollInitiative with the RT formula and both flags", async () => {
-			const actor = actorFixture(6);
-			await rollInitiativeAction(actor as never);
-			expect(actor.calls).toHaveLength(1);
-			expect(actor.calls[0]).toEqual({
-				createCombatants: true,
-				rerollInitiative: true,
-				initiativeOptions: { formula: "1d10 + 6" },
-			});
-		});
+/** Patch the test dialog: record the request, answer with `dialogResult`. */
+function wireDialog(): () => void {
+	dialogRequests = [];
+	const original = TestDialog.show;
+	TestDialog.show = (async (request: object) => {
+		dialogRequests.push(request as Record<string, unknown>);
+		return dialogResult as never;
+	}) as never;
+	return () => {
+		TestDialog.show = original as never;
+	};
+}
 
-		test("passes each actor's own derived bonus (npc + explorer fixtures)", async () => {
-			const low = actorFixture(3);
-			const high = actorFixture(9);
-			await rollInitiativeAction(low as never);
-			await rollInitiativeAction(high as never);
-			expect(low.calls[0].initiativeOptions).toEqual({ formula: "1d10 + 3" });
-			expect(high.calls[0].initiativeOptions).toEqual({ formula: "1d10 + 9" });
-		});
+/** A character-shaped fixture: Character model's bonus + an empty inventory. */
+function actorFixture(agBonus: number) {
+	return {
+		id: "a1",
+		name: "Explorer",
+		type: "explorer",
+		system: {
+			characteristics: { ag: { value: agBonus * 10, unnatural: 1 } },
+			characteristicBonus: (key: string) => (key === "ag" ? agBonus : 0),
+		},
+		items: [],
+	};
+}
 
-		test("fails closed for a non-character system (no initiativeBonus)", async () => {
-			const actor = actorFixture(5, { withModel: false });
-			await rollInitiativeAction(actor as never);
-			expect(actor.calls).toHaveLength(0);
-		});
+// --- Tests -------------------------------------------------------------------
 
-		// Bead jpt3: the live model exposes the getter as a NUMBER on the
-		// system instance (what getRollData() hands core); the adapter must
-		// accept that shape, not only function-valued stubs.
-		test("accepts a getter-shaped (number-valued) system like the live roll-data face", async () => {
-			const actor = actorFixture(6, { valueShape: "getter" });
-			await rollInitiativeAction(actor as never);
-			expect(actor.calls[0]?.initiativeOptions).toEqual({
-				formula: "1d10 + 6",
-			});
-		});
+describe("initiative formula (bead dt8t)", () => {
+	// The tracker's bulk path stays the placeholder formula; the placeholder
+	// resolves through the model's initiativeBonus getter (which folds the
+	// same explicit "initiative" rows the funnel dialog shows).
+	test("the shared shape is the @placeholder form (bead jpt3)", () => {
+		expect(INITIATIVE_FORMULA).toBe("1d10 + @initiativeBonus");
+	});
+});
 
-		test("a NaN getter value degrades to the unmodified roll", async () => {
-			const calls: Array<Record<string, unknown>> = [];
-			const actor = {
-				system: { initiativeBonus: Number.NaN },
-				rollInitiative: (opts: Record<string, unknown>) => {
-					calls.push(opts);
-					return Promise.resolve(null);
+describe("rollInitiativeAction funnel flow (bead yxm5)", () => {
+	test("opens the funnel dialog with the agility base + collected rows, rolls d10 + total, assigns, posts the card", async () => {
+		wirePorts(4);
+		const restore = wireDialog();
+		try {
+			const actor = actorFixture(5);
+			const value = await rollInitiativeAction(actor as never);
+			// d10(4) + agility(5)
+			expect(value).toBe(9);
+			expect(rollCalls).toEqual(["1d10"]);
+			// The dialog request: d10 cap as baseTarget, no difficulty ladder.
+			expect(dialogRequests).toHaveLength(1);
+			expect(dialogRequests[0].baseTarget).toBe(10);
+			expect(dialogRequests[0].difficultyLadder).toEqual([]);
+			const rows = dialogRequests[0].contributors as Array<Record<string, unknown>>;
+			expect(rows).toEqual([
+				{
+					id: "initiative-base:agility",
+					label: "ROLL.INITIATIVE_AGILITY_BONUS",
+					source: { type: "item", label: "ROLL.BASE" },
+					value: 5,
 				},
-			};
-			await rollInitiativeAction(actor as never);
-			expect(calls[0]?.initiativeOptions).toEqual({ formula: "1d10 + 0" });
-		});
+			]);
+			// The card carries the full breakdown + the assigned note.
+			expect(postedCards).toEqual(["card"]);
+			expect(lastCardVars?.value).toBe(9);
+			const analysis = lastCardVars?.analysis as Array<Record<string, unknown>>;
+			expect(analysis).toEqual([
+				{ label: "ROLL.INITIATIVE_AGILITY_BONUS", value: 5 },
+			]);
+			expect(lastCardVars?.assigned).toBe(false); // game.combat unset
+		} finally {
+			restore();
+		}
 	});
+
+	test("a dialogue custom row joins the roll (same funnel as skills)", async () => {
+		wirePorts(2);
+		const restore = wireDialog();
+		try {
+			dialogResult = {
+				modifiers: [
+					{
+						id: "dialog:custom:alert",
+						source: { type: "item", label: "X" },
+						label: "Alert",
+						value: 3,
+					},
+				],
+			};
+			const actor = actorFixture(4);
+			const value = await rollInitiativeAction(actor as never);
+			// d10(2) + base(4) + custom(+3)
+			expect(value).toBe(9);
+			const analysis = (
+				lastCardVars?.analysis ?? []
+			) as unknown[];
+			expect(analysis.length).toBe(2);
+		} finally {
+			restore();
+			dialogResult = { modifiers: [] };
+		}
+	});
+
+	test("a dialog cancel rolls and posts nothing", async () => {
+		wirePorts();
+		const restore = wireDialog();
+		try {
+			dialogResult = null;
+			const value = await rollInitiativeAction(actorFixture(5) as never);
+			expect(value).toBe(undefined);
+			expect(rollCalls).toEqual([]);
+			expect(postedCards).toEqual([]);
+		} finally {
+			restore();
+			dialogResult = { modifiers: [] };
+		}
+	});
+
+	test("assigns to the combatant when the actor is on the tracker", async () => {
+		wirePorts(4);
+		const restore = wireDialog();
+		const combatantUpdates: unknown[] = [];
+		const savedCombat = (game as { combat?: unknown }).combat;
+		try {
+			(game as { combat?: unknown }).combat = {
+				combatants: [
+					{
+						actorId: "other",
+						update: () => Promise.resolve(),
+					},
+					{
+						actorId: "a1",
+						update: (data: object) => {
+							combatantUpdates.push(data);
+							return Promise.resolve();
+						},
+					},
+				],
+			};
+			await rollInitiativeAction(actorFixture(5) as never);
+			expect(combatantUpdates).toEqual([{ initiative: 9 }]);
+			expect(lastCardVars?.assigned).toBe(true);
+		} finally {
+			restore();
+			(game as { combat?: unknown }).combat = savedCombat;
+		}
+	});
+
+	test("fails closed for a non-character system (no characteristicBonus)", async () => {
+		wirePorts();
+		const restore = wireDialog();
+		try {
+			const vehicle = {
+				id: "v1",
+				name: "Lander",
+				type: "vehicle",
+				system: { size: "huge" },
+				items: [],
+			};
+			const value = await rollInitiativeAction(vehicle as never);
+			expect(value).toBe(undefined);
+			expect(dialogRequests).toHaveLength(0);
+		} finally {
+			restore();
+		}
+	});
+});
 
 // --- Source guards ---------------------------------------------------------
 
@@ -206,10 +328,10 @@ describe("initiative wiring guards (bead dt8t)", () => {
 
 	// Bead nt34 F1: the menu entry must be gated MORE than ownership — the
 	// adapter (rules/adapter.ts rollInitiativeAction) only accepts
-	// character-shaped systems that carry an initiativeBonus (a getter on the
-	// Character model, bead jpt3), so an owned vehicle/starship token must not
-	// see a dead entry whose click silently no-ops. Source-scan guard: the
-	// visible() gate mirrors the adapter's shape gate.
+	// character-shaped systems that carry the Character model's
+	// characteristicBonus (and thus initiativeBonus, bead jpt3), so an owned
+	// vehicle/starship token must not see a dead entry whose click silently
+	// no-ops. Source-scan guard: the visible() gate mirrors the adapter's gate.
 	test("the token menu gate mirrors the adapter's initiativeBonus shape gate", () => {
 		expect(menusSource).toContain(
 			'if (!token?.actor?.isOwner) return false;',
@@ -220,20 +342,16 @@ describe("initiative wiring guards (bead dt8t)", () => {
 	});
 
 	// Bead jpt3: the two consumption routes read the ONE canonical formula —
-	// the adapter interpolates it with the literal bonus (initiativeFormula is
-	// a .replace on the constant) and the tracker reads it from
-	// CONFIG.Combat.initiative.formula (set by bootstrap/combat-tracker.ts —
-	// pinned over there). Guard here that the sheet path derives from the
-	// shared constant, so the routes cannot diverge.
-	test("initiativeFormula derives from the shared INITIATIVE_FORMULA", () => {
+	// the model getter is the placeholder's resolver and the tracker reads it
+	// from CONFIG.Combat.initiative.formula (set by bootstrap/combat-tracker.ts
+	// — pinned over there). Guard here that the formula shape stays the shared
+	// constant, so the routes cannot diverge.
+	test("the formula is the shared INITIATIVE_FORMULA constant", () => {
 		const derivedSource = readFileSync(
 			"src/roguetrader/rules/derived.ts",
 			"utf8",
 		);
 		expect(derivedSource).toContain('INITIATIVE_FORMULA = "1d10 + @initiativeBonus"');
-		expect(derivedSource).toContain(
-			'INITIATIVE_FORMULA.replace(\n\t\t"@initiativeBonus",',
-		);
 	});
 
 	// Bead nt34 F11: the v14 ContextMenuEntry option shape lives in ONE place,

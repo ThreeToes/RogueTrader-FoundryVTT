@@ -152,6 +152,91 @@ export interface LoadableOrdnance {
 export type AmmoResolver = (id: string) => LoadableOrdnance | null | undefined;
 
 /**
+ * Structural view of an ATTACHED weapon-modification item (bead huaf/ujtg):
+ * the profile fold reads only its profile-changing effect rows (kinds
+ * "pen-flat" / "primitive-clear" on `system.effects`) — the same EffectData
+ * row grammar the editor authors. Deliberately structural; attack.ts stays
+ * Foundry-free.
+ */
+export interface AttachedWeaponMod {
+	id?: string | null;
+	name?: string;
+	system?: {
+		effects?: Array<{
+			kind?: string;
+			value?: number;
+			label?: string;
+		}>;
+	};
+}
+
+/** The effect kinds an attached weapon mod can feed the fire profile. */
+export const WEAPON_MOD_EFFECT_KINDS = ["pen-flat", "primitive-clear"] as const;
+
+/**
+ * Actor-side lookup for one attached modification: `(id) => actor.items.get(id)`
+ * — the SAME resolver instance as the ammo one (both resolve owned item ids).
+ */
+export type ModResolver = (
+	id: string,
+) => AttachedWeaponMod | null | undefined;
+
+/**
+ * Resolve a weapon's attached modification ids (system.modifications) through
+ * the optional resolver; nulls/misses drop silently (a deleted mod item
+ * degrades to “not attached”, never a crash) — the sheet re-syncs dangling
+ * ids at install time.
+ */
+function weaponModSources(
+	item: AttackSource | null | undefined,
+	modsResolver?: ModResolver,
+): AttachedWeaponMod[] {
+	if (!modsResolver) return [];
+	const ids =
+		((item?.system ?? {}) as { modifications?: string[] }).modifications ?? [];
+	return ids
+		.map((id) => modsResolver(String(id)))
+		.filter((mod): mod is AttachedWeaponMod => Boolean(mod));
+}
+
+/**
+ * The weapon-mods fold (bead huaf/ujtg): fold the attached modifications'
+ * profile-changing effect rows into the base profile. Only the registered
+ * WEAPON_MOD_EFFECT_KINDS apply — everything else on a mod is display text
+ * until the effect machinery grows the kind (owner: mods must be VISIBLE, and
+ * unmodelled ones must not pretend to be mechanical). Mods apply to THIS
+ * weapon only; the engine's actor-level collection ignores
+ * weapon-modification rows (they are on no liveness table), so a mod can
+ * never double-count.
+ */
+function foldWeaponMods(
+	base: AttackProfile,
+	mods: AttachedWeaponMod[] | null | undefined,
+): AttackProfile {
+	if (!mods || mods.length === 0) return base;
+	let penetration = base.penetration;
+	let primitive = base.primitive;
+	let qualities = base.qualities;
+	for (const mod of mods) {
+		for (const row of mod.system?.effects ?? []) {
+			if (row.kind === "pen-flat" && Number.isFinite(row.value)) {
+				penetration += Number(row.value);
+			}
+			if (row.kind === "primitive-clear") {
+				primitive = false;
+				// Mono makes the weapon count non-primitive for the qualities
+				// list too (the primitive-armour rule reads either form.
+				// Pure fold — never mutate the caller's profile object).
+				qualities = qualities.filter(
+					(q) => q.toLowerCase() !== "primitive",
+				);
+			}
+		}
+	}
+	return { ...base, penetration, primitive, qualities };
+}
+
+/**
  * The weaponFamily key the load model gates on (epic nlsh): launchers fire
  * LOADED ordnance — missiles (ammunition items) or grenades (thrown-family
  * ranged-weapon items). Launchers WITH an acceptsAmmo key carry the printed
@@ -348,6 +433,7 @@ export function launcherProfile(
 export function attackProfileOf(
 	item: AttackSource | null | undefined,
 	ammoResolver?: AmmoResolver,
+	modsResolver?: ModResolver,
 ): AttackProfile | null {
 	if (!item) return null;
 	const type = (item.type ?? "") as string;
@@ -400,7 +486,12 @@ export function attackProfileOf(
 				ammoResolver,
 			);
 		}
-		return base;
+		// Attached weapon modifications (bead huaf/ujtg) fold into the fire
+		// profile — the damage path reads penetration/primitive from here.
+		return foldWeaponMods(
+			base,
+			weaponModSources(item, modsResolver),
+		);
 	}
 	if (type !== "mutation") return null;
 	const attack = (item.system as { attack?: MutationAttackLike } | undefined)

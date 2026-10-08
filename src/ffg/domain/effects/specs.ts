@@ -232,6 +232,33 @@ effectKinds.register({
 	read: () => true,
 });
 
+// ---------------------------------------------------------------------------
+// Weapon-profile channel (attached weapon mods, bead huaf/ujtg)
+//
+// Mod rows on a weapon-modification item that change the FIRE PROFILE of the
+// weapon they are attached to. They are NOT collected at actor level (the
+// carrying item type is on no liveness table) — the attack profile fold
+// (ffg/domain/model/attack.ts foldWeaponMods) reads the attached mod's rows
+// directly, so a mono installation fights correctly (+2 Pen, Not Primitive)
+// without touching the damage pipeline. Registration keeps the kinds in the
+// ONE effect vocabulary (the editor dropdown resolves its labels here).
+// ---------------------------------------------------------------------------
+
+/** "pen-flat": flat Penetration added to the attached weapon's profile. */
+effectKinds.register({
+	kind: "pen-flat",
+	channels: ["weapon-profile"],
+	applies: (effect) => Number.isFinite(Number(effect.value)),
+	read: (_item, effect) => Number(effect.value),
+});
+
+/** "primitive-clear": the mod cancels the weapon's Primitive quality (Mono). */
+effectKinds.register({
+	kind: "primitive-clear",
+	channels: ["weapon-profile"],
+	read: () => true,
+});
+
 effectKinds.register({
 	kind: "blast",
 	channels: ["roll-mechanic"],

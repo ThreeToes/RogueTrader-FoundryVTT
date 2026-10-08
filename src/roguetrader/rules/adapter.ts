@@ -3,6 +3,8 @@ import {
 	locationForHit,
 	parseDamageFormula,
 	resolveDamage,
+	type Modifier,
+	sumModifiers,
 } from "../../rules-engine/index";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
 import { actorView } from "../../ffg/infrastructure/foundry/actor-view";
@@ -26,7 +28,12 @@ import {
 	shotsForFireMode,
 } from "./ordnance";
 import { toxicActivates, toxicToughnessPenalty } from "./toxic";
-import { initiativeFormula } from "./derived";
+import {
+	breakdown,
+	collectTestModifiers,
+	mergeModifiers,
+} from "../../ffg/application/funnel";
+import { TestDialog } from "./test-dialog";
 import { messageFlagNamespace } from "../../ffg/application/chat-flags";
 import { type AttackProfile, attackProfileOf } from "../../ffg/domain/model/attack";
 
@@ -96,7 +103,13 @@ export async function rollWeaponDamage(
 	// attack too, so it resolves through the same profile as a weapon. Bead
 	// 4obp: the launcher's fire profile derives from its LOADED ordnance —
 	// unloaded = unusable and the damage roll below refuses.
-	const profile = attackProfileOf(item as never, ownedItemResolver(actor));
+	// Bead huaf/ujtg: the owner resolver doubles as the mod resolver —
+	// attached weapon modifications (pen-flat/primitive-clear) fold in here.
+	const profile = attackProfileOf(
+		item as never,
+		ownedItemResolver(actor),
+		ownedItemResolver(actor) as never,
+	);
 	if (!item || !profile) {
 		ports.notify.warn("ROLL.UNKNOWN_ITEM");
 		return;
@@ -139,7 +152,12 @@ export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
 	// ordnance resolved at all).
 	const owner = (weapon as { actor?: foundry.documents.Actor | null } | null)
 		?.actor;
-	const profile = attackProfileOf(weapon as never, owner ? ownedItemResolver(owner) : undefined);
+	// Bead huaf/ujtg: the owner resolver doubles as the mod resolver.
+	const profile = attackProfileOf(
+		weapon as never,
+		owner ? ownedItemResolver(owner) : undefined,
+		owner ? ownedItemResolver(owner) as never : undefined,
+	);
 	if (!attacker || !profile) return;
 	if (profile.unusable) {
 		getPorts().notify.warn("ROLL.LAUNCHER_UNLOADED", { weapon: profile.name });
@@ -570,20 +588,88 @@ export async function toggleSustainedPower(
  * Fails closed for actors whose system is not character-shaped (vehicles,
  * starships…): those carry no initiativeBonus and never roll.
  */
+/**
+ * Initiative (bead yxm5, owner: same roll funnel as other rollable skills —
+ * talents/items modify initiative with a visible breakdown).
+ *
+ * The funnel path: contributors = the Agility-Bonus base row + the live
+ * `initiative`-keyed modifier rows collected from the owned inventory
+ * (+ any dialog custom rows); wildcard funnel rows are EXCLUDED (the
+ * tracker's bulk formula roll keys on the explicit "initiative" rows only,
+ * so both paths count exactly one set of contributions). On accept: d10 +
+ * full breakdown total, assigned to the combatant when the actor is in the
+ * active combat, and a card posts the whole breakdown — no silent numbers.
+ */
+interface CombatantLike {
+	actorId?: string;
+	update: (data: object) => Promise<unknown>;
+}
+
 export async function rollInitiativeAction(actor: Actor): Promise<unknown> {
-	const system = actor?.system as
-		| { initiativeBonus?: number | (() => number | null | undefined) }
-		| undefined;
-	const value = system?.initiativeBonus ?? undefined;
-	if (value === undefined) return undefined;
-	// A Character model exposes the getter as a number (bead jpt3); a
-	// function-valued stub/legacy shape still resolves. Non-finite degrades to
-	// the unmodified roll, matching initiativeFormula's belt.
-	const raw = typeof value === "function" ? value() : value;
-	const bonus = Number.isFinite(raw) ? (raw as number) : 0;
-	return actor.rollInitiative({
-		createCombatants: true,
-		rerollInitiative: true,
-		initiativeOptions: { formula: initiativeFormula(bonus) },
+	const ports = getPorts();
+	const system = systemOf(actor);
+	// Fail closed for non-character systems (vehicles/starships lack the
+	// Character model's characteristicBonus) — the token-menu's visible() gate
+	// mirrors this so owned non-character tokens never see a dead entry.
+	if (
+		typeof (system as { characteristicBonus?: unknown }).characteristicBonus !==
+		"function"
+	) {
+		return undefined;
+	}
+	const agBonus = (system as { characteristicBonus: (k: string) => number }).characteristicBonus("ag");
+	// One collector — the same rows the model's initiativeBonus getter folds.
+	const collected = collectTestModifiers(actorView(actor), {
+		kind: "initiative",
+		key: "initiative",
+	}).filter((mod) => mod.id.includes(":initiative:"));
+	const rows: Modifier[] = [
+		{
+			id: "initiative-base:agility",
+			source: { type: "item", label: "ROLL.BASE" },
+			label: ports.i18n.t("ROLL.INITIATIVE_AGILITY_BONUS"),
+			value: agBonus,
+		},
+		...collected,
+	];
+	const dialog = await TestDialog.show({
+		title: `${actor.name} — ${ports.i18n.t("ROLL.INITIATIVE_TITLE")}`,
+		baseTarget: 10, // the d10 cap; the dialog's preview reads base + rows
+		contributors: rows,
+		difficultyLadder: [], // a raw d10 has no pass/fail ladder
 	});
+	if (!dialog) return undefined; // cancelled
+	// The dialog result's rows (its own contributors + any custom rows the
+	// player added) merge by id with the fixture rows, so nothing double-
+	// counts — the same dedupe rule the shared test step uses. The MERGED set
+	// is both the arithmetic and the card's breakdown (never silent rows).
+	const merged = mergeModifiers(dialog.modifiers, rows);
+	const total = (await ports.dice.roll("1d10")).total + sumModifiers(merged);
+	// Combat integration: assign to the combatant when the actor is on the
+	// active tracker (core reads the value from there).
+	const combatants = (
+		game as { combat?: { combatants?: Iterable<CombatantLike> } | null }
+	).combat?.combatants;
+	const assigned = combatants
+		? [...combatants].some((c) => c.actorId === (actor as { id?: string }).id)
+		: false;
+	const targetCombatant = combatants
+		? [...combatants].find(
+				(c) => c.actorId === (actor as { id?: string }).id,
+		)
+		: undefined;
+	if (targetCombatant) {
+		await targetCombatant.update({ initiative: total } as never);
+	}
+	await postCard(
+		actor,
+		"systems/rogue-trader/template/chat/initiative.hbs",
+		{
+			title: actor.name ?? "",
+			value: total,
+			analysis: breakdown(merged),
+			assigned,
+		},
+	);
+	return total;
 }

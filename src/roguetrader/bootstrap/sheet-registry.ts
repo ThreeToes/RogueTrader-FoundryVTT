@@ -44,6 +44,7 @@ import { Skill } from "../data/item/skill";
 import { Talent } from "../data/item/talent";
 import { Trait } from "../data/item/trait";
 import { WarrantOption } from "../data/item/warrant-option";
+import { Gearset } from "../data/item/gearset";
 import { WeaponModification } from "../data/item/weapon-modification";
 import { CharacterSheet } from "../sheet/actor/character-sheet";
 import { CacheSheet } from "../sheet/actor/cache-sheet";
@@ -215,6 +216,13 @@ export const SHEET_REGISTRY: Record<
 			model: Heirloom,
 			sheet: GearSheet,
 			label: "TYPES.Item.heirloom",
+		},
+		// Starting kits (owner rework 2026): one item per career; the creator's
+		// kit step consumes them — no player-facing sheet beyond the generic.
+		gearset: {
+			model: Gearset,
+			sheet: GearSheet,
+			label: "TYPES.Item.gearset",
 		},
 		mutation: {
 			model: Mutation,

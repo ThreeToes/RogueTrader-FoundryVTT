@@ -62,6 +62,16 @@ const EFFECT_KIND_LABEL_KEYS: Record<string, string> = {
 	// Affliction kinds (epic nt8k): characteristic deltas + item grants.
 	"characteristic-modifier": "EFFECT_KIND.CHARACTERISTIC_MODIFIER",
 	"grants-item": "EFFECT_KIND.GRANTS_ITEM",
+	// Handler-only kinds (talent-effects.ts): without a label key the editor
+	// degraded to the raw slug — the owner's untranslated-effects report.
+	"tearing": "EFFECT_KIND.TEARING",
+	"toxic": "EFFECT_KIND.TOXIC",
+	"pen-flat": "EFFECT_KIND.PEN_FLAT",
+	"primitive-clear": "EFFECT_KIND.PRIMITIVE_CLEAR",
+	"blast": "EFFECT_KIND.BLAST",
+	"corruption": "EFFECT_KIND.CORRUPTION",
+	"sorcery-rank": "EFFECT_KIND.SORCERY_RANK",
+	"grants-technique": "EFFECT_KIND.GRANTS_TECHNIQUE",
 };
 
 /**

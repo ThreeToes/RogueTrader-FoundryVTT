@@ -23,6 +23,7 @@ export type EffectChannel =
 	| "damage" // flat / critical damage (the damage pipeline)
 	| "target-soak" // target-side TB multiplier / flat reduction
 	| "roll-mechanic" // tearing / toxic / blast
+	| "weapon-profile" // attached weapon mods that change the fire profile
 	| "derived" // wounds-max, skill-rank, sorcery-rank
 	| "acquisition"; // grants, procedures, corruption
 

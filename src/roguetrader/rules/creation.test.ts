@@ -213,7 +213,8 @@ describe("creatorCanAdvance (character-creator Next gate, fix 2026-09-14)", () =
 		// Bead ghmn: the Species step made equipment step 4 the last one.
 		expect(creatorCanAdvance(CREATOR_LAST_STEP, false)).toBe(false);
 		expect(creatorCanAdvance(CREATOR_LAST_STEP, true)).toBe(true);
-		expect(CREATOR_LAST_STEP).toBe(4);
+		// Step 5 (owner rework 2026): the Starting Kit step is the last one.
+		expect(CREATOR_LAST_STEP).toBe(5);
 	});
 
 	// The wizard's step count lives in FOUR places: this constant, the creator's

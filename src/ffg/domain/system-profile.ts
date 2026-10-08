@@ -72,7 +72,7 @@ export const rtCore: SystemProfile = {
 	characteristicBase: 25,
 	pointBuyBudget: 100,
 	pointBuyMax: 20,
-	creatorLastStep: 4,
+	creatorLastStep: 5,
 	preSpentBaseline: 4500,
 	fireModeBonus: { burst: 10, full: 20 },
 	// As data: the values psychic.ts#pushCap() resolves (Table 6-1, p157) —

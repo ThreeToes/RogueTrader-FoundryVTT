@@ -65,6 +65,8 @@ const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
 	"origin-traits": "origintrait",
 	// Heirloom grant templates (Table 1-2, epic 1gb7 follow-up).
 	heirlooms: "heirloom",
+	// Starting kits (owner rework 2026): one row per career kit.
+	gearsets: "gearset",
 	// Insanity/corruption content (epic 1g2t) + the mutations tables: typed
 	// rows with kind/tableKey/roll fields. Without these the builder falls back
 	// to "gear" and Foundry's TypeDataModel silently drops those fields.
@@ -143,6 +145,9 @@ const SOURCE_TOP_LABELS: Readonly<Record<string, string | null>> = {
 	cybernetics: "Cybernetics",
 	"tau-armoury": "Tau Armoury",
 	heirlooms: "Heirlooms",
+	// Starting kits (owner rework 2026): keyed by career inside the packs' kit
+	// source file; label mirrors the Heirlooms-style grouping.
+	gearsets: "Starting Kits",
 	// Character-options concept pack (bead 4tj1).
 	skills: "Skills",
 	talents: "Talents",

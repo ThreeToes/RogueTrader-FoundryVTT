@@ -1,0 +1,26 @@
+<div class="rogue-trader chat roll initiative">
+    <h3 class="title">{{title}}</h3>
+    <div class="roll-summary">
+        <div class="roll-target">
+            <label>{{localize "ROLL.INITIATIVE_TITLE"}}</label>
+            <span class="value">{{value}}</span>
+        </div>
+        <div class="roll-result {{#if assigned}}{{else}}unassigned{{/if}}">
+            <span class="value">{{roll}}</span>
+            <span class="roll-dice-note">{{localize "ROLL.INITIATIVE_D10"}}</span>
+        </div>
+    </div>
+    {{#if analysis.length}}
+    <div class="roll-analysis">
+        {{#each analysis as |row|}}
+        <div class="analysis-row{{#if (lt row.value 0)}} negative{{/if}}">
+            <span class="label">{{row.label}}</span>
+            <span class="value">{{#if (gt row.value 0)}}+{{/if}}{{row.value}}</span>
+        </div>
+        {{/each}}
+    </div>
+    {{/if}}
+    {{#unless assigned}}
+    <p class="hint">{{localize "ROLL.INITIATIVE_NOT_IN_COMBAT"}}</p>
+    {{/unless}}
+</div>

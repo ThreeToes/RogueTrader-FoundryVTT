@@ -42,6 +42,7 @@ export const ITEM_MODELS: Record<string, ModelEntry> = {
 	"ship-component": { spec: "../roguetrader/data/item/ship-component", className: "ShipComponent" },
 	"ship-weapon-component": { spec: "../roguetrader/data/item/ship-component", className: "ShipWeaponComponent" },
 	"game-table": { spec: "../roguetrader/data/item/game-table", className: "GameTable" },
+	gearset: { spec: "../roguetrader/data/item/gearset", className: "Gearset" },
 	psychicpower: { spec: "../roguetrader/data/item/psychic-power", className: "PsychicPower" },
 	navigatorpower: { spec: "../roguetrader/data/item/navigator-power", className: "NavigatorPower" },
 	origintrait: { spec: "../roguetrader/data/item/origin-trait", className: "OriginTrait" },

@@ -94,6 +94,22 @@ export abstract class Weapon extends Gear {
 					initial: "",
 				}),
 			),
+			/**
+			 * Attached weapon modifications (bead huaf): the owned
+			 * weapon-modification item ids installed on this weapon — the
+			 * loadedAmmoId pattern at array strength. Empty = stock weapon. The
+			 * profile resolver (ffg/domain/model/attack.ts) folds the attached
+			 * mods' profile-changing effect kinds (pen-flat, primitive-clear)
+			 * into the attack; the mod items stay ordinary inventory Items, so
+			 * drag-installing one works exactly like ammunition loading.
+			 */
+			modifications: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.StringField({
+					required: true,
+					nullable: false,
+					initial: "",
+				}),
+			),
 		};
 	}
 }

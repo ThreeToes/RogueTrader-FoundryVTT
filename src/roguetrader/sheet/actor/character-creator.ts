@@ -56,6 +56,11 @@ import {
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { readRtFlag } from "../../rules/chat-flags";
+import {
+	gearsetFor,
+	kitChoicesComplete,
+	type GearsetSlot,
+} from "../../rules/gearsets";
 import { waitForDefaultGrants } from "../default-grants";
 import {
 	characterOptionDocsOnce,
@@ -170,6 +175,13 @@ interface CreatorState {
 	acqCollapsed: Record<string, boolean>;
 	/** Stage 3.5 (bead rboc): rolled heirloom (1d100 result + entry name). */
 	heirloom: { roll: number; name: string } | null;
+	/**
+	 * Starting Kit picks (owner rework 2026, step 5): per-slot option index —
+	 * slot index -> chosen option index (the book's "or" groups). Fixed
+	 * slots (one option) never need a pick; `kitPicks` records the chosen
+	 * option slot anyway at grant (default 0).
+	 */
+	kitPicks: Record<number, number>;
 }
 
 interface AcqOption {
@@ -224,6 +236,7 @@ function emptyState(): CreatorState {
 		acquisition: null,
 		acqCollapsed: {},
 		heirloom: null,
+		kitPicks: {},
 	};
 }
 
@@ -274,11 +287,14 @@ export class CharacterCreator extends CreatorApplication {
 			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
 			toggleAcqGroup: CharacterCreator.#onToggleAcqGroup,
 			rollHeirloom: CharacterCreator.#onRollHeirloom,
+			// Starting Kit picks (owner rework 2026, step 5): the book's "or"
+			// groups; data-slot + data-option identify the chip.
+			chooseKitSlot: CharacterCreator.#onChooseKitSlot,
 			finish: CharacterCreator.#onCreate,
 		},
 	});
 
-	/** Species, characteristics, Origin Path, review, equipment. */
+	/** Species, characteristics, Origin Path, review, equipment, kit. */
 	protected get lastStep(): number {
 		return CREATOR_LAST_STEP;
 	}
@@ -760,11 +776,44 @@ export class CharacterCreator extends CreatorApplication {
 			rolled: state.heirloom,
 		};
 
+		// Starting Kit (owner rework 2026, step 5): the career's kit row from
+		// the pack; alternative slots become pick-one chip rows. `kitRequired`
+		// gates Create only when the career HAS a kit at all.
+		const kit = gearsetFor(state.careerKey);
+		context.kit = kit
+			? {
+					present: true,
+					label: kit.label,
+					quote: kit.quote,
+					slots: (kit.slots ?? []).map((slot: GearsetSlot, index: number) => ({
+						index,
+						count: slot.options?.length ?? 0,
+						quote: slot.quote ?? "",
+						options: (slot.options ?? []).map((opt, optIndex) => ({
+							index: optIndex,
+							name: this.#kitOptionName(opt),
+							selectable: true,
+							selected:
+								state.kitPicks[index] === optIndex ||
+								(slot.options?.length === 1 &&
+									state.kitPicks[index] === undefined),
+						})),
+					})),
+					complete: kitChoicesComplete(kit, state.kitPicks),
+				}
+			: { present: false };
+
 		context.canCreate =
 			this.step === CREATOR_LAST_STEP &&
 			originRows.every((row) => Boolean(state.picks[row])) &&
 			Boolean(state.careerKey) &&
 			(state.method === "roll" ? true : pointBuy.valid) &&
+			// The kit's pick-one slots resolve (owner rework 2026): an unchosen
+			// "or" group would otherwise grant a silent default.
+			(
+				(context.kit as { present?: boolean; complete?: boolean })?.complete !==
+				false
+			) &&
 			// Every origin whose mechanics offer the corruption-or-insanity
 			// track must have the track chosen (book rule); otherwise the
 			// rolled dice would be silently dropped.
@@ -1239,6 +1288,28 @@ export class CharacterCreator extends CreatorApplication {
 		this.render({ force: true });
 	}
 
+	/**
+	 * Starting Kit (owner rework 2026, step 5): record the pick-one slot's
+	 * chosen option; clicking the chosen option again clears it back to the
+	 * unset state (Create re-gates, no silent default).
+	 */
+	static async #onChooseKitSlot(
+		this: CharacterCreator,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const slot = Number(target.dataset.slot);
+		const option = Number(target.dataset.option);
+		if (!Number.isInteger(slot)) return;
+		if ({}.hasOwnProperty.call(this.creatorState.kitPicks, slot) && this.creatorState.kitPicks[slot] === option) {
+			// Toggle: clear the choice (Create re-gates).
+			delete this.creatorState.kitPicks[slot];
+		} else {
+			this.creatorState.kitPicks[slot] = option;
+		}
+		this.render({ force: true });
+	}
+
 	/** Build the new pc actor and apply the whole Stage 1-2 bundle. */
 	static async #onCreate(this: CharacterCreator): Promise<void> {
 		const state = this.creatorState;
@@ -1340,6 +1411,7 @@ export class CharacterCreator extends CreatorApplication {
 			} as never);
 			await this.#applyGrantsAndSummary(target, state, resolved);
 			await this.#applyAcquisition(target, state);
+			await this.#applyKit(target, state);
 			this.close();
 			target.sheet?.render({});
 			return;
@@ -1359,9 +1431,132 @@ export class CharacterCreator extends CreatorApplication {
 
 		await this.#applyGrantsAndSummary(actor, state, resolved);
 		await this.#applyAcquisition(actor, state);
+		await this.#applyKit(actor, state);
 
 		this.close();
 		actor.sheet?.render({});
+	}
+
+	/** Display name for a kit option chip (craftsmanship + quantity hints). */
+	#kitOptionName(opt: {
+		name?: string;
+		note?: boolean;
+		craftsmanship?: string;
+		quantity?: number;
+	}): string {
+		const name = String(opt.name ?? "");
+		const cs = opt.craftsmanship
+			? `${opt.craftsmanship[0]?.toUpperCase() ?? ""}${
+				opt.craftsmanship.slice(1)
+			}-Craftsmanship `
+			: "";
+		const qty = Number(opt.quantity ?? 1) > 1 ? ` ×${opt.quantity}` : "";
+		return `${cs}${name}${qty}`;
+	}
+
+	/**
+	 * Starting Kit grant (owner rework 2026, step 5): clone the chosen pack
+	 * items — options resolve by (source folder, exact name) against the
+	 * equipment pack; craftsmanship/quantity overrides bake into the clone;
+	 * weapon mods clone and attach via system.modifications (bead huaf);
+	 * note options grant description-only gear. Everything stamps
+	 * grantedBy creator provenance. A missing item is a UI warning, never a
+	 * silent drop.
+	 */
+	async #applyKit(actor: unknown, state: CreatorState): Promise<void> {
+		const kit = gearsetFor(state.careerKey);
+		if (!kit) return;
+		const target = actor as {
+			createEmbeddedDocuments: (
+				t: string,
+				data: object[],
+			) => Promise<unknown>;
+			items?: { get?: (id: string) => { update?: (d: object) => Promise<unknown> } };
+		};
+		const docs = (await getPackDocuments("rogue-trader.equipment")) as unknown as Array<{
+			name?: string;
+			type?: string;
+			flags?: Record<string, Record<string, unknown>>;
+			toObject: () => { system?: Record<string, unknown> };
+		}>;
+		const sourceFolderOf = (d: { flags?: Record<string, Record<string, unknown>> }): string =>
+			String(
+				(d.flags?.["rogue-trader"] as { source?: string } | undefined)?.source ?? "",
+			);
+		for (let i = 0; i < (kit.slots ?? []).length; i++) {
+			const options = kit.slots[i]?.options ?? [];
+			const opt =
+				options[state.kitPicks[i] ?? 0] ??
+				options[0];
+			if (!opt) continue; // empty slot — the pack test forbids, belt only
+			if (opt.note) {
+				await target.createEmbeddedDocuments("Item", [
+					{
+						name: opt.name ?? "Starting gear",
+						type: "gear",
+						system: {
+							description: opt.description ?? "",
+							grantedBy: GRANTED_BY_CREATOR,
+						},
+					},
+				] as never);
+				continue;
+			}
+			const doc = docs.find(
+				(d) =>
+					d.name === opt.name &&
+					(!opt.source || sourceFolderOf(d) === opt.source),
+			);
+			if (!doc) {
+				getPorts().notify.warn("CREATOR.KIT_MISSING", { name: opt.name ?? "" });
+				continue;
+			}
+			const data = doc.toObject() as { system?: Record<string, unknown> };
+			const created = (await target.createEmbeddedDocuments("Item", [
+				{
+					...doc.toObject(),
+					...(opt.rename ? { name: opt.rename } : {}),
+					system: {
+						...data.system,
+						...(opt.craftsmanship
+							? { craftsmanship: opt.craftsmanship }
+							: {}),
+						...(Number(opt.quantity ?? 1) > 1
+							? { quantity: opt.quantity }
+							: {}),
+						grantedBy: GRANTED_BY_CREATOR,
+					},
+				},
+			] as never)) as unknown as Array<{ id?: string }>;
+			const weaponId = created?.[0]?.id ?? "";
+			const modIds: string[] = [];
+			for (const modName of opt.mods ?? []) {
+				const modDoc = docs.find(
+					(d) => d.name === modName && d.type === "weapon-modification",
+				);
+				if (!modDoc) {
+					getPorts().notify.warn("CREATOR.KIT_MOD_MISSING", { name: modName });
+					continue;
+				}
+				const modData = modDoc.toObject() as { system?: Record<string, unknown> };
+				const modCreated = (await target.createEmbeddedDocuments("Item", [
+					{
+						...modDoc.toObject(),
+						system: {
+							...modData.system,
+							grantedBy: GRANTED_BY_CREATOR,
+						},
+					},
+				] as never)) as unknown as Array<{ id?: string }>;
+				if (modCreated?.[0]?.id) modIds.push(modCreated[0].id);
+			}
+			if (modIds.length > 0 && weaponId && target.items?.get) {
+				const weapon = target.items.get(weaponId);
+				if (weapon?.update) {
+					await weapon.update({ system: { modifications: modIds } });
+				}
+			}
+		}
 	}
 
 	/**

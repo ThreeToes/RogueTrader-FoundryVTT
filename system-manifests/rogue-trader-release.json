@@ -210,6 +210,11 @@
           "description"
         ]
       },
+      "gearset": {
+        "htmlFields": [
+          "description"
+        ]
+      },
       "career": {
         "htmlFields": [
           "description"

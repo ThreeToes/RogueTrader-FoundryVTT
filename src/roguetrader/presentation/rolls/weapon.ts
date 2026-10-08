@@ -27,7 +27,13 @@ export const weaponHandler: RollHandler<"weapon"> = {
 		// Bead 4obp: launchers derive their fire profile from the LOADED ordnance
 		// (missile ammunition or a throw-family grenade weapon); an unloaded
 		// launcher resolves an unusable profile the damage path refuses.
-		const profile = attackProfileOf(item as never, ownedItemResolver(actor));
+		// Bead huaf/ujtg: attached weapon modifications (the mono fold) ride the
+		// same owner resolver — one lookup, both shapes.
+		const profile = attackProfileOf(
+			item as never,
+			ownedItemResolver(actor),
+			ownedItemResolver(actor) as never,
+		);
 		if (!item || !profile) {
 			ports.notify.warn("ROLL.UNKNOWN_ITEM");
 			return null;

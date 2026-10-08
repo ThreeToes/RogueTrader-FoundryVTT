@@ -9,6 +9,8 @@
         <span class="step {{#if (eq step 3)}}active{{/if}}">{{localize "CREATOR.STEP_REVIEW"}}</span>
         <span class="step-sep">→</span>
         <span class="step {{#if (eq step 4)}}active{{/if}}">{{localize "CREATOR.STEP_EQUIPMENT"}}</span>
+        <span class="step-sep">→</span>
+        <span class="step {{#if (eq step 5)}}active{{/if}}">{{localize "CREATOR.STEP_KIT"}}</span>
     </nav>
 
     {{!-- Step 0: Species (bead ghmn). Every option is derived from the careers
@@ -275,13 +277,44 @@
     </section>
     {{/if}}
 
+    {{!-- Step 5: Starting Kit (owner rework 2026): the career's kit from the
+         gearsets pack — the book's "or" groups are pick-one slots, fixed
+         rows grant as-is at Create. Kit-less careers (or a missing pack)
+         render the skip note; the grant re-checks completeness. --}}
+    {{#if (eq step 5)}}
+    <section class="creator-section border">
+        <h1>{{localize "CREATOR.STEP_KIT"}}</h1>
+        {{#if kit.present}}
+        <p class="method-hint">{{kit.label}}</p>
+        <blockquote class="kit-quote"><p>{{kit.quote}}</p></blockquote>
+        {{#each kit.slots as |slot|}}
+        <div class="acq-group">
+            <p class="method-hint">{{slot.quote}}</p>
+            <div class="origin-options">
+                {{#each slot.options as |option|}}
+                {{#unless (eq slot.count 1)}}
+                <a class="origin-chip kit-chip {{#if option.selected}}selected{{/if}}"
+                    data-action="chooseKitSlot" data-slot="{{slot.index}}" data-option="{{option.index}}">{{option.name}}</a>
+                {{else}}
+                <span class="origin-chip kit-fixed selected">{{option.name}}</span>
+                {{/unless}}
+                {{/each}}
+            </div>
+        </div>
+        {{/each}}
+        {{else}}
+        <p class="method-hint">{{localize "CREATOR.KIT_MISSING_PACK"}}</p>
+        {{/if}}
+    </section>
+    {{/if}}
+
     <footer class="creator-nav">
         {{> "rt/creator-nav"
             backLabel=(localize "CREATOR.BACK")
             backHidden=(eq step 0)
-            forwardAction=(ifThen (eq step 4) "finish" "next")
-            forwardLabel=(ifThen (eq step 4) (localize "CREATOR.CREATE") (localize "CREATOR.NEXT"))
-            forwardPrimary=(eq step 4)
+            forwardAction=(ifThen (eq step 5) "finish" "next")
+            forwardLabel=(ifThen (eq step 5) (localize "CREATOR.CREATE") (localize "CREATOR.NEXT"))
+            forwardPrimary=(eq step 5)
             forwardDisabled=(ifThen canNext false true)
         }}
     </footer>

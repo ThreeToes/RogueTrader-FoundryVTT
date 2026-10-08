@@ -502,8 +502,13 @@ export class Character extends foundry.abstract.TypeDataModel<
 	}
 
 	/**
-	 * Derived initiative bonus: the Agility Bonus (talent modifiers join via
-	 * the funnel).
+	 * Derived initiative bonus: the Agility Bonus plus live `initiative`-keyed
+	 * modifier rows (bead yxm5, owner: talents/items modify initiative — both
+	 * the tracker's formula roll and the funnel card count the SAME rows).
+	 *
+	 * Explicit `testKey === "initiative"` rows ONLY: wildcard rows stay
+	 * dialog-path modifiers (they cannot join a bulk formula roll), so the
+	 * funnel-driven button path and this getter never double-count.
 	 *
 	 * A GETTER, not a method (bead jpt3): core's tracker path interpolates the
 	 * formula "1d10 + @initiativeBonus" against actor.getRollData() === this
@@ -511,11 +516,34 @@ export class Character extends foundry.abstract.TypeDataModel<
 	 * foundry.utils.getProperty(data, "initiativeBonus")
 	 * (Roll.replaceFormulaData, foundry.mjs:34727) — and getProperty does a
 	 * prototype-chain `key in object` + `object[key]` read (foundry.mjs:2389),
-	 * so a prototype getter IS visible to the roll interpolation. Effective
-	 * Agility (gear/mutation deltas) flows in via characteristicBonus, so the
-	 * tracker path and the explicit sheet-roll path stay identical.
+	 * so a prototype getter IS visible to the roll interpolation.
+	 * Effective Agility (gear/mutation deltas) flows in via
+	 * characteristicBonus, so the tracker path and the explicit sheet-roll path
+	 * stay identical.
 	 */
 	get initiativeBonus(): number {
-		return this.agilityBonus();
+		const items = (
+			this.parent as unknown as {
+				items?: Iterable<{
+					type?: string;
+					system?: {
+						equipState?: string;
+						effects?: Array<{ kind?: string; testKey?: string; value?: number }>;
+					};
+				}>;
+			} | null
+		)?.items;
+		if (!items) return this.agilityBonus();
+		let delta = 0;
+		for (const item of items) {
+			if (!effectsAreLive(item.type ?? "", item.system?.equipState)) continue;
+			for (const effect of item.system?.effects ?? []) {
+				if (effect.kind !== "test-modifier") continue;
+				if (effect.testKey !== "initiative") continue;
+				const value = Number(effect.value ?? 0);
+				if (Number.isFinite(value) && value !== 0) delta += value;
+			}
+		}
+		return this.agilityBonus() + delta;
 	}
 }

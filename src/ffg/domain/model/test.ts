@@ -15,4 +15,8 @@ export type TestKind =
 	// Fear Test (bead jpbm, Core Rulebook p295): a Willpower test whose
 	// severity penalty is a funnel-visible modifier; context flag "fear" lets
 	// authored guarded effects apply here only.
-	| "fear";
+	| "fear"
+	// Initiative (bead yxm5, owner: modifiable by talents/items with a visible
+	// breakdown): a raw d10 + bonuses, no pass/fail. Contributors key their
+	// modifiers exactly "initiative"; wildcard rows stay dialog-path only.
+	| "initiative";

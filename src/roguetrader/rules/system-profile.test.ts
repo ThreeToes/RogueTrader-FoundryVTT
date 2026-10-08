@@ -41,7 +41,8 @@ describe("system-profile data", () => {
 		expect(rtCore.characteristicBase).toBe(25);
 		expect(rtCore.pointBuyBudget).toBe(100);
 		expect(rtCore.pointBuyMax).toBe(20);
-		expect(rtCore.creatorLastStep).toBe(4);
+		// Step 5 (owner rework 2026): the Starting Kit step is the last one.
+		expect(rtCore.creatorLastStep).toBe(5);
 		expect(rtCore.preSpentBaseline).toBe(4500);
 		expect(rtCore.fireModeBonus).toEqual({ burst: 10, full: 20 });
 		expect(rtCore.pushCap).toEqual({ sanctioned: 3, other: 4 });

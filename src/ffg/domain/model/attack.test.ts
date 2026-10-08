@@ -504,3 +504,74 @@ describe("two-kind ordnance loads into both launcher kinds (bead mnrm)", () => {
 		expect(profile?.fired ?? null).toBe(null);
 	});
 });
+
+describe("weapon-mod fold (bead huaf/ujtg)", () => {
+	// Mono (Weapon Upgrade), Core Rulebook p133: "no longer count as Primitive
+	// and add a +2 bonus to their Penetration" — the two printed deltas,
+	// mechanical through the profile fold from the attached mod's effect rows.
+	const mono = {
+		id: "mm1",
+		name: "Mono (Weapon Upgrade)",
+		type: "weapon-modification",
+		system: {
+			effects: [{ kind: "pen-flat", value: 2 }, { kind: "primitive-clear" }],
+		},
+	};
+	// A primitive sword: 0 Pen, primitive in BOTH forms (boolean field +
+	// special quality) — the fold must clear the quality list too.
+	const sword = {
+		id: "w9",
+		name: "Sword",
+		type: "melee-weapon",
+		system: {
+			damage: "1d10",
+			damageType: "Rending",
+			penetration: 0,
+			primitive: true,
+			special: ["primitive"],
+			modifications: ["mm1"],
+		},
+	};
+
+	test("Mono adds +2 Pen and cancels Primitive (both forms)", () => {
+		const profile = attackProfileOf(sword, undefined, (id) =>
+			id === "mm1" ? mono : null,
+		);
+		expect(profile?.penetration).toBe(2);
+		expect(profile?.primitive).toBe(false);
+		expect(profile?.qualities).not.toContain("primitive");
+		expect(profile?.qualities).toEqual([]);
+	});
+
+	test("a stock weapon is untouched (no ids, no resolver)", () => {
+		const stock = { ...sword, system: { ...sword.system, modifications: [] } };
+		expect(attackProfileOf(stock)?.penetration).toBe(0);
+		expect(attackProfileOf(stock)?.primitive).toBe(true);
+	});
+
+	test("a dangling (deleted) mod id is ignored, not a crash", () => {
+		const profile = attackProfileOf(sword, undefined, () => null);
+		expect(profile?.penetration).toBe(0);
+		expect(profile?.primitive).toBe(true);
+	});
+
+	test("unmodelled mod kinds stay display-only (no profile change)", () => {
+		const predictor = {
+			id: "mm2",
+			name: "Motion Predictor (Weapon Upgrade)",
+			type: "weapon-modification",
+			system: { effects: [{ kind: "test-modifier", value: 10 }] },
+		};
+		const gun = {
+			...ranged,
+			system: { ...ranged.system, modifications: ["mm2"] },
+		};
+		const profile = attackProfileOf(gun, undefined, (id) =>
+			id === "mm2" ? predictor : null,
+		);
+		expect(profile?.penetration).toBe(0);
+		// The actor-level effect engine collects live test rows; a mod row of
+		// a TEST kind must not silently add via the profile fold.
+		expect(attackProfileOf(gun)?.penetration).toBe(0);
+	});
+});

@@ -69,30 +69,13 @@ export function fatigueThreshold(character: CharacterSystemLike): number {
  *   (set by bootstrap/combat-tracker.ts at init; without it core's fallback
  *   `CONFIG.Combat.initiative.formula || game.system.initiative` resolves to
  *   "undefined" and Roll.create throws an unresolved-StringTerm error,
- *   foundry.mjs:59885 + 59939-59941 + 200897);
- * • the sheet button passes an explicit formula via initiativeFormula(bonus),
- *   whose output MUST stay arithmetically identical to resolving the
- *   placeholder — hence interpolation is a .replace on THIS constant, not a
- *   second string, so the two routes cannot silently diverge.
+ *   foundry.mjs:59885 + 59939-59941 + 200897).
+ * • @initiativeBonus resolves through the model's initiativeBonus getter,
+ *   which folds live "initiative"-keyed owned-item modifiers (bead yxm5), so
+ *   the tracker's bulk roll counts talent/item contributions; the sheet
+ *   button shows the SAME rows through the funnel dialog.
  */
 export const INITIATIVE_FORMULA = "1d10 + @initiativeBonus";
-
-/**
- * The explicit-formula variant of {@link INITIATIVE_FORMULA} (epic wjpi, bead
- * dt8t): the derived initiative bonus (the Agility Bonus, plus origin/talent
- * modifiers already folded into the model's initiativeBonus) substituted in as
- * a literal, for the sheet-button path (rules/adapter.ts rollInitiativeAction)
- * which passes a fully-resolved formula to Actor#rollInitiative.
- */
-export function initiativeFormula(bonus: number): string {
-	// Belt (bead nt34 F4): a non-finite model value would interpolate into
-	// "1d10 + NaN", which core's Roll.create throws on — fall back to plain
-	// 1d10 instead so a NaN bonus degrades to an unmodified roll.
-	return INITIATIVE_FORMULA.replace(
-		"@initiativeBonus",
-		String(Number.isFinite(bonus) ? bonus : 0),
-	);
-}
 
 /**
  * Corruption/Insanity thresholds per the book: NOT modelled - the raw fields

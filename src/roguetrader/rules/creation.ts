@@ -81,7 +81,8 @@ export function creatorCanAdvance(
 /**
  * The creator's final step index (bead ghmn added a Species step at 0, so the
  * wizard is now 0 species, 1 characteristics, 2 origin, 3 career/review,
- * 4 equipment). Keep the creator's step bounds and this constant in sync.
+ * 4 equipment, 5 the Starting Kit step (owner rework 2026). Keep the
+ * creator's step bounds and this constant in sync.
  * Profile data (bead yszf) — see src/ffg/domain/system-profile.ts.
  */
 export const CREATOR_LAST_STEP: number = rtCore.creatorLastStep;

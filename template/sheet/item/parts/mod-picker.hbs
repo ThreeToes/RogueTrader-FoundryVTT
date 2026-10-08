@@ -1,0 +1,29 @@
+<div class="ordnance-picker">
+    <div class="catalog">
+        <h2>{{localize "WEAPON.MODS"}}</h2>
+        {{#each mods as |m|}}
+        <div class="catalog-row">
+            <span class="name" data-tooltip="{{m.upgrades}}">{{m.name}}</span>
+            {{#if m.attached}}
+            <a class="add-row" data-action="detach" data-item-id="{{m.id}}"
+                data-tooltip="{{localize "WEAPON.MODS_DELETE"}}"><i class="fas fa-link-slash"></i></a>
+            {{else}}
+            <a class="add-row" data-action="pickOwned" data-item-id="{{m.id}}"
+                data-tooltip="{{localize "WEAPON.MODS_ADD"}}"><i class="fas fa-plus"></i></a>
+            {{/if}}
+        </div>
+        {{else}}
+        <p class="hint">{{localize "WEAPON.MODS_NONE_OWNED"}}</p>
+        {{/each}}
+        <h2>{{localize "WEAPON.MOD_CATALOGUE"}}</h2>
+        {{#each packMods as |m|}}
+        <div class="catalog-row">
+            <span class="name" data-tooltip="{{m.upgrades}}">{{m.name}}</span>
+            <a class="add-row" data-action="pickPack" data-uuid="{{m.uuid}}"
+                data-tooltip="{{localize "WEAPON.MODS_ADD"}}"><i class="fas fa-plus"></i></a>
+        </div>
+        {{else}}
+        <p class="hint">{{localize "WEAPON.MODS_NONE_PACK"}}</p>
+        {{/each}}
+    </div>
+</div>

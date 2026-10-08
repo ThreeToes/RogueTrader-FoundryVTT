@@ -14,6 +14,8 @@ import { effectActions, effectEditorChoices } from "./effect-actions";
 import { itemDescriptionHTML } from "../rich-text";
 import { itemSheetOptions } from "../sheet-options";
 import { loadOrdnance, OrdnancePicker } from "./ordnance-picker";
+import { ModPicker } from "./mod-picker";
+import { attachedModIds, installMod, removeMod } from "./weapon-mods";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -27,6 +29,8 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			...effectActions,
 			loadOrdnance: WeaponSheet.#openOrdnancePicker,
 			unloadOrdnance: WeaponSheet.#unloadOrdnance,
+			openModPicker: WeaponSheet.#openModPicker,
+			removeMod: WeaponSheet.#removeMod,
 		},
 	});
 
@@ -117,6 +121,31 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			};
 		}
 
+		// Attached weapon modifications (bead huaf): resolve the owned doc for
+		// each id so the sheet names them; dangling ids (deleted items) are
+		// not rendered — the next install/remove compacts the stored list.
+		const modHost = this.document as {
+			system?: { modifications?: string[] };
+		};
+		const modOwner = (
+			this.document as { actor?: foundry.documents.Actor | null }
+		).actor;
+		const mods = attachedModIds(modHost, (id) =>
+			Boolean(modOwner?.items.get(id)),
+		).map((id) => {
+			const mod = modOwner?.items.get(id) as
+				| foundry.documents.Item
+				| undefined;
+			return {
+				id,
+				name: mod?.name ?? "",
+				upgrades: String(
+					(mod?.system as { upgrades?: string } | undefined)?.upgrades ?? "",
+				),
+			};
+		});
+		context.mods = mods;
+
 		// Effect editor choices (bead bpd): localized kind labels + test keys.
 		Object.assign(
 			context,
@@ -150,6 +179,25 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			| foundry.documents.Item
 			| null;
 		if (!source) return undefined;
+		// Attached weapon modifications (bead huaf): a weapon-modification item
+		// INSTALLS regardless of launcher ordnance rules. Already-owned items
+		// link directly; a compendium/foreign item is cloned onto the actor
+		// first (matching the load-ordnance drop semantics).
+		if ((source.type as string) === "weapon-modification") {
+			const owned =
+				actor.items.find(
+					(i) => i.uuid === source.uuid || i.id === source.id,
+					) ??
+				(await cloneItemFromDrop(actor, event));
+			if (!owned) return undefined;
+			await installMod(
+				this.document as { system?: { modifications?: string[] }; update?: (d: object) => Promise<void> },
+				owned.id ?? "",
+				(id) => Boolean(actor.items.get(id)),
+			);
+			this.render({ force: true });
+			return owned;
+		}
 		if (!acceptsOrdnance(this.document as never, source as never)) {
 			getPorts().notify.warn("RANGED_WEAPON.LOAD_REJECTED", {
 				item: source.name ?? "",
@@ -190,5 +238,39 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		document: { update: (data: object) => Promise<void> };
 	}): Promise<void> {
 		await this.document.update({ system: { loadedAmmoId: "" } });
+	}
+
+	/** Mod install button: open the picker (owned rows + pack catalogue). */
+	static async #openModPicker(
+		this: { document: foundry.documents.Item },
+	): Promise<void> {
+		const actor = (this.document as { actor?: foundry.documents.Actor | null })
+			.actor;
+		if (!actor) {
+			getPorts().notify.warn("WEAPON.MODS_NO_ACTOR");
+			return;
+		}
+		new ModPicker({
+			actor,
+			weapon: this.document as never,
+		}).render({ force: true });
+	}
+
+	/** Remove one attached modification (the mod item stays owned). */
+	static async #removeMod(
+		this: { document: foundry.documents.Item },
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId = target.dataset.modId ?? "";
+		if (!itemId) return;
+		const actor = (this.document as { actor?: foundry.documents.Actor | null })
+			.actor;
+		await removeMod(
+			this.document as { system?: { modifications?: string[] }; update?: (d: object) => Promise<void> },
+			itemId,
+			(id) => Boolean(actor?.items.get(id)),
+		);
+		this.render({ force: true });
 	}
 }

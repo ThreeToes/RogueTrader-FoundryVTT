@@ -30,6 +30,11 @@ import {
 } from "../rules/origins";
 import type { OriginTraitDef } from "../rules/origin-traits";
 import {
+	setGearsetEntries,
+	type GearsetEntry,
+	type GearsetSlot,
+} from "../rules/gearsets";
+import {
 	setWarrantEntries,
 	warrantEntryFromDoc,
 	type WarrantEntry,
@@ -318,11 +323,42 @@ function migrateLegacyTypes(): void {
 	});
 }
 
+/**
+ * Starting kits (owner rework 2026): the per-career kit rows live in the
+ * `gearsets` source of the character-options concept pack; warm the pure
+ * module's pool at ready so the creator's kit step resolves synchronously.
+ */
+function warmGearsets(): void {
+	warmPool({
+		load: () => getCharacterOptionDocs("gearset"),
+		// The concept pack also holds skills/talents/...; keep the gearsets.
+		keep: (doc: foundry.documents.Item) => doc.type === "gearset",
+		map: (doc: foundry.documents.Item): GearsetEntry => {
+			const s = packSystem(doc) as unknown as {
+				key?: unknown;
+				label?: unknown;
+				quote?: unknown;
+				source?: { book?: string; page?: number };
+				slots?: GearsetSlot[];
+			};
+			return {
+				key: str(s, "key"),
+				label: String(s.label ?? ""),
+				quote: String(s.quote ?? ""),
+				source: s.source ?? {},
+				slots: Array.isArray(s.slots) ? s.slots : [],
+			};
+		},
+		set: (entries) => setGearsetEntries(entries),
+	});
+}
+
 /** Register every ready-time warmer and the legacy-type migration. */
 export function registerContentWarmers(): void {
 	warmOriginTraits();
 	warmOrigins();
 	warmHeirlooms();
+	warmGearsets();
 	warmWarrant();
 	warmMadness();
 	warmSkillCatalog();

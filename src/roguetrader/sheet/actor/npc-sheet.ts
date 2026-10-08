@@ -39,6 +39,8 @@ const { ActorSheetV2 } = foundry.applications.sheets;
  * CharacterSheet; this sheet is registered for the npc type only.
  */
 
+import { imageActions } from "../image-actions";
+
 export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "npc"],
@@ -46,6 +48,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
+			editImage: imageActions.editImage,
 			openItem: openItemAction,
 			rollNpcTest: NpcSheet.#onRollTest,
 			rollNpcSkill: NpcSheet.#onRollSkill,

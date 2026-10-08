@@ -12,6 +12,8 @@ import {
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
+import { imageActions } from "../image-actions";
+
 export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "vehicle"],
@@ -19,6 +21,7 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
+			editImage: imageActions.editImage,
 			removeCrew: VehicleSheet.#onRemoveCrew,
 			removeMounted: VehicleSheet.#onRemoveMounted,
 		},

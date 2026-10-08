@@ -10,6 +10,7 @@ import { sheetContext } from "../context";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
+import { imageActions } from "../image-actions";
 import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
 import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
@@ -111,6 +112,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
+			editImage: imageActions.editImage,
 			rollTest: CharacterSheet.#onRollTest,
 			rollSkill: CharacterSheet.#onRollSkill,
 			rollUntrained: CharacterSheet.#onRollUntrained,

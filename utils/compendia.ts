@@ -1128,6 +1128,81 @@ export function toSourceDocument(entry: Record<string, unknown>, folder: string)
 }
 
 /**
+ * Build-time inheritance: an authored `inherit: {source, name}` clause clones
+ * a sibling source entry of the SAME physical pack so one entry can ship as a
+ * real, typed item with its full system data while the stats stay governed by
+ * that source (Table 1-2 heirlooms: the Heirlooms folder inherits weapons/
+ * armour rows so they are playable and draggable, not grant templates).
+ *
+ * Merge order: the inheriting entry's system/flags override the base's (so
+ * `system.craftsmanship: best` and a source re-cite work), its name/_id win,
+ * and its type — when it declares a real one — wins; otherwise the base's
+ * declared type, resolved through the BASE source's folder rules (weapons ->
+ * melee/ranged from system.class). Loud failure: an unresolvable target or a
+ * half-written clause throws and the pack build aborts — never invent a
+ * dataless clone.
+ */
+export interface InheritedEntry {
+	/** The merged entry (base + overrides). */
+	entry: Record<string, unknown>;
+	/** Source key whose folder rules resolve the merged type/folder. */
+	folder: string;
+}
+
+export function resolveInheritance(
+	entry: Record<string, unknown>,
+	fileEntries: Map<string, Array<Record<string, unknown>>>,
+): InheritedEntry | null {
+	const clause = entry.inherit as Record<string, unknown> | undefined;
+	if (!clause || typeof clause !== "object") return null;
+	const source = typeof clause.source === "string" ? clause.source : "";
+	const name = typeof clause.name === "string" ? clause.name : "";
+	if (!source || !name) {
+		throw new Error(
+			`[packs] ${String(entry.name ?? "unnamed")}: inherit clause needs source and name ` +
+				`(got "${source}" / "${name}")`,
+		);
+	}
+	const file = [...fileEntries.keys()].find(
+		(f) => sourceKey(f.replace(/\.yaml$/, "")) === source,
+	);
+	if (!file) {
+		throw new Error(
+			`[packs] ${String(entry.name ?? "unnamed")}: inherit source "${source}" is not ` +
+				`a source file of this pack`,
+		);
+	}
+	const base = (fileEntries.get(file) ?? []).find(
+		(e) => String(e.name ?? "") === name,
+	);
+	if (!base) {
+		throw new Error(
+			`[packs] ${String(entry.name ?? "unnamed")}: inherit target "${name}" not found ` +
+				`in source "${source}"`,
+		);
+	}
+	const declaredReal = (e: Record<string, unknown>): string =>
+		typeof e.type === "string" && e.type !== "Item" ? e.type : "";
+	const merged: Record<string, unknown> = {
+		...base,
+		...(entry.name ? { name: entry.name } : {}),
+		// Explicit _id wins: deterministic ids from the name would collide when
+		// the base source ships an identical-name entry (bead n7hu idiom).
+		...(entry._id ? { _id: entry._id } : {}),
+		system: {
+			...((base.system ?? {}) as object),
+			...((entry.system ?? {}) as object),
+		},
+		flags: {
+			...((base.flags ?? {}) as object),
+			...((entry.flags ?? {}) as object),
+		},
+	};
+	merged.type = declaredReal(entry) || declaredReal(base) || resolveEntryType(base, source);
+	return { entry: merged, folder: source };
+}
+
+/**
  * Source-attribution audit (bead zzlq): every Item entry should carry
  * system.source {book, page}. Missing = warn per pack (not a hard failure:
  * pre-zzlq authoring may lag), so extraction beads see the debt loudly.
@@ -1947,9 +2022,17 @@ async function buildPack(
 				count++;
 				continue;
 			}
+			// Build-time inheritance (see resolveInheritance): heirloom rows
+			// clone a sibling source entry so they ship as real typed items.
+			const inherited = isTablePack
+				? null
+				: resolveInheritance(entry, fileEntries);
 			const doc: Record<string, unknown> = isTablePack
 				? toTableSourceDocument(entry)
-				: toSourceDocument(entry, sourceOf(entry));
+				: toSourceDocument(
+						inherited?.entry ?? entry,
+						inherited?.folder ?? sourceOf(entry),
+					);
 			if (folderStamps.size > 0) {
 				// Stamp the compendium folder (bead nsqt): root documents carry
 				// folder: null, grouped ones their folder's _id.

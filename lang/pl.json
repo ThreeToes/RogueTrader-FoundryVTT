@@ -1094,6 +1094,7 @@
   "CREATOR.HEIRLOOM_ROLL": "Rzuć 1d100",
   "CREATOR.HEIRLOOM_ROLLED": "Wyrzucono dziedziczony",
   "CREATOR.HEIRLOOM_NOT_ROLLED": "Jeszcze nie rzucono.",
+  "CREATOR.HEIRLOOM_MISSING": "Nie udało się przyznać wylosowanego przedmiotu dziedziczonego '{name}' — brak jego wpisu w kompendium. Przeciągnij go z folderu kompendium Heirlooms.",
   "CREATOR.ACQ_GROUP_WEAPONS": "Bronie",
   "CREATOR.ACQ_GROUP_ARMOUR": "Pancerze",
   "CREATOR.ACQ_GROUP_GEAR": "Wyposażenie",

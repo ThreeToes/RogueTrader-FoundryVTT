@@ -1094,6 +1094,7 @@
   "CREATOR.HEIRLOOM_ROLL": "Lancer 1d100",
   "CREATOR.HEIRLOOM_ROLLED": "Objet hérité tiré",
   "CREATOR.HEIRLOOM_NOT_ROLLED": "Pas encore tiré.",
+  "CREATOR.HEIRLOOM_MISSING": "Impossible d'accorder l'objet hérité '{name}' — son entrée de compendium est absente. Glissez-le depuis le dossier de compendium Heirlooms.",
   "CREATOR.ACQ_GROUP_WEAPONS": "Armes",
   "CREATOR.ACQ_GROUP_ARMOUR": "Armures",
   "CREATOR.ACQ_GROUP_GEAR": "Équipement",

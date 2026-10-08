@@ -8,13 +8,18 @@
  * Every item sheet wants the same window + form behaviour; only the class
  * slug, size and action handlers differ.
  */
+
+import { imageActions } from "./image-actions";
+
+const editImageAction = imageActions.editImage;
+
 export function itemSheetOptions(config: {
 	/** Extra class after "rogue-trader sheet". */
 	slug: string;
 	width: number;
 	/** Fixed pixel height, or "auto". */
 	height: number | "auto";
-	/** The sheet's own action handlers (omit for none). */
+	/** The sheet's own action handlers, merged after the shared image edit. */
 	actions?: Record<string, unknown>;
 }): object {
 	return {
@@ -22,6 +27,9 @@ export function itemSheetOptions(config: {
 		position: { width: config.width, height: config.height },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
-		...(config.actions ? { actions: config.actions } : {}),
+		// The shared header portraits persist via imageActions.editImage (core
+		// only applies the pick with updateSource — never saved). Subclass
+		// handlers merge AFTER so an override stays possible.
+		actions: { editImage: editImageAction, ...config.actions },
 	};
 }

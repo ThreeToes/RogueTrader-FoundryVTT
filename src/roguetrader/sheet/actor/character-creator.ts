@@ -1,6 +1,5 @@
 import type { CharacteristicKey } from "../../data/actor/character";
 import {
-	getHeirloomEntries,
 	heirloomForRoll,
 } from "../../rules/heirlooms";
 import {
@@ -1389,17 +1388,28 @@ export class CharacterCreator extends CreatorApplication {
 				},
 			] as never);
 		}
-		// Stage 3.5 heirloom (bead rboc): grant the rolled Table 1-2 entry as a
-		// live item (pack-item clone with craftsmanship override, or a
-		// note-item for the conditional-interaction rows), creator provenance.
+		// Stage 3.5 heirloom (bead rboc; owner rework): the rolled Table 1-2 entry
+		// IS a real typed compendium item (the Heirlooms folder inherits normal
+		// gear at build time, craftsmanship baked in) — clone it by name, flag-
+		// markered, and stamp creator provenance. Same path as dragging from the
+		// compendium, so a missed grant can be repaired by hand.
 		if (state.heirloom) {
-			const entry = getHeirloomEntries().find(
-				(e) => e.name === state.heirloom?.name,
+			const docs = (await getPackDocuments("rogue-trader.equipment")) as Array<{
+				name?: string;
+				flags?: Record<string, Record<string, unknown>>;
+				toObject: () => object;
+			}>;
+			const doc = docs.find(
+				(d) =>
+					d.name === state.heirloom?.name &&
+					typeof (d.flags?.["rogue-trader"] as { item?: unknown })?.item ===
+						"string",
 			);
-			if (!entry) {
-				console.error(
-					`rogue-trader | unknown heirloom "${state.heirloom.name}"`,
-				);
+			if (!doc) {
+				// Loud: the roll happened — a missed clone must not vanish silently.
+				getPorts().notify.warn("CREATOR.HEIRLOOM_MISSING", {
+					name: state.heirloom.name,
+				});
 				return;
 			}
 			const target = actor as {
@@ -1408,59 +1418,18 @@ export class CharacterCreator extends CreatorApplication {
 					data: object[],
 				) => Promise<unknown>;
 			};
-			const grants: object[] = [];
-			if (entry.grant.kind === "pack-item") {
-				const packId = entry.grant.pack;
-				if (!packId) {
-					console.error(
-						`rogue-trader | heirloom "${entry.name}" has a pack-item grant with no pack`,
-					);
-					return;
-				}
-				const docs = (await getPackDocuments(packId)) as unknown as Array<{
-					name?: string;
-					type?: string;
-					toObject: () => object;
-				}>;
-				const doc = docs.find(
-					// The pack also holds a same-named heirloom template (bead n7hu);
-					// clone the real gear item, never the template.
-					(d) => d.name === entry.grant.item && d.type !== "heirloom",
-				);
-				if (!doc) {
-					console.error(
-						`rogue-trader | heirloom pack item "${entry.grant.item}" not found in ${packId}`,
-					);
-					return;
-				}
-				const data = doc.toObject() as {
-					name?: string;
-					system?: Record<string, unknown>;
-				};
-				grants.push({
-					...data,
-					...(entry.grant.rename ? { name: entry.grant.rename } : {}),
+			const data = doc.toObject() as {
+				system?: Record<string, unknown>;
+			};
+			await target.createEmbeddedDocuments("Item", [
+				{
+					...doc.toObject(),
 					system: {
 						...data.system,
-						...(entry.grant.craftsmanship
-							? { craftsmanship: entry.grant.craftsmanship }
-							: {}),
 						grantedBy: GRANTED_BY_CREATOR,
 					},
-				});
-			} else {
-				grants.push({
-					name: entry.name,
-					type: "special-ability",
-					system: {
-						description: entry.grant.noteText ?? "",
-						grantedBy: GRANTED_BY_CREATOR,
-					},
-				});
-			}
-			if (grants.length > 0) {
-				await target.createEmbeddedDocuments("Item", grants as never);
-			}
+				},
+			] as never);
 		}
 	}
 

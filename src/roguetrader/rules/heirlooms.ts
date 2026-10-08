@@ -2,37 +2,29 @@
  * Table 1-2: Heirloom Items (Core Rulebook p31; epic 1gb7 follow-up; split out
  * of origins.ts by bead 8hkq).
  *
- * The per-heirloom content (key, 1d100 range, grant payload) lives in the
- * private `heirlooms` compendium pack; the verbatim prose stays in the
- * `creationtables` RollTable "Table 1-2: Heirloom Items", whose result flags
- * carry the matching `key`. This module keeps the shared types, the runtime
- * pool (warmed from the pack at ready), and the 1d100 lookup.
+ * The per-heirloom content (key, 1d100 range) lives in the
+ * `heirlooms` source of the equipment concept pack (in item FLAGS — real
+ * typed items have no schema fields for it, owner rework 2026); the verbatim
+ * prose stays in the `creationtables` RollTable "Table 1-2: Heirloom Items",
+ * whose result flags carry the matching `key`. This module keeps the shared
+ * types, the runtime pool (warmed from the pack at ready), and the 1d100
+ * lookup.
  *
  * WHY IT IS ITS OWN MODULE: the heirloom table is a Table 1-2 grant lookup and
  * has nothing to do with the Origin Path chart, but it used to live inside
  * origins.ts because both were warmed from packs at ready. Origins now holds
  * only chart machinery (see domain/model/chart.ts).
  *
+ * GRANTING: the entries ARE the compendium items — the creator (and any GM)
+ * clones the doc by name from the equipment pack, which stamps provenance via
+ * `grantedBy`. There is no separate grant payload any more (owner rework:
+ * "make them inherit from normal items and set their details properly in the
+ * compendium").
+ *
  * Curation (owner-verify, carried from bead rboc): the book grants a generic
  * Best-Craftsmanship chainsword / carapace set; the packs model them as the
  * Hecate chainsword and Storm Trooper Carapace full set, cloned + renamed.
  */
-
-export type HeirloomGrantKind = "pack-item" | "note-item";
-
-export interface HeirloomGrant {
-	kind: HeirloomGrantKind;
-	/** pack-item: compendium pack id to clone from. */
-	pack?: string;
-	/** pack-item: source item name in that pack. */
-	item?: string;
-	/** pack-item: craftsmanship override (e.g. "best"). */
-	craftsmanship?: string;
-	/** pack-item: rename the clone (the book's own item name). */
-	rename?: string;
-	/** note-item: description for the granted special-ability item. */
-	noteText?: string;
-}
 
 export interface HeirloomEntry {
 	/** Stable slug; matches the source RollTable result's item flag. */
@@ -42,7 +34,6 @@ export interface HeirloomEntry {
 	range: [number, number];
 	/** Source RollTable ("rolltables/Table 1-2: Heirloom Items"). */
 	table?: string;
-	grant: HeirloomGrant;
 }
 
 /** Runtime heirloom pool (warmed from the `heirlooms` pack at ready). */

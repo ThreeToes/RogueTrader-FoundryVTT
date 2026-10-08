@@ -84,6 +84,8 @@ function v14DeletionOperator(): object {
 	return new cls();
 }
 
+import { imageActions } from "../image-actions";
+
 export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "dynasty"],
@@ -91,6 +93,7 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
+			editImage: imageActions.editImage,
 			rollStarting: DynastySheet.#onRollStarting,
 			clearWarrant: DynastySheet.#onClearWarrant,
 		},

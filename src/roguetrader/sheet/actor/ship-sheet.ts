@@ -49,6 +49,8 @@ const COMPONENT_CATEGORIES: Array<{ key: string; labelKey: string }> = [
  * SP delta), the two Complications (rolled from the ships pack with
  * 1d10), Ship Points and Space trackers, and notes. Fully resizable.
  */
+import { imageActions } from "../image-actions";
+
 export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "starship"],
@@ -56,6 +58,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
+			editImage: imageActions.editImage,
 			rollOddity: ShipSheet.#onRollOddity,
 			rollHistory: ShipSheet.#onRollHistory,
 			removeComponent: ShipSheet.#onRemoveComponent,

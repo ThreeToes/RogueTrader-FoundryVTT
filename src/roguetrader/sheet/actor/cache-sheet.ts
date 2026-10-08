@@ -51,6 +51,8 @@ interface OwnedItem {
  * a Test could read. Independently, the roll pipeline refuses an actor the
  * current user does not own (bead qiuo), which a cache normally is.
  */
+import { imageActions } from "../image-actions";
+
 export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "cache"],
@@ -58,6 +60,7 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
+			editImage: imageActions.editImage,
 			takeItem: CacheSheet.#onTakeItem,
 			takeAll: CacheSheet.#onTakeAll,
 			deleteItem: CacheSheet.#onDeleteItem,

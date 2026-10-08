@@ -1094,6 +1094,7 @@
   "CREATOR.HEIRLOOM_ROLL": "Roll 1d100",
   "CREATOR.HEIRLOOM_ROLLED": "Heirloom rolled",
   "CREATOR.HEIRLOOM_NOT_ROLLED": "Not rolled yet.",
+  "CREATOR.HEIRLOOM_MISSING": "Could not grant the rolled heirloom '{name}' — its compendium entry is missing. Drag it from the Heirlooms compendium folder instead.",
   "CREATOR.ACQ_GROUP_WEAPONS": "Weapons",
   "CREATOR.ACQ_GROUP_ARMOUR": "Armour",
   "CREATOR.ACQ_GROUP_GEAR": "Gear",

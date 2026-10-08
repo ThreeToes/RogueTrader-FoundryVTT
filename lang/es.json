@@ -1094,6 +1094,7 @@
   "CREATOR.HEIRLOOM_ROLL": "Tirar 1d100",
   "CREATOR.HEIRLOOM_ROLLED": "Heredado obtenido",
   "CREATOR.HEIRLOOM_NOT_ROLLED": "Aún sin tirar.",
+  "CREATOR.HEIRLOOM_MISSING": "No se pudo otorgar el objeto heredado '{name}' — falta su entrada en el compendio. Arrástralo desde la carpeta de compendio Heirlooms.",
   "CREATOR.ACQ_GROUP_WEAPONS": "Armas",
   "CREATOR.ACQ_GROUP_ARMOUR": "Armaduras",
   "CREATOR.ACQ_GROUP_GEAR": "Equipo",

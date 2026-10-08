@@ -45,6 +45,8 @@ interface AttachedTable {
  * compendium). Attached tables group by kind and render read-only; the
  * authoritative row texts live on the items. Fully resizable.
  */
+import { imageActions } from "../image-actions";
+
 export class PlanetSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "planet"],
@@ -52,6 +54,7 @@ export class PlanetSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
+			editImage: imageActions.editImage,
 			removeTable: PlanetSheet.#onRemoveTable,
 		},
 	};

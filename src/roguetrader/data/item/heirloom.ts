@@ -2,9 +2,15 @@ import { textField } from "../fields";
 import { Gear } from "./gear";
 
 /**
- * Heirloom items (epic 1gb7 follow-up, Core Rulebook Table 1-2 p31): one Item
- * per heirloom, carrying the GRANT payload the character creator applies when
- * the Pride motivation's "Heirloom Item" alternative is rolled. Moved out of
+ * LEGACY (owner rework 2026): Table 1-2 heirlooms are now real typed
+ * compendium items (the Heirlooms folder inherits normal equipment entries at
+ * build time and the creator clones them by name). The type stays registered
+ * so old worlds' existing type-"heirloom" docs keep loading; the pack no
+ * longer emits any.
+ *
+ * Historic (epic 1gb7 follow-up, Core Rulebook Table 1-2 p31): one Item
+ * per heirloom, carrying the GRANT payload the character creator applied when
+ * the Pride motivation's "Heirloom Item" alternative was rolled. Moved out of
  * rules/origins.ts so the verbatim table prose (which stays in the
  * `creationtables` RollTable "Table 1-2: Heirloom Items") and the grant
  * machinery live in data, not shipped code.

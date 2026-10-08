@@ -15,9 +15,7 @@ import {
 } from "../migrations";
 import {
 	firstStr,
-	nested,
 	num,
-	optionalStr,
 	packSystem,
 	str,
 } from "../data/pack-fields";
@@ -25,7 +23,6 @@ import type { SkillSourceLike } from "../rules/default-skills";
 import {
 	setHeirloomEntries,
 	type HeirloomEntry,
-	type HeirloomGrantKind,
 } from "../rules/heirlooms";
 import {
 	originEntryFromDoc,
@@ -125,36 +122,47 @@ function warmOrigins(): void {
 }
 
 /**
- * Heirloom grant templates (Table 1-2, epic 1gb7 follow-up): the per-heirloom
- * grant payloads live in the `equipment` pack (bead n7hu); warm the pure
- * module's pool at ready.
+ * Heirloom Items (Table 1-2, Core Rulebook p31): real typed compendium items
+ * in the `equipment` pack (bead n7hu + owner rework), whose Table 1-2 metadata
+ * rides in item FLAGS; warm the pure module's pool at ready.
  */
 function warmHeirlooms(): void {
 	warmPool({
 		load: () => getPackDocuments("rogue-trader.equipment"),
-		// The equipment pack also holds arms/gear; keep the heirloom types.
-		keep: (doc: foundry.documents.Item) => doc.type === "heirloom",
+		// The equipment pack also holds arms/gear; keep the Table 1-2 marker.
+		keep: (doc: foundry.documents.Item) => heirloomFlag(doc).item !== "",
 		map: (doc: foundry.documents.Item): HeirloomEntry => {
-			const s = packSystem(doc);
-			const range = nested(s, "range");
-			const grant = nested(s, "grant");
+			const flag = heirloomFlag(doc);
+			const range = (flag.range ?? {}) as { low?: number; high?: number };
 			return {
-				key: str(s, "key"),
+				key: flag.item,
 				name: doc.name ?? "",
 				range: [num(range, "low"), num(range, "high")],
-				table: optionalStr(s, "table"),
-				grant: {
-					kind: str(grant, "kind", "pack-item") as HeirloomGrantKind,
-					pack: optionalStr(grant, "pack"),
-					item: optionalStr(grant, "item"),
-					craftsmanship: optionalStr(grant, "craftsmanship"),
-					rename: optionalStr(grant, "rename"),
-					noteText: optionalStr(grant, "noteText"),
-				},
+				table: flag.table,
 			};
 		},
 		set: (entries) => setHeirloomEntries(entries),
 	});
+}
+
+/** The Table 1-2 flags block of a pack doc ("" key when absent). */
+function heirloomFlag(doc: foundry.documents.Item): {
+	item: string;
+	table?: string;
+	range?: unknown;
+} {
+	const flag = ((
+		doc.flags as Record<string, unknown> | undefined
+	)?.["rogue-trader"] ?? {}) as {
+		item?: unknown;
+		table?: unknown;
+		range?: unknown;
+	};
+	return {
+		item: typeof flag.item === "string" ? flag.item : "",
+		table: typeof flag.table === "string" ? flag.table : undefined,
+		range: flag.range,
+	};
 }
 
 /**

@@ -1,6 +1,7 @@
 import { WARRANT_ROW_LABEL_KEYS } from "../../rules/warrant";
-import { itemDescriptionHTML } from "../rich-text";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -17,7 +18,9 @@ const { ItemSheetV2 } = foundry.applications.sheets;
  * static values; the description keeps the standard editable-aware
  * prose-mirror branch so an imported copy can still be annotated.
  */
-export class WarrantOptionSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+export class WarrantOptionSheet extends HandlebarsApplicationMixin(
+	ItemSheetV2,
+) {
 	static DEFAULT_OPTIONS = itemSheetOptions({
 		slug: "warrant-option",
 		width: 560,
@@ -26,16 +29,15 @@ export class WarrantOptionSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		content: {
-			template:
-				"systems/rogue-trader/template/sheet/item/parts/warrant-option-content.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/warrant-option-content.hbs`,
 		},
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const localize = (key: string) => game.i18n.localize(key);
 		const sys = this.document.system as unknown as {
 			row?: string;
@@ -53,7 +55,9 @@ export class WarrantOptionSheet extends HandlebarsApplicationMixin(ItemSheetV2) 
 		context.shipPoints = Number(mechanics.shipPoints ?? 0);
 		context.profitFactor = Number(mechanics.profitFactor ?? 0);
 		context.notes = [...(mechanics.notes ?? [])];
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		// Item data keys (bead apxq): effect editor choices (bead bpd, localized
+		// kind labels + test keys) + the enriched description prose.
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

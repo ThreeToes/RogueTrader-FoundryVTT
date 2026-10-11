@@ -33,7 +33,10 @@ export interface WeaponItemLike {
 /** Structural shape of an owned armour item doc (equipState lives under system). */
 export interface ArmourItemLike {
 	type: string;
-	system?: { equipState?: string | null; armourAt?: (loc: string) => number } | null;
+	system?: {
+		equipState?: string | null;
+		armourAt?: (loc: string) => number;
+	} | null;
 }
 
 /** One combat-tab weapon row (shared by PC + NPC sheets). */
@@ -95,9 +98,6 @@ export function armourLocations(items: ArmourItemLike[]): ArmourLocationRow[] {
 	);
 	return BODY_LOCATION_ORDER.map((loc) => ({
 		loc,
-		ap: Math.max(
-			0,
-			...worn.map((item) => item.system?.armourAt?.(loc) ?? 0),
-		),
+		ap: Math.max(0, ...worn.map((item) => item.system?.armourAt?.(loc) ?? 0)),
 	}));
 }

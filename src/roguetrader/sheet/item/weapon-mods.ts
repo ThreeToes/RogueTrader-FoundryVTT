@@ -50,6 +50,8 @@ export async function removeMod(
 ): Promise<void> {
 	if (!weapon.update) return;
 	await weapon.update({
-		system: { modifications: attachedModIds(weapon, owns).filter((id) => id !== itemId) },
+		system: {
+			modifications: attachedModIds(weapon, owns).filter((id) => id !== itemId),
+		},
 	});
 }

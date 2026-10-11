@@ -16,13 +16,19 @@ import {
 	resetPorts,
 	setPorts,
 } from "../../infrastructure/foundry/ports";
-import { rollPhenomena } from "./psychic-support";
+import {
+	applyPowerCorruption,
+	postPowerDamage,
+	rollPhenomena,
+} from "./psychic-support";
 
 const cards: string[] = [];
+const varsOf: Array<Record<string, unknown>> = [];
 
 afterEach(() => {
 	resetPorts();
 	cards.length = 0;
+	varsOf.length = 0;
 });
 
 /** A port set whose dice always roll 42 and whose chat records the card. */
@@ -39,11 +45,15 @@ function portsWith(find: ContentPort["find"]) {
 		},
 		chat: {
 			...foundryPorts.chat,
-			postHtml: async (
+			// Bead oy8z: the cards post through the shared postCard template
+			// path now, so record post(template, vars) instead of raw HTML.
+			post: async (
 				_actor: { uuid?: string },
-				content: string,
+				template: string,
+				vars: Record<string, unknown>,
 			): Promise<{ id?: string }> => {
-				cards.push(content);
+				cards.push(template);
+				varsOf.push(vars);
 				return { id: "msg-phenomena" };
 			},
 		},
@@ -58,9 +68,11 @@ describe("rollPhenomena reads the table through the content port (bead xkad)", (
 		setPorts(portsWith(async () => null));
 		await rollPhenomena({ name: "Psyker" } as never, {});
 		expect(cards).toHaveLength(1);
+		// Bead oy8z: the card renders from the postCard template path.
+		expect(cards[0]).toContain("psychic-phenomena.hbs");
 		// Content-optional: the card is never empty and never silent.
-		expect(cards[0]).toContain("PSYCHIC_POWER.TABLE_MISS");
-		expect(cards[0]).toContain("42");
+		expect(varsOf[0].text).toBe("PSYCHIC_POWER.TABLE_MISS");
+		expect(varsOf[0].total).toBe(42);
 	});
 
 	test("an installed table supplies the result text", async () => {
@@ -72,8 +84,10 @@ describe("rollPhenomena reads the table through the content port (bead xkad)", (
 		);
 		await rollPhenomena({ name: "Psyker" } as never, {});
 		expect(cards).toHaveLength(1);
-		expect(cards[0]).toContain("The air screams.");
-		expect(cards[0]).not.toContain("PSYCHIC_POWER.TABLE_MISS");
+		// The pack's table prose is passed as DATA (template-escaped), not
+		// interpolated into hand-built HTML (bead oy8z).
+		expect(varsOf[0].text).toBe("The air screams.");
+		expect(varsOf[0].total).toBe(42);
 	});
 
 	test("the injected content port is actually consulted", async () => {
@@ -89,5 +103,58 @@ describe("rollPhenomena reads the table through the content port (bead xkad)", (
 		// foundryContent and this array would have stayed empty).
 		expect(asked).toHaveLength(1);
 		expect(asked[0]).toContain("rogue-trader.rolltables");
+	});
+});
+
+describe("postPowerDamage + applyPowerCorruption post template cards (bead oy8z)", () => {
+	test("the damage card posts the expression and total as template vars", async () => {
+		setPorts(portsWith(async () => null));
+		await postPowerDamage({ name: "Psyker" } as never, "Fire Bolt", "1d10+4");
+		expect(cards).toHaveLength(1);
+		expect(cards[0]).toContain("psychic-damage.hbs");
+		expect(varsOf[0].label).toBe("PSYCHIC_POWER.DAMAGE_ROLL");
+		// The authored expression and item-derived label are DATA — the
+		// template escapes them; this test pins that nothing raw reaches chat
+		// as markup.
+		expect(varsOf[0].damage).toBe("1d10+4");
+		expect(varsOf[0].total).toBe(42);
+	});
+
+	test("the corruption card posts the gain as template vars", async () => {
+		const updates: unknown[] = [];
+		setPorts({
+			...portsWith(async () => null),
+			actors: {
+				...foundryPorts.actors,
+				update: async (_actor: unknown, data: unknown) => {
+					updates.push(data);
+				},
+			},
+		});
+		await applyPowerCorruption(
+			{ name: "Psyker" } as never,
+			{
+				name: "Summon Daemon",
+				system: { effects: [{ kind: "corruption", dice: "1d10+4" }] },
+			} as never,
+		);
+		expect(cards).toHaveLength(1);
+		expect(cards[0]).toContain("psychic-corruption.hbs");
+		expect(varsOf[0].label).toBe("PSYCHIC_POWER.CORRUPTION_GAIN");
+		expect(varsOf[0].gained).toBe(42);
+		// The track was actually adjusted, not just posted.
+		expect(updates).toEqual([{ "system.corruption": 42 }]);
+	});
+
+	test("no corruption effects, no card", async () => {
+		setPorts(portsWith(async () => null));
+		await applyPowerCorruption(
+			{ name: "Psyker" } as never,
+			{
+				name: "Fire Bolt",
+				system: { effects: [] },
+			} as never,
+		);
+		expect(cards).toHaveLength(0);
 	});
 });

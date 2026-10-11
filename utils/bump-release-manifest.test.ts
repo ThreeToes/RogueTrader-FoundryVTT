@@ -9,13 +9,29 @@
  * system fails loudly with NO manifest write, notes land in a file, and a
  * consumed body referencing src/packs is refused.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "bun:test";
-import { bumpFromChangesets, bumpManifest, bumpVersion } from "./bump-release-manifest.mjs";
+import {
+	bumpFromChangesets,
+	bumpManifest,
+	bumpVersion,
+} from "./bump-release-manifest.mjs";
 
-function changeset(dir: string, name: string, system: string, level: string, body: string) {
+function changeset(
+	dir: string,
+	name: string,
+	system: string,
+	level: string,
+	body: string,
+) {
 	writeFileSync(
 		join(dir, name),
 		`---\n"${system}": ${level}\n---\n\n${body}\n`,
@@ -56,7 +72,11 @@ describe("bumpManifest", () => {
 
 	it("patches version, manifest URL and download URL", () => {
 		seed("0.0.2");
-		const result = bumpManifest(manifestPath, "patch", "https://host/owner/repo");
+		const result = bumpManifest(
+			manifestPath,
+			"patch",
+			"https://host/owner/repo",
+		);
 		expect(result.version).toBe("0.0.3");
 		expect(result.tag).toBe("v0.0.3");
 		const written = JSON.parse(readFileSync(manifestPath, "utf8"));
@@ -119,10 +139,18 @@ describe("bumpFromChangesets", () => {
 	it("derives the largest level from temp-dir fixtures and stamps the manifest", () => {
 		seed("0.0.2");
 		const patchPath = changeset(
-			changesetDir, "aaa-fix.md", "rogue-trader", "patch", "- Fixed something small.",
+			changesetDir,
+			"aaa-fix.md",
+			"rogue-trader",
+			"patch",
+			"- Fixed something small.",
 		);
 		const minorPath = changeset(
-			changesetDir, "zzz-feature.md", "rogue-trader", "minor", "- Added a feature.",
+			changesetDir,
+			"zzz-feature.md",
+			"rogue-trader",
+			"minor",
+			"- Added a feature.",
 		);
 		const result = run();
 		// Largest level wins (minor beats patch).
@@ -133,7 +161,10 @@ describe("bumpFromChangesets", () => {
 		);
 		expect(result.consumed).toEqual([patchPath, minorPath]);
 		expect(result.skippedCount).toBe(0);
-		const written = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+		const written = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<
+			string,
+			unknown
+		>;
 		expect(written.version).toBe("0.1.0");
 		expect(written.manifest).toBe(
 			`https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/raw/branch/master/${manifestPath}`,
@@ -142,8 +173,20 @@ describe("bumpFromChangesets", () => {
 
 	it("writes the rendered notes file with header and bodies", () => {
 		seed("0.2.1");
-		changeset(changesetDir, "aaa-fix.md", "rogue-trader", "patch", "- Fixed the gate.");
-		changeset(changesetDir, "zzz-feature.md", "rogue-trader", "minor", "- Shared the psyker gate.");
+		changeset(
+			changesetDir,
+			"aaa-fix.md",
+			"rogue-trader",
+			"patch",
+			"- Fixed the gate.",
+		);
+		changeset(
+			changesetDir,
+			"zzz-feature.md",
+			"rogue-trader",
+			"minor",
+			"- Shared the psyker gate.",
+		);
 		run();
 		const notes = readFileSync(notesPath, "utf8");
 		expect(notes).toBe(
@@ -164,7 +207,13 @@ describe("bumpFromChangesets", () => {
 	it("a changeset naming an unregistered system fails at parse time (one-system registry)", () => {
 		seed("0.0.2");
 		mkdirSync(changesetDir, { recursive: true });
-		changeset(changesetDir, "foreign.md", "other-system", "major", "- Not for us.");
+		changeset(
+			changesetDir,
+			"foreign.md",
+			"other-system",
+			"major",
+			"- Not for us.",
+		);
 		expect(() => run()).toThrow(/unknown system: "other-system"/);
 	});
 
@@ -180,7 +229,10 @@ describe("bumpFromChangesets", () => {
 	it("refuses a consumed body referencing src/packs", () => {
 		seed("0.0.2");
 		changeset(
-			changesetDir, "leak.md", "rogue-trader", "patch",
+			changesetDir,
+			"leak.md",
+			"rogue-trader",
+			"patch",
 			"- Added npcs to src/packs/rogue_trader.",
 		);
 		const before = readFileSync(manifestPath, "utf8");

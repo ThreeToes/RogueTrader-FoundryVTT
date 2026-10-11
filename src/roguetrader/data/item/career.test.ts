@@ -125,9 +125,7 @@ describe("Career data model", () => {
 	});
 
 	test("rank helpers sort and look up", () => {
-		const c = Object.create(Career.prototype) as InstanceType<
-			typeof Career
-		> & {
+		const c = Object.create(Career.prototype) as InstanceType<typeof Career> & {
 			ranks: Array<Record<string, unknown>>;
 		};
 		c.ranks = [

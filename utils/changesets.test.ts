@@ -107,12 +107,18 @@ describe("selectBump", () => {
 	}
 
 	it("patch + patch -> patch", () => {
-		const changesets = [make("rogue-trader", "patch", "one"), make("rogue-trader", "patch", "two")];
+		const changesets = [
+			make("rogue-trader", "patch", "one"),
+			make("rogue-trader", "patch", "two"),
+		];
 		expect(selectBump("rogue-trader", changesets).level).toBe("patch");
 	});
 
 	it("minor + patch -> minor", () => {
-		const changesets = [make("rogue-trader", "patch", "p"), make("rogue-trader", "minor", "m")];
+		const changesets = [
+			make("rogue-trader", "patch", "p"),
+			make("rogue-trader", "minor", "m"),
+		];
 		expect(selectBump("rogue-trader", changesets).level).toBe("minor");
 	});
 

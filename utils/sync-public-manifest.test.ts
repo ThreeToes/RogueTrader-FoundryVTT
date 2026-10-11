@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { setPublicDownload, syncPublicManifest } from "./sync-public-manifest.mjs";
+import {
+	setPublicDownload,
+	syncPublicManifest,
+} from "./sync-public-manifest.mjs";
 
 const GITHUB_REPO = "ThreeToes/RogueTrader-FoundryVTT";
 

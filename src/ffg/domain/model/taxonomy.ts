@@ -32,7 +32,8 @@ export function isWeaponType(
 
 /** The item's equip state, defaulting to "stowed" (the schema initial). */
 export function equipStateOf(item: EquipableLike): EquipState {
-	const state = (item.system as { equipState?: string } | undefined)?.equipState;
+	const state = (item.system as { equipState?: string } | undefined)
+		?.equipState;
 	return state === "carried" || state === "worn" ? state : "stowed";
 }
 
@@ -42,7 +43,15 @@ export function equipStateOf(item: EquipableLike): EquipState {
  * DataModel; data/actor/character.ts re-exports it for compatibility.
  */
 export const CHARACTERISTIC_KEYS = [
-	"ws", "bs", "s", "t", "ag", "int", "per", "wp", "fel",
+	"ws",
+	"bs",
+	"s",
+	"t",
+	"ag",
+	"int",
+	"per",
+	"wp",
+	"fel",
 ] as const;
 
 export type CharacteristicKey = (typeof CHARACTERISTIC_KEYS)[number];

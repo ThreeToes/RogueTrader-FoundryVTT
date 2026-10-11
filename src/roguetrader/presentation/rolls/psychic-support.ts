@@ -13,7 +13,9 @@ import type { EffectData } from "../../../ffg/domain/model/effect";
 import { corruptionExpressions } from "../../../ffg/domain/model/effect";
 import { ROLLTABLES_PACK } from "../../application/packs";
 import { getPorts } from "../../infrastructure/foundry/ports";
+import { postCard } from "../../rules/chat-flags";
 import { phenomenaRollModifier, phenomenaTableName } from "../../rules/psychic";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 /**
  * Roll on the Psychic Phenomena table (or Perils of the Warp on 75+,
@@ -50,10 +52,14 @@ export async function rollPhenomena(
 	);
 	const text = result?.text ?? ports.i18n.t("PSYCHIC_POWER.TABLE_MISS");
 	const label = ports.i18n.t("PSYCHIC_POWER.PHENOMENA_ROLL");
-	await ports.chat.postHtml(
-		actor,
-		`<div class="rogue-trader phenomena-roll"><h3>${label}: ${total}</h3><p>${text}</p></div>`,
-	);
+	// Bead oy8z: posted through the shared postCard template path (the
+	// chat-flags idiom) instead of hand-built HTML — the pack's table prose
+	// reaches the card as escaped template data, never live HTML.
+	await postCard(actor, `${TEMPLATE_ROOT}chat/psychic-phenomena.hbs`, {
+		label,
+		total,
+		text,
+	});
 }
 
 /**
@@ -69,10 +75,13 @@ export async function postPowerDamage(
 	const ports = getPorts();
 	const total = (await ports.dice.roll(damage)).total;
 	const label = ports.i18n.t("PSYCHIC_POWER.DAMAGE_ROLL", { power: powerName });
-	await ports.chat.postHtml(
-		actor,
-		`<div class="rogue-trader power-damage"><h3>${label}</h3><p>${damage}: <strong>${total}</strong></p></div>`,
-	);
+	// Bead oy8z: template path (escape: the expression and the total are
+	// data, not markup).
+	await postCard(actor, `${TEMPLATE_ROOT}chat/psychic-damage.hbs`, {
+		label,
+		damage,
+		total,
+	});
 }
 
 /**
@@ -86,7 +95,8 @@ export async function applyPowerCorruption(
 	item: { name?: string; system?: unknown },
 ): Promise<void> {
 	const ports = getPorts();
-	const effects = (item.system as { effects?: EffectData[] } | undefined)?.effects;
+	const effects = (item.system as { effects?: EffectData[] } | undefined)
+		?.effects;
 	const expressions = corruptionExpressions(effects);
 	if (expressions.length === 0) return;
 	let gained = 0;
@@ -98,10 +108,11 @@ export async function applyPowerCorruption(
 	const label = ports.i18n.t("PSYCHIC_POWER.CORRUPTION_GAIN", {
 		power: item.name ?? "",
 	});
-	await ports.chat.postHtml(
-		actor,
-		`<div class="rogue-trader power-corruption"><p>${label}: <strong>${gained}</strong></p></div>`,
-	);
+	// Bead oy8z: template path; {power} (the item's name) is escaped.
+	await postCard(actor, `${TEMPLATE_ROOT}chat/psychic-corruption.hbs`, {
+		label,
+		gained,
+	});
 }
 
 /**

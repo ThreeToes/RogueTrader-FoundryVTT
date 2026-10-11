@@ -40,21 +40,23 @@ const TRAITS_YAML = "src/packs/rogue_trader/character-options/traits.yaml";
 const OUT = "src/packs/rogue_trader/character-options/careers.yaml";
 
 if (!existsSync(PARSED)) {
-	throw new Error(`run src/packs/.extraction-src/parse-careers.mjs first (${PARSED} missing)`);
+	throw new Error(
+		`run src/packs/.extraction-src/parse-careers.mjs first (${PARSED} missing)`,
+	);
 }
 
 const parsed = yaml.parse(readFileSync(PARSED, "utf8")) as CareerParsed[];
-const altParsed = (
-	existsSync(ALT_PARSED)
-		? (yaml.parse(readFileSync(ALT_PARSED, "utf8")) as AltCareerParsed[])
-		: []
-);
+const altParsed = existsSync(ALT_PARSED)
+	? (yaml.parse(readFileSync(ALT_PARSED, "utf8")) as AltCareerParsed[])
+	: [];
 const skillNames = namesFrom(SKILLS_YAML);
 const talentNames = namesFrom(TALENTS_YAML);
 const traitNames = namesFrom(TRAITS_YAML);
 
 function namesFrom(path: string): Set<string> {
-	const docs = yaml.parse(readFileSync(path, "utf8")) as Array<{ name: string }>;
+	const docs = yaml.parse(readFileSync(path, "utf8")) as Array<{
+		name: string;
+	}>;
 	return new Set(docs.map((d) => d.name));
 }
 
@@ -391,10 +393,10 @@ const PARAGRAPH_STARTS: Record<string, string[]> = {
  * reassembled verbatim; the only change is <p> boundaries.
  */
 function splitParagraphs(block: string, markers: string[]): string[] {
-	const sentences =
-		block.match(/[^.!?]*[.!?]+[\u201d\u2019]?|[^.!?]+$/g)?.map((s) => s.trim()).filter(Boolean) ?? [
-			block,
-		];
+	const sentences = block
+		.match(/[^.!?]*[.!?]+[\u201d\u2019]?|[^.!?]+$/g)
+		?.map((s) => s.trim())
+		.filter(Boolean) ?? [block];
 	const out: string[] = [];
 	let current: string[] = [];
 	for (const sentence of sentences) {
@@ -463,35 +465,35 @@ function toDescriptionHtml(prose: string, careerKey: string): string {
 
 const documents = [
 	...parsed.map((career) => ({
-	name: career.name,
-	type: "Item",
-	description: toDescriptionHtml(career.description ?? "", career.key),
-	system: {
-		key: career.key,
-		shortDescription: career.shortDescription,
-		source: { book: "Core Rulebook", page: career.page },
-		suggestedHomeWorlds: SUGGESTED_HOME_WORLDS[career.key] ?? [],
-		characteristicAdvances: career.characteristicAdvances,
-		startingSkills: career.startingSkills,
-		startingTalents: career.startingTalents,
-		startingGear: career.startingGear,
-		ranks: career.ranks.map((rank) => ({
-			rank: rank.rank,
-			xpLevel: RANK_XP[rank.rank] ?? 0,
-			advances: rank.advances.map((adv) => {
-				const resolved = keyAdvance(adv.name, adv.type);
-				return {
-					key: resolved.key,
-					name: resolved.name,
-					type: adv.type,
-					cost: adv.cost,
-					multiplier: resolved.multiplier,
-					prerequisites: adv.prerequisites,
-				};
-			}),
-		})),
-	},
-})),
+		name: career.name,
+		type: "Item",
+		description: toDescriptionHtml(career.description ?? "", career.key),
+		system: {
+			key: career.key,
+			shortDescription: career.shortDescription,
+			source: { book: "Core Rulebook", page: career.page },
+			suggestedHomeWorlds: SUGGESTED_HOME_WORLDS[career.key] ?? [],
+			characteristicAdvances: career.characteristicAdvances,
+			startingSkills: career.startingSkills,
+			startingTalents: career.startingTalents,
+			startingGear: career.startingGear,
+			ranks: career.ranks.map((rank) => ({
+				rank: rank.rank,
+				xpLevel: RANK_XP[rank.rank] ?? 0,
+				advances: rank.advances.map((adv) => {
+					const resolved = keyAdvance(adv.name, adv.type);
+					return {
+						key: resolved.key,
+						name: resolved.name,
+						type: adv.type,
+						cost: adv.cost,
+						multiplier: resolved.multiplier,
+						prerequisites: adv.prerequisites,
+					};
+				}),
+			})),
+		},
+	})),
 	...altDocuments(altParsed),
 ];
 
@@ -516,7 +518,9 @@ writeFileSync(OUT, header + body);
 console.log(`[careers] ${documents.length} documents -> ${OUT}`);
 
 if (unkeyed.length) {
-	console.log(`\n[careers] UNKEYED ROWS (${unkeyed.length}) — verify each is genuinely unkeyable:`);
+	console.log(
+		`\n[careers] UNKEYED ROWS (${unkeyed.length}) — verify each is genuinely unkeyable:`,
+	);
 	for (const row of unkeyed) console.log(`  ${row}`);
 } else {
 	console.log("[careers] all advance rows keyed");

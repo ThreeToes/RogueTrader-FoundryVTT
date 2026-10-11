@@ -31,8 +31,7 @@ const { ActorSheetV2 } = foundry.applications.sheets;
  * `sheetContext` (bead e2ge): a shared Rt*Sheet base cannot be made
  * type-correct without making tsc non-terminating — see sheet/context.ts.
  */
-const CHOICE_TAB_TEMPLATE =
-	"systems/rogue-trader/template/sheet/actor/tabs/dynasty-choice.hbs";
+const CHOICE_TAB_TEMPLATE = `${TEMPLATE_ROOT}sheet/actor/tabs/dynasty-choice.hbs`;
 
 /**
  * Dotted update delta applying `next` on top of the CURRENT stored picks
@@ -64,12 +63,12 @@ export function warrantPicksDelta(
 }
 
 /**
-	 * A `foundry.data.operators.ForcedDeletion` instance (verified on core
-	 * v14.366 — client/client.mjs uses it identically). fvtt-types v13 lacks
-	 * the operators namespace, so the access is typed locally; lazy so the
-	 * module survives import in headless tests without a full foundry stub.
-	 * @returns fresh deletion operator.
-	 */
+ * A `foundry.data.operators.ForcedDeletion` instance (verified on core
+ * v14.366 — client/client.mjs uses it identically). fvtt-types v13 lacks
+ * the operators namespace, so the access is typed locally; lazy so the
+ * module survives import in headless tests without a full foundry stub.
+ * @returns fresh deletion operator.
+ */
 function v14DeletionOperator(): object {
 	const cls = (
 		foundry.data as {
@@ -85,6 +84,7 @@ function v14DeletionOperator(): object {
 }
 
 import { imageActions } from "../image-actions";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
@@ -101,15 +101,13 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	static PARTS = {
 		header: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/parts/dynasty-header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/dynasty-header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		record: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/tabs/dynasty-record.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/dynasty-record.hbs`,
 		},
 		// One PART per choice tab, all rendering the SAME shared template
 		// parameterised in _preparePartContext — never six hand-copied files
@@ -122,7 +120,12 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static TABS = {
 		primary: {
 			tabs: [
-				{ id: "record", group: "primary", label: "DYNASTY.TAB_RECORD", cssClass: "" },
+				{
+					id: "record",
+					group: "primary",
+					label: "DYNASTY.TAB_RECORD",
+					cssClass: "",
+				},
 				// Tab labels reuse the chart-row step labels (WARRANT.ROW_*).
 				...WARRANT_ROWS.map((row) => ({
 					id: row,
@@ -216,8 +219,8 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			{} as never,
 		);
 		if (!(WARRANT_ROWS as string[]).includes(partId)) return base;
-		const tabs = (base as { tabs?: Record<string, { cssClass?: string }> })
-			.tabs ?? {};
+		const tabs =
+			(base as { tabs?: Record<string, { cssClass?: string }> }).tabs ?? {};
 		const choice = base as {
 			warrantChoicesByRow?: Record<string, unknown>;
 		};
@@ -244,11 +247,9 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			input.dataset.wired = "1";
 			input.addEventListener("change", () => {
 				if (!input.checked) return;
-				this.#setPick(
-					input.dataset.warrantRow ?? "",
-					input.value,
-				).catch((error) =>
-					console.error("rogue-trader | dynasty warrant pick failed", error),
+				this.#setPick(input.dataset.warrantRow ?? "", input.value).catch(
+					(error) =>
+						console.error("rogue-trader | dynasty warrant pick failed", error),
 				);
 			});
 		}
@@ -285,9 +286,11 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			update["system.profitFactor"] = resolved.profitFactor;
 			update["system.shipPoints.total"] = resolved.shipPoints;
 		}
-		await (this.document as unknown as {
-			update: (data: object) => Promise<unknown>;
-		}).update(update);
+		await (
+			this.document as unknown as {
+				update: (data: object) => Promise<unknown>;
+			}
+		).update(update);
 		this.render({ force: true });
 	}
 
@@ -304,9 +307,11 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			"system.warrant.shipPoints": 0,
 			"system.warrant.profitFactor": 0,
 		};
-		await (this.document as unknown as {
-			update: (data: object) => Promise<unknown>;
-		}).update(update);
+		await (
+			this.document as unknown as {
+				update: (data: object) => Promise<unknown>;
+			}
+		).update(update);
 		this.render({ force: true });
 	}
 
@@ -318,9 +323,11 @@ export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static async #onRollStarting(this: DynastySheet): Promise<void> {
 		const total = (await getPorts().dice.roll("1d10")).total ?? 1;
 		const result = startingProfitFactorAndShipPoints(total);
-		await (this.document as unknown as {
-			update: (data: object) => Promise<unknown>;
-		}).update({
+		await (
+			this.document as unknown as {
+				update: (data: object) => Promise<unknown>;
+			}
+		).update({
 			system: {
 				profitFactor: result.profitFactor,
 				shipPoints: { total: result.shipPoints },

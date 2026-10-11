@@ -81,10 +81,35 @@ export function resolveTest(request: TestRequest): TestOutcome {
 }
 
 /**
- * Hit location from the to-hit d100 tens digit, per the profile's table.
- * Pure table lookup; falls back to "body" for unknown digits.
+ * Reverse the digits of a d100 roll (Core Rulebook Table 9-6, printed p244:
+ * Hit Locations read the REVERSED roll). 20 -> 02 = 2; 00/100 -> 100.
+ */
+function reversedD100(hitRoll: number): number {
+	const digits = String(((Math.abs(hitRoll) % 100) + 100) % 100).padStart(2, "0");
+	const reversed = Number(digits[1] + digits[0]);
+	return reversed === 0 ? 100 : reversed;
+}
+
+/** Parse one "low-high" band key ("01-10", tolerant of whitespace). */
+function parseHitBand(key: string): [number, number] | null {
+	const match = /^\s*(\d+)\s*-\s*(\d+)\s*$/.exec(key);
+	if (!match) return null;
+	const to100 = (raw: string) => (Number(raw) === 0 ? 100 : Number(raw));
+	return [to100(match[1]), to100(match[2])];
+}
+
+/**
+ * Hit location from the to-hit d100 roll, per the Core Rulebook (Table 9-6:
+ * Hit Locations, printed p244): the roll's digits are reversed, then read
+ * against the profile's range bands. Falls back to "body" out of range.
  */
 export function locationForHit(hitRoll: number, profile: RuleProfile): string {
-	const tens = String(Math.floor(Math.abs(hitRoll) / 10) % 10);
-	return profile.hitLocations?.[tens] ?? "body";
+	const table = profile.hitLocations;
+	if (!table) return "body";
+	const reversed = reversedD100(hitRoll);
+	for (const [key, location] of Object.entries(table)) {
+		const band = parseHitBand(key);
+		if (band && reversed >= band[0] && reversed <= band[1]) return location;
+	}
+	return "body";
 }

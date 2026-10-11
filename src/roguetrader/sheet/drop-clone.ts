@@ -8,6 +8,7 @@
  */
 
 import { isWeaponType } from "../data/accessors";
+import { clonePackDocPayload } from "./clone-doc";
 
 export interface CloneItemOptions {
 	/** Static merge into every cloned item's system data. */
@@ -37,10 +38,21 @@ export async function cloneItemIntoActor(
 ): Promise<foundry.documents.Item | undefined> {
 	const source = await foundry.utils.fromUuid(uuid);
 	if (!(source instanceof foundry.documents.Item)) return undefined;
-	if (options.skipOwned !== false && actor.items.find((i) => i.uuid === source.uuid)) {
+	if (
+		options.skipOwned !== false &&
+		actor.items.find((i) => i.uuid === source.uuid)
+	) {
 		return undefined;
 	}
-	const payload = source.toObject() as { system?: Record<string, unknown> };
+	// Bead 27eu: the pack doc's _id must NOT ride along (repo convention — two
+	// Items cannot share an _id): dropping the same pack entry twice past the
+	// uuid-based skipOwned check would clone a duplicate _id onto one actor.
+	const payload = clonePackDocPayload(
+		source.toObject() as unknown as {
+			_id?: unknown;
+			system?: Record<string, unknown>;
+		},
+	) as { system?: Record<string, unknown> };
 	const overrides = {
 		...options.systemOverrides,
 		...options.systemOverridesFor?.(source.type as string),

@@ -1,12 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { buildActorView } from "../../../ffg/domain/model/build";
+import type { CharacterSystemView } from "../../../ffg/domain/model/actor";
+import { isCharacterView } from "../../../ffg/domain/model/actor";
+import { buildActorView, type LooseActor } from "../../../ffg/domain/model/build";
 import { actorView } from "./actor-view";
 
 // The builder is the one place that reads Foundry document shape for the rules
 // layer. These tests pin the mapping with loose fakes (the real documents are
 // structurally identical for the fields we read).
 
-function fakeActor(overrides: Record<string, unknown> = {}) {
+function fakeActor(overrides: Record<string, unknown> = {}): LooseActor & {
+	type: "explorer";
+} {
 	return {
 		id: "a1",
 		uuid: "Actor.a1",
@@ -20,7 +24,12 @@ function fakeActor(overrides: Record<string, unknown> = {}) {
 		effects: [],
 		appliedEffects: [],
 		...overrides,
-	} as never;
+	} as LooseActor & { type: "explorer" };
+}
+
+/** Fixture WITHOUT a known actor type: falls through to the generic builder. */
+function openActor(overrides: Record<string, unknown> = {}): LooseActor {
+	return fakeActor(overrides) as LooseActor;
 }
 
 describe("actorView builder (epic kof0, phase 1)", () => {
@@ -83,12 +92,14 @@ describe("actorView builder (epic kof0, phase 1)", () => {
 	});
 
 	test("is defensive about missing collections and fields", () => {
-		const view = actorView({
-			id: "a2",
-			name: "Sparse",
-			type: "vehicle",
-			system: {},
-		} as never);
+		const view = actorView(
+			openActor({
+				id: "a2",
+				name: "Sparse",
+				type: "vehicle",
+				system: {},
+			}),
+		);
 		expect(view.items).toEqual([]);
 		expect(view.effects).toEqual([]);
 		expect(view.appliedEffects).toEqual([]);
@@ -96,44 +107,84 @@ describe("actorView builder (epic kof0, phase 1)", () => {
 	});
 });
 
-describe("actorView per-system instantiation (h2uo)", () => {
-	test("default instantiation keeps the full RT system view", () => {
-		const view = actorView(
-			fakeActor({
-				system: {
-					characteristics: {},
-					psyRating: 3,
-					voidShields: 2,
-					size: "colossal",
-				},
-			}),
-		);
-		expect(view.system.psyRating).toBe(3);
-		expect(view.system.voidShields).toBe(2);
-		expect(view.system.size).toBe("colossal");
+describe("actorView per-family system views (bead l2wz)", () => {
+	test("a character view is CharacterSystemView — no ship/vehicle fields", () => {
+		// The accepted shape, per the bead: actorView(characterActor).system is
+		// typed CharacterSystemView, so ship/vehicle reads no longer lie.
+		const view = actorView({
+			id: "a1",
+			uuid: "Actor.a1",
+			name: "Sable",
+			type: "explorer",
+			system: {
+				characteristics: { ws: { value: 40, unnatural: 1 } },
+				psyker: true,
+				wounds: { value: 5, max: 14 },
+			},
+			items: [],
+			effects: [],
+			appliedEffects: [],
+		});
+		expect(view.system.psyker).toBe(true);
+		// Type-level pin (the bead's acceptance): system is the character family.
+		const system: CharacterSystemView = view.system;
+		expect(system.wounds?.max).toBe(14);
+		const ship =
+			// @ts-expect-error ship fields do not type-check on a character view
+			view.system.voidShields;
+		expect(ship).toBeUndefined();
+		const vehicle =
+			// @ts-expect-error vehicle fields do not type-check on a character view
+			view.system.size;
+		expect(vehicle).toBeUndefined();
 	});
 
-	test("narrows to a system-supplied SystemView at compile time", () => {
-		type Dh2System = {
-			characteristics: Record<string, { value: number; unnatural: number }>;
-			fateReserve?: number;
-		};
-		const view = actorView<Dh2System>(
-			fakeActor({
-				system: {
-					characteristics: { ws: { value: 35, unnatural: 0 } },
-					fateReserve: 3,
-				},
-			}),
-		);
-		expect(view.system.fateReserve).toBe(3);
-		// RT-only fields do not exist on the narrow view (compile-time check).
+	test("a starship view is ShipSystemView — no character fields", () => {
+		const view = actorView({
+			id: "s1",
+			type: "starship",
+			system: {
+				characteristics: {},
+				hullIntegrity: { value: 30, max: 30 },
+				voidShields: 2,
+			},
+		});
+		expect(view.system.hullIntegrity?.max).toBe(30);
+		expect(view.system.voidShields).toBe(2);
 		const leak =
-			// @ts-expect-error ship fields leak nothing into sibling systems
-			view.system.voidShields;
+			// @ts-expect-error character fields do not type-check on a ship view
+			view.system.psyker;
 		expect(leak).toBeUndefined();
 	});
 
+	test("a vehicle view is VehicleSystemView — no ship fields", () => {
+		const view = actorView({
+			id: "v1",
+			type: "vehicle",
+			system: { characteristics: {}, size: "colossal" },
+		});
+		expect(view.system.size).toBe("colossal");
+		const leak =
+			// @ts-expect-error ship fields do not type-check on a vehicle view
+			view.system.hullIntegrity;
+		expect(leak).toBeUndefined();
+	});
+
+	test("unmapped actor families build a bare base view (no family claims)", () => {
+		// The builder narrows per actor.type at runtime; a dynasty/planet/cache
+		// actor claims none of the RT family fields. Rules code narrows via
+		// isCharacterView, which correctly excludes everyone here.
+		const view = actorView(
+			openActor({ type: "dynasty", system: { ruler: "Winterscale" } }),
+		);
+		expect(isCharacterView(view)).toBe(false);
+		expect("psyker" in view.system).toBe(false);
+		expect("voidShields" in view.system).toBe(false);
+		expect("size" in view.system).toBe(false);
+	});
+});
+
+describe("explicit generic instantiation still works (h2uo)", () => {
 	test("buildActorView is generic the same way", () => {
 		type ShipSystem = {
 			characteristics: Record<string, never>;
@@ -155,13 +206,19 @@ describe("buildActorView flag namespace (bead pwn0)", () => {
 	const snapOutEffect = {
 		id: "fx1",
 		name: "Fleeing",
-		flags: { "sibling-core": { snapOut: true }, "rogue-trader": { snapOut: true } },
+		flags: {
+			"sibling-core": { snapOut: true },
+			"rogue-trader": { snapOut: true },
+		},
 	};
 
 	test("a caller-provided namespace is used to read effect flags", () => {
-		const view = buildActorView({ effects: [snapOutEffect] }, {
-			flagNamespace: "sibling-core",
-		});
+		const view = buildActorView(
+			{ effects: [snapOutEffect] },
+			{
+				flagNamespace: "sibling-core",
+			},
+		);
 		expect(view.effects[0]?.snapOut).toBe(true);
 	});
 

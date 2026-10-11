@@ -7,7 +7,9 @@
  * values, acquisition) call `collectEffects` and map the hits; none of them
  * walks items or parses guards itself.
  *
- * Adding an effect kind = one `effectKinds.register(...)` here.
+ * Adding an effect kind = one `effectKinds.register(...)` here, with the
+ * editor label carried on the spec's `labelKey` (bead ypbx) — the sheet layer
+ * derives its dropdown from the registry, so no second edit is needed.
  */
 
 import type { Modifier } from "../../../rules-engine/modifier";
@@ -69,18 +71,20 @@ function keyMatches(
 	if (mode === "characteristic") return Boolean(key) && key === ctx.testKey;
 	if (key?.startsWith("skill:")) {
 		return (
-			ctx.skillName?.toLowerCase() ===
-			key.slice("skill:".length).toLowerCase()
+			ctx.skillName?.toLowerCase() === key.slice("skill:".length).toLowerCase()
 		);
 	}
 	return key === "" || key === undefined || key === ctx.testKey;
 }
 
-/** The funnel modifier id: the owning item's name is part of it so two
- * different items with the same (label, key, condition) shape stay additive. */
+/** The funnel modifier id: the owning item's id is part of it so two
+ * different items with the same (label, key, condition) shape stay additive
+ * even when they share a name (mergeModifiers dedupes first-wins; bead 2040);
+ * hand-built views with no id fall back to the name, so a single item's
+ * duplicate rows still collide and dedupe. */
 function funnelId(item: ItemView, effect: EffectData, keyPart: string): string {
 	const prefix = item.type === "talent" ? "talent" : `item:${item.type}`;
-	return `${prefix}:${item.name}:${keyPart}:${effect.label ?? ""}:${effect.condition || "any"}`;
+	return `${prefix}:${item.id || item.name}:${keyPart}:${effect.label ?? ""}:${effect.condition || "any"}`;
 }
 
 /** The shared funnel modifier builder for the three test kinds. */
@@ -106,6 +110,7 @@ function funnelModifier(
 /** "test-modifier" (and the schema default): any test, keyed or wildcard. */
 effectKinds.register({
 	kind: "test-modifier",
+	labelKey: "EFFECT_KIND.TEST_MODIFIER",
 	channels: ["test"],
 	applies: (effect, ctx) =>
 		guardPasses(effect, ctx) &&
@@ -118,6 +123,7 @@ effectKinds.register({
 /** "attack-modifier": attack tests only (Berserk Charge, Gunslinger, …). */
 effectKinds.register({
 	kind: "attack-modifier",
+	labelKey: "EFFECT_KIND.ATTACK_MODIFIER",
 	channels: ["test"],
 	applies: (effect, ctx) =>
 		ctx.testKind === "attack" &&
@@ -130,6 +136,7 @@ effectKinds.register({
 /** "characteristic-modifier": characteristic-keyed, any test kind. */
 effectKinds.register({
 	kind: "characteristic-modifier",
+	labelKey: "EFFECT_KIND.CHARACTERISTIC_MODIFIER",
 	channels: ["test"],
 	applies: (effect, ctx) =>
 		guardPasses(effect, ctx) &&
@@ -166,7 +173,9 @@ function damageModifier(
 ): Modifier {
 	const isTalent = item.type === "talent";
 	return {
-		id: `${isTalent ? "talent-damage" : "weapon-damage"}:${item.name}:${kind}:${effect.label ?? ""}:${effect.condition || "any"}`,
+		// Bead 2040: the item's own id (name as fallback) keeps two distinct
+		// same-named documents additive while one item's duplicates dedupe.
+		id: `${isTalent ? "talent-damage" : "weapon-damage"}:${item.id || item.name}:${kind}:${effect.label ?? ""}:${effect.condition || "any"}`,
 		source: {
 			type: isTalent ? "talent" : "item",
 			label: isTalent ? "SOURCE.FROM_TALENTS" : "SOURCE.FROM_WEAPONS",
@@ -179,6 +188,7 @@ function damageModifier(
 
 effectKinds.register({
 	kind: "damage-flat",
+	labelKey: "EFFECT_KIND.DAMAGE_FLAT",
 	channels: ["damage"],
 	applies: damageApplies,
 	toModifier: (item, effect) => damageModifier(item, effect, "damage-flat"),
@@ -186,6 +196,7 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "critical-damage",
+	labelKey: "EFFECT_KIND.CRITICAL_DAMAGE",
 	channels: ["damage"],
 	applies: damageApplies,
 	toModifier: (item, effect) => damageModifier(item, effect, "critical-damage"),
@@ -197,6 +208,7 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "tb-multiplier",
+	labelKey: "EFFECT_KIND.TB_MULTIPLIER",
 	channels: ["target-soak"],
 	applies: (effect) => Number(effect.value) > 0,
 	read: (_item, effect) => Number(effect.value),
@@ -204,12 +216,14 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "damage-reduction",
+	labelKey: "EFFECT_KIND.DAMAGE_REDUCTION",
 	channels: ["target-soak"],
 	applies: (effect) => Number(effect.value) > 0,
 	toModifier: (item, effect) => ({
-		// The item name rides on the id so same-shaped rows on different traits
-		// stay additive (funnel dedupe lesson).
-		id: `trait-reduction:${item.name ?? ""}:${effect.label ?? ""}`,
+		// The item id rides on the id (name fallback, 2040's shape) so
+		// same-named rows on different traits stay additive (funnel dedupe
+		// lesson).
+		id: `trait-reduction:${item.id || item.name}:${effect.label ?? ""}`,
 		source: { type: "item", label: "SOURCE.FROM_TRAITS" },
 		label: effect.label || item.name || "",
 		value: Number(effect.value),
@@ -222,12 +236,14 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "tearing",
+	labelKey: "EFFECT_KIND.TEARING",
 	channels: ["roll-mechanic"],
 	read: () => true,
 });
 
 effectKinds.register({
 	kind: "toxic",
+	labelKey: "EFFECT_KIND.TOXIC",
 	channels: ["roll-mechanic"],
 	read: () => true,
 });
@@ -247,6 +263,7 @@ effectKinds.register({
 /** "pen-flat": flat Penetration added to the attached weapon's profile. */
 effectKinds.register({
 	kind: "pen-flat",
+	labelKey: "EFFECT_KIND.PEN_FLAT",
 	channels: ["weapon-profile"],
 	applies: (effect) => Number.isFinite(Number(effect.value)),
 	read: (_item, effect) => Number(effect.value),
@@ -255,12 +272,14 @@ effectKinds.register({
 /** "primitive-clear": the mod cancels the weapon's Primitive quality (Mono). */
 effectKinds.register({
 	kind: "primitive-clear",
+	labelKey: "EFFECT_KIND.PRIMITIVE_CLEAR",
 	channels: ["weapon-profile"],
 	read: () => true,
 });
 
 effectKinds.register({
 	kind: "blast",
+	labelKey: "EFFECT_KIND.BLAST",
 	channels: ["roll-mechanic"],
 	applies: (effect) => Number.isFinite(Number(effect.value)),
 	read: (_item, effect) => Number(effect.value),
@@ -272,6 +291,7 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "wounds-max",
+	labelKey: "EFFECT_KIND.WOUNDS_MAX",
 	channels: ["derived"],
 	read: (_item, effect) => {
 		const value = Number(effect.value ?? 1);
@@ -281,6 +301,7 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "skill-rank",
+	labelKey: "EFFECT_KIND.SKILL_RANK",
 	channels: ["derived"],
 	read: (_item, effect) => {
 		const value = Number(effect.value ?? 0);
@@ -290,6 +311,7 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "sorcery-rank",
+	labelKey: "EFFECT_KIND.SORCERY_RANK",
 	channels: ["derived"],
 	read: (_item, effect) => {
 		const value = Number(effect.value ?? 0);
@@ -303,6 +325,7 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "grants-item",
+	labelKey: "EFFECT_KIND.GRANTS_ITEM",
 	channels: ["acquisition"],
 	read: (_item, effect) => ({
 		target: (effect.testKey ?? "").trim(),
@@ -312,6 +335,7 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "corruption",
+	labelKey: "EFFECT_KIND.CORRUPTION",
 	channels: ["acquisition"],
 	read: (_item, effect) => {
 		const dice = (effect.dice ?? "").trim();
@@ -323,6 +347,7 @@ effectKinds.register({
 
 effectKinds.register({
 	kind: "grants-technique",
+	labelKey: "EFFECT_KIND.GRANTS_TECHNIQUE",
 	channels: ["acquisition"],
 	read: (_item, effect) => {
 		const value = Number(effect.value ?? 1);

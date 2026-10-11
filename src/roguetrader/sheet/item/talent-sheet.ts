@@ -1,9 +1,10 @@
 import { talentCategories } from "../../registry";
 import { findPackTalentDoc } from "../actor/grant-helpers";
 import { isBareTalent, talentBackfillPatch } from "../../rules/talent-backfill";
-import { effectActions, effectEditorChoices } from "./effect-actions";
-import { itemDescriptionHTML } from "../rich-text";
+import { effectActions } from "./effect-actions";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -23,16 +24,15 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		content: {
-			template:
-				"systems/rogue-trader/template/sheet/item/parts/talent-content.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/talent-content.hbs`,
 		},
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		// Bare legacy heal (bead oaaz): pre-meh0 creator talents carry no pack
 		// data — heal once on render (AGENT-GUIDE §3 render-time backfill;
 		// hooks are never awaited). Guarded by isBareTalent so manual/homebrew
@@ -65,13 +65,11 @@ export class TalentSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.categoryChoices = Object.fromEntries(talentCategories.entries());
 		// Read-only display label for the category select.
 		context.categoryLabel = game.i18n.localize(
-			talentCategories.choices[
-				this.document.system.category
-			] as string,
+			talentCategories.choices[this.document.system.category] as string,
 		);
-		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(context, effectEditorChoices());
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		// Item data keys (bead apxq): effect editor choices (bead bpd, localized
+		// kind labels + test keys) + the enriched description prose.
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

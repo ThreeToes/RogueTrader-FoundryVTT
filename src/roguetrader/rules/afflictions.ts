@@ -127,7 +127,9 @@ async function degenerateMind(
 	context: ProcedureContext,
 ): Promise<ProcedureOutcome> {
 	const rolled = await context.roll("1d10");
-	const band = DEGENERATE_MIND_TABLE.find((b) => rolled >= 1 && rolled <= b.max);
+	const band = DEGENERATE_MIND_TABLE.find(
+		(b) => rolled >= 1 && rolled <= b.max,
+	);
 	if (!band) {
 		throw new Error(
 			`Degenerate Mind sub-roll out of range (1d10 returned ${rolled})`,

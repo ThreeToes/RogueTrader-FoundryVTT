@@ -72,8 +72,8 @@ describe("CharacterSheet part descriptors (scroll preservation, ss1d)", () => {
 	});
 
 	test("the tab list matches the parts (new tabs must opt in)", () => {
-		const tabPartIds = Object.keys(parts).filter(
-			(id) => parts[id].template?.includes("/tabs/"),
+		const tabPartIds = Object.keys(parts).filter((id) =>
+			parts[id].template?.includes("/tabs/"),
 		);
 		expect(tabPartIds.sort()).toEqual([...SCROLLING_TABS].sort());
 	});

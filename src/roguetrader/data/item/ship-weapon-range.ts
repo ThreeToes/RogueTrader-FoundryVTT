@@ -32,10 +32,7 @@ export function normalizeShipWeaponRange(value: unknown): ShipWeaponRange {
 	}
 	if (value != null && typeof value === "object") {
 		const src = value as Record<string, unknown>;
-		return swapIfNeeded(
-			Number(src.min ?? 0),
-			Number(src.max ?? 0),
-		);
+		return swapIfNeeded(Number(src.min ?? 0), Number(src.max ?? 0));
 	}
 	return { min: 0, max: 0 };
 }
@@ -50,9 +47,7 @@ export function normalizeShipWeaponRange(value: unknown): ShipWeaponRange {
  */
 export function formatShipWeaponRange(range: unknown): string {
 	const band = normalizeShipWeaponRange(range);
-	return band.min === band.max
-		? `${band.min}`
-		: `${band.min}-${band.max}`;
+	return band.min === band.max ? `${band.min}` : `${band.min}-${band.max}`;
 }
 
 function swapIfNeeded(min: number, max: number): ShipWeaponRange {

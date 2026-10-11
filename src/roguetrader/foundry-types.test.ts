@@ -34,7 +34,10 @@ const originalFoundry = (globalThis as Record<string, unknown>).foundry;
 		),
 	},
 	applications: {
-		api: { ApplicationV2: class {}, HandlebarsApplicationMixin: (b: unknown) => b },
+		api: {
+			ApplicationV2: class {},
+			HandlebarsApplicationMixin: (b: unknown) => b,
+		},
 		sheets: { ActorSheetV2: class {}, ItemSheetV2: class {} },
 	},
 };
@@ -76,7 +79,7 @@ describe("Foundry type declarations (bead rt9z)", () => {
 		// optional — the ~89 `game.i18n` errors come straight back.
 		const source = readFileSync(DECLARATION, "utf8");
 		expect(source).toContain("interface AssumeHookRan");
-		expect(source).toContain('ready: never;');
+		expect(source).toContain("ready: never;");
 	});
 
 	for (const documentName of ["Item", "Actor"] as const) {

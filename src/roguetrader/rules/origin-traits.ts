@@ -14,6 +14,7 @@
 
 import { storedOriginPicks, type StoredOrigins } from "./origins";
 import { testContributors } from "../../ffg/application/funnel";
+import { isCharacterView } from "../../ffg/domain/model/actor";
 import { getPorts } from "../infrastructure/foundry/ports";
 
 export interface OriginTraitDef {
@@ -28,7 +29,9 @@ export interface OriginTraitDef {
 }
 
 /** Lookup key: originKey.traitKey. */
-export function traitDefKey(def: Pick<OriginTraitDef, "originKey" | "traitKey">): string {
+export function traitDefKey(
+	def: Pick<OriginTraitDef, "originKey" | "traitKey">,
+): string {
 	return `${def.originKey}.${def.traitKey}`;
 }
 
@@ -58,7 +61,11 @@ export interface ResolvedOriginTrait {
 export function resolveOriginTraits(
 	origins: OriginsRecord | undefined,
 	defs: OriginTraitDef[],
-): { modifiers: ResolvedOriginTrait[]; grants: ResolvedOriginTrait[]; notes: ResolvedOriginTrait[] } {
+): {
+	modifiers: ResolvedOriginTrait[];
+	grants: ResolvedOriginTrait[];
+	notes: ResolvedOriginTrait[];
+} {
 	const out = { modifiers: [], grants: [], notes: [] } as {
 		modifiers: ResolvedOriginTrait[];
 		grants: ResolvedOriginTrait[];
@@ -76,7 +83,7 @@ export function resolveOriginTraits(
 		if (!activeKeys.has(def.originKey)) continue;
 		const resolved = {
 			def,
-			claimed: def.kind === "grant" && (claims[traitDefKey(def)] === true),
+			claimed: def.kind === "grant" && claims[traitDefKey(def)] === true,
 		};
 		if (def.kind === "modifier") out.modifiers.push(resolved);
 		else if (def.kind === "grant") out.grants.push(resolved);
@@ -101,6 +108,11 @@ export function traitModifierId(def: OriginTraitDef): string {
 testContributors.register("origin-traits", (view, context) => {
 	const defs = getPorts().config.originTraits() as OriginTraitDef[];
 	if (defs.length === 0) return [];
+	// Bead l2wz: the view's system types as the family union; origins are a
+	// character-family field — non-character families carry none (as the
+	// `view.system.origins` read already yielded undefined for them), so the
+	// guard changes nothing at runtime.
+	if (!isCharacterView(view)) return [];
 	const origins = view.system.origins as never;
 	if (!origins) return [];
 	// Pure resolution (above; no import cycle — it does not import the funnel).

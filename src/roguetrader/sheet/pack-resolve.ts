@@ -1,13 +1,18 @@
 /**
- * Robust compendium document resolution (bead wwuc root cause): fromUuid
- * resolved to undefined in-world for our LevelDB packs even when the pack
- * held the document, silently no-opping `item.sheet?.render(...)`. Resolve
- * the document DIRECTLY from the pack instead:
- * "Compendium.<pack>.<type>.<id>" -> game.packs.get("<pack>").getDocument(id).
- * fromUuid stays the fallback for non-compendium uuid shapes.
+ * Robust compendium document resolution. The SEMANTICS (the bead wwuc root
+ * cause): fromUuid resolved to undefined in-world for our LevelDB packs even
+ * when the pack held the document, silently no-opping
+ * `item.sheet?.render(...)`. "Compendium.<pack>.<type>.<id>" therefore
+ * resolves DIRECTLY from the pack, not through generic uuid resolution, and
+ * non-compendium uuid shapes fall through to fromUuid.
+ *
+ * Since bead p7o5 those semantics live BEHIND the ContentPort
+ * (ports.content.document/documentsOrNull — the foundry adapter implements
+ * them); this module is application code and never touches game.packs or
+ * fromUuid directly, so a swapped-in NO_CONTENT_PORT (or a test fake) is
+ * honoured here too.
  */
 import { getPorts } from "../../ffg/infrastructure/foundry/ports";
-import { packDocuments } from "../infrastructure/foundry/content";
 /**
  * The OPEN layer of the pack-doc link library (epic 61pk, bead n2b2):
  * this module pairs the pure resolvers/anchor helper (sheet/pack-doc-links.ts,
@@ -29,42 +34,21 @@ export {
 export async function resolvePackDocument(
 	uuid: string,
 ): Promise<unknown | null> {
-	const parts = /^Compendium\.([^.]+)\.([^.]+)\.Item\.([^.]+)$/.exec(uuid);
-	if (parts) {
-		const pack = game.packs?.get(`${parts[1]}.${parts[2]}`);
-		if (pack) {
-			const doc = await (
-				pack as unknown as {
-					getDocument: (id: string) => Promise<unknown>;
-				}
-			).getDocument(parts[3]);
-			if (!doc) {
-				console.warn(
-					`rogue-trader | pack document ${parts[3]} not found in ${parts[1]}.${parts[2]}`,
-				);
-			}
-			return doc ?? null;
-		}
-		console.warn(`rogue-trader | compendium pack ${parts[1]}.${parts[2]} not found`);
-		return null;
-	}
-	// fvtt-types types fromUuid's parameter as a template-literal UUID union,
-	// but a uuid here is an arbitrary string — cast at this one boundary (the
-	// rules/adapter documentFromUuid precedent). This module entered the
-	// scoped type graph in bead qg4z, when the damage-adapter started pulling
-	// the doc-link catalogs through this file.
-	return (await foundry.utils.fromUuid(uuid as never)) ?? null;
+	// Direct-from-pack + fromUuid-fallback semantics live in the adapter
+	// (see the module header); missing docs warn loudly and resolve null.
+	return getPorts().content.document(uuid);
 }
 
 /**
  * Fetch a compendium pack's documents (bead ku1i consolidation, routed
- * through the infrastructure primitive in bead s4lu): one loud missing-pack
- * warning per fetch instead of 22 silent no-ops. Empty list means "pack
- * missing or empty" — callers that distinguish can check the pack's
- * existence separately.
+ * through the ContentPort as of bead p7o5 — the null-carrying access lets
+ * this stay "one loud missing-pack warning per fetch instead of 22 silent
+ * no-ops", without the rules-facing documents() that collapses null to
+ * []). Empty list means "pack missing or empty" — callers that distinguish
+ * can probe documentsOrNull themselves.
  */
 export async function getPackDocuments(packId: string): Promise<unknown[]> {
-	const docs = await packDocuments(packId);
+	const docs = await getPorts().content.documentsOrNull(packId);
 	if (docs === null) {
 		console.warn(`rogue-trader | compendium pack ${packId} not installed`);
 		return [];
@@ -137,7 +121,10 @@ export async function openDocumentSheet(
 ): Promise<void> {
 	const sheet = (item as { sheet?: { render: (o?: object) => unknown } }).sheet;
 	if (!sheet) {
-		console.error(`rogue-trader | ${label}: resolved document has no sheet:`, item);
+		console.error(
+			`rogue-trader | ${label}: resolved document has no sheet:`,
+			item,
+		);
 		getPorts().notify.error(notifyKey, vars);
 		return;
 	}

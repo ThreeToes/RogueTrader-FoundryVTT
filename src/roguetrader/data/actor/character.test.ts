@@ -24,16 +24,34 @@ function charWith(values: Record<string, number>): Character {
 }
 
 describe("Character derived values (definitional)", () => {
-	test("movement scales with Agility bonus", () => {
-		const c = charWith({ ag: 40 }); // AB 4
-		const m = c.movement();
-		expect(m).toEqual({ half: 3, full: 4, charge: 8, run: 12 });
+	// Bead krph (Core Rulebook movement, printed p265): half = AB×1,
+	// full = AB×2, charge = AB×3, run = AB×6.
+	const ladder = (ab: number) => ({
+		half: ab,
+		full: ab * 2,
+		charge: ab * 3,
+		run: ab * 6,
 	});
 
-	test("low AB clamps half-move to 1", () => {
-		const c = charWith({ ag: 10 }); // AB 1
-		expect(c.movement().half).toBe(1);
-		expect(c.movement().full).toBe(1);
+	test("movement ladder scales with Agility bonus (AB 4 → 4/8/12/24)", () => {
+		expect(charWith({ ag: 40 }).movement()).toEqual(ladder(4));
+	});
+
+	test("movement ladder at AB 1 → 1/2/3/6", () => {
+		expect(charWith({ ag: 10 }).movement()).toEqual(ladder(1));
+	});
+
+	test("movement ladder at AB 2 → 2/4/6/12", () => {
+		expect(charWith({ ag: 20 }).movement()).toEqual(ladder(2));
+	});
+
+	test("movement ladder at AB 5 → 5/10/15/30", () => {
+		expect(charWith({ ag: 55 }).movement()).toEqual(ladder(5));
+	});
+
+	// The book defines no floor: a zeroed characteristic yields zeroed rates.
+	test("movement ladder at AB 0 → 0/0/0/0 (no floor in the book)", () => {
+		expect(charWith({ ag: 0 }).movement()).toEqual(ladder(0));
 	});
 
 	// Bead jpt3: a GETTER, not a method — core's roll interpolation reads it as
@@ -97,7 +115,7 @@ describe("effective characteristic values (bead xu83)", () => {
 		]);
 		expect(c.effectiveCharacteristicValue("ag")).toBe(25);
 		expect(c.characteristicBonus("ag")).toBe(2);
-		expect(c.movement().full).toBe(2);
+		expect(c.movement().full).toBe(4);
 		expect(c.initiativeBonus).toBe(2);
 	});
 
@@ -150,16 +168,16 @@ describe("NPC identity fields (bead lib6)", () => {
 			expect(field, `schema missing ${key}`).toBeDefined();
 			expect(field?.opts?.initial).toBe("");
 		}
-		const threat = schema.threatLevel as {
-			opts?: { initial?: unknown };
-		} | undefined;
+		const threat = schema.threatLevel as
+			| {
+					opts?: { initial?: unknown };
+			  }
+			| undefined;
 		expect(threat?.opts?.initial).toBe("");
 	});
 
 	test("template.json npc block carries no system keys (the schema owns them)", async () => {
-		const template = (await import(
-			"../../../../template.json"
-		)) as unknown as {
+		const template = (await import("../../../../template.json")) as unknown as {
 			Actor: { types: string[]; npc: Record<string, unknown> };
 		};
 		// Still listed: template.json's `types` is the legacy declaration list
@@ -181,7 +199,10 @@ describe("NPC identity fields (bead lib6)", () => {
 			"size",
 			"notes",
 		]) {
-			expect(npc[key], `npc.${key} must not be in the template`).toBeUndefined();
+			expect(
+				npc[key],
+				`npc.${key} must not be in the template`,
+			).toBeUndefined();
 		}
 		// The dead v9 "type" key stays dead (system.type read like the actor
 		// type, which is why npcType exists).

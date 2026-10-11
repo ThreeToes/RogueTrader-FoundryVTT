@@ -45,6 +45,7 @@ export type RollKind =
 	| "ship-weapon"
 	| "ship-repair"
 	| "fear"
+	| "snap-out"
 	| "action";
 
 /** Shared request data (generic base, narrowed to the Foundry Actor). */
@@ -98,8 +99,12 @@ export interface ShipWeaponRollRequest extends RollBase {
 	kind: "ship-weapon";
 	/** Installed ship-weapon-component item id on the firing ship. */
 	itemId: string;
-	/** Range band vs the target (book p220): half range +10, long -10. */
-	rangeBand?: "half" | "normal" | "long";
+	/**
+	 * Range band vs the target (Core Rulebook pp219-220): half range +10,
+	 * beyond range -10; "out-of-range" reports a target beyond twice the
+	 * weapon's range and the salvo is refused before any dice are rolled.
+	 */
+	rangeBand?: "half" | "normal" | "long" | "out-of-range";
 }
 
 /**
@@ -133,6 +138,17 @@ export interface FearRollRequest extends RollBase {
 	modifiers?: Modifier[];
 }
 
+/**
+ * "Snap out of it" (bead n0tp, Core Rulebook p296): a Willpower Test to end a
+ * snap-out-capable condition. Lives beside the fear kinds because the outcome
+ * effects (ending the condition / the failure card) are fear-family rules.
+ */
+export interface SnapOutRollRequest extends RollBase {
+	kind: "snap-out";
+	/** Caller-provided modifiers, merged with the funnel collection. */
+	modifiers?: Modifier[];
+}
+
 export type RollRequest =
 	| CharacteristicRollRequest
 	| SkillRollRequest
@@ -142,6 +158,7 @@ export type RollRequest =
 	| ShipWeaponRollRequest
 	| ShipRepairRollRequest
 	| FearRollRequest
+	| SnapOutRollRequest
 	| ActionRollRequest;
 
 /**
@@ -214,6 +231,8 @@ export interface RollKindData {
 		/** Set on the Unshakeable Faith re-roll so it happens only once. */
 		rerolled?: boolean;
 	};
+	/** Snap-out carries nothing from prepare to after (bead n0tp). */
+	"snap-out": undefined;
 	/** The combat-action card inputs (bead et5a, epic moew). */
 	action: {
 		/** The catalog entry snapshot: doc link + verbatim card text. */

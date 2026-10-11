@@ -76,6 +76,33 @@ export interface CharacterSystemView extends SystemViewBase {
 	criticalOverrideRound?: number;
 }
 
+/** The actor types the registry maps onto the unified Character model. */
+export const CHARACTER_ACTOR_TYPES = ["pc", "explorer", "npc"] as const;
+export type CharacterActorTypes = (typeof CHARACTER_ACTOR_TYPES)[number];
+
+/** The actor types carrying a starship system model. */
+export const STARSHIP_ACTOR_TYPES = ["starship"] as const;
+export type ShipActorTypes = (typeof STARSHIP_ACTOR_TYPES)[number];
+
+/** The actor types carrying a vehicle system model. */
+export const VEHICLE_ACTOR_TYPES = ["vehicle"] as const;
+export type VehicleActorTypes = (typeof VEHICLE_ACTOR_TYPES)[number];
+
+/**
+ * Actor type -> system-view family. Distributed, so a union of actor types
+ * yields the union of their families. Types carrying none of the RT family
+ * models (dynasty, planet, cache) fall through to just the base view: they
+ * claim none of the family fields, which is the point of the families.
+ */
+export type SystemViewOfActorType<T extends string> =
+	T extends CharacterActorTypes
+		? CharacterSystemView
+		: T extends ShipActorTypes
+			? ShipSystemView
+			: T extends VehicleActorTypes
+				? VehicleSystemView
+				: SystemViewBase;
+
 /** RT ship system data. */
 export interface ShipSystemView extends SystemViewBase {
 	crewQuality?: string;
@@ -92,12 +119,26 @@ export interface VehicleSystemView extends SystemViewBase {
 }
 
 /**
- * The full RT view: union of every actor family's system fields. This is the
- * default instantiation of `ActorView`/`buildActorView` so existing RT call
- * sites do not churn; sibling systems (DH2, Only War…) instantiate with just
- * the `SystemViewBase`-extending type they support.
+ * The union of every RT actor family's system view (bead l2wz). This is the
+ * DEFAULT instantiation of `ActorView`/`buildActorView`: a bare `ActorView`
+ * must be able to name any of the RT families, so reads of family-specific
+ * fields still require narrowing (a character view does NOT carry
+ * `voidShields` — that was the wide-cross-product bug).
  */
-export type ActorSystemView = CharacterSystemView &
+export type ActorSystemView =
+	| CharacterSystemView
+	| ShipSystemView
+	| VehicleSystemView;
+
+/**
+ * The WIDE cross-product of every actor family (all families' fields at
+ * once) — explicitly labelled for what it is. A view typed with this claims
+ * fields that only some actors have, so it is only honest for plumbing that
+ * genuinely must accept every family's full field set (none currently does);
+ * prefer a single family view or the `ActorSystemView` union. Exported for
+ * explicit `ActorView<AnySystemView>` instantiations, never as a default.
+ */
+export type AnySystemView = CharacterSystemView &
 	ShipSystemView &
 	VehicleSystemView;
 
@@ -114,6 +155,18 @@ export interface ActorView<S extends SystemViewBase = ActorSystemView> {
 	readonly effects: readonly EffectView[];
 	/** Effects currently APPLIED to the actor (includes transferred item effects). */
 	readonly appliedEffects: readonly EffectView[];
+}
+
+/**
+ * Narrow a view to the character family (pc/explorer/npc). The builder picks
+ * the family per `actor.type`; this is the runtime mirror of that choice, so
+ * rules code with character-only fields (wounds, psyker flags, origins) can
+ * narrow honestly instead of reading possibly-absent fields off a wide view.
+ */
+export function isCharacterView(
+	view: ActorView,
+): view is ActorView<CharacterSystemView> {
+	return (CHARACTER_ACTOR_TYPES as readonly string[]).includes(view.type);
 }
 
 /** Find an owned item by id. */

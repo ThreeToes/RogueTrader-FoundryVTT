@@ -302,9 +302,7 @@ function normaliseReplaces(value: unknown): string[] | undefined {
 }
 
 /** A path entry's species binding: blank = human. */
-export function speciesKeyOfEntry(entry: {
-	species?: string;
-}): string {
+export function speciesKeyOfEntry(entry: { species?: string }): string {
 	return (entry?.species ?? "").trim();
 }
 
@@ -377,7 +375,10 @@ export function originsInRow(row: OriginRow): OriginEntry[] {
  * (p16: the choice directly below, or either adjacent neighbour of it). The
  * first row is completely open.
  */
-export function allowedColumns(row: OriginRow, prevCol: number | null): number[] {
+export function allowedColumns(
+	row: OriginRow,
+	prevCol: number | null,
+): number[] {
 	// Lineage is NOT part of the constrained chart (Into the Storm p28:
 	// "Lineage choices are free and open, not constrained by the other choices
 	// of the Origin Path"), so every slot is reachable. The adjacency itself
@@ -438,7 +439,10 @@ export function effectiveMechanics(
 	variantKey?: string,
 ): OriginMechanics {
 	if (!variantKey || !entry.variants) return entry.mechanics;
-	return entry.variants.find((v) => v.key === variantKey)?.mechanics ?? entry.mechanics;
+	return (
+		entry.variants.find((v) => v.key === variantKey)?.mechanics ??
+		entry.mechanics
+	);
 }
 
 // ---------------------------------------------------------------- Resolution
@@ -672,10 +676,7 @@ export function resolveOrigins(
 			absorb(`${label}: ${alt.label}`, alt.mechanics);
 		}
 		// Characteristic choice: exactly one group.
-		if (
-			mechanics.characteristicChoice &&
-			pick.charChoice
-		) {
+		if (mechanics.characteristicChoice && pick.charChoice) {
 			addChars(pick.charChoice);
 		}
 		// Option choice may be a skill or a talent; the caller matches it
@@ -686,5 +687,3 @@ export function resolveOrigins(
 	}
 	return resolved;
 }
-
-

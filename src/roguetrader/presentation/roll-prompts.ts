@@ -15,9 +15,7 @@ import { getPorts } from "../infrastructure/foundry/ports";
  * +1..+cap. Push levels are separate buttons; each callback encodes the level
  * in the returned value ("push:2").
  */
-export async function promptStrength(
-	pushCapLimit = 3,
-): Promise<string | null> {
+export async function promptStrength(pushCapLimit = 3): Promise<string | null> {
 	const ports = getPorts();
 	const cap = Math.max(1, Math.floor(pushCapLimit));
 	const pushButtons = Array.from({ length: cap }, (_, index) => {
@@ -96,13 +94,15 @@ export async function promptTargetComponent(
 	target: unknown,
 ): Promise<unknown | null> {
 	const ports = getPorts();
-	const items = (
-		(target as { items?: { filter: (fn: unknown) => unknown[] } }).items?.filter(
-			(i: { type?: string }) => {
-				return i.type === "ship-component" || i.type === "ship-weapon-component";
-			},
-		) ?? []
-	) as Array<{ id?: string; name?: string; system?: { state?: string } }>;
+	const items = ((
+		target as { items?: { filter: (fn: unknown) => unknown[] } }
+	).items?.filter((i: { type?: string }) => {
+		return i.type === "ship-component" || i.type === "ship-weapon-component";
+	}) ?? []) as Array<{
+		id?: string;
+		name?: string;
+		system?: { state?: string };
+	}>;
 	const fixable = items.filter(
 		(i) => (i.system?.state ?? "intact") !== "destroyed",
 	);
@@ -112,9 +112,11 @@ export async function promptTargetComponent(
 			(i) =>
 				`<div class="form-group"><label><input type="radio" name="component" value="${i.id}" > ${i.name}</label></div>`,
 		)
-		.join("")}<div class="form-group"><input type="radio" name="component" value="" checked> — ${ports.i18n.t(
-			"SHIP_COMBAT.CRITICAL_SKIP",
-		)} —</div>`;
+		.join(
+			"",
+		)}<div class="form-group"><input type="radio" name="component" value="" checked> — ${ports.i18n.t(
+		"SHIP_COMBAT.CRITICAL_SKIP",
+	)} —</div>`;
 	const result = (await foundry.applications.api.DialogV2.input({
 		window: {
 			title: ports.i18n.t("SHIP_COMBAT.CRITICAL_TITLE"),
@@ -125,6 +127,7 @@ export async function promptTargetComponent(
 	const id = result?.component?.trim();
 	if (!id) return null;
 	return (
-		target as { items?: { get: (id: string) => unknown } }
-	).items?.get(id) ?? null;
+		(target as { items?: { get: (id: string) => unknown } }).items?.get(id) ??
+		null
+	);
 }

@@ -48,7 +48,7 @@ describe("toxicToughnessModifier (bead d8bc, visible funnel contributor)", () =>
 		const mod = toxicToughnessModifier(4, "Toxic (−5 per Damage point)");
 		expect(mod.id).toBe("toxic-toughness");
 		expect(mod.source.type).toBe("effect");
-		expect(mod.source.label).toBe("toxic");
+		expect(mod.source.label).toBe("SOURCE.FROM_TOXIC");
 		expect(mod.label).toBe("Toxic (−5 per Damage point)");
 		expect(mod.value).toBe(-20);
 	});

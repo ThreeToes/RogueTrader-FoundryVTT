@@ -231,10 +231,13 @@ describe("damageless ordnance loads but refuses fire (bead pht2)", () => {
 	});
 
 	test("a loaded damageless round is unusable (no damage formula to roll)", () => {
-		const profile = attackProfileOf({
-			...missileLauncher,
-			system: { ...missileLauncher.system, loadedAmmoId: "a4" },
-		},	(id) => (id === "a4" ? webMissile : null));
+		const profile = attackProfileOf(
+			{
+				...missileLauncher,
+				system: { ...missileLauncher.system, loadedAmmoId: "a4" },
+			},
+			(id) => (id === "a4" ? webMissile : null),
+		);
 		expect(profile?.unusable).toBe(true);
 	});
 });
@@ -318,9 +321,15 @@ describe("attackProfileOf launcher load branch (bead 4obp)", () => {
 	test("a loaded grenade launcher derives from the grenade weapon's OWN fields", () => {
 		const gla = {
 			...missileLauncher,
-			system: { ...missileLauncher.system, loadedAmmoId: "g1", acceptsAmmo: "grenade" },
+			system: {
+				...missileLauncher.system,
+				loadedAmmoId: "g1",
+				acceptsAmmo: "grenade",
+			},
 		};
-		const profile = attackProfileOf(gla, (id) => (id === "g1" ? fragGrenade : null));
+		const profile = attackProfileOf(gla, (id) =>
+			id === "g1" ? fragGrenade : null,
+		);
 		expect(profile?.damage).toBe("2d10+3");
 		expect(profile?.qualities).toEqual(["blast-3"]);
 		// The grenade STAYS unchanged: no mutation of the loaded item happened.
@@ -342,8 +351,9 @@ describe("attackProfileOf launcher load branch (bead 4obp)", () => {
 	});
 
 	test("a launcher whose loaded item no longer exists is unusable", () => {
-		const profile = attackProfileOf(missileLauncher, (id) =>
-			id === "a1" ? null : null, // deleted ammo
+		const profile = attackProfileOf(
+			missileLauncher,
+			(id) => (id === "a1" ? null : null), // deleted ammo
 		);
 		expect(profile?.unusable).toBe(true);
 	});
@@ -464,7 +474,10 @@ describe("two-kind ordnance loads into both launcher kinds (bead mnrm)", () => {
 		// whitespace + case + duplicate tokens normalise:
 		const sloppy = {
 			...starflareRound,
-			system: { ...starflareRound.system, ordnance: { kind: "  Grenade\tMISSILE missile " } },
+			system: {
+				...starflareRound.system,
+				ordnance: { kind: "  Grenade\tMISSILE missile " },
+			},
 		};
 		expect(ordnanceKindsOf(sloppy)).toEqual(["grenade", "missile"]);
 		// no ordnance block = no kinds:
@@ -496,10 +509,13 @@ describe("two-kind ordnance loads into both launcher kinds (bead mnrm)", () => {
 	test("a launcher loaded with the two-kind damageless round still refuses fire", () => {
 		// The load is ACCEPTED (no load-refusal); the damage path is the
 		// established warn-and-refuse (ordnanceFieldsOf needs a formula).
-		const profile = attackProfileOf({
-			...missileLauncher,
-			system: { ...missileLauncher.system, loadedAmmoId: "a6" },
-		},	(id) => (id === "a6" ? starflareRound : null));
+		const profile = attackProfileOf(
+			{
+				...missileLauncher,
+				system: { ...missileLauncher.system, loadedAmmoId: "a6" },
+			},
+			(id) => (id === "a6" ? starflareRound : null),
+		);
 		expect(profile?.unusable).toBe(true);
 		expect(profile?.fired ?? null).toBe(null);
 	});

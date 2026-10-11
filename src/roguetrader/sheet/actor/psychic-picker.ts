@@ -1,6 +1,9 @@
+import { getPorts } from "../../infrastructure/foundry/ports";
 import { sheetContext } from "../context";
-import { getCharacterOptionDocs } from "../pack-resolve";
+import { getCharacterOptionDocs, resolvePackDocument } from "../pack-resolve";
 import { OwnedItemPicker } from "./owned-picker";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
+import { clonePackDocPayload } from "./creator-apply";
 
 /**
  * Psychic power compendium picker (bead m4me): lists the character-options
@@ -22,13 +25,14 @@ export class PsychicPicker extends OwnedItemPicker {
 
 	static PARTS = {
 		form: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/parts/psychic-picker.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/psychic-picker.hbs`,
 		},
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options as never));
+		const context = sheetContext(
+			await super._prepareContext(_options as never),
+		);
 		const documents = (await getCharacterOptionDocs(
 			"psychicpower",
 		)) as unknown as Array<{
@@ -77,11 +81,33 @@ export class PsychicPicker extends OwnedItemPicker {
 	): Promise<void> {
 		const uuid = target.dataset.uuid;
 		if (!uuid || !this.actor) return;
-		const doc = (await foundry.utils.fromUuid(uuid as never)) as unknown as
-			| { toObject?: () => object }
-			| null;
-		if (!doc?.toObject) return;
-		await this.actor.createEmbeddedDocuments("Item", [doc.toObject()] as never);
+		// Bead qynu: this used to call foundry.utils.fromUuid directly, which
+		// silently resolved to null in-world for this system's LevelDB packs
+		// (bead wwuc's root cause) — the click did NOTHING with no diagnostics.
+		// Resolve through the shared pack resolver instead and fail loudly.
+		let doc: { toObject?: () => object } | null = null;
+		try {
+			doc = (await resolvePackDocument(uuid)) as {
+				toObject?: () => object;
+			} | null;
+		} catch (error) {
+			console.error(
+				`rogue-trader | psychic picker: resolving "${uuid}" failed:`,
+				error,
+			);
+		}
+		if (!doc?.toObject) {
+			console.warn(
+				`rogue-trader | psychic picker: "${uuid}" did not resolve; grant skipped`,
+			);
+			getPorts().notify.error("PSYCHIC_POWER.ADD_FAIL", { uuid });
+			return;
+		}
+		// The clone must not carry the pack doc's _id (two Items cannot share
+		// an _id; shared strip via clonePackDocPayload, bead xynx).
+		await this.actor.createEmbeddedDocuments("Item", [
+			clonePackDocPayload(doc.toObject()),
+		] as never);
 		this.render({ force: true } as never);
 	}
 }

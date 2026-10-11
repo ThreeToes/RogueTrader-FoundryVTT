@@ -1,16 +1,11 @@
-import {
-	performRoll,
-} from "../../rules/adapter";
+import { performRoll } from "../../rules/adapter";
 import type { CharacteristicKey as Key } from "../../data/actor/character";
+import { equipStateOf, systemOf } from "../../data/accessors";
 import {
-	equipStateOf,
-	systemOf,
-} from "../../data/accessors";
-import { cloneItemFromDrop, npcEquipDefaultSystemOverrides } from "../drop-clone";
-import {
-	compendiumSourceOf,
-	npcInventoryGroups,
-} from "../npc-inventory";
+	cloneItemFromDrop,
+	npcEquipDefaultSystemOverrides,
+} from "../drop-clone";
+import { compendiumSourceOf, npcInventoryGroups } from "../npc-inventory";
 import { equipToggleState } from "../equip";
 import {
 	gatePsykerTab,
@@ -24,6 +19,7 @@ import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { isPsykerLike } from "../../rules/psyker";
+import { bodyLocationLabelKey } from "../../rules/labels";
 import { enrichText } from "../rich-text";
 import { itemIdFromTarget } from "../dom";
 
@@ -40,6 +36,7 @@ const { ActorSheetV2 } = foundry.applications.sheets;
  */
 
 import { imageActions } from "../image-actions";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
@@ -67,24 +64,22 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	static PARTS = {
 		header: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/parts/npc-header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/npc-header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		main: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/npc-main.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/npc-main.hbs`,
 		},
 		inventory: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/tabs/npc-inventory.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/npc-inventory.hbs`,
 		},
 		psy: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/npc-psy.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/npc-psy.hbs`,
 		},
 		notes: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/npc-notes.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/npc-notes.hbs`,
 		},
 	};
 
@@ -110,11 +105,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	protected override _prepareTabs(
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
-		return gatePsykerTab(
-			this.actor,
-			super._prepareTabs(group),
-			"psy",
-		);
+		return gatePsykerTab(this.actor, super._prepareTabs(group), "psy");
 	}
 
 	/**
@@ -195,7 +186,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			this.actor.items as unknown as Parameters<typeof armourLocations>[0],
 		).map(({ loc, ap }) => ({
 			loc,
-			label: `BODY_LOCATION.${loc.toUpperCase().replace(/-/g, "_")}`,
+			label: bodyLocationLabelKey(loc),
 			ap,
 		}));
 		context.armourItems = this.actor.items
@@ -245,7 +236,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		});
 	}
 
-		/** Click a known skill to roll it. */
+	/** Click a known skill to roll it. */
 	static async #onRollSkill(
 		this: { actor: foundry.documents.Actor },
 		_event: unknown,

@@ -9,13 +9,62 @@ import type { WarrantEntry } from "../../rules/warrant";
 
 /** A pool covering two paths of options, in row/column order. */
 const entries: WarrantEntry[] = [
-	{ key: "a1", row: "warrant-age", col: 1, name: "Age of Sin", description: "<p>Sin grows the dynasty.</p>", mechanics: { shipPoints: 9, profitFactor: 5 } },
-	{ key: "a2", row: "warrant-age", col: 2, name: "Age of Redemption", description: "<p>Redemption.</p>", mechanics: { shipPoints: 10, notes: ["Gain an Archeotech component"] } },
-	{ key: "b3", row: "fortune-fate", col: 3, name: "Rising Star", description: "", mechanics: { profitFactor: 2 } },
-	{ key: "c3", row: "acquisition", col: 3, name: "Seed Currency", description: "", mechanics: { profitFactor: 1 } },
-	{ key: "d3", row: "sanction", col: 3, name: "Sanctioned", description: "", mechanics: {} },
-	{ key: "e3", row: "contacts", col: 3, name: "Cartel", description: "", mechanics: {} },
-	{ key: "f3", row: "renown", col: 3, name: "Renowned", description: "", mechanics: { shipPoints: 3 } },
+	{
+		key: "a1",
+		row: "warrant-age",
+		col: 1,
+		name: "Age of Sin",
+		description: "<p>Sin grows the dynasty.</p>",
+		mechanics: { shipPoints: 9, profitFactor: 5 },
+	},
+	{
+		key: "a2",
+		row: "warrant-age",
+		col: 2,
+		name: "Age of Redemption",
+		description: "<p>Redemption.</p>",
+		mechanics: { shipPoints: 10, notes: ["Gain an Archeotech component"] },
+	},
+	{
+		key: "b3",
+		row: "fortune-fate",
+		col: 3,
+		name: "Rising Star",
+		description: "",
+		mechanics: { profitFactor: 2 },
+	},
+	{
+		key: "c3",
+		row: "acquisition",
+		col: 3,
+		name: "Seed Currency",
+		description: "",
+		mechanics: { profitFactor: 1 },
+	},
+	{
+		key: "d3",
+		row: "sanction",
+		col: 3,
+		name: "Sanctioned",
+		description: "",
+		mechanics: {},
+	},
+	{
+		key: "e3",
+		row: "contacts",
+		col: 3,
+		name: "Cartel",
+		description: "",
+		mechanics: {},
+	},
+	{
+		key: "f3",
+		row: "renown",
+		col: 3,
+		name: "Renowned",
+		description: "",
+		mechanics: { shipPoints: 3 },
+	},
 ];
 
 const FULL: Record<string, string> = {
@@ -60,7 +109,10 @@ describe("warrantChoiceViews (bead twtq)", () => {
 	});
 
 	test("unpicked rows stay unresolved but keep their tab wiring", () => {
-		const partial: Record<string, string> = { "warrant-age": "a2", "fortune-fate": "b3" };
+		const partial: Record<string, string> = {
+			"warrant-age": "a2",
+			"fortune-fate": "b3",
+		};
 		const views = warrantChoiceViews(partial, entries);
 		const later = views.filter((view) => !partial[view.row]);
 		expect(later.length).toBe(4);

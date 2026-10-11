@@ -244,7 +244,8 @@ describe("encounter-end mapping (bead cneb)", () => {
 	test("encounterLengthStatusIds derives from the condition table (no drift)", () => {
 		const ids = encounterLengthStatusIds();
 		// Every id is a real registry status.
-		for (const id of ids) expect(SYSTEM_STATUSES.some((s) => s.id === id)).toBe(true);
+		for (const id of ids)
+			expect(SYSTEM_STATUSES.some((s) => s.id === id)).toBe(true);
 		// The book's encounter-length outcomes: shaken/frozen/fleeing/frenzied
 		// (p295) + non-combat unnerved (p296). NOT startled/unconscious/frozen's
 		// timed/catatonic/hallucinating rounds-and-hours flavours.
@@ -268,7 +269,11 @@ describe("encounter-end mapping (bead cneb)", () => {
 		// one, so encounter end must not delete it.
 		const removals = encounterEndRemovals([
 			{ id: "ae-frozen-timed", statuses: ["frozen"], duration: { rounds: 5 } },
-			{ id: "ae-shaken", statuses: ["frozen", "shaken"], duration: { seconds: 0 } },
+			{
+				id: "ae-shaken",
+				statuses: ["frozen", "shaken"],
+				duration: { seconds: 0 },
+			},
 		]);
 		// The second effect carries frozen (encounter-length flavour) and a
 		// null seconds — still removed, both statuses reported as one removal.
@@ -397,20 +402,20 @@ describe("content guards: combat conditions (epic vr1o / bead c9nt)", () => {
 		},
 	);
 
-	test(
-	"every combat row carries a printed-page cite comment (extraction convention)",
-	async () => {
+	test("every combat row carries a printed-page cite comment (extraction convention)", async () => {
 		const source = await Bun.file(
 			new URL("./conditions.ts", import.meta.url),
 		).text();
-		const rowMarker = '{ id: "';
+		// Row formatting may be single-line or multi-line (biome reflow), so
+		// anchor on the id literal rather than the `{ id:` prefix.
+		const rowMarker = 'id: "';
 		for (const id of COMBAT_CONDITION_IDS) {
-			const rowAt = source.indexOf(`{ id: "${id}"`);
+			const rowAt = source.indexOf(`id: "${id}"`);
 			expect(rowAt, `row for '${id}' exists in conditions.ts`).toBeGreaterThan(
 				-1,
 			);
 			// The cite lives in the comment block directly above the row: from
-			// the previous `{ id:` row up to this row.
+			// the previous `id:` row up to this row.
 			const prevRow = source.lastIndexOf(rowMarker, rowAt - 1);
 			const block = source.slice(prevRow + 1, rowAt);
 			expect(
@@ -525,17 +530,19 @@ function refresh(
 		migrateDuration(duration);
 		const value = typeof duration.value === "number" ? duration.value : null;
 		// _prepareCombatBasedDuration: remaining = value - (round - startRound).
-		const remaining = value == null
-			? Number.POSITIVE_INFINITY
-			: value - (combat.round - (effect.start.round ?? 1));
+		const remaining =
+			value == null
+				? Number.POSITIVE_INFINITY
+				: value - (combat.round - (effect.start.round ?? 1));
 		const durationReached = remaining <= 0 || !Number.isFinite(remaining);
 		// isExpiryEvent: expiry defaults to "turnStart" for a numbered duration
 		// (schema initial 15802-15803); encounter-length effects have neither
 		// value nor expiry and can never match a combat event.
 		const expiry = value != null ? "turnStart" : null;
-		const isExpiryEvent = event === expiry
-			&& event === "turnStart"
-			&& effect.owner === combat.combatant;
+		const isExpiryEvent =
+			event === expiry &&
+			event === "turnStart" &&
+			effect.owner === combat.combatant;
 		if (durationReached && isExpiryEvent) {
 			effect.deleted = true; // expiryAction "delete" → #deleteExpiredEffects
 			deleted.push(effect.id);
@@ -563,7 +570,13 @@ function appliedEffect(
 	round: number,
 	owner: string,
 ): SimEffect {
-	return { id, condition, start: { round, combat: "c1" }, owner, deleted: false };
+	return {
+		id,
+		condition,
+		start: { round, combat: "c1" },
+		owner,
+		deleted: false,
+	};
 }
 
 /** A turnStart combat snapshot against the A/B/C turn order. */
@@ -582,7 +595,9 @@ describe("rounds duration automation (bead u3i7, v14 core native)", () => {
 			expect(refresh(registry, "turnStart", turnStart(round, 0))).toEqual([]);
 		}
 		// Round 8, owner A's turn start: remaining 6 - (8 - 2) = 0 → deleted.
-		expect(refresh(registry, "turnStart", turnStart(8, 0))).toEqual(["ae-frozen"]);
+		expect(refresh(registry, "turnStart", turnStart(8, 0))).toEqual([
+			"ae-frozen",
+		]);
 		expect(effect.deleted).toBe(true);
 	});
 
@@ -596,14 +611,21 @@ describe("rounds duration automation (bead u3i7, v14 core native)", () => {
 		}
 		expect(effect.deleted).toBe(false);
 		// Only owner B's turn start in round 7 (1 + 6) removes it.
-		expect(refresh(registry, "turnStart", turnStart(7, 1))).toEqual(["ae-frozen"]);
+		expect(refresh(registry, "turnStart", turnStart(7, 1))).toEqual([
+			"ae-frozen",
+		]);
 	});
 
 	test("encounter-length conditions are NEVER expired by core ticking — only by the deleteCombat cleanup", () => {
 		const effect = appliedEffect("ae-shaken", ENCOUNTER, 2, "A");
 		const registry = [effect];
 		// A full 30-round encounter, every event kind, every turn slot:
-		for (const event of ["turnStart", "roundStart", "roundEnd", "turnEnd"] as const) {
+		for (const event of [
+			"turnStart",
+			"roundStart",
+			"roundEnd",
+			"turnEnd",
+		] as const) {
 			for (let round = 1; round <= 30; round++) {
 				for (const turn of [0, 1, 2]) {
 					refresh(registry, event, { round, combatant: TURN_ORDER[turn] });
@@ -625,7 +647,11 @@ describe("rounds duration automation (bead u3i7, v14 core native)", () => {
 		// (rules/conditions.ts) skips it; core's own ticking is its only removal.
 		expect(
 			encounterEndRemovals([
-				{ id: "ae-frozen", statuses: [TIMED.statusId], duration: { rounds: 6 } },
+				{
+					id: "ae-frozen",
+					statuses: [TIMED.statusId],
+					duration: { rounds: 6 },
+				},
 			]),
 		).toEqual([]);
 	});
@@ -634,7 +660,11 @@ describe("rounds duration automation (bead u3i7, v14 core native)", () => {
 		// Fixed-cap timed rows: frozen 1d5→6 rounds (capped, p295-296) and
 		// hallucinating 20 rounds; catatonic's hours land as seconds;
 		// startled is the smallest timed row, one round.
-		const cases: Array<{ condition: ConditionData; value: number; units: string }> = [
+		const cases: Array<{
+			condition: ConditionData;
+			value: number;
+			units: string;
+		}> = [
 			{ condition: shockCondition(10), value: 1, units: "rounds" },
 			{ condition: shockCondition(150), value: 6, units: "rounds" },
 			{ condition: shockCondition(160), value: 6, units: "rounds" },

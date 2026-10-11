@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import { formatShipWeaponRange, normalizeShipWeaponRange } from "./ship-weapon-range";
+import {
+	formatShipWeaponRange,
+	normalizeShipWeaponRange,
+} from "./ship-weapon-range";
 
 // Bead 3atc (epic c48r): ship-weapon range became a min/max VU band.
 // These pin the legacy-doc migration rule: a bare number (or numeric

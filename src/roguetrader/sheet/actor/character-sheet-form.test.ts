@@ -17,6 +17,7 @@
 // creators.test.ts pattern (sheet modules touch the foundry global at load).
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const originalGlobals: Record<string, unknown> = {};
 for (const key of ["game", "ui", "foundry", "Hooks", "CONFIG", "Handlebars"]) {
@@ -47,7 +48,8 @@ afterAll(() => {
 	}
 });
 
-const TEMPLATE_ROOT = "template/";
+/** Where templates live on disk (the RT root lives in ffg/domain). */
+const DISK_TEMPLATE_ROOT = "template/";
 
 /** rt/ partial name (e.g. "paired-value") -> its template file path. */
 function partialFile(partial: string): string | undefined {
@@ -64,7 +66,7 @@ function loadWithIncludes(path: string): string {
 	const load = (rel: string): string => {
 		if (seen.has(rel)) return "";
 		seen.add(rel);
-		const source = readFileSync(`${TEMPLATE_ROOT}${rel}`, "utf8");
+		const source = readFileSync(`${DISK_TEMPLATE_ROOT}${rel}`, "utf8");
 		return source.replace(
 			/\{\{>\s*"rt\/([\w-]+)"/g,
 			(_match, partial: string) => {
@@ -73,7 +75,7 @@ function loadWithIncludes(path: string): string {
 			},
 		);
 	};
-	return load(path.replace("systems/rogue-trader/template/", ""));
+	return load(path.replace(TEMPLATE_ROOT, ""));
 }
 
 /** name="..." attributes on actual form controls (<input>/<select>/<textarea>) in the source. */
@@ -81,9 +83,7 @@ function boundNames(source: string): string[] {
 	// prose-mirror elements carry a name but are editors, not form controls,
 	// and data-name= must not match — only elements that contribute submit data.
 	return [
-		...source.matchAll(
-			/<(?:input|select|textarea)\b[^>]*?\bname="([^"]+)"/g,
-		),
+		...source.matchAll(/<(?:input|select|textarea)\b[^>]*?\bname="([^"]+)"/g),
 	].map((match) => match[1]);
 }
 

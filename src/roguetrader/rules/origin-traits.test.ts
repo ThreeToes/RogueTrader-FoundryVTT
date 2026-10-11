@@ -26,7 +26,9 @@ const def = (
 
 const DEFS: OriginTraitDef[] = [
 	def("death-world", "paranoid", "modifier", { testKey: "fel", value: -10 }),
-	def("press-ganged", "unwilling-accomplice", "grant", { grantKind: "free-skill" }),
+	def("press-ganged", "unwilling-accomplice", "grant", {
+		grantKind: "free-skill",
+	}),
 	def("press-ganged", "jealous-freedom", "note"),
 	def("void-born", "charmed", "note"),
 ];
@@ -88,8 +90,14 @@ describe("trait keys and ids", () => {
 	});
 
 	test("modifier ids are stable and trait-unique", () => {
-		const d1 = def("death-world", "paranoid", "modifier", { testKey: "fel", value: -10 });
-		const d2 = def("void-born", "paranoid", "modifier", { testKey: "fel", value: -5 });
+		const d1 = def("death-world", "paranoid", "modifier", {
+			testKey: "fel",
+			value: -10,
+		});
+		const d2 = def("void-born", "paranoid", "modifier", {
+			testKey: "fel",
+			value: -5,
+		});
 		expect(traitModifierId(d1)).not.toBe(traitModifierId(d2));
 		expect(traitModifierId(d1)).toBe(traitModifierId({ ...d1 }));
 	});

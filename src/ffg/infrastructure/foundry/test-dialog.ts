@@ -1,5 +1,6 @@
 import { sumModifiers } from "../../../rules-engine/index";
 import type { Modifier } from "../../../rules-engine/modifier";
+import { localizeLabel } from "./ports";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -33,6 +34,18 @@ export interface TestDialogAttackContext {
 	ranged: boolean;
 	/** Melee weapon: show the charge checkbox (talent conditions gate on it). */
 	melee: boolean;
+	// Bead 4hwl: the option bonus numbers are DATA, not template literals — a
+	// GM-tuned homebrew fire-mode profile (resolveFireModeBonus) renders its
+	// real value instead of the hardcoded (+10)/(+20) that contradicted the
+	// rules data (homebrew is a data seam, AGENTS.md).
+	/** Semi-Auto Burst BS bonus shown on the fire-mode option (core +10, p237). */
+	burstBonus?: number;
+	/** Full Auto Burst BS bonus shown on the fire-mode option (core +20, p237). */
+	fullBonus?: number;
+	/** Aim (half action) bonus shown on the aim option (core +10, p237). */
+	aimHalf?: number;
+	/** Aim (full action) bonus shown on the aim option (core +20, p237). */
+	aimFull?: number;
 }
 
 export interface TestDialogRequest {
@@ -164,7 +177,7 @@ export class TestDialogBase extends HandlebarsApplicationMixin(ApplicationV2) {
 	#conditionLabel: ((key: string) => string) | null;
 	#ladder: DifficultyStep[];
 	#labelPrefix: string;
-	#custom: CustomModifierRow[];	// Bead z132: the modifiers expander persists its open state across
+	#custom: CustomModifierRow[]; // Bead z132: the modifiers expander persists its open state across
 	// rerenders (add/remove custom rows recreates the DOM); collapsed default.
 	#modifiersOpen = false;
 	// Bead wqt3: selected difficulty modifier (null = no selection).
@@ -247,9 +260,8 @@ export class TestDialogBase extends HandlebarsApplicationMixin(ApplicationV2) {
 	/** Checked guarded-effect condition flags (authoritative at roll time). */
 	#conditionFlags(): Record<string, boolean> {
 		const flags: Record<string, boolean> = {};
-		const boxes = this.element?.querySelectorAll<HTMLInputElement>(
-			"[data-condition]",
-		);
+		const boxes =
+			this.element?.querySelectorAll<HTMLInputElement>("[data-condition]");
 		for (const box of boxes ?? []) {
 			const key = box.dataset.condition ?? "";
 			if (key && box.checked) flags[key] = true;
@@ -318,10 +330,7 @@ export class TestDialogBase extends HandlebarsApplicationMixin(ApplicationV2) {
 		const root = this.element;
 		if (!root) return;
 		const total = this.#totalModifier();
-		const target = Math.min(
-			100,
-			Math.max(1, this.#baseTarget + total),
-		);
+		const target = Math.min(100, Math.max(1, this.#baseTarget + total));
 		const setText = (selector: string, text: string): void => {
 			const el = root.querySelector<HTMLElement>(selector);
 			if (el) el.textContent = text;
@@ -334,15 +343,19 @@ export class TestDialogBase extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	override async _prepareContext(
-		options: Parameters<InstanceType<typeof ApplicationV2>["_prepareContext"]>[0],
+		options: Parameters<
+			InstanceType<typeof ApplicationV2>["_prepareContext"]
+		>[0],
 	) {
 		const context = (await super._prepareContext(options)) as Record<
 			string,
 			unknown
 		>;
 		context.baseTarget = this.#baseTarget;
+		// Bead dfdv: contributor labels may be i18n KEYS (funnel quality keys,
+		// item-effect labels) — localize KEY-shaped ones, pass free text through.
 		context.contributors = this.#fixedContributors().map((m) => ({
-			label: m.label,
+			label: localizeLabel(m.label),
 			value: m.value,
 			sourceLabel: m.source.label,
 		}));
@@ -390,9 +403,8 @@ export class TestDialogBase extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 		// Bead z132: persist the modifiers expander's open state across
 		// rerenders so adding a custom row does not collapse it again.
-		const expander = this.element?.querySelector<HTMLDetailsElement>(
-			"[data-modifiers]",
-		);
+		const expander =
+			this.element?.querySelector<HTMLDetailsElement>("[data-modifiers]");
 		expander?.addEventListener("toggle", () => {
 			this.#modifiersOpen = expander.open;
 		});
@@ -448,10 +460,12 @@ export class TestDialogBase extends HandlebarsApplicationMixin(ApplicationV2) {
 		// Bead hyv: read attack-context selectors, if shown.
 		if (this.#attackContext) {
 			const root = this.element;
-			const fireMode = root?.querySelector<HTMLSelectElement>("[data-fire-mode]")
-				?.value as TestDialogAttackSelection["fireMode"];
+			const fireMode = root?.querySelector<HTMLSelectElement>(
+				"[data-fire-mode]",
+			)?.value as TestDialogAttackSelection["fireMode"];
 			const aim = root?.querySelector<HTMLSelectElement>("[data-aim]")?.value;
-			const charge = root?.querySelector<HTMLInputElement>("[data-charge]")?.checked;
+			const charge =
+				root?.querySelector<HTMLInputElement>("[data-charge]")?.checked;
 			this.#attack = {
 				...(this.#attackContext.ranged && fireMode !== "single"
 					? { fireMode }

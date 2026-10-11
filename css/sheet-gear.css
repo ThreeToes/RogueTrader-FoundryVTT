@@ -12,6 +12,10 @@
 	--rt-muted: #7a6a53;
 	--rt-muted-deep: #5a4f3f;
 	--rt-muted-faint: #55503f;
+	/* Chat note ink (bead j8jg): the muted step the four chat-card note
+	   surfaces (modifier breakdown, quality notes, action note, ordnance
+	   usage) share — one token so a chat-palette retune is one edit. */
+	--rt-chat-note: #4a3f31;
 	--rt-danger: #8b5e52;
 	--rt-danger-deep: #c0392b;
 	--rt-danger-alarm: #b71c1c;
@@ -43,6 +47,43 @@
 	/* Corner radii: one default + one small (5px folded into 4px). */
 	--rt-radius: 4px;
 	--rt-radius-sm: 3px;
+}
+
+/* Shared chip base (bead 6zha): ONE anatomy for every boxed chip affordance
+   — border + radius + padding + type + cursor. Per-site modifiers keep only
+   what differs (font-size step, border token, cursor:help, display bits).
+   The scope list covers every chip site across the sheets, the creators and
+   the test dialog (which sits outside .rogue-trader — bead y8u3). It sits
+   before every per-site rule so modifiers always win. */
+.rogue-trader.sheet .chip-option .chip,
+.rogue-trader .pick-chip,
+.rogue-trader.sheet .traits-row .chip,
+.rogue-trader.sheet.starship .inv-row .state-chip,
+.rogue-trader.sheet.starship .inv-row .slot-chip,
+.rogue-trader.sheet.character .ladder-option,
+.rogue-trader.sheet .origin-chip,
+.rogue-trader .character-creator .chip,
+.rogue-trader .psychic .psychic-tags .chip,
+.rogue-trader .background .origin-mod,
+.rogue-trader .advancement .adv-multiplier,
+.test-dialog-app .test-dialog .difficulty-chip,
+.test-dialog-app .test-dialog .condition-chip {
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius);
+	padding: 1px 8px;
+	font-size: var(--rt-fs-md);
+	cursor: pointer;
+	background: none;
+}
+
+/* Selected treatment 1 of 2 — solid gold FILL: the input:checked ladder and
+   radio toggles light fully gold (bead 6zha collapsed the per-site copies
+   of this treatment). */
+.rogue-trader.sheet .chip-option input:checked + .chip,
+.rogue-trader.sheet.character .ladder-option.active {
+	background: var(--rt-gold);
+	border-color: var(--rt-gold);
+	color: var(--rt-on-gold);
 }
 
 .rogue-trader .tab {
@@ -109,7 +150,10 @@
 	padding: 1px 2px;
 }
 
-.rogue-trader.sheet .header.compact .header-cell .short-description::placeholder {
+.rogue-trader.sheet
+	.header.compact
+	.header-cell
+	.short-description::placeholder {
 	color: var(--rt-muted-deep);
 }
 
@@ -167,9 +211,9 @@
 	max-height: 150px;
 }
 
-.rogue-trader.sheet.character .header-grid .header-portrait {
-	align-items: center;
-}
+/* .header-grid .header-portrait centring comes from the shared portrait
+   rule below (bead 47jq): the character-specific align-items line was
+   fully covered there. */
 
 .rogue-trader.sheet.character .header-side {
 	display: flex;
@@ -266,13 +310,8 @@
 	min-width: 0;
 }
 
-.rogue-trader.sheet .header-grid label {
-	font-size: var(--rt-fs-sm);
-	font-weight: bold;
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
-	color: var(--rt-gold);
-}
+/* (bead 1yyd) label typography from the shared small-caps gold label rule
+   below — no standalone .header-grid label rule anymore. */
 
 .rogue-trader.sheet .header-cell input,
 .rogue-trader.sheet .header-cell select {
@@ -317,23 +356,18 @@
 
 .rogue-trader.sheet .chip-option .chip {
 	font-size: var(--rt-fs-sm);
-	padding: 1px 8px;
-	border: 1px solid var(--rt-muted);
+	border-color: var(--rt-muted);
 	border-radius: var(--rt-radius-sm);
 	color: var(--rt-muted);
 	line-height: 1.4;
 	white-space: nowrap;
 }
 
+/* Checked highlight lives in the shared gold FILL treatment (bead 6zha,
+   top of this file). */
 .rogue-trader.sheet .chip-option:hover .chip {
 	border-color: var(--rt-gold);
 	color: var(--rt-gold);
-}
-
-.rogue-trader.sheet .chip-option input:checked + .chip {
-	background: var(--rt-gold);
-	border-color: var(--rt-gold);
-	color: var(--rt-on-gold);
 }
 
 /* Design tokens: consistent labels/inputs across all system sheets */
@@ -342,19 +376,25 @@
 	margin-bottom: 8px;
 }
 
-/* Shared small-caps gold label (bead xcte): one rule for every
-   label-over-field context instead of N copied blocks. */
-.rogue-trader.sheet .stats-row .stat > label,
-.rogue-trader.sheet .rate-of-fire > label,
-.rogue-trader.sheet .header-grid label,
-.rogue-trader.sheet .part-label,
-.rogue-trader.sheet .chip-label,
-.rogue-trader.sheet.starship .stat-grid .stat > label,
-.rogue-trader.sheet.npc .stat-grid .stat > label,
-.rogue-trader.sheet.ship-creator .stat-grid .stat > label,
-.rogue-trader.sheet.planet .stat-grid .stat > label,
-.rogue-trader.sheet.npc table.npc-chars th,
-.rogue-trader.sheet .career-table thead th {
+/* Shared small-caps gold label (bead xcte, scope widened to the whole
+   .rogue-trader root by bead 2cgf): one rule for every label-over-field
+   context instead of N copied blocks. The warrant-row (dynasty sheet),
+   dialog ledger label (not under .rogue-trader) and advancement-header
+   labels joined by bead 1yyd. */
+.rogue-trader .stats-row .stat > label,
+.rogue-trader .rate-of-fire > label,
+.rogue-trader .header-grid label,
+.rogue-trader .part-label,
+.rogue-trader .chip-label,
+.rogue-trader.starship .stat-grid .stat > label,
+.rogue-trader.npc .stat-grid .stat > label,
+.rogue-trader.ship-creator .stat-grid .stat > label,
+.rogue-trader.planet .stat-grid .stat > label,
+.rogue-trader.npc table.npc-chars th,
+.rogue-trader .career-table thead th,
+.rogue-trader.sheet.dynasty .warrant-row-label,
+.rogue-trader .advancement .advancement-header .stat > label,
+.test-dialog-app .test-dialog .ledger-field-label {
 	font-size: var(--rt-fs-sm);
 	font-weight: bold;
 	letter-spacing: 0.05em;
@@ -575,9 +615,9 @@
 	flex: 2 1 0;
 }
 
-.rogue-trader.gear .stats {
-	align-content: baseline;
-}
+/*	The old .rogue-trader.gear .stats { align-content: baseline } was deleted
+	(bead 47jq): .stats is a plain block container in every template and no
+	rule makes it flex/grid, so align-content never applied. */
 
 .rogue-trader.sheet .stats-row .stat.craftsmanship select,
 .rogue-trader.sheet .stats-row .stat.availability select {
@@ -781,10 +821,8 @@
 .rogue-trader.sheet .inv-row .equip-toggle.equipped {
 	color: var(--color-text-light-highlight, var(--rt-gold-soft));
 }
-
-.rogue-trader.sheet .inv-row .weapon-roll.unequipped {
-	opacity: 0.4;
-}
+/*	Unequipped weapon-roll dimming lives beside the .weapon-roll base
+	(css/sheet-character.css, bead nzdx): ONE rule for the 0.4 dim level. */
 /* ---------------------------------------------------------------------------
    Global shared sheet patterns (bead: starship sheet tidy-up).
    Promoted from .character-creator/.background/.sheet.character scoping to
@@ -793,7 +831,7 @@
    in sheet-character.css were removed (bead ah2c).
    --------------------------------------------------------------------------- */
 
-.rogue-trader.sheet .pick-chips {
+.rogue-trader .pick-chips {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
@@ -801,20 +839,12 @@
 	margin: 4px 0;
 }
 
-.rogue-trader.sheet .pick-label {
+.rogue-trader .pick-label {
 	font-size: var(--rt-fs-md);
 	color: var(--rt-muted);
 }
 
-.rogue-trader.sheet .pick-chip {
-	border: 1px solid var(--rt-border);
-	border-radius: var(--rt-radius);
-	padding: 1px 8px;
-	font-size: var(--rt-fs-md);
-	cursor: pointer;
-}
-
-.rogue-trader.sheet .pick-chip.selected {
+.rogue-trader .pick-chip.selected {
 	background: var(--rt-border);
 	color: var(--color-text-light-highlight, var(--rt-gold-soft));
 }
@@ -827,10 +857,7 @@
 }
 
 .rogue-trader.sheet .traits-row .chip {
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	padding: 1px 8px;
-	font-size: var(--rt-fs-md);
+	border-color: var(--rt-border-strong);
 	cursor: help;
 }
 
@@ -936,14 +963,16 @@
 	white-space: nowrap;
 }
 
-/* Shared meter track/fill family (bead tye1): the rt/capacity-bar vocabulary
+/* Shared meter track/fill family (bead tye1, scope widened to the whole
+   .rogue-trader root by bead 2cgf): the rt/capacity-bar vocabulary
    (cb-track / cb-fill) is the ONE meter anatomy — the starship capacity bars
-   (Hull tab + Refit budget strip, via the rt/capacity-bar partial) and the
+   (Hull tab + Refit budget strip, via the rt/capacity-bar partial), the
    character inventory encumbrance meter (css/sheet-character.css
-   .encumbrance-progress) both render this anatomy. State ramps preserved
-   exactly: .over (partial over-flag → rt-danger-deep alarm) and
-   .state-encumbered / .state-over (inventory encumbrance states). */
-.rogue-trader.sheet .cb-track {
+   .encumbrance-progress) and the advancement dialog's xp-to-next-rank meter
+   all render this anatomy. State ramps preserved exactly: .over (partial
+   over-flag → rt-danger-deep alarm) and .state-encumbered / .state-over
+   (inventory encumbrance states). */
+.rogue-trader .cb-track {
 	flex: 1;
 	height: 10px;
 	border: 1px solid var(--rt-border-strong);
@@ -952,30 +981,30 @@
 	background: var(--rt-panel-shadow);
 }
 
-.rogue-trader.sheet .cb-fill {
+.rogue-trader .cb-fill {
 	display: block;
 	height: 100%;
 	background: var(--rt-success);
 }
 
-.rogue-trader.sheet .over .cb-fill {
+.rogue-trader .over .cb-fill {
 	background: var(--rt-danger-deep);
 }
 
-.rogue-trader.sheet .over .cb-value {
+.rogue-trader .over .cb-value {
 	color: var(--rt-danger-deep);
 	font-weight: bold;
 }
 
-.rogue-trader.sheet .state-encumbered .cb-fill {
+.rogue-trader .state-encumbered .cb-fill {
 	background: var(--rt-gold);
 }
 
-.rogue-trader.sheet .state-over .cb-fill {
+.rogue-trader .state-over .cb-fill {
 	background: var(--rt-danger-deep);
 }
 
-.rogue-trader.sheet .state-over .cb-value {
+.rogue-trader .state-over .cb-value {
 	color: var(--rt-danger-deep);
 }
 
@@ -1158,16 +1187,13 @@
 	flex: none;
 }
 
-/* Chip base (state + slot chips share one anatomy). */
+/* State/slot chrome comes from the shared chip base (bead 6zha); these are
+   the site-local steps. */
 .rogue-trader.sheet.starship .inv-row .state-chip,
 .rogue-trader.sheet.starship .inv-row .slot-chip {
-	padding: 1px 8px;
 	font-size: var(--rt-fs-xs);
-	color: var(--rt-muted);
-	background: none;
-	border: 1px solid var(--rt-border);
 	border-radius: var(--rt-radius-sm);
-	cursor: pointer;
+	color: var(--rt-muted);
 }
 
 .rogue-trader.sheet.starship .inv-row .state-chip:hover,
@@ -1175,13 +1201,31 @@
 	border-color: var(--rt-border-strong);
 }
 
-/* Checked chip = the difficulty-chip gold treatment, exactly as the test
-   dialog renders its selected ladder rung. Shared by state + slot chips. */
+/* The dialog's hover ramp and the checked TINT are ordered together: the
+   checked gold border must survive hovering (hover ramps then tint).
+   Also shared by state + slot chips below. */
+.test-dialog-app .test-dialog button.difficulty-chip:hover,
+.test-dialog-app .test-dialog .condition-chip:hover {
+	border-color: var(--rt-border-strong);
+}
+
+/* Checked treatment 2 of 2 — dim gold TINT (bead 6zha): the gold border +
+   faint gold wash + gold text rung, exactly as the test dialog renders its
+   selected ladder rung (owner round 3/5 ruling), shared by the checked
+   starship state/slot chips. */
+.test-dialog-app .test-dialog button.difficulty-chip.checked,
+.test-dialog-app .test-dialog .condition-chip:has(input:checked),
 .rogue-trader.sheet.starship .inv-row .state-chip.checked,
 .rogue-trader.sheet.starship .inv-row .slot-chip.checked {
 	border-color: var(--rt-gold);
 	background: var(--rt-gold-alpha-faint);
 	color: var(--rt-gold);
+}
+
+/* Checked state/slot chips are additionally bold — the current-state
+   emphasis of the vitals strip. */
+.rogue-trader.sheet.starship .inv-row .state-chip.checked,
+.rogue-trader.sheet.starship .inv-row .slot-chip.checked {
 	font-weight: bold;
 }
 
@@ -1206,26 +1250,20 @@
 	cursor: not-allowed;
 }
 
-/* Loud weapon-capacity warnings (bead om4j). */
-.rogue-trader.sheet.starship .method-hint.warn {
+/* Loud weapon-capacity warnings (bead om4j): the amber .warn step fires on
+   three templates — refit issues, ship-creator's no-options-for-hull hint and
+   the chat salvo's crippled note (beads om4j + mi66) — so the rule is shared
+   on .rogue-trader; tokens resolve on every sheet and chat root. */
+.rogue-trader .method-hint.warn {
 	color: var(--rt-warn);
 	margin: 2px 0;
 }
 
-.rogue-trader.sheet.starship .inv-row .inv-name {
-	flex: 1;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	cursor: pointer;
-}
-.rogue-trader.sheet.starship .inv-row .inv-delete {
-	color: var(--rt-danger);
-	background: none;
-	border: none;
-	cursor: pointer;
-	padding: 0 4px;
-}
+/* The starship refit rows reuse the shared .inv-name anatomy (min-width:0
+   ellipsis, hover gold — sheet-character.css); the old starship duplicate
+   was deleted (bead qwbs). The delete affordance is likewise the shared
+   faded-red-delete anatomy: muted until hover (design-language "faded-red
+   delete"), dropped the always-red starship override per the bead ruling. */
 
 /* Shared strip anatomy (bead tye1): the test-dialog target-strip
    (css/sheet-character.css) and the starship combat vitals strip (bead ecnp)
@@ -1256,7 +1294,8 @@
 }
 
 .test-dialog-app .test-dialog .target-strip .stat > label,
-.rogue-trader.sheet.starship .sc-vitals-strip .stat > label {
+.rogue-trader.sheet.starship .sc-vitals-strip .stat > label,
+.rogue-trader.sheet.starship .battery-card .card-stats .stat > label {
 	font-size: var(--rt-fs-xs);
 	font-weight: bold;
 	text-transform: uppercase;
@@ -1292,11 +1331,27 @@
 	gap: 3px;
 }
 
-.rogue-trader.sheet.starship .sc-vitals-strip .shields .pip {
+/* Shared pip anatomy (bead gmzw): the DESIGN-LANGUAGE "Pips" vocabulary —
+   ONE 9px gold circle, shared by the starship void-shield strip and the
+   character-sheet unnatural-multiplier pips. Transparent fill; the .lit
+   state (all shield pips carry it in the template) paints gold + glow. */
+.rogue-trader.sheet .pip {
+	appearance: none;
+	flex: none;
 	width: 9px;
 	height: 9px;
+	min-width: 9px;
+	max-width: 9px;
+	min-height: 9px;
+	line-height: 1;
+	padding: 0;
+	margin: 0;
 	border: 1px solid var(--rt-gold);
 	border-radius: 50%;
+	background: transparent;
+}
+
+.rogue-trader.sheet .pip.lit {
 	background: var(--rt-gold);
 	box-shadow: 0 0 3px rgba(184, 134, 11, 0.8);
 }
@@ -1402,14 +1457,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: 1px;
-}
-
-.rogue-trader.sheet.starship .battery-card .card-stats .stat > label {
-	font-size: var(--rt-fs-xs);
-	font-weight: bold;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--rt-gold);
 }
 
 .rogue-trader.sheet.starship .battery-card .card-stats .stat .value {

@@ -30,14 +30,26 @@ import type {
 	ShipWeaponRollRequest,
 } from "../../rules/roll-contract";
 import { crewQualityEffects } from "../../rules/ship-crew";
-import { normalizeShipWeaponRange, type ShipWeaponRange } from "../../data/item/ship-weapon-range";
+import {
+	normalizeShipWeaponRange,
+	type ShipWeaponRange,
+} from "../../data/item/ship-weapon-range";
 import { promptShieldAbsorption, promptTargetComponent } from "../roll-prompts";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 /** Ship weapon salvo (rollWeaponSalvo, bead xfta, Core Rulebook pp220-222). */
 export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 	async prepare(request) {
 		const ports = getPorts();
 		const ship = request.actor;
+		// Hard 2x range cap (Core Rulebook pp219-220): beyond twice the
+		// weapon's range the shot cannot be made at all — refuse before any
+		// dice are rolled instead of firing at -10 against unlimited range
+		// (bead 3ba1).
+		if (request.rangeBand === "out-of-range") {
+			ports.notify.warn("SHIP_COMBAT.OUT_OF_RANGE");
+			return null;
+		}
 		const item = ship.items.get(request.itemId);
 		if (!item || (item.type as string) !== "ship-weapon-component") {
 			ports.notify.warn("ROLL.UNKNOWN_ITEM");
@@ -77,7 +89,10 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		let strength = Math.max(0, weapon.strength ?? 0);
 		let strengthNote = "";
 		if (weapon.strengthRoll) {
-			strength = Math.max(1, (await ports.dice.roll(weapon.strengthRoll)).total);
+			strength = Math.max(
+				1,
+				(await ports.dice.roll(weapon.strengthRoll)).total,
+			);
 			strengthNote = ports.i18n.t("SHIP_COMBAT.STRENGTH_ROLLED", {
 				dice: weapon.strengthRoll,
 				strength,
@@ -116,7 +131,9 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		const band = request.rangeBand ?? "normal";
 		if (band === "normal") return [];
 		// Map the band through the kernel: half = (range 2, distance 1),
-		// long = (range 1, distance 2).
+		// long = (range 1, distance 2). The out-of-range band is refused in
+		// prepare() before the dialog, so it never contributes a row here.
+		if (band === "out-of-range") return [];
 		const { modifier } = rangeModifier(
 			band === "half" ? 2 : 1,
 			band === "half" ? 1 : 2,
@@ -266,24 +283,20 @@ async function postShipSalvoCard(
 		crippled: boolean;
 	},
 ): Promise<void> {
-	await postCard(
-		request.actor,
-		"systems/rogue-trader/template/chat/ship-salvo.hbs",
-		{
-			title: prepared.title,
-			targetName: result.targetName,
-			hits: result.hits,
-			absorbed: result.absorbed,
-			through: result.through,
-			damageTotal: result.damageTotal,
-			armourAbsorbed: result.salvo.armourAbsorbed,
-			hullDamage: result.salvo.hullDamage,
-			crewPopulationLoss: result.crewLoss.population,
-			crewMoraleLoss: result.crewLoss.morale,
-			criticalName: result.critical?.name ?? "",
-			crippled: result.crippled,
-		},
-	);
+	await postCard(request.actor, `${TEMPLATE_ROOT}chat/ship-salvo.hbs`, {
+		title: prepared.title,
+		targetName: result.targetName,
+		hits: result.hits,
+		absorbed: result.absorbed,
+		through: result.through,
+		damageTotal: result.damageTotal,
+		armourAbsorbed: result.salvo.armourAbsorbed,
+		hullDamage: result.salvo.hullDamage,
+		crewPopulationLoss: result.crewLoss.population,
+		crewMoraleLoss: result.crewLoss.morale,
+		criticalName: result.critical?.name ?? "",
+		crippled: result.crippled,
+	});
 }
 
 /**
@@ -344,18 +357,15 @@ export const shipRepairHandler: RollHandler<"ship-repair"> = {
 			prepared.kindData?.componentId ?? "",
 		);
 		if (!component) return;
-		const { turns } = emergencyRepairsOutcome(outcome.degrees);
+		const d5 = (await ports.dice.roll("1d5")).total;
+		const { turns } = emergencyRepairsOutcome(outcome.degrees, d5);
 		await ports.actors.update(component, {
 			system: { state: "intact", depressurised: false },
 		});
-		await postCard(
-			request.actor,
-			"systems/rogue-trader/template/chat/ship-repair.hbs",
-			{
-				title: prepared.title,
-				component: component.name ?? "",
-				turns,
-			},
-		);
+		await postCard(request.actor, `${TEMPLATE_ROOT}chat/ship-repair.hbs`, {
+			title: prepared.title,
+			component: component.name ?? "",
+			turns,
+		});
 	},
 };

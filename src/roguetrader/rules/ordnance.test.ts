@@ -9,11 +9,12 @@
  */
 
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { decrementQuantity, shotsForFireMode } from "./ordnance";
 import {
-	decrementQuantity,
-	shotsForFireMode,
-} from "./ordnance";
-import { foundryPorts, resetPorts, setPorts } from "../infrastructure/foundry/ports";
+	foundryPorts,
+	resetPorts,
+	setPorts,
+} from "../infrastructure/foundry/ports";
 
 const warnings: Array<[string, Record<string, unknown> | undefined]> = [];
 const infos: Array<[string, Record<string, unknown> | undefined]> = [];
@@ -29,7 +30,8 @@ for (const key of ["game", "ui", "foundry"]) {
 
 afterAll(() => {
 	for (const [key, value] of Object.entries(originalGlobals)) {
-		if (value === undefined) delete (globalThis as Record<string, unknown>)[key];
+		if (value === undefined)
+			delete (globalThis as Record<string, unknown>)[key];
 		else (globalThis as Record<string, unknown>)[key] = value;
 	}
 });

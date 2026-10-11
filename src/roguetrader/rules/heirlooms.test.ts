@@ -18,14 +18,19 @@ import {
 // so no grant payload is mapped here.
 const HEIRLOOM_PACK = "src/packs/rogue_trader/equipment/heirlooms.yaml";
 const HAS_HEIRLOOM_PACK = existsSync(HEIRLOOM_PACK);
-const docs = (
-	HAS_HEIRLOOM_PACK
-		? (parse(readFileSync(HEIRLOOM_PACK, "utf8")) as Array<{
-				name?: string;
-				flags?: Record<string, { item?: string; table?: string; range?: { low?: number; high?: number } }>;
-			}>)
-		: []
-);
+const docs = HAS_HEIRLOOM_PACK
+	? (parse(readFileSync(HEIRLOOM_PACK, "utf8")) as Array<{
+			name?: string;
+			flags?: Record<
+				string,
+				{
+					item?: string;
+					table?: string;
+					range?: { low?: number; high?: number };
+				}
+			>;
+		}>)
+	: [];
 setHeirloomEntries(
 	docs.map((doc) => {
 		const flag = doc.flags?.["rogue-trader"] ?? {};

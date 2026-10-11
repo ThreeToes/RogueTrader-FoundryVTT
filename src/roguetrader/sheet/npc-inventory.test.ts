@@ -52,9 +52,7 @@ describe("npcInventoryGroups (no more all-types-in-one list)", () => {
 		const groups = npcInventoryGroups([
 			{ id: "a1", name: "Frag Missile", type: "ammunition" },
 		]);
-		expect(groups.map((g) => g.labelKey)).toEqual([
-			"TYPES.Item.ammunition",
-		]);
+		expect(groups.map((g) => g.labelKey)).toEqual(["TYPES.Item.ammunition"]);
 		expect(groups[0].items[0]).toMatchObject({
 			id: "a1",
 			name: "Frag Missile",
@@ -66,9 +64,24 @@ describe("npcInventoryGroups (no more all-types-in-one list)", () => {
 
 	it("marks weapons/gear equippable with ready = carried", () => {
 		const groups = npcInventoryGroups([
-			{ id: "w1", name: "Lasgun", type: "ranged-weapon", system: { equipState: "carried" } },
-			{ id: "w2", name: "Sword", type: "melee-weapon", system: { equipState: "stowed" } },
-			{ id: "g1", name: "Rope", type: "gear", system: { equipState: "carried" } },
+			{
+				id: "w1",
+				name: "Lasgun",
+				type: "ranged-weapon",
+				system: { equipState: "carried" },
+			},
+			{
+				id: "w2",
+				name: "Sword",
+				type: "melee-weapon",
+				system: { equipState: "stowed" },
+			},
+			{
+				id: "g1",
+				name: "Rope",
+				type: "gear",
+				system: { equipState: "carried" },
+			},
 			{ id: "t1", name: "Rapid Reload", type: "talent" },
 		]);
 		const byName = new Map(
@@ -114,7 +127,9 @@ describe("npcInventoryGroups (no more all-types-in-one list)", () => {
 	});
 
 	it("drops empty groups", () => {
-		const groups = npcInventoryGroups([{ id: "g1", name: "Rope", type: "gear" }]);
+		const groups = npcInventoryGroups([
+			{ id: "g1", name: "Rope", type: "gear" },
+		]);
 		expect(groups.map((g) => g.labelKey)).toEqual(["TYPES.Item.gear"]);
 	});
 

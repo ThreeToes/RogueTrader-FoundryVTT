@@ -1,25 +1,24 @@
 import { Character } from "../../data/actor/character";
+import { prepareDroppedItems } from "./affliction-drop";
 import type { ActionOwnedItem } from "../../rules/actions";
 import { itemIdFromTarget } from "../dom";
-import {
-	equipStateOf,
-	isWeaponType,
-	systemOf,
-} from "../../data/accessors";
+import { equipStateOf, isWeaponType, systemOf } from "../../data/accessors";
 import { sheetContext } from "../context";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 import { imageActions } from "../image-actions";
-import { getCharacterOptionDocs, getPackDocuments } from "../pack-resolve";
+import { getCharacterOptionDocs } from "../pack-resolve";
+import { clonePackDocPayload } from "../clone-doc";
+import {
+	findPackDoc,
+	packSlugToType,
+	warnPackDocMissing,
+} from "./grant-helpers";
 import { waitForDefaultGrants } from "../default-grants";
 import type { AdvanceLedgerEntry } from "../../rules/advancement";
 import { derivedRank, totalSpent } from "../../rules/advancement";
-import {
-	careers,
-	equipStates,
-	sorceryRanks,
-} from "../../registry";
+import { careers, equipStates, sorceryRanks } from "../../registry";
 import { collectSorceryRank } from "../../rules/talent-effects";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
@@ -34,12 +33,9 @@ import {
 	ORIGIN_ROW_ORDER,
 	storedOriginPicks,
 } from "../../rules/origins";
-import {
-	resolveOriginTraits,
-} from "../../rules/origin-traits";
+import { resolveOriginTraits } from "../../rules/origin-traits";
 import {
 	corruptionTrack,
-	dueDisorders,
 	insanityTrack,
 	madnessSheetContext,
 	type MadnessPoints,
@@ -53,15 +49,7 @@ import {
 	toggleSustainedPower,
 } from "../../rules/adapter";
 import { missingSkillGrants } from "../../rules/default-skills";
-import {
-	applyAfflictionProcedure,
-	type ProcedureGrant,
-	resolveAfflictionGrants,
-	resolveEffectValues,
-} from "../../rules/afflictions";
-import { postCard } from "../../rules/chat-flags";
-import type { MutationRow } from "../../data/item/mutation-roll";
-import type { EffectData } from "../../data/item/effects";
+import { resolveAfflictionGrants } from "../../rules/afflictions";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { actorEncumbrance } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
@@ -88,11 +76,9 @@ import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
 import { TalentPicker } from "./talent-picker";
-import {
-	combatActionChipAction,
-	actionsChipContext,
-} from "./actions-view";
+import { combatActionChipAction, actionsChipContext } from "./actions-view";
 import { enrichText } from "../rich-text";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 // (CharacteristicView, MAX_UNNATURAL_STEPS moved to sheet/skills-domain — bead 6l90)
 
@@ -163,9 +149,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	/**
-	 * Roll initiative (epic wjpi, bead dt8t, Core Rulebook): 1d10 + the derived
-	 * initiative bonus into the active encounter via the DEFAULT CombatTracker
-	 * (rules/adapter.ts rollInitiativeAction → core Actor#rollInitiative).
+	 * Roll initiative (bead dt8t → bead yxm5 funnel): 1d10 + the derived
+	 * initiative bonus, funnel-visible (talent/item rows in the dialog) and
+	 * assigned to every combatant of the actor via rules/adapter.ts
+	 * rollInitiativeAction.
 	 */
 	static async #onRollInitiative(this: {
 		actor: foundry.documents.Actor;
@@ -255,7 +242,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	): Promise<void> {
 		const uuid = target.dataset.uuid;
 		if (!uuid) {
-			console.warn("rogue-trader | career link: no data-uuid on the clicked element");
+			console.warn(
+				"rogue-trader | career link: no data-uuid on the clicked element",
+			);
 			return;
 		}
 		try {
@@ -337,17 +326,45 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		) {
 			return;
 		}
-		const docs = (await getPackDocuments(
-			`rogue-trader.${pack}`,
-		)) as foundry.documents.Item[];
-		const doc = docs.find((item) => item.name === name);
+		const type = packSlugToType(pack);
+		if (!type) {
+			// Unmapped slugs (pack-authored/GM labels like "mutations:…") used
+			// to resolve against their own per-pack compendium: keep that route
+			// name-only instead of warning-and-return (epic zlwc round 4).
+			const doc = (await findPackDoc(null, name, {
+				pack: `rogue-trader.${pack}`,
+			})) as foundry.documents.Item | null;
+			if (!doc) {
+				warnPackDocMissing(pack, name, "grant skipped");
+				getPorts().notify.warn("AFFLICTION.GRANT_MISSING", { name });
+				return;
+			}
+			// Same grant write as the mapped route below: one clone (the pack doc's
+			// _id stripped, bead 27eu), an optional benefit stamp, and a
+			// re-rendered sheet.
+			const unmapped = clonePackDocPayload(
+				doc.toObject() as unknown as { _id?: string; system?: { benefit?: string } },
+			) as unknown as { system?: { benefit?: string } };
+			if (benefit && unmapped.system) unmapped.system.benefit = benefit;
+			await this.actor.createEmbeddedDocuments("Item", [unmapped as never]);
+			this.render?.({ force: true });
+			return;
+		}
+		// bead 38io: the shared case-insensitive pack-by-name resolve — the
+		// grants-item targets live in the character-options concept pack (bead
+		// 4tj1), so the per-pack getPackDocuments idiom goes away here.
+		const doc = (await findPackDoc(
+			type,
+			name,
+		)) as foundry.documents.Item | null;
 		if (!doc) {
+			warnPackDocMissing(type, name, "grant skipped");
 			getPorts().notify.warn("AFFLICTION.GRANT_MISSING", { name });
 			return;
 		}
-		const object = doc.toObject() as unknown as {
-			system?: { benefit?: string };
-		};
+		const object = clonePackDocPayload(
+			doc.toObject() as unknown as { _id?: string; system?: { benefit?: string } },
+		) as unknown as { system?: { benefit?: string } };
 		if (benefit && object.system) object.system.benefit = benefit;
 		await this.actor.createEmbeddedDocuments("Item", [object as never]);
 		this.render?.({ force: true });
@@ -356,11 +373,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	/** Cached madness-pack rows (CONFIG registry, epic 1g2t). */
 	static #madnessRows(): unknown[] {
 		return (
-			(CONFIG as unknown as {
-				ROGUE_TRADER?: {
-					madness?: { getRows?: () => unknown[] };
-				};
-			}).ROGUE_TRADER?.madness?.getRows?.() ?? []
+			(
+				CONFIG as unknown as {
+					ROGUE_TRADER?: {
+						madness?: { getRows?: () => unknown[] };
+					};
+				}
+			).ROGUE_TRADER?.madness?.getRows?.() ?? []
 		);
 	}
 
@@ -380,12 +399,14 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			system.insanity ?? 0,
 		);
 		const modifiers: Modifier[] = track.modifier
-			? [{
-					id: "trauma:track",
-					source: { type: "item", label: "MADNESS.TRAUMA_MODIFIER" },
-					label: `${track.degree}`,
-					value: track.modifier,
-					}]
+			? [
+					{
+						id: "trauma:track",
+						source: { type: "item", label: "MADNESS.TRAUMA_MODIFIER" },
+						label: `${track.degree}`,
+						value: track.modifier,
+					},
+				]
 			: [];
 		await performRoll({
 			kind: "characteristic",
@@ -410,12 +431,14 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			system.corruption ?? 0,
 		);
 		const modifiers: Modifier[] = track.modifier
-			? [{
-					id: "malignancy:track",
-					source: { type: "item", label: "MADNESS.MALIGNANCY_MODIFIER" },
-					label: `${track.degree}`,
-					value: track.modifier,
-					}]
+			? [
+					{
+						id: "malignancy:track",
+						source: { type: "item", label: "MADNESS.MALIGNANCY_MODIFIER" },
+						label: `${track.degree}`,
+						value: track.modifier,
+					},
+				]
 			: [];
 		await performRoll({
 			kind: "characteristic",
@@ -550,8 +573,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const key = target.dataset.key;
 		const value = Number(target.dataset.value);
 		if (!key || Number.isNaN(value)) return;
-		const current =
-			systemOf(this.actor).characteristics[key]?.unnatural ?? 1;
+		const current = systemOf(this.actor).characteristics[key]?.unnatural ?? 1;
 		const next = current === value ? 1 : value;
 		await this.actor.update({
 			system: { characteristics: { [key]: { unnatural: next } } },
@@ -560,10 +582,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/actor/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		// Each tab part's root <section class="tab"> is the scroll container
 		// (.rogue-trader .tab { overflow-y: auto }): the scrollable descriptor
@@ -571,37 +593,37 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// (bead ss1d) so a delete/re-render no longer jumps the sheet to the
 		// top. "" = the part's own root element (core _syncPartState).
 		stats: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/stats.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/stats.hbs`,
 			scrollable: [""],
 		},
 		combat: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/combat.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/combat.hbs`,
 			scrollable: [""],
 		},
 		// Actions tab (epic moew, bead 9r82): the combat actions chip grid; the
 		// root <section class="tab"> is the scroll container like every tab part.
 		actions: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/actions.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/actions.hbs`,
 			scrollable: [""],
 		},
 		inventory: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/inventory.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/inventory.hbs`,
 			scrollable: [""],
 		},
 		background: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/background.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/background.hbs`,
 			scrollable: [""],
 		},
 		skills: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/skills.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/skills.hbs`,
 			scrollable: [""],
 		},
 		psychic: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/psychic.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/psychic.hbs`,
 			scrollable: [""],
 		},
 		notes: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/notes.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/notes.hbs`,
 			scrollable: [""],
 		},
 	};
@@ -649,11 +671,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	protected override _prepareTabs(
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
-		return gatePsykerTab(
-			this.actor,
-			super._prepareTabs(group),
-			"psychic",
-		);
+		return gatePsykerTab(this.actor, super._prepareTabs(group), "psychic");
 	}
 
 	/**
@@ -721,7 +739,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		await this.actor.createEmbeddedDocuments("Item", grants);
 	}
 
-/**
+	/**
 	 * Builds the sheet context tab by tab. Orchestration only: ensure default
 	 * skills -> base context -> the shared per-render career fetch -> one
 	 * builder per tab/section, each documented below. The await order (skill
@@ -782,11 +800,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.advancementTooltip = game.i18n!.localize("ADVANCE.OPEN");
 		if (system.careerKey) {
 			if (careerDocs.length > 0) {
-				const careerDoc = careerDocs.find((d) => d.system.key === system.careerKey);
+				const careerDoc = careerDocs.find(
+					(d) => d.system.key === system.careerKey,
+				);
 				const thresholds = (careerDoc?.system.ranks ?? []).map((r) => ({
 					rank: r.rank,
 					xpLevel: r.xpLevel,
-					}));
+				}));
 				if (thresholds.length > 0) {
 					const derived = derivedRank(
 						thresholds,
@@ -806,7 +826,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// advancement ledger (totalSpent) — manual editing desynced the pool
 		// from the ledger; the Advancement dialog is the purchase path. The
 		// lifetime total stays editable.
-		context.xpSpent = totalSpent((system.advances ?? []) as AdvanceLedgerEntry[]);
+		context.xpSpent = totalSpent(
+			(system.advances ?? []) as AdvanceLedgerEntry[],
+		);
 		context.xpTotal = system.xp?.total ?? 0;
 	}
 
@@ -826,7 +848,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			(item) => item.type === "skill",
 		);
 		const catalog = await getSkillCatalog();
-		const catalogByChar = new Map<string, Awaited<ReturnType<typeof getSkillCatalog>>>();
+		const catalogByChar = new Map<
+			string,
+			Awaited<ReturnType<typeof getSkillCatalog>>
+		>();
 		for (const entry of catalog) {
 			const list = catalogByChar.get(entry.characteristic) ?? [];
 			list.push(entry);
@@ -1037,7 +1062,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	): Promise<void> {
 		// Compendium link per talent row (bead oaaz): pack uuid by name
 		// (case-insensitive), same careers-pack pattern as careerItemId above.
-		const packDocs = (await getCharacterOptionDocs("talent")) as unknown as Array<{
+		const packDocs = (await getCharacterOptionDocs(
+			"talent",
+		)) as unknown as Array<{
 			uuid?: string;
 			name?: string;
 		}>;
@@ -1098,32 +1125,38 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Dynasty link (owner redesign): characters attach to the group's
 		// dynasty actor; PF/SP live there. Picker lists all dynasty actors.
 		context.dynastyUuid = system.dynastyUuid ?? "";
-		context.dynastyOptions = ((game.actors ?? []) as unknown as {
-			contents: Array<{
-				type?: string;
-				uuid: string;
-				name?: string;
-				system?: { profitFactor?: number };
-			}>;
-		}).contents
+		context.dynastyOptions = (
+			(game.actors ?? []) as unknown as {
+				contents: Array<{
+					type?: string;
+					uuid: string;
+					name?: string;
+					system?: { profitFactor?: number };
+				}>;
+			}
+		).contents
 			.filter((a) => a.type === "dynasty")
 			.map((a) => ({
 				uuid: a.uuid,
 				name: a.name ?? "",
-				label: a.system?.profitFactor !== undefined ? `${a.name} (PF ${a.system.profitFactor})` : (a.name ?? ""),
+				label:
+					a.system?.profitFactor !== undefined
+						? `${a.name} (PF ${a.system.profitFactor})`
+						: (a.name ?? ""),
 				selected: system.dynastyUuid === a.uuid,
 			}));
 
 		// Origin traits (bead tgq9): modifier/grant/note resolution from the
 		// cached pack defs; grants carry claim state, free-skill grants resolve
 		// via the skill picker.
-		const traitDefs = (
-			CONFIG as unknown as {
-				ROGUE_TRADER?: {
-					originTraits?: { getDefs?: () => unknown[] };
-				};
-			}
-		).ROGUE_TRADER?.originTraits?.getDefs?.() ?? [];
+		const traitDefs =
+			(
+				CONFIG as unknown as {
+					ROGUE_TRADER?: {
+						originTraits?: { getDefs?: () => unknown[] };
+					};
+				}
+			).ROGUE_TRADER?.originTraits?.getDefs?.() ?? [];
 		const traitResolution = resolveOriginTraits(
 			// The STORED shape, both halves: resolveOriginTraits reads it through
 			// storedOriginPicks, so a xeno's path picks contribute their traits.
@@ -1140,7 +1173,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			key: `${t.def.originKey}.${t.def.traitKey}`,
 			name: t.def.name,
 			claimed: t.claimed,
-			resolvable: t.def.grantKind === "free-skill" || t.def.grantKind === "extra-common-lore",
+			resolvable:
+				t.def.grantKind === "free-skill" ||
+				t.def.grantKind === "extra-common-lore",
 			tooltip: t.def.text,
 		}));
 		context.traitNotes = traitResolution.notes.map((t) => ({
@@ -1174,7 +1209,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		careerDocs: CareerDocRow[],
 	): void {
 		if (careerDocs.length > 0 && system.careerKey) {
-			const careerDoc = careerDocs.find((d) => d.system.key === system.careerKey);
+			const careerDoc = careerDocs.find(
+				(d) => d.system.key === system.careerKey,
+			);
 			if (!careerDoc) {
 				console.warn(
 					`rogue-trader | no career doc with system.key "${system.careerKey}" in the character-options pack`,
@@ -1240,208 +1277,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 }
 
-/**
- * The mutation pack (bead kam1): Ravaged Body rolls further mutations off it,
- * and the granted Items are cloned from it.
- */
-const MUTATION_PACK = "rogue-trader.afflictions";
-
-/** Structural view of a mutation pack document (band + name). */
-interface MutationPackDoc {
-	name?: string;
-	type?: string;
-	system?: { tableKey?: string; rollMin?: number; rollMax?: number };
-	toObject?: () => unknown;
-}
-
-/**
- * Read the mutation table rows out of the pack. A row missing its band THROWS:
- * a silently-defaulted band would make one row cover every number and quietly
- * corrupt every Ravaged Body roll.
- */
-function mutationRowsFrom(docs: MutationPackDoc[]): MutationRow[] {
-	return docs.map((doc) => {
-		const system = doc.system;
-		if (
-			!doc.name ||
-			typeof system?.rollMin !== "number" ||
-			typeof system?.rollMax !== "number"
-		) {
-			throw new Error(
-				`mutation pack row "${doc.name ?? "?"}" has no table band (rollMin/rollMax)`,
-			);
-		}
-		return {
-			name: doc.name,
-			tableKey: system.tableKey ?? "mutations",
-			rollMin: system.rollMin,
-			rollMax: system.rollMax,
-		};
-	});
-}
-
-/**
- * Clone a dropped Item for embedding, settling acquisition-time state on the
- * copy (epic nt8k). Four affliction-specific steps:
- * - a printed acquisition procedure (bead xu83) runs once and appends its
- *   settled effect rows (Degenerate Mind's trait pick, Mental Regressive's
- *   per-characteristic table), then clears the marker so it cannot re-run;
- * - a procedure that rolls up FURTHER mutations (bead kam1: Ravaged Body's
- *   "Roll 1d5 times on this table") returns them as grants. They are resolved
- *   against the mutation pack, settled the same way, and returned alongside
- *   the dropped item so one drop can produce several Items;
- * - characteristic changes are rolled ONCE here and written onto the effect
- *   row, so later tests see a stable number (dice are signed: "-1d10" reduces);
- * - an acquired Disorder records the severity it was gained at, which is what
- *   `dueDisorders` reads to stop re-prompting that threshold.
- *
- * Returns the dropped item's payload FIRST, then any granted mutations, so the
- * caller's single createEmbeddedDocuments call preserves drop order.
- * Module-level to keep it off the class body.
- */
-async function prepareDroppedItems(
-	actor: foundry.documents.Actor,
-	source: foundry.documents.Item,
-	gainedByTableRoll = false,
-): Promise<Record<string, unknown>[]> {
-	const object = source.toObject() as unknown as {
-		system?: {
-			kind?: string;
-			effects?: EffectData[];
-			acquiredSeverity?: string;
-			procedure?: string;
-		};
-	};
-	const system = object.system;
-	if (!system) return [object as unknown as Record<string, unknown>];
-	const grants: ProcedureGrant[] = [];
-	if (system.procedure) {
-		// A mutation gained BY a table roll must not re-run its own table
-		// procedure. The book does not resolve re-rolling Ravaged Body into
-		// Ravaged Body, and recursing would loop without bound; the bounded
-		// reading is to grant the mutation and stop (bead kam1 records this
-		// for owner confirmation). Every other procedure still settles.
-		if (gainedByTableRoll && system.procedure === "ravaged-body") {
-			system.procedure = "";
-		} else {
-			const character = systemOf(actor);
-			// The pack is read at most once per drop, and only when a
-			// procedure actually needs the table.
-			let packDocs: MutationPackDoc[] | null = null;
-			const loadMutations = async (): Promise<MutationPackDoc[]> => {
-				packDocs ??= (
-					(await getPackDocuments(MUTATION_PACK)) as MutationPackDoc[]
-				).filter((doc) => doc.type === "mutation");
-				return packDocs;
-			};
-			const outcome = await applyAfflictionProcedure(system.procedure, {
-				roll: async (notation) => {
-					return (await getPorts().dice.roll(notation)).total ?? 0;
-				},
-				characteristic: (key) => character.effectiveCharacteristicValue(key),
-				mutationRows: async () => mutationRowsFrom(await loadMutations()),
-			});
-			system.effects = [...(system.effects ?? []), ...outcome.effects];
-			grants.push(...outcome.grants);
-			// Settled: the sub-roll must never run again on this item.
-			system.procedure = "";
-		}
-	}
-	if (
-		system.effects?.some(
-			(effect) =>
-				effect.kind === "characteristic-modifier" && effect.dice && !effect.value,
-		)
-	) {
-		system.effects = await resolveEffectValues(
-			system.effects,
-			async (notation) => {
-				return (await getPorts().dice.roll(notation)).total ?? 0;
-			},
-		);
-	}
-	if (source.type === "madnessentry" && system.kind === "disorder") {
-		const character = actor.system as unknown as { insanity?: number };
-		const held = actor.items
-			.filter(
-				(item) =>
-					item.type === "madnessentry" &&
-					(item.system as unknown as { kind?: string }).kind === "disorder",
-			)
-			.map((item) => ({
-				severity:
-					(item.system as unknown as { acquiredSeverity?: string })
-						.acquiredSeverity ?? "",
-			}));
-		system.acquiredSeverity =
-			dueDisorders(character.insanity ?? 0, held)[0]?.severity ?? "";
-	}
-
-	const payloads = [object as unknown as Record<string, unknown>];
-	if (grants.length > 0) {
-		await postMutationRollCard(actor, source.name ?? "", grants);
-		for (const grant of grants) {
-			const granted = await resolveMutationByName(grant.name);
-			if (!granted) {
-				console.warn(
-					`rogue-trader | Ravaged Body rolled "${grant.name}", which is not in ${MUTATION_PACK}`,
-				);
-				continue;
-			}
-			const grantedPayloads = await prepareDroppedItems(actor, granted, true);
-			for (const payload of grantedPayloads) {
-				// A granted mutation is a NEW owned Item, so the pack document's
-				// _id must go: rolling the same mutation twice is legal (the book
-				// says roll 1d5 times, not re-roll repeats), and two embedded
-				// Items cannot share an _id.
-				const clone = { ...(payload as Record<string, unknown>) };
-				delete clone._id;
-				payloads.push(clone);
-			}
-		}
-	}
-	return payloads;
-}
-
-/** Resolve a mutation pack Item by name (fresh document, safe to clone). */
-async function resolveMutationByName(
-	name: string,
-): Promise<foundry.documents.Item | null> {
-	const docs = (
-		(await getPackDocuments(MUTATION_PACK)) as Array<{
-			name?: string;
-			type?: string;
-			toObject?: () => unknown;
-		}>
-	).filter((doc) => doc.type === "mutation");
-	const found = docs.find((doc) => doc.name === name) ?? null;
-	return found as unknown as foundry.documents.Item | null;
-}
-
-/**
- * Post the Ravaged Body card (bead kam1): the mutation that triggered the
- * table, and each d100 with the row it landed on, so the roll is auditable at
- * the table rather than appearing as N unexplained new items.
- */
-async function postMutationRollCard(
-	actor: foundry.documents.Actor,
-	sourceName: string,
-	grants: ProcedureGrant[],
-): Promise<void> {
-	try {
-		await postCard(actor, "systems/rogue-trader/template/chat/mutation-roll.hbs", {
-			title: game.i18n.format("CHAT.MUTATION_ROLL_TITLE", { mutation: sourceName }),
-			countLabel: game.i18n.format("CHAT.MUTATION_ROLL_COUNT", {
-				count: grants.length,
-			}),
-			results: grants.map((grant) => ({
-				roll: grant.roll ?? 0,
-				name: grant.name,
-			})),
-		});
-	} catch (error) {
-		// The items are already being created; a failed card must not abort the
-		// drop. Loud, because a silent failure here loses the audit trail.
-		console.error("rogue-trader | mutation roll card failed", error);
-	}
-}
+// Affliction drop machinery — the mutation pack resolution, the procedure
+// settling (Ravaged Body's further mutations, Degenerate Mind, Mental
+// Regressive), the roll-once characteristic dice and the mutation-roll chat
+// card — lives in ./affliction-drop (bead yxpk).

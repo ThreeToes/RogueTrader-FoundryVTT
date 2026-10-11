@@ -130,7 +130,7 @@ const sections = [
 interface Page {
 	name: string;
 	text?: string;
-	"src"?: unknown;
+	src?: unknown;
 	source?: string;
 	[key: string]: unknown;
 }
@@ -151,7 +151,10 @@ const docs = yaml.parse(readFileSync(OUT, "utf8")) as Journal[];
  */
 const INTERRUPTED_HEADS: Record<string, [string, string]> = {
 	// [glued prefix as extracted, restored prefix]
-	"The Rak'Gol": ["The Rak’Gol cross the Expanse", "Where the Rak’Gol cross the Expanse"],
+	"The Rak'Gol": [
+		"The Rak’Gol cross the Expanse",
+		"Where the Rak’Gol cross the Expanse",
+	],
 };
 
 /**
@@ -258,7 +261,9 @@ const RUN_IN_HEADS = [
 	"SOPHI ADRIANIS’ MISADVENTURE",
 ];
 /** Longest-first so "HOUSE KRIN CLERK" wins over "HOUSE KRIN". */
-const RUN_IN_HEADS_SORTED = [...RUN_IN_HEADS].sort((a, b) => b.length - a.length);
+const RUN_IN_HEADS_SORTED = [...RUN_IN_HEADS].sort(
+	(a, b) => b.length - a.length,
+);
 
 /** Page HTML: verbatim paragraphs, with printed run-in headings as <h3>. */
 function toHtml(section: Section): string {
@@ -329,7 +334,8 @@ for (const section of sections) {
 	const merge = MERGE_INTO[section.name];
 	if (merge) {
 		const host = docs.find((d) => d.name === merge.journal);
-		if (!host) throw new Error(`no journal "${merge.journal}" for ${section.name}`);
+		if (!host)
+			throw new Error(`no journal "${merge.journal}" for ${section.name}`);
 		const page = host.pages.find((p) => p.name === merge.page);
 		if (!page) throw new Error(`no page "${merge.page}" in ${merge.journal}`);
 		if ((page.text ?? "").includes(`<h3>${section.name}</h3>`)) {

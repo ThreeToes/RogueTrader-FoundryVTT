@@ -22,7 +22,9 @@ globals.game = {
 	i18n: { localize: (key: string) => key, format: (key: string) => key },
 	system: { id: "rogue-trader" },
 };
-globals.ui = { notifications: { warn: () => undefined, info: () => undefined } };
+globals.ui = {
+	notifications: { warn: () => undefined, info: () => undefined },
+};
 globals.CONFIG = {};
 globals.Hooks = { once: () => undefined, on: () => undefined };
 globals.foundry = {
@@ -37,8 +39,15 @@ globals.foundry = {
 			DialogV2: { wait: async () => null, input: async () => null },
 		},
 		sheets: { ActorSheetV2: class {}, ItemSheetV2: class {} },
-		handlebars: { renderTemplate: async () => "", getTemplate: async () => () => "" },
-		documents: { Item: class {}, Actor: class {}, ChatMessage: { get: () => undefined } },
+		handlebars: {
+			renderTemplate: async () => "",
+			getTemplate: async () => () => "",
+		},
+		documents: {
+			Item: class {},
+			Actor: class {},
+			ChatMessage: { get: () => undefined },
+		},
 		utils: { mergeObject: () => undefined },
 	},
 };
@@ -128,10 +137,11 @@ function makeRendered(creator: (typeof CREATORS)[number]): CreatorInstance {
 }
 
 /** The action handlers a creator exposes to Foundry. */
-function actionsOf(ctor: unknown): Record<string, (this: unknown) => Promise<void>> {
-	return (
-		ctor as { DEFAULT_OPTIONS: { actions: Record<string, never> } }
-	).DEFAULT_OPTIONS.actions as unknown as Record<
+function actionsOf(
+	ctor: unknown,
+): Record<string, (this: unknown) => Promise<void>> {
+	return (ctor as { DEFAULT_OPTIONS: { actions: Record<string, never> } })
+		.DEFAULT_OPTIONS.actions as unknown as Record<
 		string,
 		(this: unknown) => Promise<void>
 	>;

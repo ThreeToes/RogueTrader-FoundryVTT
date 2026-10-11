@@ -15,7 +15,10 @@ const { Battlesuit } = await import("./battlesuit");
  * all ways" — so the inheritance is asserted too, not just the new fields.
  */
 describe("Battlesuit schema (bead rojm)", () => {
-	const schema = Battlesuit.defineSchema() as unknown as Record<string, unknown>;
+	const schema = Battlesuit.defineSchema() as unknown as Record<
+		string,
+		unknown
+	>;
 
 	test("is worn armour: inherits the Armour fields", () => {
 		expect(Object.getPrototypeOf(Battlesuit)).toBe(Armour);

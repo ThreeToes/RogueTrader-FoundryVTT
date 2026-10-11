@@ -24,12 +24,24 @@ export interface ModelEntry {
 /** Registered Item sub-types -> model. */
 export const ITEM_MODELS: Record<string, ModelEntry> = {
 	// Combat actions (bead moew): Table 9-4 + Action Descriptions.
-	action: { spec: "../roguetrader/data/item/action", className: "CombatAction" },
+	action: {
+		spec: "../roguetrader/data/item/action",
+		className: "CombatAction",
+	},
 	gear: { spec: "../roguetrader/data/item/gear", className: "Gear" },
-	"ranged-weapon": { spec: "../roguetrader/data/item/ranged-weapon", className: "RangedWeapon" },
-	"melee-weapon": { spec: "../roguetrader/data/item/melee-weapon", className: "MeleeWeapon" },
+	"ranged-weapon": {
+		spec: "../roguetrader/data/item/ranged-weapon",
+		className: "RangedWeapon",
+	},
+	"melee-weapon": {
+		spec: "../roguetrader/data/item/melee-weapon",
+		className: "MeleeWeapon",
+	},
 	armour: { spec: "../roguetrader/data/item/armour", className: "Armour" },
-	battlesuit: { spec: "../roguetrader/data/item/battlesuit", className: "Battlesuit" },
+	battlesuit: {
+		spec: "../roguetrader/data/item/battlesuit",
+		className: "Battlesuit",
+	},
 	"battlesuit-system": {
 		spec: "../roguetrader/data/item/battlesuit-system",
 		className: "BattlesuitSystem",
@@ -38,32 +50,77 @@ export const ITEM_MODELS: Record<string, ModelEntry> = {
 	talent: { spec: "../roguetrader/data/item/talent", className: "Talent" },
 	career: { spec: "../roguetrader/data/item/career", className: "Career" },
 	ship: { spec: "../roguetrader/data/item/starship", className: "Starship" },
-	"ship-complication": { spec: "../roguetrader/data/item/starship", className: "ShipComplication" },
-	"ship-component": { spec: "../roguetrader/data/item/ship-component", className: "ShipComponent" },
-	"ship-weapon-component": { spec: "../roguetrader/data/item/ship-component", className: "ShipWeaponComponent" },
-	"game-table": { spec: "../roguetrader/data/item/game-table", className: "GameTable" },
+	"ship-complication": {
+		spec: "../roguetrader/data/item/starship",
+		className: "ShipComplication",
+	},
+	"ship-component": {
+		spec: "../roguetrader/data/item/ship-component",
+		className: "ShipComponent",
+	},
+	"ship-weapon-component": {
+		spec: "../roguetrader/data/item/ship-component",
+		className: "ShipWeaponComponent",
+	},
+	"game-table": {
+		spec: "../roguetrader/data/item/game-table",
+		className: "GameTable",
+	},
 	gearset: { spec: "../roguetrader/data/item/gearset", className: "Gearset" },
-	psychicpower: { spec: "../roguetrader/data/item/psychic-power", className: "PsychicPower" },
-	navigatorpower: { spec: "../roguetrader/data/item/navigator-power", className: "NavigatorPower" },
-	origintrait: { spec: "../roguetrader/data/item/origin-trait", className: "OriginTrait" },
+	psychicpower: {
+		spec: "../roguetrader/data/item/psychic-power",
+		className: "PsychicPower",
+	},
+	navigatorpower: {
+		spec: "../roguetrader/data/item/navigator-power",
+		className: "NavigatorPower",
+	},
+	origintrait: {
+		spec: "../roguetrader/data/item/origin-trait",
+		className: "OriginTrait",
+	},
 	origin: { spec: "../roguetrader/data/item/origin", className: "Origin" },
-	heirloom: { spec: "../roguetrader/data/item/heirloom", className: "Heirloom" },
-	mutation: { spec: "../roguetrader/data/item/mutation", className: "Mutation" },
-	madnessentry: { spec: "../roguetrader/data/item/madness", className: "MadnessEntry" },
+	heirloom: {
+		spec: "../roguetrader/data/item/heirloom",
+		className: "Heirloom",
+	},
+	mutation: {
+		spec: "../roguetrader/data/item/mutation",
+		className: "Mutation",
+	},
+	madnessentry: {
+		spec: "../roguetrader/data/item/madness",
+		className: "MadnessEntry",
+	},
 	trait: { spec: "../roguetrader/data/item/trait", className: "Trait" },
 	"warrant-option": {
 		spec: "../roguetrader/data/item/warrant-option",
 		className: "WarrantOption",
 	},
-	ammunition: { spec: "../roguetrader/data/item/ammunition", className: "Ammunition" },
-	"force-field": { spec: "../roguetrader/data/item/force-field", className: "ForceField" },
-	"weapon-modification": { spec: "../roguetrader/data/item/weapon-modification", className: "WeaponModification" },
-	"armour-modification": { spec: "../roguetrader/data/item/armour-modification", className: "ArmourModification" },
+	ammunition: {
+		spec: "../roguetrader/data/item/ammunition",
+		className: "Ammunition",
+	},
+	"force-field": {
+		spec: "../roguetrader/data/item/force-field",
+		className: "ForceField",
+	},
+	"weapon-modification": {
+		spec: "../roguetrader/data/item/weapon-modification",
+		className: "WeaponModification",
+	},
+	"armour-modification": {
+		spec: "../roguetrader/data/item/armour-modification",
+		className: "ArmourModification",
+	},
 	// Plain-Gear sub-types: no extra schema, registered against the Gear model.
 	aptitude: { spec: "../roguetrader/data/item/gear", className: "Gear" },
 	tool: { spec: "../roguetrader/data/item/gear", className: "Gear" },
 	drug: { spec: "../roguetrader/data/item/gear", className: "Gear" },
-	"special-ability": { spec: "../roguetrader/data/item/gear", className: "Gear" },
+	"special-ability": {
+		spec: "../roguetrader/data/item/gear",
+		className: "Gear",
+	},
 };
 
 /** Registered Actor types -> model. */
@@ -71,12 +128,21 @@ export const ACTOR_MODELS: Record<string, ModelEntry> = {
 	// "pc" is the pre-rename character type, kept registered until the ow8w
 	// ready-migration has run; it shares the Character model.
 	pc: { spec: "../roguetrader/data/actor/character", className: "Character" },
-	explorer: { spec: "../roguetrader/data/actor/character", className: "Character" },
+	explorer: {
+		spec: "../roguetrader/data/actor/character",
+		className: "Character",
+	},
 	npc: { spec: "../roguetrader/data/actor/character", className: "Character" },
 	vehicle: { spec: "../roguetrader/data/actor/vehicle", className: "Vehicle" },
 	dynasty: { spec: "../roguetrader/data/actor/dynasty", className: "Dynasty" },
-	starship: { spec: "../roguetrader/data/actor/starship-actor", className: "StarshipActor" },
-	planet: { spec: "../roguetrader/data/actor/planet-actor", className: "PlanetActor" },
+	starship: {
+		spec: "../roguetrader/data/actor/starship-actor",
+		className: "StarshipActor",
+	},
+	planet: {
+		spec: "../roguetrader/data/actor/planet-actor",
+		className: "PlanetActor",
+	},
 	cache: { spec: "../roguetrader/data/actor/cache", className: "CacheActor" },
 };
 
@@ -102,7 +168,11 @@ export function schemaDefaults(schema: Schema): Map<string, unknown> {
 		for (const [key, field] of Object.entries(fields ?? {})) {
 			const path = prefix ? `${prefix}.${key}` : key;
 			if (field?.fields) walk(field.fields, path);
-			else out.set(path, (field as { opts?: { initial?: unknown } })?.opts?.initial);
+			else
+				out.set(
+					path,
+					(field as { opts?: { initial?: unknown } })?.opts?.initial,
+				);
 		}
 	};
 	walk(schema);

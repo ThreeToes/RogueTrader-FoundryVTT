@@ -76,9 +76,7 @@ export function resolveTalentDoc<T extends PackDocLike>(
 	return (
 		(row.key ? talentDocs.find((d) => d.key === row.key) : undefined) ??
 		(row.name
-			? talentDocs.find(
-				(d) => d.name.toLowerCase() === row.name.toLowerCase(),
-			)
+			? talentDocs.find((d) => d.name.toLowerCase() === row.name.toLowerCase())
 			: undefined)
 	);
 }
@@ -161,4 +159,3 @@ export function packDocAnchor(
 	if (!uuid) return null;
 	return { action: OPEN_PACK_DOC_ACTION, uuid, name: displayName ?? row.name };
 }
-

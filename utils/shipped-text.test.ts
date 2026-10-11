@@ -53,9 +53,12 @@ function stringValues(
 	value: unknown,
 	trail: string[] = [],
 ): Array<{ where: string; text: string }> {
-	if (typeof value === "string") return [{ where: trail.join("."), text: value }];
+	if (typeof value === "string")
+		return [{ where: trail.join("."), text: value }];
 	if (Array.isArray(value)) {
-		return value.flatMap((item, i) => stringValues(item, [...trail, String(i)]));
+		return value.flatMap((item, i) =>
+			stringValues(item, [...trail, String(i)]),
+		);
 	}
 	if (value && typeof value === "object") {
 		return Object.entries(value).flatMap(([key, item]) =>
@@ -69,7 +72,10 @@ function langOffenders(): string[] {
 	const bad: string[] = [];
 	for (const lang of ["en", "es", "fr", "pl"]) {
 		const file = `lang/${lang}.json`;
-		const dict = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
+		const dict = JSON.parse(readFileSync(file, "utf8")) as Record<
+			string,
+			unknown
+		>;
 		for (const { where, text } of stringValues(dict)) {
 			if (hasBeadId(text)) bad.push(`${file} ${where}: ${text}`);
 		}
@@ -119,15 +125,12 @@ describe("shipped text carries no bead ids (bead x9yu)", () => {
 		expect(hasBeadId("- name: Micro-bead")).toBe(false);
 		expect(hasBeadId("Internal vox-bead")).toBe(false);
 		expect(hasBeadId("far too many beady eyes")).toBe(false);
-		expect(
-			hasBeadId("An integral micro-bead vox, mag-boots, lamp pack"),
-		).toBe(false);
+		expect(hasBeadId("An integral micro-bead vox, mag-boots, lamp pack")).toBe(
+			false,
+		);
 	});
 
-	test.skipIf(!HAS_PACKS)(
-		"no compendium string contains a bead id",
-		() => {
-			expect(packOffenders()).toEqual([]);
-		},
-	);
+	test.skipIf(!HAS_PACKS)("no compendium string contains a bead id", () => {
+		expect(packOffenders()).toEqual([]);
+	});
 });

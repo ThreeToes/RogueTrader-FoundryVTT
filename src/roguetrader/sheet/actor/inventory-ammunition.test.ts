@@ -53,7 +53,7 @@ describe("character inventory ammunition group (bead 8uc7)", () => {
 	});
 
 	test("ammunition rows keep the shared open + delete affordances", () => {
-		expect(branch).toContain("(localize \"GEAR.OPEN_SHEET\")");
+		expect(branch).toContain('(localize "GEAR.OPEN_SHEET")');
 		expect(branch).toContain('deleteAction="deleteItem"');
 	});
 });

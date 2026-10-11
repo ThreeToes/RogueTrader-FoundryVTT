@@ -28,11 +28,16 @@ const GITHUB_BRANCH = "master";
 const ARTIFACT_NAME = "rogue-trader.zip";
 
 /** Stamp version + stable manifest URL + provisional download URL. */
-export function syncPublicManifest(publicPath = PUBLIC_MANIFEST, privatePath = PRIVATE_MANIFEST) {
+export function syncPublicManifest(
+	publicPath = PUBLIC_MANIFEST,
+	privatePath = PRIVATE_MANIFEST,
+) {
 	const priv = JSON.parse(readFileSync(privatePath, "utf8"));
 	const pub = JSON.parse(readFileSync(publicPath, "utf8"));
 	if (typeof priv.version !== "string") {
-		throw new Error(`private release manifest has no string version: ${privatePath}`);
+		throw new Error(
+			`private release manifest has no string version: ${privatePath}`,
+		);
 	}
 	const version = priv.version;
 	const tag = `v${version}`;
@@ -73,7 +78,9 @@ function main() {
 			const result = setPublicDownload(urlArg.slice("--url=".length));
 			if (result.changed) console.log(`download=${result.download}`);
 		} else {
-			console.error("usage: bun utils/sync-public-manifest.mjs <sync|set-download --url=...>");
+			console.error(
+				"usage: bun utils/sync-public-manifest.mjs <sync|set-download --url=...>",
+			);
 			process.exit(1);
 		}
 	} catch (error) {

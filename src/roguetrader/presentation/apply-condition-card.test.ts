@@ -22,6 +22,7 @@
 import { afterEach, afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import type { Ports } from "../../ffg/application/ports";
+import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
 
 // Foundry globals stubbed BEFORE the dynamic import (chat-doc-open pattern:
 // the import chain reaches ApplicationV2-derived sheet classes).
@@ -62,8 +63,7 @@ afterAll(() => {
 	for (const key of ["game", "foundry"]) {
 		if (originalGlobals[key] === undefined)
 			delete (globalThis as Record<string, unknown>)[key];
-		else
-			(globalThis as Record<string, unknown>)[key] = originalGlobals[key];
+		else (globalThis as Record<string, unknown>)[key] = originalGlobals[key];
 	}
 });
 
@@ -121,9 +121,7 @@ describe("postCriticalCard condition suggestion (bead ronn)", () => {
 			{ damageType: "Energy", location: "head" },
 		);
 		expect(posted).toHaveLength(1);
-		expect(posted[0]!.template).toBe(
-			"systems/rogue-trader/template/chat/critical.hbs",
-		);
+		expect(posted[0]!.template).toBe(`${TEMPLATE_ROOT}chat/critical.hbs`);
 		expect(posted[0]!.vars.conditionSuggestions).toEqual([
 			{ statusId: "stunned", labelKey: "STATUS.STUNNED" },
 		]);
@@ -179,6 +177,36 @@ describe("postCriticalCard condition suggestion (bead ronn)", () => {
 			{ damageType: "Energy", location: "body" },
 		);
 		expect(posted[0]!.vars.conditionSuggestions).toEqual([]);
+	});
+
+	test("kebab-case locations get underscored BODY_LOCATION keys (bead kilr)", async () => {
+		const { posted } = captureCard();
+		await postCriticalCard(
+			{ uuid: "Actor.victim" },
+			{
+				effects: [
+					{
+						id: "crit-1",
+						location: "left-arm",
+						severity: 2,
+						table: "Critical Hit (Impact, Arm)",
+						roll: 2,
+						source: "core",
+						text: "The attack breaks bones in the left arm.",
+					},
+				],
+				woundsApplied: 1,
+				excess: 2,
+				overrideUsed: false,
+			},
+			{ damageType: "Impact", location: "left-arm" },
+		);
+		expect(posted).toHaveLength(1);
+		expect(posted[0]!.vars.locationLabelKey).toBe("BODY_LOCATION.LEFT_ARM");
+		expect(
+			(posted[0]!.vars.effects as Array<{ locationLabelKey: string }>)[0]
+				?.locationLabelKey,
+		).toBe("BODY_LOCATION.LEFT_ARM");
 	});
 
 	test("a MANUAL row (table content missing) never suggests a condition", async () => {
@@ -265,10 +293,7 @@ describe("template scan guards (bead ronn)", () => {
 				const dict = JSON.parse(
 					readFileSync(`lang/${lang}.json`, "utf8"),
 				) as Record<string, string>;
-				expect(
-					dict[key],
-					`${lang}.json has a non-empty ${key}`,
-				).toBeTruthy();
+				expect(dict[key], `${lang}.json has a non-empty ${key}`).toBeTruthy();
 			}
 		}
 	});

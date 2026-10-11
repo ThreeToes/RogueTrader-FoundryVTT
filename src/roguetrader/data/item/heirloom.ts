@@ -57,7 +57,10 @@ export class Heirloom extends Gear {
 			/** How the creator grants this heirloom. */
 			grant: new fields.SchemaField({
 				kind: new fields.StringField({
-					choices: { "pack-item": "HEIRLOOM.KIND_PACK_ITEM", "note-item": "HEIRLOOM.KIND_NOTE_ITEM" },
+					choices: {
+						"pack-item": "HEIRLOOM.KIND_PACK_ITEM",
+						"note-item": "HEIRLOOM.KIND_NOTE_ITEM",
+					},
 					initial: "pack-item",
 					required: true,
 					nullable: false,

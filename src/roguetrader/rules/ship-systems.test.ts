@@ -69,7 +69,12 @@ describe("weapon capacity parsing (Table 8-4, book p202)", () => {
 describe("deriveShipStats (bead om4j)", () => {
 	test("sums generation, draw, space, SP and shields", () => {
 		const stats = deriveShipStats([
-			{ name: "Jovian Pattern Class 1 Drive", power: "35 Generated", space: 8, sp: "-" },
+			{
+				name: "Jovian Pattern Class 1 Drive",
+				power: "35 Generated",
+				space: 8,
+				sp: "-",
+			},
 			{ name: "Single Void Shield Array", power: "5", space: 1, sp: "-" },
 			{ name: "Mars Pattern Macrocannons", power: "4", space: 2, sp: "1" },
 			{ name: "Commerce Bridge", power: "1", space: 2, sp: "0" },

@@ -9,6 +9,7 @@
 import { characteristicLongLabels } from "../../registry";
 import { withAddedEffect, withoutEffectAt } from "../../data/item/effects";
 import { talentEffectHandlers } from "../../rules/talent-effects";
+import { effectKinds } from "../../../ffg/domain/effects";
 
 interface EffectsSheet {
 	document: {
@@ -21,9 +22,7 @@ export const effectActions = {
 	/** Append a blank effect row (data-action="addEffect"). */
 	async addEffect(this: EffectsSheet): Promise<void> {
 		await this.document.update({
-			"system.effects": withAddedEffect(
-				this.document.system.effects as never,
-			),
+			"system.effects": withAddedEffect(this.document.system.effects as never),
 		});
 	},
 
@@ -49,36 +48,13 @@ export const effectActions = {
 // so authors never type slugs or characteristic keys by hand.
 // ---------------------------------------------------------------------------
 
-/** Known effect kinds -> i18n key under EFFECT_KIND.*. */
-const EFFECT_KIND_LABEL_KEYS: Record<string, string> = {
-	"test-modifier": "EFFECT_KIND.TEST_MODIFIER",
-	"attack-modifier": "EFFECT_KIND.ATTACK_MODIFIER",
-	"wounds-max": "EFFECT_KIND.WOUNDS_MAX",
-	"skill-rank": "EFFECT_KIND.SKILL_RANK",
-	"damage-flat": "EFFECT_KIND.DAMAGE_FLAT",
-	"critical-damage": "EFFECT_KIND.CRITICAL_DAMAGE",
-	"tb-multiplier": "EFFECT_KIND.TB_MULTIPLIER",
-	"damage-reduction": "EFFECT_KIND.DAMAGE_REDUCTION",
-	// Affliction kinds (epic nt8k): characteristic deltas + item grants.
-	"characteristic-modifier": "EFFECT_KIND.CHARACTERISTIC_MODIFIER",
-	"grants-item": "EFFECT_KIND.GRANTS_ITEM",
-	// Handler-only kinds (talent-effects.ts): without a label key the editor
-	// degraded to the raw slug — the owner's untranslated-effects report.
-	"tearing": "EFFECT_KIND.TEARING",
-	"toxic": "EFFECT_KIND.TOXIC",
-	"pen-flat": "EFFECT_KIND.PEN_FLAT",
-	"primitive-clear": "EFFECT_KIND.PRIMITIVE_CLEAR",
-	"blast": "EFFECT_KIND.BLAST",
-	"corruption": "EFFECT_KIND.CORRUPTION",
-	"sorcery-rank": "EFFECT_KIND.SORCERY_RANK",
-	"grants-technique": "EFFECT_KIND.GRANTS_TECHNIQUE",
-};
-
 /**
  * Dropdown choices for the shared effect editor: `kindChoices` maps kind ->
- * localized label (registered module kinds fall back to the raw kind);
- * `testKeyChoices` maps key -> localized label with "" = all tests.
- * `localize` is optional and defaults to `game.i18n.localize`.
+ * localized label, derived from the registered `EffectSpec`s' `labelKey`
+ * (bead ypbx — a new kind needs NO second edit here); kinds known only to a
+ * handler (no spec) fall back to the raw slug, as do specs registered without
+ * a `labelKey`. `testKeyChoices` maps key -> localized label with "" = all
+ * tests. `localize` is optional and defaults to `game.i18n.localize`.
  */
 export function effectEditorChoices(
 	localize: (key: string) => string = (key) => game.i18n.localize(key),
@@ -87,15 +63,12 @@ export function effectEditorChoices(
 	testKeyChoices: Record<string, string>;
 } {
 	const kindChoices: Record<string, string> = {};
-	// Offer every kind a handler or a label knows about (a label-key-only kind,
-	// e.g. characteristic-modifier / grants-item, is editable too).
 	const knownKinds = [
-		"test-modifier",
+		...effectKinds.all().map((spec) => spec.kind),
 		...talentEffectHandlers.kinds(),
-		...Object.keys(EFFECT_KIND_LABEL_KEYS),
 	];
 	for (const kind of [...new Set(knownKinds)]) {
-		const labelKey = EFFECT_KIND_LABEL_KEYS[kind];
+		const labelKey = effectKinds.get(kind)?.labelKey;
 		kindChoices[kind] = labelKey ? localize(labelKey) : kind;
 	}
 	const testKeyChoices: Record<string, string> = {

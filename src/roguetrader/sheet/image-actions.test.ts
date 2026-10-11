@@ -6,7 +6,11 @@ import { imageActions } from "./image-actions";
 // it with a minimal FilePicker whose browse() fires the callback (same
 // globals-swap pattern as combat-tracker.test.ts).
 
-type PickerOpts = { type?: string; current?: string; callback?: (p: string) => void };
+type PickerOpts = {
+	type?: string;
+	current?: string;
+	callback?: (p: string) => void;
+};
 type UpdateCall = Record<string, unknown>;
 
 let lastOpts: PickerOpts | null = null;
@@ -50,7 +54,15 @@ describe("imageActions.editImage (persisted portrait pick)", () => {
 		pickPath = "icons/test.webp";
 		const updates: UpdateCall[] = [];
 		await imageActions.editImage.call(
-			{ document: { documentName: "Item", update: (d) => { updates.push(d); return Promise.resolve(); } } },
+			{
+				document: {
+					documentName: "Item",
+					update: (d) => {
+						updates.push(d);
+						return Promise.resolve();
+					},
+				},
+			},
 			{},
 			target(),
 		);
@@ -63,7 +75,15 @@ describe("imageActions.editImage (persisted portrait pick)", () => {
 		const updates: UpdateCall[] = [];
 		pickPath = "worlds/test/portraits/new.webp";
 		await imageActions.editImage.call(
-			{ document: { documentName: "Actor", update: (d) => { updates.push(d); return Promise.resolve(); } } },
+			{
+				document: {
+					documentName: "Actor",
+					update: (d) => {
+						updates.push(d);
+						return Promise.resolve();
+					},
+				},
+			},
 			{},
 			target(),
 		);
@@ -81,7 +101,15 @@ describe("imageActions.editImage (persisted portrait pick)", () => {
 		const updates: UpdateCall[] = [];
 		pickPath = "";
 		await imageActions.editImage.call(
-			{ document: { documentName: "Actor", update: (d) => { updates.push(d); return Promise.resolve(); } } },
+			{
+				document: {
+					documentName: "Actor",
+					update: (d) => {
+						updates.push(d);
+						return Promise.resolve();
+					},
+				},
+			},
 			{},
 			target(),
 		);
@@ -92,7 +120,15 @@ describe("imageActions.editImage (persisted portrait pick)", () => {
 		const updates: UpdateCall[] = [];
 		pickPath = "art.webp";
 		await imageActions.editImage.call(
-			{ document: { documentName: "Item", update: (d) => { updates.push(d); return Promise.resolve(); } } },
+			{
+				document: {
+					documentName: "Item",
+					update: (d) => {
+						updates.push(d);
+						return Promise.resolve();
+					},
+				},
+			},
 			{},
 			target("prototypeToken.texture.src"),
 		);

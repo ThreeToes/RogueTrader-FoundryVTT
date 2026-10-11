@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	attachedModIds,
-	installMod,
-	removeMod,
-} from "./weapon-mods";
+import { attachedModIds, installMod, removeMod } from "./weapon-mods";
 
 describe("weapon-mod install/remove (bead huaf)", () => {
 	const owned = new Set(["a", "b"]);
@@ -11,7 +7,10 @@ describe("weapon-mod install/remove (bead huaf)", () => {
 
 	test("attachedModIds dedupes and drops dangling ids", () => {
 		expect(
-			attachedModIds({ system: { modifications: ["a", "ghost", "a", ""] } }, owns),
+			attachedModIds(
+				{ system: { modifications: ["a", "ghost", "a", ""] } },
+				owns,
+			),
 		).toEqual(["a"]);
 	});
 

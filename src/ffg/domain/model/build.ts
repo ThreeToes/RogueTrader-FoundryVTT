@@ -78,7 +78,10 @@ export function itemView(item: LooseItem): ItemView {
 	};
 }
 
-export function effectView(effect: LooseEffect, flagNamespace?: string): EffectView {
+export function effectView(
+	effect: LooseEffect,
+	flagNamespace?: string,
+): EffectView {
 	return {
 		id: effect.id ?? "",
 		name: effect.name ?? "",
@@ -106,6 +109,12 @@ export interface BuildActorViewOptions {
 	flagNamespace?: string;
 }
 
+/**
+ * Default `S` is the RT family UNION, not a wide cross-product (bead l2wz):
+ * a view built without an explicit family claims every RT family's fields —
+ * reads of family-specific fields narrow first. Callers that know the actor
+ * family (or sibling systems) pass a single family type explicitly.
+ */
 export function buildActorView<S extends SystemViewBase = ActorSystemView>(
 	input: LooseActor,
 	options?: BuildActorViewOptions,

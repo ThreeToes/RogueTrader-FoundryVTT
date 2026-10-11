@@ -1,10 +1,10 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
-import { sheetContext } from "../context";
-import { itemDescriptionHTML } from "../rich-text";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
-import { effectActions, effectEditorChoices } from "./effect-actions";
+import { effectActions } from "./effect-actions";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 /**
  * Single-section trait sheet (bead 25ii): header + benefit + effects editor +
@@ -22,21 +22,19 @@ export class TraitSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		content: {
-			template:
-				"systems/rogue-trader/template/sheet/item/parts/trait-content.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/trait-content.hbs`,
 		},
 	};
 
 	async _prepareContext(options: object = {}) {
 		const context = sheetContext(await super._prepareContext(options as never));
 
-		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(context, effectEditorChoices());
-
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		// Item data keys (bead apxq): effect editor choices (bead bpd, localized
+		// kind labels + test keys) + the enriched description prose.
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

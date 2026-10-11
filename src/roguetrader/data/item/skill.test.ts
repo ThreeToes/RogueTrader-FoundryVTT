@@ -12,10 +12,7 @@ const { Skill } = await import("./skill");
  */
 describe("Skill data model", () => {
 	test("schema declares key as a slug string defaulting to ''", () => {
-		const schema = Skill.defineSchema() as unknown as Record<
-			string,
-			StubField
-		>;
+		const schema = Skill.defineSchema() as unknown as Record<string, StubField>;
 		const key = schema.key as StubField;
 		expect(key).toBeDefined();
 		expect(key.opts.initial).toBe("");

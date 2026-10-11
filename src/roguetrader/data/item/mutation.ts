@@ -87,14 +87,12 @@ export class Mutation extends Gear {
 			attack: new foundry.data.fields.SchemaField({
 				characteristic: textField(),
 				damage: textField(),
-				damageTypes: new foundry.data.fields.ArrayField(
-					textField(),
-					{ initial: () => [] },
-				),
-				qualities: new foundry.data.fields.ArrayField(
-					textField(),
-					{ initial: () => [] },
-				),
+				damageTypes: new foundry.data.fields.ArrayField(textField(), {
+					initial: () => [],
+				}),
+				qualities: new foundry.data.fields.ArrayField(textField(), {
+					initial: () => [],
+				}),
 				action: textField(),
 				dodgeable: new foundry.data.fields.BooleanField({ initial: true }),
 				parryable: new foundry.data.fields.BooleanField({ initial: false }),

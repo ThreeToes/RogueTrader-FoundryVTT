@@ -26,7 +26,9 @@ globals.game = {
 	i18n: { localize: (key: string) => key, format: (key: string) => key },
 	system: { id: "rogue-trader" },
 };
-globals.ui = { notifications: { warn: () => undefined, info: () => undefined } };
+globals.ui = {
+	notifications: { warn: () => undefined, info: () => undefined },
+};
 globals.CONFIG = {};
 globals.Hooks = { once: () => undefined, on: () => undefined };
 
@@ -64,11 +66,16 @@ afterAll(() => {
 });
 
 const handler = () => {
-	const options = (DynastySheet as unknown as {
-		DEFAULT_OPTIONS: {
-			actions: Record<string, (this: unknown, event: unknown, target: unknown) => Promise<void>>;
-		};
-	}).DEFAULT_OPTIONS.actions;
+	const options = (
+		DynastySheet as unknown as {
+			DEFAULT_OPTIONS: {
+				actions: Record<
+					string,
+					(this: unknown, event: unknown, target: unknown) => Promise<void>
+				>;
+			};
+		}
+	).DEFAULT_OPTIONS.actions;
 	expect(options.clearWarrant).toBeTypeOf("function");
 	return options.clearWarrant;
 };

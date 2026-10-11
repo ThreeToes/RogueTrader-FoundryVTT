@@ -6,12 +6,15 @@
  * INFORMATIONAL ONLY: posts the defender's reaction test card; it does not
  * modify or cancel the damage flow (manual resolution for now).
  * Rules flags VERIFY: reaction-per-round accounting is not tracked;
- * untrained fallback is characteristic-only at -10.
+ * untrained fallback is characteristic-only with the profile's untrainedSkill
+ * model (half the Characteristic round down, Core Rulebook p74, bead tval).
  */
 
 import { systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollBase } from "../../rules/roll-contract";
+import { skillHandler } from "./characteristic-skill";
+import { runRoll } from "./orchestrator";
 
 export async function resolveEvasion(
 	defender: Actor,
@@ -54,18 +57,22 @@ export async function resolveEvasion(
 	// Roll the chosen reaction (the card records the attempt; the result is
 	// NOT fed into the damage calculation - manual resolution).
 	//
-	// Lazy import: resolveEvasion re-enters the pipeline, and the pipeline
-	// imports the handler registry, which imports weapon.ts (the only caller
-	// of this module). A static import would close that cycle.
-	const { performRoll } = await import("./perform");
-	await performRoll({
-		kind: "skill",
-		actor: defender,
-		...(owned
-			? { itemId: owned.id ?? "" }
-			: {
-					characteristicKey: skillName === "Parry" ? "ws" : "ag",
-					label: skillName,
-				}),
-	});
+	// The re-entry is STATIC through orchestrator.ts with the skill handler
+	// (bead 1uai): the old lazy ./perform import existed to break evasion ->
+	// perform -> handlers -> weapon -> evasion, but the orchestrator core
+	// never imports the handler registry, so the graph is acyclic without a
+	// runtime import.
+	await runRoll(
+		{
+			kind: "skill",
+			actor: defender,
+			...(owned
+				? { itemId: owned.id ?? "" }
+				: {
+						characteristicKey: skillName === "Parry" ? "ws" : "ag",
+						label: skillName,
+					}),
+		},
+		skillHandler,
+	);
 }

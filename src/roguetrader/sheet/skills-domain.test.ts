@@ -52,12 +52,15 @@ describe("findOwnedSkillForRow (bead wxkw — shared preview/application matcher
 	});
 
 	it("matches by pack key first", () => {
-		expect(findOwnedSkillForRow(owned, row({ key: "awareness" }))).toBe(owned[0]);
+		expect(findOwnedSkillForRow(owned, row({ key: "awareness" }))).toBe(
+			owned[0],
+		);
 	});
 
 	it("matches by exact name after the key fails", () => {
-		expect(findOwnedSkillForRow(owned, row({ name: "Common Lore (Imperium)" })))
-			.toBe(owned[2]);
+		expect(
+			findOwnedSkillForRow(owned, row({ name: "Common Lore (Imperium)" })),
+		).toBe(owned[2]);
 	});
 
 	it("matches trimmed + case-insensitively (t093 semantics)", () => {
@@ -69,8 +72,9 @@ describe("findOwnedSkillForRow (bead wxkw — shared preview/application matcher
 				row({ name: "Awareness" }),
 			),
 		).toMatchObject({ name: "  awareness " });
-		expect(findOwnedSkillForRow(owned, row({ name: "COMMON LORE (imperium)" })))
-			.toBe(owned[2]);
+		expect(
+			findOwnedSkillForRow(owned, row({ name: "COMMON LORE (imperium)" })),
+		).toBe(owned[2]);
 	});
 
 	it("keys win even when a name match appears earlier in the list", () => {
@@ -89,13 +93,15 @@ describe("findOwnedSkillForRow (bead wxkw — shared preview/application matcher
 		// The old live path matched empty system.key === empty row.key and
 		// could bump an unrelated keyless skill.
 		const keyless = [{ key: "", name: "Dodge", ladder: 1 }];
-		expect(findOwnedSkillForRow(keyless, row({ name: "Awareness" })))
-			.toBeUndefined();
+		expect(
+			findOwnedSkillForRow(keyless, row({ name: "Awareness" })),
+		).toBeUndefined();
 	});
 
 	it("returns undefined on no match; blank candidate names never match", () => {
-		expect(findOwnedSkillForRow(owned, row({ name: "Unheard-Of" })))
-			.toBeUndefined();
+		expect(
+			findOwnedSkillForRow(owned, row({ name: "Unheard-Of" })),
+		).toBeUndefined();
 		expect(
 			findOwnedSkillForRow([{ key: "x", name: "" }], row({ name: "x" })),
 		).toBeUndefined();
@@ -104,8 +110,9 @@ describe("findOwnedSkillForRow (bead wxkw — shared preview/application matcher
 	it("compares against BOTH the resolved row name and the raw row name", () => {
 		// Key-only raw row name ('tech-use') vs the display name the button
 		// carries ('Tech-Use'): either side alone must find the owned skill.
-		expect(findOwnedSkillForRow(owned, row({ name: "tech-use" }), "Tech-Use"))
-			.toBe(owned[1]);
+		expect(
+			findOwnedSkillForRow(owned, row({ name: "tech-use" }), "Tech-Use"),
+		).toBe(owned[1]);
 		expect(
 			findOwnedSkillForRow(
 				[{ key: "", name: "Tech-Use", ladder: 1 }],
@@ -161,7 +168,13 @@ describe("mergeOwnedAndCatalogRows (bead 6l90)", () => {
 
 	it("keeps advanced flag from owned system", () => {
 		const rows = mergeOwnedAndCatalogRows(
-			[{ id: "o1", name: "Forbidden Lore (Xenos)", system: { ladder: 1, advanced: true } }],
+			[
+				{
+					id: "o1",
+					name: "Forbidden Lore (Xenos)",
+					system: { ladder: 1, advanced: true },
+				},
+			],
 			[],
 		);
 		expect(rows[0]).toMatchObject({ advanced: true, ladder: 1 });
@@ -177,9 +190,10 @@ describe("mergeOwnedAndCatalogRows (bead 6l90)", () => {
 	});
 
 	it("defaults ladder to 0 for catalog rows and missing owned system", () => {
-		const rows = mergeOwnedAndCatalogRows([{ id: "o1", name: "Dodge" }], [
-			{ id: "c1", name: "Awareness", characteristic: "per" },
-		]);
+		const rows = mergeOwnedAndCatalogRows(
+			[{ id: "o1", name: "Dodge" }],
+			[{ id: "c1", name: "Awareness", characteristic: "per" }],
+		);
 		expect(rows.map((r) => r.ladder)).toEqual([0, 0]);
 	});
 });
@@ -265,7 +279,8 @@ describe("characteristic views (bead 6l90)", () => {
 		expect(view.delta).toBe(0);
 		expect(view.effectiveValue).toBe(view.value);
 	});
-});describe("characteristicValues (bead bdu4)", () => {
+});
+describe("characteristicValues (bead bdu4)", () => {
 	it("maps present values to a plain record", () => {
 		expect(
 			characteristicValues({

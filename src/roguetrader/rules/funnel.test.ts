@@ -66,7 +66,10 @@ describe("mergeModifiers", () => {
 				},
 			],
 		};
-		const funnelRun = collectTestModifiers(actor, { kind: "skill", key: "fel" });
+		const funnelRun = collectTestModifiers(actor, {
+			kind: "skill",
+			key: "fel",
+		});
 		// Dialog returns the echoed contributor rows + a custom row.
 		const dialogResult = [
 			...funnelRun,
@@ -122,10 +125,10 @@ describe("contributor registry", () => {
 				value: 5,
 			},
 		]);
-		const mods = testContributors.run(
-			buildActorView({}),
-			{ kind: "characteristic", key: "ws" },
-		);
+		const mods = testContributors.run(buildActorView({}), {
+			kind: "characteristic",
+			key: "ws",
+		});
 		expect(mods).toHaveLength(1);
 		expect(mods[0].id).toBe("custom");
 	});
@@ -242,9 +245,9 @@ describe("talent contributor", () => {
 
 	test("keyed effect only applies to matching tests", () => {
 		const bs = collectTestModifiers(talentActor, { kind: "attack", key: "bs" });
-		expect(bs.find((m) => m.id === "talent::bs:Deadeye Shooter:any")?.value).toBe(
-			10,
-		);
+		expect(
+			bs.find((m) => m.id === "talent::bs:Deadeye Shooter:any")?.value,
+		).toBe(10);
 		const ws = collectTestModifiers(talentActor, { kind: "attack", key: "ws" });
 		expect(
 			ws.find((m) => m.id === "talent::bs:Deadeye Shooter:any"),
@@ -258,16 +261,28 @@ describe("talent contributor", () => {
 	test("two talents with the same effect shape are both additive", () => {
 		const twoTalents = {
 			items: [
-				{ name: "Sure Strike", type: "talent", system: { effects: [{ testKey: "", value: 5 }] } },
-				{ name: "Deadly Aim", type: "talent", system: { effects: [{ testKey: "", value: 10 }] } },
+				{
+					name: "Sure Strike",
+					type: "talent",
+					system: { effects: [{ testKey: "", value: 5 }] },
+				},
+				{
+					name: "Deadly Aim",
+					type: "talent",
+					system: { effects: [{ testKey: "", value: 10 }] },
+				},
 			],
 		};
 		const mods = collectTestModifiers(twoTalents, {
 			kind: "characteristic",
 			key: "ws",
 		});
-		expect(mods.find((m) => m.id === "talent:Sure Strike:any::any")?.value).toBe(5);
-		expect(mods.find((m) => m.id === "talent:Deadly Aim:any::any")?.value).toBe(10);
+		expect(
+			mods.find((m) => m.id === "talent:Sure Strike:any::any")?.value,
+		).toBe(5);
+		expect(mods.find((m) => m.id === "talent:Deadly Aim:any::any")?.value).toBe(
+			10,
+		);
 		expect(
 			mods
 				.filter((m) => m.id.startsWith("talent:"))
@@ -276,8 +291,15 @@ describe("talent contributor", () => {
 	});
 
 	test("the same talent's re-collected row dedupes across the dialog round-trip", () => {
-		const first = collectTestModifiers(talentActor, { kind: "characteristic", key: "fel" });
-		const second = collectTestModifiers(talentActor, { kind: "characteristic", key: "fel" }, first);
+		const first = collectTestModifiers(talentActor, {
+			kind: "characteristic",
+			key: "fel",
+		});
+		const second = collectTestModifiers(
+			talentActor,
+			{ kind: "characteristic", key: "fel" },
+			first,
+		);
 		expect(second.filter((m) => m.id.startsWith("talent")).length).toBe(
 			first.filter((m) => m.id.startsWith("talent")).length,
 		);
@@ -304,7 +326,12 @@ describe("talent contributor", () => {
 			system: {
 				equipState: "carried",
 				effects: [
-					{ kind: "test-modifier", testKey: "skill:medicae", value: 20, label: "Medikit" },
+					{
+						kind: "test-modifier",
+						testKey: "skill:medicae",
+						value: 20,
+						label: "Medikit",
+					},
 				],
 			},
 		};
@@ -336,18 +363,31 @@ describe("talent contributor", () => {
 		const collectAttack = (special: string[], aimed = false) =>
 			collectTestModifiers(
 				{ items: [] },
-				{ kind: "attack", key: "bs", weapon: { type: "ranged-weapon", special }, aimed },
+				{
+					kind: "attack",
+					key: "bs",
+					weapon: { type: "ranged-weapon", special },
+					aimed,
+				},
 			);
 
 		test("accurate grants +10 only when aimed", () => {
-			const aimed = collectAttack(["accurate"], true).filter((m) => m.label === "accurate");
+			const aimed = collectAttack(["accurate"], true).filter(
+				(m) => m.label === "QUALITY.ACCURATE",
+			);
 			expect(aimed).toHaveLength(1);
 			expect(aimed[0]?.value).toBe(10);
-			expect(collectAttack(["accurate"], false).filter((m) => m.label === "accurate")).toHaveLength(0);
+			expect(
+				collectAttack(["accurate"], false).filter(
+					(m) => m.label === "QUALITY.ACCURATE",
+				),
+			).toHaveLength(0);
 		});
 
 		test("defensive imposes -10 on attack tests", () => {
-			const mods = collectAttack(["defensive"]).filter((m) => m.label === "defensive");
+			const mods = collectAttack(["defensive"]).filter(
+				(m) => m.label === "QUALITY.DEFENSIVE",
+			);
 			expect(mods).toHaveLength(1);
 			expect(mods[0]?.value).toBe(-10);
 		});
@@ -422,38 +462,73 @@ describe("talent contributor", () => {
 			system: { effects },
 		});
 		const collect = (items: unknown[]) =>
-			collectTestModifiers(
-				{ items },
-				{ kind: "attack", key: "ws" },
-			).filter((m) => m.id.startsWith("item:trait") || m.label === "Trait Effect");
+			collectTestModifiers({ items }, { kind: "attack", key: "ws" }).filter(
+				(m) => m.id.startsWith("item:trait") || m.label === "Trait Effect",
+			);
 
 		test("unkeyed test-modifier rows contribute on any test kind", () => {
 			const mods = collect([
-				trait([{ kind: "test-modifier", testKey: "", value: -10, label: "Trait Effect" }]),
+				trait([
+					{
+						kind: "test-modifier",
+						testKey: "",
+						value: -10,
+						label: "Trait Effect",
+					},
+				]),
 			]);
 			expect(mods).toHaveLength(1);
 			expect(mods[0].value).toBe(-10);
-			expect(mods[0].source).toEqual({ type: "item", label: "SOURCE.FROM_TRAITS" });
+			expect(mods[0].source).toEqual({
+				type: "item",
+				label: "SOURCE.FROM_TRAITS",
+			});
 		});
 
 		test("attack-modifier rows apply only to attack tests", () => {
 			const mods = collectTestModifiers(
-				{ items: [trait([{ kind: "attack-modifier", testKey: "ws", value: 10, label: "Trait Effect" }])] },
+				{
+					items: [
+						trait([
+							{
+								kind: "attack-modifier",
+								testKey: "ws",
+								value: 10,
+								label: "Trait Effect",
+							},
+						]),
+					],
+				},
 				{ kind: "attack", key: "ws" },
 			).filter((m) => m.label === "Trait Effect");
 			expect(mods).toHaveLength(1);
 			const nonAttack = collectTestModifiers(
-				{ items: [trait([{ kind: "attack-modifier", testKey: "ws", value: 10, label: "Trait Effect" }])] },
+				{
+					items: [
+						trait([
+							{
+								kind: "attack-modifier",
+								testKey: "ws",
+								value: 10,
+								label: "Trait Effect",
+							},
+						]),
+					],
+				},
 				{ kind: "characteristic", key: "ws" },
 			).filter((m) => m.label === "Trait Effect");
 			expect(nonAttack).toHaveLength(0);
 		});
 
 		test("damage-side kinds never contribute test modifiers", () => {
-			expect(collect([
-				trait([{ kind: "tb-multiplier", value: 2, label: "Trait Effect" }]),
-				trait([{ kind: "damage-reduction", value: 6, label: "Trait Effect" }]),
-			])).toHaveLength(0);
+			expect(
+				collect([
+					trait([{ kind: "tb-multiplier", value: 2, label: "Trait Effect" }]),
+					trait([
+						{ kind: "damage-reduction", value: 6, label: "Trait Effect" },
+					]),
+				]),
+			).toHaveLength(0);
 		});
 	});
 
@@ -480,7 +555,10 @@ describe("talent contributor", () => {
 				]),
 			];
 			const hit = withLabel(
-				collectTestModifiers({ items }, { kind: "skill", key: "ag", skillName: "Dodge" }),
+				collectTestModifiers(
+					{ items },
+					{ kind: "skill", key: "ag", skillName: "Dodge" },
+				),
 				"Misshapen",
 			);
 			expect(hit).toHaveLength(1);
@@ -513,7 +591,10 @@ describe("talent contributor", () => {
 				},
 			};
 			const mods = withLabel(
-				collectTestModifiers({ items: [disorder] }, { kind: "characteristic", key: "ag" }),
+				collectTestModifiers(
+					{ items: [disorder] },
+					{ kind: "characteristic", key: "ag" },
+				),
 				"Palsy",
 			);
 			expect(mods).toHaveLength(1);
@@ -535,10 +616,16 @@ describe("talent contributor", () => {
 				]),
 			];
 			expect(
-				withLabel(collectTestModifiers({ items }, { kind: "attack", key: "ws" }), "Malformed Hands"),
+				withLabel(
+					collectTestModifiers({ items }, { kind: "attack", key: "ws" }),
+					"Malformed Hands",
+				),
 			).toHaveLength(1);
 			expect(
-				withLabel(collectTestModifiers({ items }, { kind: "attack", key: "bs" }), "Malformed Hands"),
+				withLabel(
+					collectTestModifiers({ items }, { kind: "attack", key: "bs" }),
+					"Malformed Hands",
+				),
 			).toHaveLength(0);
 		});
 
@@ -566,7 +653,13 @@ describe("talent contributor", () => {
 					type: "talent",
 					system: {
 						effects: [
-							{ kind: "test-modifier", testKey: "", value: 10, label: "Resistance", condition: "fear" },
+							{
+								kind: "test-modifier",
+								testKey: "",
+								value: 10,
+								label: "Resistance",
+								condition: "fear",
+							},
 						],
 					},
 				},
@@ -596,7 +689,12 @@ describe("talent contributor", () => {
 				type: "talent",
 				system: {
 					effects: [
-						{ testKey: "ws", value: 20, label: "Berserk Charge", condition: "charging" },
+						{
+							testKey: "ws",
+							value: 20,
+							label: "Berserk Charge",
+							condition: "charging",
+						},
 					],
 				},
 			},
@@ -678,16 +776,16 @@ describe("talent contributor", () => {
 				{},
 				{ kind: "attack", key: "bs", fireMode: "burst" },
 			);
-			expect(
-				burst.find((m) => m.id === "attack:fire-mode:burst")?.value,
-			).toBe(10);
+			expect(burst.find((m) => m.id === "attack:fire-mode:burst")?.value).toBe(
+				10,
+			);
 			const full = collectTestModifiers(
 				{},
 				{ kind: "attack", key: "bs", fireMode: "full" },
 			);
-			expect(
-				full.find((m) => m.id === "attack:fire-mode:full")?.value,
-			).toBe(20);
+			expect(full.find((m) => m.id === "attack:fire-mode:full")?.value).toBe(
+				20,
+			);
 		});
 
 		test("fire-mode modifiers never apply to non-attack tests", () => {
@@ -723,7 +821,12 @@ describe("collectConditionKeys (bead xu83)", () => {
 				type: "madnessentry",
 				system: {
 					effects: [
-						{ kind: "test-modifier", testKey: "fel", value: -10, condition: "strangers" },
+						{
+							kind: "test-modifier",
+							testKey: "fel",
+							value: -10,
+							condition: "strangers",
+						},
 					],
 				},
 			},
@@ -732,7 +835,12 @@ describe("collectConditionKeys (bead xu83)", () => {
 				type: "mutation",
 				system: {
 					effects: [
-						{ kind: "test-modifier", testKey: "t", value: 20, condition: "poison" },
+						{
+							kind: "test-modifier",
+							testKey: "t",
+							value: 20,
+							condition: "poison",
+						},
 					],
 				},
 			},

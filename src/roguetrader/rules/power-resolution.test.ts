@@ -13,7 +13,10 @@ describe("power-resolution registry (bead sa6)", () => {
 			damage: false,
 			sustained: false,
 		});
-		expect(resolvePower(undefined)).toEqual({ damage: false, sustained: false });
+		expect(resolvePower(undefined)).toEqual({
+			damage: false,
+			sustained: false,
+		});
 	});
 
 	test("modules can register their own subtype entries", () => {

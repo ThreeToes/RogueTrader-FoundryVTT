@@ -40,16 +40,76 @@ export interface SystemStatus {
 
 /** The registry; init.ts seeds CONFIG.statusEffects from this. */
 export const SYSTEM_STATUSES: SystemStatus[] = [
-	{ id: "startled", labelKey: "STATUS.STARTLED", icon: "fa-solid fa-face-flushed", testPenalty: 0, snapOut: false },
-	{ id: "shaken", labelKey: "STATUS.SHAKEN", icon: "fa-solid fa-face-dizzy", testPenalty: -10, snapOut: false },
-	{ id: "unnerved", labelKey: "STATUS.UNNERVED", icon: "fa-solid fa-face-fearful", testPenalty: -10, snapOut: false },
-	{ id: "frozen", labelKey: "STATUS.FROZEN", icon: "fa-solid fa-snowflake", testPenalty: -30, snapOut: false },
-	{ id: "fleeing", labelKey: "STATUS.FLEEING", icon: "fa-solid fa-person-running", testPenalty: -20, snapOut: true },
-	{ id: "frenzied", labelKey: "STATUS.FRENZIED", icon: "fa-solid fa-face-angry", testPenalty: 0, snapOut: true },
-	{ id: "hallucinating", labelKey: "STATUS.HALLUCINATING", icon: "fa-solid fa-eye", testPenalty: 0, snapOut: false },
-	{ id: "catatonic", labelKey: "STATUS.CATATONIC", icon: "fa-solid fa-bed", testPenalty: 0, snapOut: false },
-	{ id: "unconscious", labelKey: "STATUS.UNCONSCIOUS", icon: "fa-solid fa-moon", testPenalty: 0, snapOut: false },
-	{ id: "stunned", labelKey: "STATUS.STUNNED", icon: "fa-solid fa-star", testPenalty: 0, snapOut: true },
+	{
+		id: "startled",
+		labelKey: "STATUS.STARTLED",
+		icon: "fa-solid fa-face-flushed",
+		testPenalty: 0,
+		snapOut: false,
+	},
+	{
+		id: "shaken",
+		labelKey: "STATUS.SHAKEN",
+		icon: "fa-solid fa-face-dizzy",
+		testPenalty: -10,
+		snapOut: false,
+	},
+	{
+		id: "unnerved",
+		labelKey: "STATUS.UNNERVED",
+		icon: "fa-solid fa-face-fearful",
+		testPenalty: -10,
+		snapOut: false,
+	},
+	{
+		id: "frozen",
+		labelKey: "STATUS.FROZEN",
+		icon: "fa-solid fa-snowflake",
+		testPenalty: -30,
+		snapOut: false,
+	},
+	{
+		id: "fleeing",
+		labelKey: "STATUS.FLEEING",
+		icon: "fa-solid fa-person-running",
+		testPenalty: -20,
+		snapOut: true,
+	},
+	{
+		id: "frenzied",
+		labelKey: "STATUS.FRENZIED",
+		icon: "fa-solid fa-face-angry",
+		testPenalty: 0,
+		snapOut: true,
+	},
+	{
+		id: "hallucinating",
+		labelKey: "STATUS.HALLUCINATING",
+		icon: "fa-solid fa-eye",
+		testPenalty: 0,
+		snapOut: false,
+	},
+	{
+		id: "catatonic",
+		labelKey: "STATUS.CATATONIC",
+		icon: "fa-solid fa-bed",
+		testPenalty: 0,
+		snapOut: false,
+	},
+	{
+		id: "unconscious",
+		labelKey: "STATUS.UNCONSCIOUS",
+		icon: "fa-solid fa-moon",
+		testPenalty: 0,
+		snapOut: false,
+	},
+	{
+		id: "stunned",
+		labelKey: "STATUS.STUNNED",
+		icon: "fa-solid fa-star",
+		testPenalty: 0,
+		snapOut: true,
+	},
 	// On Fire, printed p260-261 (files 0261-0262): at EACH Round start the
 	// blazing character suffers 1d10 Energy damage (NO armour reduction, p261)
 	// AND gains 1 level of Fatigue, until the fire is extinguished — per-round
@@ -61,7 +121,13 @@ export const SYSTEM_STATUSES: SystemStatus[] = [
 	// (−20) Agility Test as a Full Action puts the flames out (GM may adjust);
 	// that is an Agility roll, not a Willpower snap-out test, so snapOut
 	// stays false — the book escape route is documented, not automated.
-	{ id: "on-fire", labelKey: "STATUS.ON_FIRE", icon: "fa-solid fa-fire", testPenalty: 0, snapOut: false },
+	{
+		id: "on-fire",
+		labelKey: "STATUS.ON_FIRE",
+		icon: "fa-solid fa-fire",
+		testPenalty: 0,
+		snapOut: false,
+	},
 	// ---------------------------------------------------------------------
 	// Combat-chapter conditions (epic vr1o, verified by bead t2ak; owner
 	// spot-check passed 2026-10-04). Encoding notes:
@@ -82,7 +148,13 @@ export const SYSTEM_STATUSES: SystemStatus[] = [
 	// (the Dodge -20 and attacker modifiers recorded, not automated).
 	// Duration: static until Stands. Dropping Prone is a Free Action unless
 	// engaged in a Grapple (p249); Knock-Down (p242) applies it on success.
-	{ id: "prone", labelKey: "STATUS.PRONE", icon: "fa-solid fa-person-falling", testPenalty: -10, snapOut: false },
+	{
+		id: "prone",
+		labelKey: "STATUS.PRONE",
+		icon: "fa-solid fa-person-falling",
+		testPenalty: -10,
+		snapOut: false,
+	},
 	// Pinned, printed p248-249 (files 0249-0250): Half Actions only; -20 to
 	// all Ballistic Skill Tests; may not leave cover except to retreat.
 	// The -20 BS number rides the funnel; the action economy is not
@@ -90,7 +162,13 @@ export const SYSTEM_STATUSES: SystemStatus[] = [
 	// of the victim's Turn (Easy +30 when no longer under fire, melee
 	// auto-escapes, p249) -> snapOut true. Applied by a failed Hard (-20)
 	// Willpower Pinning Test against suppressive fire (p248).
-	{ id: "pinned", labelKey: "STATUS.PINNED", icon: "fa-solid fa-crosshairs", testPenalty: -20, snapOut: true },
+	{
+		id: "pinned",
+		labelKey: "STATUS.PINNED",
+		icon: "fa-solid fa-crosshairs",
+		testPenalty: -20,
+		snapOut: true,
+	},
 	// Grappled, printed p246-247 (files 0247-0248): grapple participants
 	// cannot use Reactions, may only use the Grapple Action, count as
 	// engaged in melee, and other attackers gain +20 WS to hit them
@@ -99,25 +177,49 @@ export const SYSTEM_STATUSES: SystemStatus[] = [
 	// (p247), not a Willpower snap-out -> snapOut false. The controller can
 	// end the Grapple as a Free Action; larger grapplers count extra
 	// degrees of success per size difference (p242).
-	{ id: "grappled", labelKey: "STATUS.GRAPPLED", icon: "fa-solid fa-link", testPenalty: 0, snapOut: false },
+	{
+		id: "grappled",
+		labelKey: "STATUS.GRAPPLED",
+		icon: "fa-solid fa-link",
+		testPenalty: 0,
+		snapOut: false,
+	},
 	// Helpless, printed p248 (file 0249; Status Conditions overview p241): a
 	// Helpless character can take no Actions and is no longer Helpless at
 	// the GM's discretion (waking up, breaking free, etc.). Helpless
 	// Targets (p248): WS Tests to hit auto-succeed and damage is rolled
 	// twice (both dice added) - the auto-hit is the "real" penalty and the
 	// victim rolls no defence anyway, so testPenalty 0 (stunned convention).
-	{ id: "helpless", labelKey: "STATUS.HELPLESS", icon: "fa-solid fa-user-slash", testPenalty: 0, snapOut: false },
+	{
+		id: "helpless",
+		labelKey: "STATUS.HELPLESS",
+		icon: "fa-solid fa-user-slash",
+		testPenalty: 0,
+		snapOut: false,
+	},
 	// Blinded, printed p260 (file 0261): auto-fail ALL vision-based tests
 	// and ALL Ballistic Skill Tests; -30 WS and most other tests that
 	// benefit from vision. The -30 rides the funnel; the auto-fail
 	// categories (vision tests, BS) are recorded, not automated.
-	{ id: "blinded", labelKey: "STATUS.BLINDED", icon: "fa-solid fa-eye-slash", testPenalty: -30, snapOut: false },
+	{
+		id: "blinded",
+		labelKey: "STATUS.BLINDED",
+		icon: "fa-solid fa-eye-slash",
+		testPenalty: -30,
+		snapOut: false,
+	},
 	// Deafened, printed p260 (file 0261): cannot hear well enough to
 	// communicate; auto-fails any Skill/Characteristic Test relying on
 	// hearing until he recovers or the disability is repaired; the GM is
 	// free to decide further effects. Auto-fail is the book mechanism, so
 	// the funnel value is 0.
-	{ id: "deafened", labelKey: "STATUS.DEAFENED", icon: "fa-solid fa-ear-deaf", testPenalty: 0, snapOut: false },
+	{
+		id: "deafened",
+		labelKey: "STATUS.DEAFENED",
+		icon: "fa-solid fa-ear-deaf",
+		testPenalty: 0,
+		snapOut: false,
+	},
 	// Blood Loss, printed p260 (file 0261), a Critical Effect from Critical
 	// Damage: 10% chance of dying each Round unless treated; a conscious
 	// sufferer may attempt a Difficult (-10) Medicae Test each Round to
@@ -126,19 +228,37 @@ export const SYSTEM_STATUSES: SystemStatus[] = [
 	// unconscious or unwilling). The per-round death check and the
 	// Medicae-only staunch test are per-round machinery, not a victim test
 	// penalty -> 0, rules recorded here for future automation.
-	{ id: "blood-loss", labelKey: "STATUS.BLOOD_LOSS", icon: "fa-solid fa-droplet", testPenalty: 0, snapOut: false },
+	{
+		id: "blood-loss",
+		labelKey: "STATUS.BLOOD_LOSS",
+		icon: "fa-solid fa-droplet",
+		testPenalty: 0,
+		snapOut: false,
+	},
 	// Unaware, printed p249 (file 0250; overview p241): can take no Actions
 	// and is no longer Unaware once he has been attacked (successfully or
 	// otherwise). Attackers gain +30 WS AND BS to hit an Unaware target
 	// (Easy, p249) - attacker-side, so testPenalty 0 (stunned convention).
-	{ id: "unaware", labelKey: "STATUS.UNAWARE", icon: "fa-solid fa-low-vision", testPenalty: 0, snapOut: false },
+	{
+		id: "unaware",
+		labelKey: "STATUS.UNAWARE",
+		icon: "fa-solid fa-low-vision",
+		testPenalty: 0,
+		snapOut: false,
+	},
 	// Surprised, printed p235 (file 0236): a Surprised character loses his
 	// Turn in the first Round (can do nothing but stand dumbfounded) and
 	// attackers gain +30 WS/BS vs him; after the Surprise Round resolves
 	// he recovers and all combatants re-roll Initiative - automatic end,
 	// not a snap-out. Recorded duration one Round (startled precedent: a
 	// 1-round "stand dumbfounded" condition carries no test penalty).
-	{ id: "surprised", labelKey: "STATUS.SURPRISED", icon: "fa-solid fa-circle-question", testPenalty: 0, snapOut: false },
+	{
+		id: "surprised",
+		labelKey: "STATUS.SURPRISED",
+		icon: "fa-solid fa-circle-question",
+		testPenalty: 0,
+		snapOut: false,
+	},
 	// ---------------------------------------------------------------------
 	// FATIGUE IS A TRACK, NOT A STATUS (Core Rulebook p250-251, files
 	// 0251-0252): levels gained from attacks, Grappling and some Critical
@@ -309,12 +429,7 @@ export function cardSuggestedCondition(statusId: string): ConditionData | null {
 
 /** Non-combat Fear failure condition (p296): built over the shared maker. */
 export function unnervedCondition(): ConditionData {
-	return makeCondition(
-		"unnerved",
-		"FEAR.NONCOMBAT_FAILURE",
-		"0",
-		{},
-	);
+	return makeCondition("unnerved", "FEAR.NONCOMBAT_FAILURE", "0", {});
 }
 
 /**
@@ -367,17 +482,18 @@ export function conditionEffectData(
 export function carriedConditions(
 	actor: unknown,
 ): Array<{ id: string; name: string; snapOut: boolean }> {
-	const effects = (
-		actor as {
-			items?: never;
-			effects?: Array<{
-				id?: string;
-				name?: string;
-				statuses?: string[];
-				flags?: Record<string, Record<string, unknown>>;
-			}>;
-		}
-	).effects ?? [];
+	const effects =
+		(
+			actor as {
+				items?: never;
+				effects?: Array<{
+					id?: string;
+					name?: string;
+					statuses?: string[];
+					flags?: Record<string, Record<string, unknown>>;
+				}>;
+			}
+		).effects ?? [];
 	return effects
 		.filter(
 			(e) =>
@@ -412,7 +528,8 @@ export function snapOutReady(actor: unknown): boolean {
  */
 export function isEncounterLength(condition: ConditionData): boolean {
 	return (
-		condition.duration.rounds === undefined && condition.duration.hours === undefined
+		condition.duration.rounds === undefined &&
+		condition.duration.hours === undefined
 	);
 }
 
@@ -430,12 +547,14 @@ export function isEncounterLength(condition: ConditionData): boolean {
  * unregistered factory silently misses encounter-end removal.
  */
 const ENCOUNTER_LENGTH_STATUSES: Set<string> = new Set([
-	...SHOCK_CONDITIONS.filter((row) => isEncounterLength({
-		statusId: row.statusId,
-		duration: row.duration,
-		textKey: "",
-		insanity: "0",
-	})).map((row) => row.statusId),
+	...SHOCK_CONDITIONS.filter((row) =>
+		isEncounterLength({
+			statusId: row.statusId,
+			duration: row.duration,
+			textKey: "",
+			insanity: "0",
+		}),
+	).map((row) => row.statusId),
 	unnervedCondition().statusId,
 ]);
 

@@ -40,9 +40,7 @@ describe("defaultSkillItems", () => {
 
 describe("missingSkillGrants (race-safe default grants)", () => {
 	test("filters out skills the actor already owns (exact name)", () => {
-		const grants = missingSkillGrants(catalog, [
-			"Speak Language (Low Gothic)",
-		]);
+		const grants = missingSkillGrants(catalog, ["Speak Language (Low Gothic)"]);
 		expect(grants).toHaveLength(0);
 	});
 

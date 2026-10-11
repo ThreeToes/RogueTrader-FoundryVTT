@@ -1,10 +1,11 @@
 import { Armour } from "../../data/item/armour";
 import { Battlesuit } from "../../data/item/battlesuit";
 import { bodyLocations } from "../../registry";
-import { effectActions, effectEditorChoices } from "./effect-actions";
+import { effectActions } from "./effect-actions";
 import { ITEM_DATA_TABS } from "../tabs";
-import { itemDescriptionHTML } from "../rich-text";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -19,23 +20,23 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		data: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/armour-data.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/armour-data.hbs`,
 		},
 		notes: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/notes.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/notes.hbs`,
 		},
 	};
 
 	static TABS = ITEM_DATA_TABS;
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const system = this.document.system as Armour;
 
 		// Complete per-location record so every registry location shows a box.
@@ -60,9 +61,6 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			row(["left-leg", "right-leg"], "legs-row"),
 		];
 
-		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(context, effectEditorChoices());
-
 		// Tau battlesuits (bead rojm) share this sheet and add the profile block
 		// the book prints on p38: Hard Points, Size, Strength, Primary Systems and
 		// a Recommended Loadout. Exposed only for that type, so plain armour
@@ -82,9 +80,9 @@ export class ArmourSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			};
 		}
 
-		// Description tab: enriched HTML from the system description
-		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		// Item data keys (bead apxq): effect editor choices (bead bpd, localized
+		// kind labels + test keys) + the enriched description tab prose.
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

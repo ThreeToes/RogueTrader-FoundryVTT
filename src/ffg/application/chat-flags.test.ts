@@ -3,10 +3,7 @@
  * data resolved through the config port, not a hardcoded string.
  */
 import { describe, expect, it } from "bun:test";
-import {
-	messageFlagNamespace,
-	readMessageFlag,
-} from "./chat-flags";
+import { messageFlagNamespace, readMessageFlag } from "./chat-flags";
 import type { Ports } from "./ports";
 
 /** Minimal fake ports: only config.profile() and nothing else is touched. */
@@ -18,9 +15,9 @@ function fakePorts(profile: { messageFlagNamespace: string }): Ports {
 
 describe("chat-flags (ffg application)", () => {
 	it("resolves the flag namespace from the config port's profile", () => {
-		expect(messageFlagNamespace(fakePorts({ messageFlagNamespace: "dh2" }))).toBe(
-			"dh2",
-		);
+		expect(
+			messageFlagNamespace(fakePorts({ messageFlagNamespace: "dh2" })),
+		).toBe("dh2");
 	});
 
 	it("reads a flag under the ACTIVE system's namespace", () => {

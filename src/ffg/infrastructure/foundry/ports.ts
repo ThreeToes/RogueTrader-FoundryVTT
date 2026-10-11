@@ -79,14 +79,18 @@ const chat: Chat = {
 			vars,
 		);
 		return (await foundry.documents.ChatMessage.create({
-			speaker: foundry.documents.ChatMessage.getSpeaker({ actor: actor as never }),
+			speaker: foundry.documents.ChatMessage.getSpeaker({
+				actor: actor as never,
+			}),
 			content,
 			...(flags ? { flags } : {}),
 		})) as { id?: string } | undefined;
 	},
 	async postHtml(actor, content) {
 		return (await foundry.documents.ChatMessage.create({
-			speaker: foundry.documents.ChatMessage.getSpeaker({ actor: actor as never }),
+			speaker: foundry.documents.ChatMessage.getSpeaker({
+				actor: actor as never,
+			}),
 			content,
 		})) as { id?: string } | undefined;
 	},
@@ -143,14 +147,18 @@ function localise(key: string, vars?: Record<string, unknown>): string {
 		}
 	).game?.i18n;
 	if (!api) return key;
-	return vars ? api.format(key, vars as Record<string, string>) : api.localize(key);
+	return vars
+		? api.format(key, vars as Record<string, string>)
+		: api.localize(key);
 }
 
-function notifications(): {
-	warn(m: string): void;
-	info(m: string): void;
-	error(m: string): void;
-} | undefined {
+function notifications():
+	| {
+			warn(m: string): void;
+			info(m: string): void;
+			error(m: string): void;
+	  }
+	| undefined {
 	return (
 		globalThis as {
 			ui?: {
@@ -179,6 +187,23 @@ const notify: Notify = {
 const i18n: I18n = {
 	t: (key, vars) => localise(key, vars),
 };
+
+/**
+ * i18n KEY_SHAPE (bead dfdv): UPPER_SNAKE segments joined with dots — the
+ * shape every label key takes ("ROLL.AIM_HALF", "QUALITY.ACCURATE"). Free
+ * text (weapon names, custom rows, already-localized labels) never matches.
+ */
+export const KEY_SHAPE = /^[A-Z][A-Z0-9_]*(?:\.[A-Z0-9_]+)+$/;
+
+/**
+ * Localize a modifier label that is an i18n KEY (bead dfdv): the display
+ * seams (TestDialog contributor rows, runTest's card analysis) pass every
+ * label through here — KEY-shaped labels resolve through i18n, free text
+ * passes through untouched (idempotent: localized text no longer matches).
+ */
+export function localizeLabel(label: string): string {
+	return KEY_SHAPE.test(label) ? localise(label) : label;
+}
 
 /**
  * System-specific config overrides (bead 8ycd): a sibling system module (or a

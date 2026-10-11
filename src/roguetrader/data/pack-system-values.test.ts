@@ -92,7 +92,8 @@ const KNOWN_GAPS: Readonly<
 	// allowing 4 is a schema change.
 	"npcs/npcs.yaml::skill::ladder": {
 		matches: 1,
-		reason: "Stryxis Merchant Deceive (+30) ladder 4 beyond max 3 — allow 4 vs data downgrade; awaiting owner decision (sweep bead 1e7h, escalated item 3)",
+		reason:
+			"Stryxis Merchant Deceive (+30) ladder 4 beyond max 3 — allow 4 vs data downgrade; awaiting owner decision (sweep bead 1e7h, escalated item 3)",
 	},
 };
 
@@ -120,9 +121,10 @@ function packFiles(): string[] {
  * this mirrors the packer's parseAllDocuments. Parse errors are returned
  * LOUDLY — a silently-skipped file would make the walk lie.
  */
-function readEntries(
-	file: string,
-): { entries: Array<Record<string, unknown>>; errors: string[] } {
+function readEntries(file: string): {
+	entries: Array<Record<string, unknown>>;
+	errors: string[];
+} {
 	const contents = readFileSync(`${PACK_ROOT}/${file}`, "utf8");
 	const entries: Array<Record<string, unknown>> = [];
 	const errors: string[] = [];
@@ -173,13 +175,24 @@ function checkField(
 	// OTHER guard's job — pack-schema.test.ts owns undeclared system keys).
 	if (field instanceof StubSchemaField) {
 		if (value == null || typeof value !== "object" || Array.isArray(value)) {
-			violations.push({ ...probe, field: path, value, problem: "schema field expects an object" });
+			violations.push({
+				...probe,
+				field: path,
+				value,
+				problem: "schema field expects an object",
+			});
 			return;
 		}
 		const declared = field.fields ?? {};
 		for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
 			if (k in declared) {
-				checkField(declared[k], v, path ? `${path}.${k}` : k, violations, probe);
+				checkField(
+					declared[k],
+					v,
+					path ? `${path}.${k}` : k,
+					violations,
+					probe,
+				);
 			}
 		}
 		return;
@@ -188,7 +201,12 @@ function checkField(
 	if (field instanceof StubTypedObjectField) {
 		if (value === undefined) return;
 		if (value === null || typeof value !== "object" || Array.isArray(value)) {
-			violations.push({ ...probe, field: path, value, problem: "typed-object field expects a record" });
+			violations.push({
+				...probe,
+				field: path,
+				value,
+				problem: "typed-object field expects a record",
+			});
 			return;
 		}
 		for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
@@ -200,19 +218,36 @@ function checkField(
 	if (field instanceof StubArrayField) {
 		if (value === undefined) return;
 		if (!Array.isArray(value)) {
-			violations.push({ ...probe, field: path, value, problem: "array field expects an array" });
+			violations.push({
+				...probe,
+				field: path,
+				value,
+				problem: "array field expects an array",
+			});
 			return;
 		}
 		for (const [i, v] of value.entries()) {
-			checkField(field.of, v, path ? `${path}.${i}` : String(i), violations, probe);
+			checkField(
+				field.of,
+				v,
+				path ? `${path}.${i}` : String(i),
+				violations,
+				probe,
+			);
 		}
 		return;
 	}
 	// Primitive field (String/Number/Boolean/HTML) — only opts distinguish.
-	const opts = ((field as { opts?: Record<string, unknown> }).opts ?? {}) as Record<string, unknown>;
+	const opts = ((field as { opts?: Record<string, unknown> }).opts ??
+		{}) as Record<string, unknown>;
 	if (value === undefined || value === null) {
 		if (value === null && opts.nullable === false) {
-			violations.push({ ...probe, field: path, value, problem: "null but nullable: false" });
+			violations.push({
+				...probe,
+				field: path,
+				value,
+				problem: "null but nullable: false",
+			});
 		}
 		return;
 	}
@@ -221,17 +256,26 @@ function checkField(
 		const asStr = typeof value === "string" ? value : undefined;
 		if (asStr === undefined) {
 			violations.push({
-				...probe, field: path, value, choices: validChoices(field),
+				...probe,
+				field: path,
+				value,
+				choices: validChoices(field),
 				problem: "non-string value in a choices field",
 			});
 		} else if (asStr === "" && opts.blank !== true) {
 			violations.push({
-				...probe, field: path, value, choices: validChoices(field),
+				...probe,
+				field: path,
+				value,
+				choices: validChoices(field),
 				problem: "blank value, choices set, blank not allowed",
 			});
 		} else if (asStr !== "" && !set.has(asStr)) {
 			violations.push({
-				...probe, field: path, value, choices: validChoices(field),
+				...probe,
+				field: path,
+				value,
+				choices: validChoices(field),
 				problem: "value outside choices",
 			});
 		}
@@ -245,197 +289,257 @@ function checkField(
 	if (numeric) {
 		if (typeof value === "number") {
 			if (opts.integer === true && !Number.isInteger(value)) {
-				violations.push({ ...probe, field: path, value, problem: "non-integer in integer field" });
+				violations.push({
+					...probe,
+					field: path,
+					value,
+					problem: "non-integer in integer field",
+				});
 			}
 			if (typeof opts.min === "number" && value < opts.min) {
-				violations.push({ ...probe, field: path, value, problem: `below min ${String(opts.min)}` });
+				violations.push({
+					...probe,
+					field: path,
+					value,
+					problem: `below min ${String(opts.min)}`,
+				});
 			}
 			if (typeof opts.max === "number" && value > opts.max) {
-				violations.push({ ...probe, field: path, value, problem: `above max ${String(opts.max)}` });
+				violations.push({
+					...probe,
+					field: path,
+					value,
+					problem: `above max ${String(opts.max)}`,
+				});
 			}
 			return;
 		}
 		// Foundry casts numeric strings (and "" -> 0) at clean.
-		if (typeof value === "string" && (value === "" || Number.isFinite(Number(value)))) return;
-		violations.push({ ...probe, field: path, value, problem: "non-numeric value in number field" });
+		if (
+			typeof value === "string" &&
+			(value === "" || Number.isFinite(Number(value)))
+		)
+			return;
+		violations.push({
+			...probe,
+			field: path,
+			value,
+			problem: "non-numeric value in number field",
+		});
 		return;
 	}
 	if (typeof opts.initial === "boolean") {
 		if (typeof value !== "boolean") {
 			// Foundry casts boolean-shaped strings at clean.
 			if (value === "true" || value === "false") return;
-			violations.push({ ...probe, field: path, value, problem: "non-boolean value in boolean field" });
+			violations.push({
+				...probe,
+				field: path,
+				value,
+				problem: "non-boolean value in boolean field",
+			});
 		}
 		return;
 	}
 	// String / HTML field: must be a string.
 	if (typeof value !== "string") {
 		violations.push({
-			...probe, field: path, value,
-			problem: field instanceof StubHtmlField
-				? "non-string value in HTML field"
-				: "non-string value in string field",
+			...probe,
+			field: path,
+			value,
+			problem:
+				field instanceof StubHtmlField
+					? "non-string value in HTML field"
+					: "non-string value in string field",
 		});
 	}
 }
 
-describe.skipIf(!HAS_PACKS)("pack system values match their data model schema", () => {
-	test("every choice-constrained (and numeric/typed) field value is valid", async () => {
-		const {
-			ACTOR_PACKS,
-			JOURNAL_PACKS,
-			TABLE_PACKS,
-			buildItemSourceIndex,
-			resolveEntryType,
-			sourceKey,
-			toActorSourceDocument,
-		} = await import("../../../utils/compendia");
+describe.skipIf(!HAS_PACKS)(
+	"pack system values match their data model schema",
+	() => {
+		test("every choice-constrained (and numeric/typed) field value is valid", async () => {
+			const {
+				ACTOR_PACKS,
+				JOURNAL_PACKS,
+				TABLE_PACKS,
+				buildItemSourceIndex,
+				resolveEntryType,
+				sourceKey,
+				toActorSourceDocument,
+			} = await import("../../../utils/compendia");
 
-		// type -> declared schema, for every registered model.
-		const schemas = new Map<string, Schema>();
-		for (const [type, entry] of Object.entries({
-			...ITEM_MODELS,
-			...ACTOR_MODELS,
-		})) {
-			schemas.set(type, await loadSchema(entry));
-		}
-
-		const violations: Violation[] = [];
-		const parseErrors: string[] = [];
-		const noModelTypes = new Map<string, number>();
-		let checkedDocs = 0;
-
-		const walk = (
-			system: Record<string, unknown>,
-			type: string,
-			file: string,
-			name: string,
-			displayPack: string,
-		): void => {
-			const pack = displayPack;
-			const schema = schemas.get(type);
-			if (!schema) {
-				// Negative space must stay honest: every type the walk reaches has
-				// to be a registered model (rolltables/journal packs are skipped
-				// wholesale; anything else means a new pack folder needs a model or
-				// an explicit decision — see FOLDER_TYPE_DEFAULTS).
-				noModelTypes.set(type, (noModelTypes.get(type) ?? 0) + 1);
-				return;
+			// type -> declared schema, for every registered model.
+			const schemas = new Map<string, Schema>();
+			for (const [type, entry] of Object.entries({
+				...ITEM_MODELS,
+				...ACTOR_MODELS,
+			})) {
+				schemas.set(type, await loadSchema(entry));
 			}
-			for (const [k, v] of Object.entries(system)) {
-				const field = schema[k];
-				if (field) {
-					checkField(field, v, k, violations, { file, pack, type, name });
+
+			const violations: Violation[] = [];
+			const parseErrors: string[] = [];
+			const noModelTypes = new Map<string, number>();
+			let checkedDocs = 0;
+
+			const walk = (
+				system: Record<string, unknown>,
+				type: string,
+				file: string,
+				name: string,
+				displayPack: string,
+			): void => {
+				const pack = displayPack;
+				const schema = schemas.get(type);
+				if (!schema) {
+					// Negative space must stay honest: every type the walk reaches has
+					// to be a registered model (rolltables/journal packs are skipped
+					// wholesale; anything else means a new pack folder needs a model or
+					// an explicit decision — see FOLDER_TYPE_DEFAULTS).
+					noModelTypes.set(type, (noModelTypes.get(type) ?? 0) + 1);
+					return;
 				}
-			}
-		};
+				for (const [k, v] of Object.entries(system)) {
+					const field = schema[k];
+					if (field) {
+						checkField(field, v, k, violations, { file, pack, type, name });
+					}
+				}
+			};
 
-		// Item source index: actor packs resolve embedded items through it.
-		const dirs = packDirs().map((name) => ({ name }));
-		const itemIndex = await buildItemSourceIndex(dirs);
+			// Item source index: actor packs resolve embedded items through it.
+			const dirs = packDirs().map((name) => ({ name }));
+			const itemIndex = await buildItemSourceIndex(dirs);
 
-		for (const rel of packFiles()) {
-			const dir = rel.split("/")[0];
-			// Foundry core doc types (RollTable, JournalEntry) — no RT model.
-			if (TABLE_PACKS.has(dir) || JOURNAL_PACKS.has(dir)) continue;
-			const { entries, errors } = readEntries(rel);
-			parseErrors.push(...errors);
-			if (ACTOR_PACKS.has(dir)) {
+			for (const rel of packFiles()) {
+				const dir = rel.split("/")[0];
+				// Foundry core doc types (RollTable, JournalEntry) — no RT model.
+				if (TABLE_PACKS.has(dir) || JOURNAL_PACKS.has(dir)) continue;
+				const { entries, errors } = readEntries(rel);
+				parseErrors.push(...errors);
+				if (ACTOR_PACKS.has(dir)) {
+					for (const entry of entries) {
+						checkedDocs++;
+						const name = String(entry.name ?? "unnamed");
+						const actorType =
+							typeof entry.type === "string" && entry.type ? entry.type : "npc";
+						try {
+							const { actor, embedded } = toActorSourceDocument(
+								entry,
+								itemIndex,
+								null,
+							);
+							walk(
+								actor.system as Record<string, unknown>,
+								actorType,
+								rel,
+								name,
+								rel,
+							);
+							for (const item of embedded) {
+								const itemType = String(item.type ?? "gear");
+								walk(
+									item.system as Record<string, unknown>,
+									itemType,
+									rel,
+									`${name} — ${String(item.name ?? "")}`,
+									`${rel} (embedded)`,
+								);
+							}
+						} catch (error) {
+							violations.push({
+								file: rel,
+								pack: rel,
+								type: actorType,
+								name,
+								field: "(packer)",
+								value: null,
+								problem: `toActorSourceDocument threw: ${(error as Error).message.split("\n")[0]}`,
+							});
+						}
+					}
+					continue;
+				}
+				// Item packs: resolve the type exactly as toSourceDocument does.
+				const stem =
+					rel
+						.split("/")
+						.at(-1)
+						?.replace(/\.yaml$/, "") ?? "";
 				for (const entry of entries) {
 					checkedDocs++;
 					const name = String(entry.name ?? "unnamed");
-					const actorType =
-						typeof entry.type === "string" && entry.type ? entry.type : "npc";
-					try {
-						const { actor, embedded } = toActorSourceDocument(entry, itemIndex, null);
-						walk(actor.system as Record<string, unknown>, actorType, rel, name, rel);
-						for (const item of embedded) {
-							const itemType = String(item.type ?? "gear");
-							walk(
-								item.system as Record<string, unknown>,
-								itemType,
-								rel,
-								`${name} — ${String(item.name ?? "")}`,
-								`${rel} (embedded)`,
-							);
-						}
-					} catch (error) {
-						violations.push({
-							file: rel, pack: rel, type: actorType, name, field: "(packer)", value: null,
-							problem: `toActorSourceDocument threw: ${(error as Error).message.split("\n")[0]}`,
-						});
+					const type = resolveEntryType(entry, sourceKey(stem));
+					const system: Record<string, unknown> = {
+						...((entry.system ?? {}) as Record<string, unknown>),
+					};
+					// Authoring sugar mirrored from toSourceDocument: the sheet reads
+					// system.description, so a top-level description is nested there.
+					if (
+						!system.description &&
+						typeof entry.description === "string" &&
+						entry.description
+					) {
+						system.description = entry.description;
 					}
+					walk(system, type, rel, name, rel);
 				}
-				continue;
 			}
-			// Item packs: resolve the type exactly as toSourceDocument does.
-			const stem = rel.split("/").at(-1)?.replace(/\.yaml$/, "") ?? "";
-			for (const entry of entries) {
-				checkedDocs++;
-				const name = String(entry.name ?? "unnamed");
-				const type = resolveEntryType(entry, sourceKey(stem));
-				const system: Record<string, unknown> = {
-					...((entry.system ?? {}) as Record<string, unknown>),
-				};
-				// Authoring sugar mirrored from toSourceDocument: the sheet reads
-				// system.description, so a top-level description is nested there.
-				if (!system.description && typeof entry.description === "string" && entry.description) {
-					system.description = entry.description;
-				}
-				walk(system, type, rel, name, rel);
+
+			// A collapse to near zero means the walk stopped finding entries — never
+			// let the guard pass by accident.
+			expect(checkedDocs).toBeGreaterThan(2000);
+			expect(parseErrors).toEqual([]);
+
+			// Fold in the bead-bmg5 navigator-power characteristic guard: a long
+			// characteristic name is a choice miss, enforced here like any other.
+			//
+			// Allowlist handling: every gap key must match EXACTLY its declared
+			// count, every violation must be covered, and the allowlist size is
+			// asserted below. Removing a gap from the data (stale line) or adding a
+			// new violation (in the wild, or behind an existing key) both fail.
+			for (const [key, gap] of Object.entries(KNOWN_GAPS)) {
+				const [rel, type, field] = key.split("::");
+				const actual = violations.filter(
+					(v) => v.file === rel && v.type === type && v.field === field,
+				);
+				expect(actual.length).toBe(gap.matches);
 			}
-		}
-
-		// A collapse to near zero means the walk stopped finding entries — never
-		// let the guard pass by accident.
-		expect(checkedDocs).toBeGreaterThan(2000);
-		expect(parseErrors).toEqual([]);
-
-		// Fold in the bead-bmg5 navigator-power characteristic guard: a long
-		// characteristic name is a choice miss, enforced here like any other.
-		//
-		// Allowlist handling: every gap key must match EXACTLY its declared
-		// count, every violation must be covered, and the allowlist size is
-		// asserted below. Removing a gap from the data (stale line) or adding a
-		// new violation (in the wild, or behind an existing key) both fail.
-		for (const [key, gap] of Object.entries(KNOWN_GAPS)) {
-			const [rel, type, field] = key.split("::");
-			const actual = violations.filter(
-				(v) => v.file === rel && v.type === type && v.field === field,
+			const uncovered = violations.filter(
+				(v) => !KNOWN_GAPS[`${v.file}::${v.type}::${v.field}`],
 			);
-			expect(actual.length).toBe(gap.matches);
-		}
-		const uncovered = violations.filter((v) => !KNOWN_GAPS[`${v.file}::${v.type}::${v.field}`]);
-		expect(Object.keys(KNOWN_GAPS).length).toBe(EXPECTED_KNOWN_GAPS);
+			expect(Object.keys(KNOWN_GAPS).length).toBe(EXPECTED_KNOWN_GAPS);
 
-		// Loud per-violation output for anything NOT allowlisted: pack, doc name,
-		// field, value, valid choices. Only uncovered violations fail here — the
-		// allowlisted ones fail their own per-key count check above.
-		expect(
-			uncovered.map(
-				(v) =>
-					`${v.pack} [${v.type}] ${v.name}: system.${v.field} = ${JSON.stringify(v.value)} — ${v.problem}${v.choices ? ` (valid: ${v.choices})` : ""}`,
-			),
-		).toEqual([]);
+			// Loud per-violation output for anything NOT allowlisted: pack, doc name,
+			// field, value, valid choices. Only uncovered violations fail here — the
+			// allowlisted ones fail their own per-key count check above.
+			expect(
+				uncovered.map(
+					(v) =>
+						`${v.pack} [${v.type}] ${v.name}: system.${v.field} = ${JSON.stringify(v.value)} — ${v.problem}${v.choices ? ` (valid: ${v.choices})` : ""}`,
+				),
+			).toEqual([]);
 
-		expect(noModelTypes).toEqual(new Map());
-	});
+			expect(noModelTypes).toEqual(new Map());
+		});
 
-	test("the gaps allowlist only references real files, models and fields", () => {
-		// A typo'd key would silently allow nothing while looking like cover.
-		const files = new Set(packFiles());
-		const bogus: string[] = [];
-		for (const key of Object.keys(KNOWN_GAPS)) {
-			const [rel, type] = key.split("::");
-			if (!files.has(rel)) bogus.push(key);
-			else if (!ITEM_MODELS[type] && !ACTOR_MODELS[type]) bogus.push(key);
-		}
-		expect(bogus).toEqual([]);
-	});
+		test("the gaps allowlist only references real files, models and fields", () => {
+			// A typo'd key would silently allow nothing while looking like cover.
+			const files = new Set(packFiles());
+			const bogus: string[] = [];
+			for (const key of Object.keys(KNOWN_GAPS)) {
+				const [rel, type] = key.split("::");
+				if (!files.has(rel)) bogus.push(key);
+				else if (!ITEM_MODELS[type] && !ACTOR_MODELS[type]) bogus.push(key);
+			}
+			expect(bogus).toEqual([]);
+		});
 
-	test("the gaps allowlist is the documented size", () => {
-		// Removing a gap line (owner decision landed, data fixed) must come with
-		// updating this count — so the allowlist cannot quietly shrink.
-		expect(Object.keys(KNOWN_GAPS).length).toBe(EXPECTED_KNOWN_GAPS);
-	});
-});
+		test("the gaps allowlist is the documented size", () => {
+			// Removing a gap line (owner decision landed, data fixed) must come with
+			// updating this count — so the allowlist cannot quietly shrink.
+			expect(Object.keys(KNOWN_GAPS).length).toBe(EXPECTED_KNOWN_GAPS);
+		});
+	},
+);

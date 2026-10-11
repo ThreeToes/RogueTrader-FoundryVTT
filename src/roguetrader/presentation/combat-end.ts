@@ -39,7 +39,7 @@ export function registerCombatEncounterEndHook(): void {
 			if (userId !== (game as { userId?: string }).userId) return;
 			removeEncounterLengthConditions(combat).catch((error) =>
 				console.error(
-					"rogue-trader: encounter-end condition cleanup failed",
+					"rogue-trader | encounter-end condition cleanup failed",
 					error,
 				),
 			);
@@ -74,7 +74,10 @@ export async function removeEncounterLengthConditions(
 					effects?: Array<{
 						id?: string;
 						statuses?: string[];
-						duration?: { rounds?: number | null; seconds?: number | null } | null;
+						duration?: {
+							rounds?: number | null;
+							seconds?: number | null;
+						} | null;
 					}>;
 				}
 			).effects ?? [],

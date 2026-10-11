@@ -31,7 +31,42 @@
  *   context.myKey = …;
  */
 
+import { effectEditorChoices } from "./item/effect-actions";
+import { itemDescriptionHTML } from "./rich-text";
+
 /** Widen a base-class context so a sheet can hang its own keys off it. */
 export function sheetContext(context: unknown): Record<string, unknown> {
 	return context as Record<string, unknown>;
+}
+
+/**
+ * The item-sheet data keys every item sheet composes (bead apxq):
+ * the enriched description tab prose plus the shared effect editor's
+ * dropdown choices (kind labels + test keys, bead bpd).
+ */
+export interface ItemDataKeys {
+	descriptionHTML: string;
+	kindChoices: Record<string, string>;
+	testKeyChoices: Record<string, string>;
+}
+
+/**
+ * One composition helper for the boilerplate every item sheet would
+ * otherwise hand-wire. There is no shared item-sheet base class (see above),
+ * so sheets compose instead:
+ *
+ *   const context = sheetContext(await super._prepareContext(options));
+ *   Object.assign(context, await itemDataContext(this.document));
+ *
+ * NOTE: tab preparation stays per-sheet (only some sheets render tab
+ * partials, and HandlebarsApplicationMixin shapes `context.tabs` itself);
+ * this helper only covers the keys that are genuinely uniform.
+ */
+export async function itemDataContext(
+	document: unknown,
+): Promise<ItemDataKeys> {
+	return {
+		descriptionHTML: await itemDescriptionHTML(document),
+		...effectEditorChoices(),
+	};
 }

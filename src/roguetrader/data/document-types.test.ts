@@ -52,7 +52,9 @@ const NOT_OFFERED_ACTOR_TYPES = new Set(["pc"]);
 
 const readManifest = async (
 	relative: string,
-): Promise<{ documentTypes: Record<string, Record<string, { htmlFields?: string[] }>> }> =>
+): Promise<{
+	documentTypes: Record<string, Record<string, { htmlFields?: string[] }>>;
+}> =>
 	JSON.parse(
 		await Bun.file(new URL(`../../../${relative}`, import.meta.url)).text(),
 	);

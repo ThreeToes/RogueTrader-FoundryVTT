@@ -31,14 +31,12 @@ import {
 // (src/packs/rogue_trader/character-options/origins.test.ts).
 const ORIGIN_PACK = "src/packs/rogue_trader/character-options/origins.yaml";
 const HAS_ORIGIN_PACK = existsSync(ORIGIN_PACK);
-const packDocs = (
-	HAS_ORIGIN_PACK
-		? (parse(readFileSync(ORIGIN_PACK, "utf8")) as Array<{
-				name?: string;
-				system?: Record<string, unknown>;
-			}>)
-		: []
-);
+const packDocs = HAS_ORIGIN_PACK
+	? (parse(readFileSync(ORIGIN_PACK, "utf8")) as Array<{
+			name?: string;
+			system?: Record<string, unknown>;
+		}>)
+	: [];
 setOriginEntries(packDocs.map((doc) => originEntryFromDoc(doc)));
 const ORIGIN_ENTRIES = getOriginEntries();
 
@@ -65,9 +63,7 @@ packDescribe("origin path chart (Core Rulebook p16)", () => {
 		// Frontier World substitutes for Death World at the same column.
 		const homeWorlds = originsInRow("home-world");
 		const coreCols = new Set(
-			homeWorlds
-				.filter((e) => !e.replaces)
-				.map((e) => e.col),
+			homeWorlds.filter((e) => !e.replaces).map((e) => e.col),
 		);
 		for (const entry of homeWorlds.filter((e) => e.replaces)) {
 			expect(coreCols.has(entry.col), entry.name).toBe(true);
@@ -151,9 +147,7 @@ packDescribe("origin mechanics", () => {
 		const wanted = effectiveMechanics(entry, "wanted-fugitive");
 		expect(wanted.talents).toContain("Peer (Underworld)");
 		const hunted = effectiveMechanics(entry, "hunted-by-a-crime-baron");
-		expect(hunted.characteristics).toEqual([
-			{ key: "per", value: 3 },
-		]);
+		expect(hunted.characteristics).toEqual([{ key: "per", value: 3 }]);
 		// Unknown variant falls back to the (empty) entry mechanics.
 		expect(effectiveMechanics(entry, "nope").characteristics).toBeUndefined();
 	});
@@ -177,9 +171,7 @@ packDescribe("origin mechanics", () => {
 					// Bands cover 1-10 in ascending order.
 					expect(m.fateTable[0].max).toBeGreaterThanOrEqual(1);
 					for (let i = 1; i < m.fateTable.length; i += 1) {
-						expect(m.fateTable[i].max).toBeGreaterThan(
-							m.fateTable[i - 1].max,
-						);
+						expect(m.fateTable[i].max).toBeGreaterThan(m.fateTable[i - 1].max);
 					}
 					expect(m.fateTable[m.fateTable.length - 1].max).toBe(10);
 				}
@@ -329,7 +321,15 @@ packDescribe("choice coverage", () => {
 
 	test("characteristic mods use valid keys and non-zero values", () => {
 		const validKeys = new Set([
-			"ws", "bs", "s", "t", "ag", "int", "per", "wp", "fel",
+			"ws",
+			"bs",
+			"s",
+			"t",
+			"ag",
+			"int",
+			"per",
+			"wp",
+			"fel",
 		] satisfies CharMod["key"][]);
 		for (const entry of ORIGIN_ENTRIES) {
 			const blobs = entry.variants
@@ -484,7 +484,9 @@ packDescribe("species origin paths (bead ghmn)", () => {
 		const packRows = new Set(getOriginEntries().map((e) => e.row));
 		expect(packRows.size).toBeGreaterThan(6);
 		for (const row of packRows) {
-			expect(choices.has(row), `row "${row}" missing from the choices`).toBe(true);
+			expect(choices.has(row), `row "${row}" missing from the choices`).toBe(
+				true,
+			);
 		}
 		// And the human five must still be a strict subset — the xeno rows are
 		// APPENDED, never substituted.
@@ -651,7 +653,11 @@ describe("replaces: single string and array shapes normalise identically (bead w
 	});
 
 	test("entryColumns treats a single-string alternate like a one-element array", () => {
-		const entry = (key: string, col: number, replaces: string | string[]): OriginEntry => ({
+		const entry = (
+			key: string,
+			col: number,
+			replaces: string | string[],
+		): OriginEntry => ({
 			key,
 			row: "birthright",
 			col,

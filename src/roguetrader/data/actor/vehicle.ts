@@ -109,10 +109,9 @@ export class Vehicle extends foundry.abstract.TypeDataModel<
 				}),
 			),
 			/** Crew/passenger Actor UUIDs (reference list, not embedded docs). */
-			crew: new foundry.data.fields.ArrayField(
-				textField(),
-				{ initial: () => [] },
-			),
+			crew: new foundry.data.fields.ArrayField(textField(), {
+				initial: () => [],
+			}),
 			/** Mounted weapons: {uuid, facing} references, facing from vehicleFacings. */
 			mountedWeapons: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.SchemaField({

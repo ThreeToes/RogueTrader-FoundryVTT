@@ -61,12 +61,12 @@ describe("prereqKind (bead 9r82 data-driven mapping)", () => {
 	test("the printed pack texts classify to their machine kinds", () => {
 		expect(prereqKind("")).toBe("none");
 		expect(prereqKind("A Heavy weapon.")).toBe("heavy-weapon");
-		expect(
-			prereqKind("A ranged weapon capable of fully automatic fire."),
-		).toBe("ranged-full-auto");
-		expect(
-			prereqKind("A ranged weapon capable of semi-automatic fire."),
-		).toBe("ranged-semi-auto");
+		expect(prereqKind("A ranged weapon capable of fully automatic fire.")).toBe(
+			"ranged-full-auto",
+		);
+		expect(prereqKind("A ranged weapon capable of semi-automatic fire.")).toBe(
+			"ranged-semi-auto",
+		);
 		expect(prereqKind("A weapon capable of fully automatic fire.")).toBe(
 			// rateOfFire (and thus automatic fire) only exists on ranged
 			// weapons, so the short printed sentence and the ranged one are the
@@ -74,7 +74,9 @@ describe("prereqKind (bead 9r82 data-driven mapping)", () => {
 			"ranged-full-auto",
 		);
 		expect(
-			prereqKind("Two weapons, or the Swift Attack or Lightning Attack talent."),
+			prereqKind(
+				"Two weapons, or the Swift Attack or Lightning Attack talent.",
+			),
 		).toBe("two-weapons-or-assault");
 	});
 
@@ -230,9 +232,7 @@ describe("actionCapabilities + actionAvailable (print precedents)", () => {
 	test("actions without prerequisites are always available (26 of 31)", () => {
 		const aim = entry("Aim");
 		expect(aim.prereqKind).toBe("none");
-		expect(
-			actionAvailable(aim, actionCapabilities([])),
-		).toBeTrue();
+		expect(actionAvailable(aim, actionCapabilities([]))).toBeTrue();
 	});
 });
 
@@ -257,9 +257,7 @@ describe("the warmed catalog (talent-catalog contract)", () => {
 		expect(mapped.prereqKind).toBe("none");
 		expect(mapped.actionCost).toBe("Half/Full");
 		expect(mapped.rollTest).toBe("");
-		expect(mapped.uuid).toBe(
-			"Compendium.rogue-trader.actions.Item.abc",
-		);
+		expect(mapped.uuid).toBe("Compendium.rogue-trader.actions.Item.abc");
 	});
 
 	test("the mapper classifies a printed roll spec + prerequisite", () => {
@@ -354,8 +352,8 @@ describe("the lookup card (lookup dispatch, fake ports)", () => {
 		expect(posted.length).toBe(1);
 		expect(posted[0].template).toBe(ACTION_LOOKUP_TEMPLATE);
 		expect(
-			(posted[0].vars as { titleDoc: { link: { uuid: string } } }).titleDoc
-				.link.uuid,
+			(posted[0].vars as { titleDoc: { link: { uuid: string } } }).titleDoc.link
+				.uuid,
 		).toBe("Compendium.rogue-trader.actions.Item.test");
 	});
 });

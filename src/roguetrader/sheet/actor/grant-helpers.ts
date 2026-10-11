@@ -5,9 +5,7 @@
  * by the creator, advancement dialog and talent picker.
  */
 
-import {
-	getCharacterOptionDocs,
-} from "../pack-resolve";
+import { CHARACTER_OPTIONS_PACK, getPackDocuments } from "../pack-resolve";
 import {
 	parameterisedBase,
 	parameterisedPackBase,
@@ -18,15 +16,110 @@ import {
 	type PackTalentSnapshot,
 } from "../../rules/grants";
 
+/**
+ * Pack slugs used by grants-item effect labels ("traits:Fear",
+ * "talents:Iron Jaw") mapped onto the character-options concept pack's
+ * Item types (bead 4tj1 merged the per-pack traits/talents/skills sources
+ * into it). Pure; used by the sheet's affliction grant action.
+ */
+const GRANT_PACK_TYPES: Readonly<Record<string, string>> = {
+	traits: "trait",
+	talents: "talent",
+	skills: "skill",
+};
+
+/** Map a pack-qualified effect label slug ("traits") to its Item type. */
+export function packSlugToType(slug: string): string | null {
+	return GRANT_PACK_TYPES[slug.toLowerCase()] ?? null;
+}
+
+/**
+ * THE pack-by-name resolve (bead 38io): case-insensitive name match against
+ * character-option documents of ONE Item type — or, with `options.pack`,
+ * against another compendium pack (the afflictions mutations) filtered by
+ * the same type; `type` may be null to accept any Item type (the starting
+ * kit's mixed-type gear). With `options.source`, only docs whose
+ * `flags["rogue-trader"].source` folder matches resolve (build-time source
+ * provenance, bead n7hu). Returns null on miss; the CALLER owns the
+ * missing-doc behaviour through warnPackDocMissing (bare fallback / notify /
+ * no-op), so one function owns the resolution instead of a per-surface
+ * docs.find().
+ */
+/**
+ * THE pack-by-name resolve (bead 38io): case-insensitive name match against
+ * character-option documents of ONE Item type (or ANY type, with a null
+ * `type`); with `options.pack`, against that compendium pack; with
+ * `options.source`, narrowed to one build-time source folder
+ * (`flags["rogue-trader"].source`, bead n7hu). Fetches go through the shared
+ * once-cache under the PACK key so mixed-type resolves (the starting kit)
+ * never refetch per option (epic zlwc round 4). Returns null on miss; the
+ * CALLER owns the missing-doc behaviour through warnPackDocMissing (bare
+ * fallback / notify / no-op), so one function owns the resolution instead of
+ * a per-surface docs.find().
+ */
+/**
+ * THE pack-by-name resolve (bead 38io): case-insensitive name match against
+ * character-option documents of ONE Item type (or ANY type, with a null
+ * `type`); with `options.pack`, against that compendium pack; with
+ * `options.source`, narrowed to one build-time source folder
+ * (`flags["rogue-trader"].source`, bead n7hu). Callers that resolve MANY
+ * names from ONE pack pass `options.docs` (their own once-fetched list —
+ * the kit finalize) and no refetch happens per option. Returns null on
+ * miss; the CALLER owns the missing-doc behaviour through
+ * warnPackDocMissing (bare fallback / notify / no-op), so one function owns
+ * the resolution instead of a per-surface docs.find().
+ */
+export async function findPackDoc(
+	type: string | null,
+	name: string,
+	options: { pack?: string; source?: string; docs?: unknown[] } = {},
+): Promise<unknown | null> {
+	const docs = (options.docs ??
+		(options.pack
+			? await getPackDocuments(options.pack)
+			: await getPackDocuments(CHARACTER_OPTIONS_PACK))) as unknown as Array<{
+		name?: string;
+		type?: string;
+		flags?: Record<string, Record<string, unknown>>;
+	}>;
+	let candidates = type ? docs.filter((d) => d.type === type) : docs;
+	if (options.source) {
+		candidates = candidates.filter(
+			(d) =>
+				String(
+					(d.flags?.["rogue-trader"] as { source?: string } | undefined)
+						?.source ?? "",
+				) === options.source,
+		);
+	}
+	const lower = name.toLowerCase();
+	return candidates.find((d) => d.name?.toLowerCase() === lower) ?? null;
+}
+
+/**
+ * Shared missing-doc warn (bead 38io): the established grant semantics — one
+ * loud console line per miss — from every surface that resolves pack docs by
+ * name. Callers layer their own user-facing notify on top where the action
+ * needs one.
+ */
+export function warnPackDocMissing(
+	type: string,
+	name: string,
+	action: string,
+	pack = "character-options",
+): void {
+	console.warn(
+		`rogue-trader | ${type} "${name}" not found in the ${pack} pack; ${action}`,
+	);
+}
+
 /** Case-insensitive name match against the talents compendium pack. */
 export async function findPackTalentDoc(
 	name: string,
 ): Promise<(PackTalentSnapshot & { id?: string }) | null> {
-	const docs = (await getCharacterOptionDocs("talent")) as unknown as Array<
-		PackTalentSnapshot & { id?: string }
-	>;
-	const lower = name.toLowerCase();
-	return docs.find((d) => d.name?.toLowerCase() === lower) ?? null;
+	return (await findPackDoc("talent", name)) as
+		| (PackTalentSnapshot & { id?: string })
+		| null;
 }
 
 /**
@@ -48,9 +141,7 @@ export async function talentGrant(
 		if (base) doc = await findPackTalentDoc(base);
 	}
 	if (!doc) {
-		console.warn(
-			`rogue-trader | talent "${name}" not found in the character-options pack; granting a bare item`,
-		);
+		warnPackDocMissing("talent", name, "granting a bare item");
 	}
 	return talentGrantPayload(name, doc, options);
 }

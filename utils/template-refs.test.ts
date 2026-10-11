@@ -18,7 +18,6 @@ import { describe, expect, test } from "bun:test";
 const SRC = "src";
 const TEMPLATE_ROOT = "template";
 const SYSTEM_PREFIX = "systems/rogue-trader/template/";
-
 /** Every .ts file under src/, excluding tests (tests may use fake paths). */
 function sourceFiles(dir: string): string[] {
 	const out: string[] = [];
@@ -30,17 +29,32 @@ function sourceFiles(dir: string): string[] {
 	return out;
 }
 
-/** Template paths referenced as string literals in the source. */
-function referencedTemplates(): Array<{ file: string; line: number; ref: string }> {
+/** Template paths referenced in the source (bead qezr: two reference forms). */
+function referencedTemplates(): Array<{
+	file: string;
+	line: number;
+	ref: string;
+}> {
 	const found: Array<{ file: string; line: number; ref: string }> = [];
-	const re = new RegExp(`${SYSTEM_PREFIX}[\\w./-]+\\.hbs`, "g");
+	// Form 1: a quoted `${SYSTEM_PREFIX}...hbs` literal (tests keep these);
+	// form 2: the shared TEMPLATE_ROOT constant interpolated into a template
+	// literal — resolve both to the same logical path.
+	const raw = new RegExp(`${SYSTEM_PREFIX}[\\w./-]+\\.hbs`, "g");
+	const viaConst = /\$\{TEMPLATE_ROOT\}([\w./-]+\.hbs)/g;
 	for (const file of sourceFiles(SRC)) {
 		const source = readFileSync(file, "utf8");
-		for (const match of source.matchAll(re)) {
+		for (const match of source.matchAll(raw)) {
 			found.push({
 				file,
 				line: source.slice(0, match.index).split("\n").length,
 				ref: match[0],
+			});
+		}
+		for (const match of source.matchAll(viaConst)) {
+			found.push({
+				file,
+				line: source.slice(0, match.index).split("\n").length,
+				ref: SYSTEM_PREFIX + match[1],
 			});
 		}
 	}
@@ -65,13 +79,12 @@ describe("template references (bead 83tl follow-up)", () => {
 	test("no template path uses a different prefix", () => {
 		// A bare "template/..." or a wrong system id would resolve differently
 		// in Foundry than it does on disk, so catch the drift here too.
-		const wrongPrefix = sourceFiles(SRC)
-			.flatMap((file) => {
-				const source = readFileSync(file, "utf8");
-				return [...source.matchAll(/["'`]([^"'`\s]*?)\/template\/[\w./-]+\.hbs/g)]
-					.filter((m) => !m[1].endsWith("systems/rogue-trader"))
-					.map(() => file);
-			});
+		const wrongPrefix = sourceFiles(SRC).flatMap((file) => {
+			const source = readFileSync(file, "utf8");
+			return [...source.matchAll(/["'`]([^"'`\s]*?)\/template\/[\w./-]+\.hbs/g)]
+				.filter((m) => !m[1].endsWith("systems/rogue-trader"))
+				.map(() => file);
+		});
 		expect([...new Set(wrongPrefix)]).toEqual([]);
 	});
 });

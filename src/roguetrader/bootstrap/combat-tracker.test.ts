@@ -116,18 +116,14 @@ describe("combat tracker defaults (bead nc3q + bead jpt3)", () => {
 	});
 
 	test("defaults the resource to current Wounds", () => {
-		const entry = registrations.get(
-			"core.combatTrackerConfig",
-		) as Registration;
+		const entry = registrations.get("core.combatTrackerConfig") as Registration;
 		const settings = entry.default as { resource?: unknown };
 		expect(settings.resource).toBe("wounds.value");
 		expect(TRACKER_RESOURCE).toBe("wounds.value");
 	});
 
 	test("keeps every other default (skipDefeated, turnMarker) untouched", () => {
-		const entry = registrations.get(
-			"core.combatTrackerConfig",
-		) as Registration;
+		const entry = registrations.get("core.combatTrackerConfig") as Registration;
 		const settings = entry.default as {
 			skipDefeated?: boolean;
 			turnMarker?: Record<string, unknown>;
@@ -140,9 +136,7 @@ describe("combat tracker defaults (bead nc3q + bead jpt3)", () => {
 		// The CombatTrackerConfig combobox works because it reads and writes
 		// the same setting through the SAME schema field; only the default is
 		// overridden, so a stored value (the GM's choice) still wins.
-		const entry = registrations.get(
-			"core.combatTrackerConfig",
-		) as Registration;
+		const entry = registrations.get("core.combatTrackerConfig") as Registration;
 		expect(entry.type).toBe(CORE_ENTRY.type);
 		expect(entry.onChange).toBe(CORE_ENTRY.onChange);
 	});

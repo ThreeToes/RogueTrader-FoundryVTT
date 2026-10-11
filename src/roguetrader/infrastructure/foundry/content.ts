@@ -5,4 +5,7 @@
  * the ports shim). This module keeps the existing imports working.
  */
 
-export { foundryContent, packDocuments } from "../../../ffg/infrastructure/foundry/content";
+export {
+	foundryContent,
+	packDocuments,
+} from "../../../ffg/infrastructure/foundry/content";

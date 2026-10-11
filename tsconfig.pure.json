@@ -16,7 +16,7 @@
 	"include": [
 		"src/rules-engine/**/*.ts",
 		"src/ffg/domain/**/*.ts",
-		"src/ffg/application/**/*.ts",
+		"src/ffg/application/**/*.ts"
 	],
 	"exclude": ["node_modules", "release", "packs", "utils", "**/*.test.ts"]
 }

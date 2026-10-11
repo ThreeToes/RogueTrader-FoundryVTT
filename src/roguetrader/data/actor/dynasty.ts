@@ -61,10 +61,9 @@ export class Dynasty extends foundry.abstract.TypeDataModel<
 			 * existing dynasty actor.
 			 */
 			warrant: new foundry.data.fields.SchemaField({
-				picks: new foundry.data.fields.TypedObjectField(
-					textField(),
-					{ initial: () => ({}) },
-				),
+				picks: new foundry.data.fields.TypedObjectField(textField(), {
+					initial: () => ({}),
+				}),
 				shipPoints: new foundry.data.fields.NumberField({
 					min: 0,
 					integer: true,

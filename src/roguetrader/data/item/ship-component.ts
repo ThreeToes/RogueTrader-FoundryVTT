@@ -7,7 +7,10 @@
  * (SP-cost based for SP-carrying kinds; fixed for archeotech/xeno-tech).
  */
 import { textField } from "../fields";
-import { normalizeShipWeaponRange, type ShipWeaponRange } from "./ship-weapon-range";
+import {
+	normalizeShipWeaponRange,
+	type ShipWeaponRange,
+} from "./ship-weapon-range";
 import { sourceField } from "./source";
 
 export class ShipComponent extends foundry.abstract.TypeDataModel<
@@ -60,7 +63,9 @@ export class ShipComponent extends foundry.abstract.TypeDataModel<
 	static override defineSchema() {
 		return {
 			/** "essential" | "supplemental" | "archeotech" | "xenotech" (Tables 8-3/8-5/8-6/8-7). */
-			category: new foundry.data.fields.StringField({ initial: "supplemental" }),
+			category: new foundry.data.fields.StringField({
+				initial: "supplemental",
+			}),
 			/** Verbatim hull-type list from the table ("All Ships", "Transports, Raiders, Frigates"). */
 			hullTypes: textField(),
 			/** Power draw; drives are "N Generated", others a plain number (StringField for "35 Generated"). */
@@ -154,7 +159,9 @@ export class ShipWeaponComponent extends ShipComponent {
 	 */
 	declare slot: string;
 
-	static override migrateData(source: { range?: unknown } & Record<string, unknown>) {
+	static override migrateData(
+		source: { range?: unknown } & Record<string, unknown>,
+	) {
 		// Legacy single-number range (docs authored before epic c48r) →
 		// symmetric band (min = max = that number). Runs in _initializeSource
 		// BEFORE schema validation touches the raw source, which is what keeps

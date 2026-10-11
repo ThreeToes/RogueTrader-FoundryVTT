@@ -10,7 +10,8 @@
  *   combined.
  * - Lance: 1 hit + 1 per three degrees of success; each hit resolved
  *   separately; IGNORES armour (damage goes straight to Hull Integrity).
- * - Range: > range (up to 2x) = -10 BS; <= half range = +10 BS (p220).
+ * - Range: > range (up to 2x) = -10 BS; <= half range = +10 BS; beyond
+ *   twice the range the shot is simply out of range (pp219-220).
  * - Void shields: cancel incoming hits equal to shield strength, then
  *   overload; restored before the next attacker's fire (p220-221).
  * - Damage: total minus Armour; remainder is Hull Integrity loss (p221).
@@ -29,13 +30,17 @@
 export type ShipWeaponKind = "macrobattery" | "lance";
 
 /**
- * BS modifier for firing at a given distance (book p220): within half range
- * +10, beyond range (up to 2x) -10, otherwise 0.
+ * BS modifier for firing at a given distance (Core Rulebook pp219-220):
+ * within half range +10, beyond range (up to 2x) -10, otherwise 0. Twice
+ * the weapon's range is the hard maximum — beyond it the outcome reason is
+ * "out-of-range" and the caller MUST refuse the shot entirely rather than
+ * roll at -10 against unlimited range (the modifier is meaningless then).
  */
 export function rangeModifier(
 	range: number,
 	distance: number,
-): { modifier: number; reason: "half" | "long" | "normal" } {
+): { modifier: number; reason: "half" | "long" | "normal" | "out-of-range" } {
+	if (distance > range * 2) return { modifier: 0, reason: "out-of-range" };
 	if (distance <= range / 2) return { modifier: 10, reason: "half" };
 	if (distance > range) return { modifier: -10, reason: "long" };
 	return { modifier: 0, reason: "normal" };
@@ -51,8 +56,7 @@ export function hitsScored(
 	degrees: number,
 	strength: number,
 ): number {
-	const raw =
-		kind === "lance" ? 1 + Math.floor(degrees / 3) : 1 + degrees;
+	const raw = kind === "lance" ? 1 + Math.floor(degrees / 3) : 1 + degrees;
 	return Math.min(Math.max(0, strength), Math.max(1, raw));
 }
 
@@ -112,9 +116,10 @@ export function resolveSalvoDamage(req: SalvoRequest): SalvoOutcome {
  * Hull Integrity losses drag Crew Population and Morale down 1:1
  * (book p221).
  */
-export function crewLossFromHullDamage(
-	hullDamage: number,
-): { population: number; morale: number } {
+export function crewLossFromHullDamage(hullDamage: number): {
+	population: number;
+	morale: number;
+} {
 	const loss = Math.max(0, hullDamage);
 	return { population: loss, morale: loss };
 }
@@ -206,7 +211,11 @@ export function criticalFromCrippledDamage(
  * unpowered, damaged, or destroyed"). Depressurisation is a separate
  * condition a component may carry alongside its state (p224).
  */
-export type ShipComponentState = "intact" | "unpowered" | "damaged" | "destroyed";
+export type ShipComponentState =
+	| "intact"
+	| "unpowered"
+	| "damaged"
+	| "destroyed";
 
 export const SHIP_COMPONENT_STATES: readonly ShipComponentState[] = [
 	"intact",
@@ -216,7 +225,9 @@ export const SHIP_COMPONENT_STATES: readonly ShipComponentState[] = [
 ];
 
 /** Whether the component functions (damaged/destroyed never do, p223). */
-export function componentFunctional(state: ShipComponentState | undefined): boolean {
+export function componentFunctional(
+	state: ShipComponentState | undefined,
+): boolean {
 	return state === undefined || state === "intact" || state === "unpowered";
 }
 
@@ -241,7 +252,12 @@ export function emergencyRepairsCanFix(
  * the adapter's; these are the book's dice counts.
  */
 export const HAZARD_CREW_DAMAGE = {
-	fire: { populationDice: 1, populationFaces: 5, moraleDice: 1, moraleFaces: 10 },
+	fire: {
+		populationDice: 1,
+		populationFaces: 5,
+		moraleDice: 1,
+		moraleFaces: 10,
+	},
 	depressurisation: {
 		populationDice: 1,
 		populationFaces: 10,
@@ -267,13 +283,14 @@ export const VENT_FIRE_CREW_DAMAGE = {
  * Repair outcome for a successful Emergency Repairs action (book p218):
  * the component's state is restored to intact (depressurised hulls are
  * patched; p224). Repair TIME is 1d5 Strategic Turns, reduced by one turn
- * per degree of success to a minimum of one — the adapter rolls the d5 and
- * feeds the degrees here.
+ * per degree of success to a minimum of one — the adapter rolls the d5
+ * (never hard-coded) and passes BOTH the degrees and the die result here.
  */
 export function emergencyRepairsOutcome(
 	degrees: number,
+	d5: number,
 ): { turns: number } {
-	const d5 = 5;
 	const reduction = Math.max(0, degrees);
-	return { turns: Math.max(1, d5 - reduction) };
+	const die = Math.max(0, d5);
+	return { turns: Math.max(1, die - reduction) };
 }

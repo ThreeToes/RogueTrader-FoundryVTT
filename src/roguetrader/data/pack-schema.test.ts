@@ -182,7 +182,14 @@ describe.skipIf(!HAS_PACKS)("pack system keys match their data model", () => {
 		const { buildItemSourceIndex, toActorSourceDocument } = await import(
 			"../../../utils/compendia"
 		);
-		const LOADOUT = ["skills", "talents", "traits", "weapons", "armour", "gear"];
+		const LOADOUT = [
+			"skills",
+			"talents",
+			"traits",
+			"weapons",
+			"armour",
+			"gear",
+		];
 		const dirs = readdirSync(PACK_ROOT)
 			.filter((d) => statSync(`${PACK_ROOT}/${d}`).isDirectory())
 			.map((name) => ({ name }));
@@ -216,7 +223,9 @@ describe.skipIf(!HAS_PACKS)("pack system keys match their data model", () => {
 				try {
 					const { embedded } = toActorSourceDocument(doc, index, null);
 					if (embedded.length === 0) {
-						offenders.push(`${rel} ${String(doc.name)}: authored loadout, 0 items`);
+						offenders.push(
+							`${rel} ${String(doc.name)}: authored loadout, 0 items`,
+						);
 					}
 				} catch (error) {
 					offenders.push(

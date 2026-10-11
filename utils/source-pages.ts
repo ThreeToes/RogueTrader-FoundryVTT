@@ -113,7 +113,9 @@ export function isWrappedCellMatch(
  * pass, or every talent cite would land on its career table.
  */
 export function isAdvanceRow(t: string): boolean {
-	return /\s\d+\s(talent|skill)\s*$/i.test(t) || /\s(talent|skill)\s*$/i.test(t);
+	return (
+		/\s\d+\s(talent|skill)\s*$/i.test(t) || /\s(talent|skill)\s*$/i.test(t)
+	);
 }
 
 export interface FindPageOptions {
@@ -173,7 +175,7 @@ export function findMakerWrappedPage(
 			break;
 		}
 	}
-	return hits.length === 1 ? (hits[0] - 1) : null;
+	return hits.length === 1 ? hits[0] - 1 : null;
 }
 
 /**
@@ -212,7 +214,7 @@ export function findNicknamePage(
 			break;
 		}
 	}
-	return hits.length === 1 ? (hits[0] - 1) : null;
+	return hits.length === 1 ? hits[0] - 1 : null;
 }
 
 /**

@@ -1,267 +1,182 @@
 {
-  "id": "rogue-trader",
-  "title": "Rogue Trader",
-  "description": "Unofficial Foundry VTT System for Rogue Trader.",
-  "version": "0.5.1",
-  "minimumCoreVersion": 13,
-  "compatibility": {
-    "minimum": 13,
-    "verified": 14,
-    "maximum": 14
-  },
-  "templateVersion": 2,
-  "authors": [
-    {
-      "name": "ThreeToes"
-    }
-  ],
-  "scripts": [],
-  "esmodules": [
-    "./entry-point.js"
-  ],
-  "styles": [
-    "./css/rogue-trader.css"
-  ],
-  "packs": [],
-  "languages": [
-    {
-      "lang": "en",
-      "name": "English",
-      "path": "lang/en.json"
-    },
-    {
-      "lang": "es",
-      "name": "Español",
-      "path": "lang/es.json"
-    },
-    {
-      "lang": "fr",
-      "name": "Français",
-      "path": "lang/fr.json"
-    },
-    {
-      "lang": "pl",
-      "name": "Polski",
-      "path": "lang/pl.json"
-    }
-  ],
-  "documentTypes": {
-    "Actor": {
-      "dynasty": {
-        "htmlFields": [
-          "notes"
-        ]
-      },
-      "explorer": {
-        "htmlFields": [
-          "life.motivation",
-          "notes",
-          "description"
-        ]
-      },
-      "npc": {
-        "htmlFields": [
-          "life.motivation",
-          "notes",
-          "description"
-        ]
-      },
-      "planet": {
-        "htmlFields": [
-          "notes"
-        ]
-      },
-      "cache": {
-        "htmlFields": [
-          "notes"
-        ]
-      },
-      "starship": {
-        "htmlFields": [
-          "notes"
-        ]
-      },
-      "vehicle": {
-        "htmlFields": [
-          "description"
-        ]
-      }
-    },
-    "Item": {
-      "action": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "gear": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "ranged-weapon": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "melee-weapon": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "armour": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "battlesuit": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "battlesuit-system": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "skill": {},
-      "talent": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "psychicpower": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "ammunition": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "force-field": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "weapon-modification": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "armour-modification": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "tool": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "drug": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "special-ability": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "aptitude": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "trait": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "warrant-option": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "ship-component": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "ship-weapon-component": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "ship": {
-        "htmlFields": [
-          "description",
-          "specialRules"
-        ]
-      },
-      "ship-complication": {
-        "htmlFields": [
-          "effect"
-        ]
-      },
-      "game-table": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "gearset": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "career": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "heirloom": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "madnessentry": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "mutation": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "navigatorpower": {
-        "htmlFields": [
-          "levels.novice",
-          "levels.adept",
-          "levels.master",
-          "description"
-        ]
-      },
-      "origin": {
-        "htmlFields": [
-          "description"
-        ]
-      },
-      "origintrait": {
-        "htmlFields": [
-          "description"
-        ]
-      }
-    }
-  },
-  "gridDistance": 1,
-  "gridUnits": "m",
-  "primaryTokenAttribute": null,
-  "secondaryTokenAttribute": null,
-  "url": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader",
-  "socket": true,
-  "license": "LICENSE.md",
-  "manifest": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/raw/branch/master/system-manifests/rogue-trader-release.json",
-  "download": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/releases/download/v0.5.1/rogue-trader.zip"
+	"id": "rogue-trader",
+	"title": "Rogue Trader",
+	"description": "Unofficial Foundry VTT System for Rogue Trader.",
+	"version": "0.5.1",
+	"minimumCoreVersion": 13,
+	"compatibility": {
+		"minimum": 13,
+		"verified": 14,
+		"maximum": 14
+	},
+	"templateVersion": 2,
+	"authors": [
+		{
+			"name": "ThreeToes"
+		}
+	],
+	"scripts": [],
+	"esmodules": ["./entry-point.js"],
+	"styles": ["./css/rogue-trader.css"],
+	"packs": [],
+	"languages": [
+		{
+			"lang": "en",
+			"name": "English",
+			"path": "lang/en.json"
+		},
+		{
+			"lang": "es",
+			"name": "Español",
+			"path": "lang/es.json"
+		},
+		{
+			"lang": "fr",
+			"name": "Français",
+			"path": "lang/fr.json"
+		},
+		{
+			"lang": "pl",
+			"name": "Polski",
+			"path": "lang/pl.json"
+		}
+	],
+	"documentTypes": {
+		"Actor": {
+			"dynasty": {
+				"htmlFields": ["notes"]
+			},
+			"explorer": {
+				"htmlFields": ["life.motivation", "notes", "description"]
+			},
+			"npc": {
+				"htmlFields": ["life.motivation", "notes", "description"]
+			},
+			"planet": {
+				"htmlFields": ["notes"]
+			},
+			"cache": {
+				"htmlFields": ["notes"]
+			},
+			"starship": {
+				"htmlFields": ["notes"]
+			},
+			"vehicle": {
+				"htmlFields": ["description"]
+			}
+		},
+		"Item": {
+			"action": {
+				"htmlFields": ["description"]
+			},
+			"gear": {
+				"htmlFields": ["description"]
+			},
+			"ranged-weapon": {
+				"htmlFields": ["description"]
+			},
+			"melee-weapon": {
+				"htmlFields": ["description"]
+			},
+			"armour": {
+				"htmlFields": ["description"]
+			},
+			"battlesuit": {
+				"htmlFields": ["description"]
+			},
+			"battlesuit-system": {
+				"htmlFields": ["description"]
+			},
+			"skill": {},
+			"talent": {
+				"htmlFields": ["description"]
+			},
+			"psychicpower": {
+				"htmlFields": ["description"]
+			},
+			"ammunition": {
+				"htmlFields": ["description"]
+			},
+			"force-field": {
+				"htmlFields": ["description"]
+			},
+			"weapon-modification": {
+				"htmlFields": ["description"]
+			},
+			"armour-modification": {
+				"htmlFields": ["description"]
+			},
+			"tool": {
+				"htmlFields": ["description"]
+			},
+			"drug": {
+				"htmlFields": ["description"]
+			},
+			"special-ability": {
+				"htmlFields": ["description"]
+			},
+			"aptitude": {
+				"htmlFields": ["description"]
+			},
+			"trait": {
+				"htmlFields": ["description"]
+			},
+			"warrant-option": {
+				"htmlFields": ["description"]
+			},
+			"ship-component": {
+				"htmlFields": ["description"]
+			},
+			"ship-weapon-component": {
+				"htmlFields": ["description"]
+			},
+			"ship": {
+				"htmlFields": ["description", "specialRules"]
+			},
+			"ship-complication": {
+				"htmlFields": ["effect"]
+			},
+			"game-table": {
+				"htmlFields": ["description"]
+			},
+			"gearset": {
+				"htmlFields": ["description"]
+			},
+			"career": {
+				"htmlFields": ["description"]
+			},
+			"heirloom": {
+				"htmlFields": ["description"]
+			},
+			"madnessentry": {
+				"htmlFields": ["description"]
+			},
+			"mutation": {
+				"htmlFields": ["description"]
+			},
+			"navigatorpower": {
+				"htmlFields": [
+					"levels.novice",
+					"levels.adept",
+					"levels.master",
+					"description"
+				]
+			},
+			"origin": {
+				"htmlFields": ["description"]
+			},
+			"origintrait": {
+				"htmlFields": ["description"]
+			}
+		}
+	},
+	"gridDistance": 1,
+	"gridUnits": "m",
+	"primaryTokenAttribute": null,
+	"secondaryTokenAttribute": null,
+	"url": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader",
+	"socket": true,
+	"license": "LICENSE.md",
+	"manifest": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/raw/branch/master/system-manifests/rogue-trader-release.json",
+	"download": "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader/releases/download/v0.5.1/rogue-trader.zip"
 }

@@ -55,7 +55,8 @@ import { readFileSync } from "node:fs";
 
 afterAll(() => {
 	for (const [key, value] of Object.entries(originalGlobals)) {
-		if (value === undefined) delete (globalThis as Record<string, unknown>)[key];
+		if (value === undefined)
+			delete (globalThis as Record<string, unknown>)[key];
 		else (globalThis as Record<string, unknown>)[key] = value;
 	}
 });
@@ -161,7 +162,9 @@ describe("rollInitiativeAction funnel flow (bead yxm5)", () => {
 			expect(dialogRequests).toHaveLength(1);
 			expect(dialogRequests[0].baseTarget).toBe(10);
 			expect(dialogRequests[0].difficultyLadder).toEqual([]);
-			const rows = dialogRequests[0].contributors as Array<Record<string, unknown>>;
+			const rows = dialogRequests[0].contributors as Array<
+				Record<string, unknown>
+			>;
 			expect(rows).toEqual([
 				{
 					id: "initiative-base:agility",
@@ -201,9 +204,7 @@ describe("rollInitiativeAction funnel flow (bead yxm5)", () => {
 			const value = await rollInitiativeAction(actor as never);
 			// d10(2) + base(4) + custom(+3)
 			expect(value).toBe(9);
-			const analysis = (
-				lastCardVars?.analysis ?? []
-			) as unknown[];
+			const analysis = (lastCardVars?.analysis ?? []) as unknown[];
 			expect(analysis.length).toBe(2);
 		} finally {
 			restore();
@@ -286,10 +287,7 @@ const statsTemplate = readFileSync(
 	"template/sheet/actor/tabs/stats.hbs",
 	"utf8",
 );
-const hooksSource = readFileSync(
-	"src/roguetrader/bootstrap/hooks.ts",
-	"utf8",
-);
+const hooksSource = readFileSync("src/roguetrader/bootstrap/hooks.ts", "utf8");
 const menusSource = readFileSync(
 	"src/roguetrader/presentation/token-menus.ts",
 	"utf8",
@@ -308,12 +306,9 @@ describe("initiative wiring guards (bead dt8t)", () => {
 		expect(sheetSource).toContain("await rollInitiativeAction(this.actor)");
 	});
 
-	test(
-		"bootstrap registers the token context-menu module",
-		() => {
-			expect(hooksSource).toContain("registerTokenContextMenus()");
-		},
-	);
+	test("bootstrap registers the token context-menu module", () => {
+		expect(hooksSource).toContain("registerTokenContextMenus()");
+	});
 
 	test("the token menu targets the core Tokens-tab context hook", () => {
 		// v14 core: PlaceableTab fires get<Token>PlaceableContextOptions for the
@@ -322,7 +317,9 @@ describe("initiative wiring guards (bead dt8t)", () => {
 		expect(menusSource).toContain('"getTokenPlaceableContextOptions"');
 		expect(menusSource).toContain("rollInitiativeAction");
 		// v14 ContextMenuEntry field (creator-menus.test.ts precedent).
-		expect(menusSource).toContain("visible: (element) => canRollToken(element)");
+		expect(menusSource).toContain(
+			"visible: (element) => canRollToken(element)",
+		);
 		expect(menusSource).not.toMatch(/\bcondition\??\s*:/);
 	});
 
@@ -333,12 +330,8 @@ describe("initiative wiring guards (bead dt8t)", () => {
 	// vehicle/starship token must not see a dead entry whose click silently
 	// no-ops. Source-scan guard: the visible() gate mirrors the adapter's gate.
 	test("the token menu gate mirrors the adapter's initiativeBonus shape gate", () => {
-		expect(menusSource).toContain(
-			'if (!token?.actor?.isOwner) return false;',
-		);
-		expect(menusSource).toContain(
-			'"initiativeBonus" in system',
-		);
+		expect(menusSource).toContain("if (!token?.actor?.isOwner) return false;");
+		expect(menusSource).toContain('"initiativeBonus" in system');
 	});
 
 	// Bead jpt3: the two consumption routes read the ONE canonical formula —
@@ -351,7 +344,9 @@ describe("initiative wiring guards (bead dt8t)", () => {
 			"src/roguetrader/rules/derived.ts",
 			"utf8",
 		);
-		expect(derivedSource).toContain('INITIATIVE_FORMULA = "1d10 + @initiativeBonus"');
+		expect(derivedSource).toContain(
+			'INITIATIVE_FORMULA = "1d10 + @initiativeBonus"',
+		);
 	});
 
 	// Bead nt34 F11: the v14 ContextMenuEntry option shape lives in ONE place,

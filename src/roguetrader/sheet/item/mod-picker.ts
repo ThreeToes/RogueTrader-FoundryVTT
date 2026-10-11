@@ -3,6 +3,7 @@ import { sheetContext } from "../context";
 import { getPackDocuments } from "../pack-resolve";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { installMod, removeMod } from "./weapon-mods";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 // One row of the picker is {id?, uuid?, name, upgrades, owned} — structural
 // object literals, no interface (the template reads it directly).
@@ -32,7 +33,10 @@ export class ModPicker extends OwnedItemPicker {
 	/** The weapon receiving the attachment. */
 	#weapon: WeaponModHost;
 
-	constructor(options: { actor: foundry.documents.Actor; weapon: WeaponModHost }) {
+	constructor(options: {
+		actor: foundry.documents.Actor;
+		weapon: WeaponModHost;
+	}) {
 		super(options);
 		this.#weapon = options.weapon;
 	}
@@ -52,7 +56,7 @@ export class ModPicker extends OwnedItemPicker {
 
 	static PARTS = {
 		form: {
-			template: "systems/rogue-trader/template/sheet/item/parts/mod-picker.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/mod-picker.hbs`,
 		},
 	};
 
@@ -78,9 +82,7 @@ export class ModPicker extends OwnedItemPicker {
 			}))
 			.sort((a, b) => a.name.localeCompare(b.name));
 		// The pack catalogue (content-optional: a missing pack lists nothing).
-		const docs = (await getPackDocuments(
-			"rogue-trader.equipment",
-		)) as Array<{
+		const docs = (await getPackDocuments("rogue-trader.equipment")) as Array<{
 			uuid?: string;
 			name?: string;
 			type?: string;
@@ -109,10 +111,8 @@ export class ModPicker extends OwnedItemPicker {
 	): Promise<void> {
 		const itemId = target.dataset.itemId ?? "";
 		if (!itemId || !this.actor.items.get(itemId)) return;
-		await installMod(
-			this.#weapon,
-			itemId,
-			(id) => Boolean(this.actor.items.get(id)),
+		await installMod(this.#weapon, itemId, (id) =>
+			Boolean(this.actor.items.get(id)),
 		);
 		this.close();
 	}
@@ -150,10 +150,8 @@ export class ModPicker extends OwnedItemPicker {
 			getPorts().notify.warn("WEAPON.MOD_CLONE_FAILED");
 			return;
 		}
-		await installMod(
-			this.#weapon,
-			itemId,
-			(id) => Boolean(this.actor.items.get(id)),
+		await installMod(this.#weapon, itemId, (id) =>
+			Boolean(this.actor.items.get(id)),
 		);
 		this.close();
 	}
@@ -166,10 +164,8 @@ export class ModPicker extends OwnedItemPicker {
 	): Promise<void> {
 		const itemId = target.dataset.itemId ?? "";
 		if (!itemId) return;
-		await removeMod(
-			this.#weapon,
-			itemId,
-			(id) => Boolean(this.actor.items.get(id)),
+		await removeMod(this.#weapon, itemId, (id) =>
+			Boolean(this.actor.items.get(id)),
 		);
 		this.close();
 	}

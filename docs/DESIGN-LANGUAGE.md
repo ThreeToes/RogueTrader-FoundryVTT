@@ -19,6 +19,7 @@ token, never the raw hex:
 | `--rt-muted` | `#7a6a53` | Secondary text, group labels, separators, units |
 | `--rt-muted-deep` | `#5a4f3f` | "Off" segments (RoF `-`, zero overlays), grips |
 | `--rt-muted-faint` | `#55503f` | Stowed equip toggles |
+| `--rt-chat-note` | `#4a3f31` | Chat-card note ink (modifier breakdown, quality notes, action note, ordnance usage) |
 | `--rt-danger` | `#8b5e52` | Destructive actions (`skill-delete`, `inv-delete`) |
 | `--rt-danger-deep` | `#c0392b` | Over-encumbered state, negative modifiers |
 | `--rt-danger-alarm` | `#b71c1c` | Chat-card failure values |

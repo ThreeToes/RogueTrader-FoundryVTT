@@ -94,9 +94,11 @@ export async function decrementQuantity(
 		weaponName?: string;
 	},
 ): Promise<DecrementResult> {
-	const doc = item as (QuantityBearingItem & {
-		name?: string;
-	}) | null;
+	const doc = item as
+		| (QuantityBearingItem & {
+				name?: string;
+		  })
+		| null;
 	const ports = getPorts();
 	const shots = Math.max(1, Number(options.shots ?? 1));
 	const current = Number(doc?.system?.quantity ?? 0);
@@ -123,6 +125,9 @@ export async function decrementQuantity(
 	// still sees the 0 remainder on the chip / card.
 	const next = Math.max(0, current - shots);
 	await ports.items.update(item, { system: { quantity: next } });
-	ports.notify.info("CHAT.AMMO_SPENT", { name: doc?.name ?? "", quantity: next });
+	ports.notify.info("CHAT.AMMO_SPENT", {
+		name: doc?.name ?? "",
+		quantity: next,
+	});
 	return next;
 }

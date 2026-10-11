@@ -1,6 +1,8 @@
 import { effectActions } from "./effect-actions";
 import { enrichText } from "../rich-text";
+import { sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -28,16 +30,15 @@ export class ShipComplicationSheet extends HandlebarsApplicationMixin(
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		content: {
-			template:
-				"systems/rogue-trader/template/sheet/item/parts/ship-complication-content.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/ship-complication-content.hbs`,
 		},
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const sys = this.document.system as unknown as Record<string, unknown> & {
 			kind?: string;
 			roll?: number;
@@ -49,12 +50,11 @@ export class ShipComplicationSheet extends HandlebarsApplicationMixin(
 			value,
 			label: game.i18n.localize(key),
 		}));
-		context.effectHTML =
-			await enrichText(
-				String(sys.effect ?? ""),
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
+		context.effectHTML = await enrichText(
+			String(sys.effect ?? ""),
+			this.document,
+			{ secrets: this.document.isOwner },
+		);
 		return context;
 	}
 }

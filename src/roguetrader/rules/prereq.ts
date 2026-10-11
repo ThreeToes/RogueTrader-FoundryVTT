@@ -11,7 +11,13 @@
  *   "Psy Rating 2"      -> psyker with at least that Psy Rating
  *   "Acrobatic"         -> talent-chain prereq (owned talent by name)
  *   "Jaded or Resistance (Poisons)" -> OR-list of atoms
+ *   "Acrobatic, Jaded, or Resistance (Poisons)"
+ *      -> AND[Acrobatic] + OR[Jaded, Resistance]. The trailing "or"-chunk
+ *      binds ONLY to the immediately previous comma segment: the book's
+ *      Oxford-comma style makes "Acrobatic" a standalone AND atom, and only
+ *      "Jaded, or Resistance (Poisons)" merges into one OR group.
  *   comma-separated atoms are AND; "or" (case-insensitive) binds a group.
+ *   (a comma immediately followed by "or" extends that OR group — bead rl1u).
  *
  * Special prerequisites ("Mechanicus Implants", "Pure Faith") parse as
  * talent-name atoms — the GM adjudicates via the soft-confirm path.
@@ -21,15 +27,24 @@ import type { CharacteristicKey } from "../data/actor/character";
 
 /** Characteristic tokens as they appear in book notation -> schema keys. */
 const CHARACTERISTIC_TOKENS: Record<string, CharacteristicKey> = {
-	ws: "ws", "weapon skill": "ws",
-	bs: "bs", "ballistic skill": "bs",
-	s: "s", strength: "s",
-	t: "t", toughness: "t",
-	ag: "ag", agility: "ag",
-	int: "int", intelligence: "int",
-	per: "per", perception: "per",
-	wp: "wp", willpower: "wp",
-	fel: "fel", fellowship: "fel",
+	ws: "ws",
+	"weapon skill": "ws",
+	bs: "bs",
+	"ballistic skill": "bs",
+	s: "s",
+	strength: "s",
+	t: "t",
+	toughness: "t",
+	ag: "ag",
+	agility: "ag",
+	int: "int",
+	intelligence: "int",
+	per: "per",
+	perception: "per",
+	wp: "wp",
+	willpower: "wp",
+	fel: "fel",
+	fellowship: "fel",
 };
 
 export interface CharacteristicPrereq {
@@ -48,10 +63,7 @@ export interface PsyRatingPrereq {
 	value: number;
 }
 
-export type PrereqAtom =
-	| CharacteristicPrereq
-	| TalentPrereq
-	| PsyRatingPrereq;
+export type PrereqAtom = CharacteristicPrereq | TalentPrereq | PsyRatingPrereq;
 
 /** Parsed prerequisite structure: AND of groups; each group is an OR list. */
 export interface ParsedPrerequisites {
@@ -79,9 +91,40 @@ export function parsePrerequisites(raw: string): ParsedPrerequisites {
 		.split(/,\s*/)
 		.map((s) => s.trim())
 		.filter(Boolean);
+	// Oxford-comma OR lists ("Acrobatic, Jaded, or Resistance (Poisons)") put
+	// the trailing "or" at the START of its comma segment with no whitespace
+	// before it, so the plain /\s+or\s+/ split below would miss it and yield a
+	// bogus talent atom named "or ...".  A segment beginning with "or" extends
+	// the previous comma-separated alternative into the same OR group (rl1u).
+	const chunks: string[] = [];
+	// A BARE "or" comma segment ("Foo, or, Bar") leaves an empty remainder:
+	// it is dropped, but the OR-binding rolls forward onto the NEXT segment so
+	// no bogus talent atom named "or" appears and the next chunk still joins
+	// the previous one (bead i7ov).
+	let pendingOr = false;
+	for (const rawSegment of segments) {
+		// ^or\b (not ^or\s+) so a bare "or" segment is caught too.
+		const orLead = /^or\b/i.test(rawSegment);
+		const segment = rawSegment.replace(/^or\b/i, "").trim();
+		if (segment === "") {
+			if (orLead && chunks.length > 0) pendingOr = true;
+			continue;
+		}
+		if ((orLead || pendingOr) && chunks.length > 0) {
+			pendingOr = false;
+			const prev = chunks[chunks.length - 1]!;
+			chunks[chunks.length - 1] = `${prev} or ${segment}`;
+		} else {
+			pendingOr = false;
+			chunks.push(segment);
+		}
+	}
 	const groups: PrereqAtom[][] = [];
-	for (const segment of segments) {
-		const alternatives = segment.split(/\s+or\s+/i).map((s) => s.trim()).filter(Boolean);
+	for (const chunk of chunks) {
+		const alternatives = chunk
+			.split(/\s+or\s+/i)
+			.map((s) => s.trim())
+			.filter(Boolean);
 		const atoms = alternatives
 			.map(parseAtom)
 			.filter((a): a is PrereqAtom => a !== null);
@@ -99,7 +142,8 @@ function parseAtom(atom: string): PrereqAtom | null {
 	const charMatch = /^([A-Za-z]+)\s+(\d{1,3})$/.exec(cleaned);
 	if (charMatch) {
 		const key = CHARACTERISTIC_TOKENS[charMatch[1]!.toLowerCase()];
-		if (key) return { kind: "characteristic", key, value: Number(charMatch[2]) };
+		if (key)
+			return { kind: "characteristic", key, value: Number(charMatch[2]) };
 	}
 
 	// Psy Rating threshold: "Psy Rating 2".
@@ -129,10 +173,7 @@ export function evaluatePrerequisites(
 	return { met: unmet.length === 0, unmet };
 }
 
-function atomMet(
-	atom: PrereqAtom,
-	actor: ActorPrereqSnapshot,
-): boolean {
+function atomMet(atom: PrereqAtom, actor: ActorPrereqSnapshot): boolean {
 	switch (atom.kind) {
 		case "characteristic": {
 			const value = actor.characteristics[atom.key] ?? 0;

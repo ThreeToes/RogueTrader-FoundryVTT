@@ -15,8 +15,12 @@ describe("background tab affliction delete affordance (bead fjtr)", () => {
 	// chips, not the talent rows' identical anchors further down the file.
 	// The block starts at the each and ends before the affliction grants
 	// comment that closes the section.
-	const start = template.indexOf("{{#each madness.afflictionGroups as |group|}}");
-	const end = template.indexOf("{{!-- Trait/talent grants from owned afflictions");
+	const start = template.indexOf(
+		"{{#each madness.afflictionGroups as |group|}}",
+	);
+	const end = template.indexOf(
+		"{{!-- Trait/talent grants from owned afflictions",
+	);
 	const afflictions = template.slice(start, end);
 
 	test("the each block exists in the template", () => {

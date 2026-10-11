@@ -1,29 +1,29 @@
 {
-    "scripts": {
-        "build": "bun utils/build.ts",
-        "build:js": "bun utils/javascript.ts",
-        "build:css": "bun utils/css.ts",
-        "build:packs": "bun utils/compendia.ts",
-        "verify:templates": "bun utils/verify-templates.mjs",
-        "build:manifest": "cp system-manifests/dev.json ./release/rogue_trader/system.json",
-        "build:languages": "cp -R ./lang/ release/rogue_trader/",
-        "build:templates": "cp -R ./template release/rogue_trader/",
-        "watch": "bun utils/build.ts --watch",
-        "lint": "biome lint",
-        "typecheck:pure": "tsc -p tsconfig.pure.json",
-        "typecheck:scoped": "tsc -p tsconfig.scoped.json",
-        "typecheck": "bun run typecheck:pure && bun run typecheck:scoped",
-        "format": "biome format --write",
-        "check": "biome check",
-        "hooks:install": "git config core.hooksPath .githooks"
-    },
-    "devDependencies": {
-        "@biomejs/biome": "2.5.8",
-        "@league-of-foundry-developers/foundry-vtt-types": "^13.341.1",
-        "fvtt-types": "npm:@league-of-foundry-developers/foundry-vtt-types"
-    },
-    "dependencies": {
-        "classic-level": "3.0.0",
-        "yaml": "^2"
-    }
+	"scripts": {
+		"build": "bun utils/build.ts",
+		"build:js": "bun utils/javascript.ts",
+		"build:css": "bun utils/css.ts",
+		"build:packs": "bun utils/compendia.ts",
+		"verify:templates": "bun utils/verify-templates.mjs",
+		"build:manifest": "cp system-manifests/dev.json ./release/rogue_trader/system.json",
+		"build:languages": "cp -R ./lang/ release/rogue_trader/",
+		"build:templates": "cp -R ./template release/rogue_trader/",
+		"watch": "bun utils/build.ts --watch",
+		"lint": "biome lint",
+		"typecheck:pure": "tsc -p tsconfig.pure.json",
+		"typecheck:scoped": "tsc -p tsconfig.scoped.json",
+		"typecheck": "bun run typecheck:pure && bun run typecheck:scoped",
+		"format": "biome format --write",
+		"check": "biome check",
+		"hooks:install": "git config core.hooksPath .githooks"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.8",
+		"@league-of-foundry-developers/foundry-vtt-types": "^13.341.1",
+		"fvtt-types": "npm:@league-of-foundry-developers/foundry-vtt-types"
+	},
+	"dependencies": {
+		"classic-level": "3.0.0",
+		"yaml": "^2"
+	}
 }

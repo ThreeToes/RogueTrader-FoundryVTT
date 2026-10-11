@@ -64,9 +64,7 @@ const CAREER = {
 		{
 			rank: 2,
 			xpLevel: 7000,
-			advances: [
-				row({ key: "tech-use", type: "skill", cost: 100, rank: 2 }),
-			],
+			advances: [row({ key: "tech-use", type: "skill", cost: 100, rank: 2 })],
 		},
 		{ rank: 3, xpLevel: 10000, advances: [] },
 	],
@@ -113,7 +111,11 @@ describe("advancement view model — name resolution precedence", () => {
 			makeInput({
 				career: {
 					ranks: [
-						{ rank: 1, xpLevel: 5000, advances: [row({ key: "awareness", name: "Verbatim Name" })] },
+						{
+							rank: 1,
+							xpLevel: 5000,
+							advances: [row({ key: "awareness", name: "Verbatim Name" })],
+						},
 					],
 					characteristicAdvances: {},
 				},
@@ -134,7 +136,11 @@ describe("advancement view model — name resolution precedence", () => {
 			makeInput({
 				career: {
 					ranks: [
-						{ rank: 1, xpLevel: 5000, advances: [row({ key: "psy-rating", type: "talent" })] },
+						{
+							rank: 1,
+							xpLevel: 5000,
+							advances: [row({ key: "psy-rating", type: "talent" })],
+						},
 					],
 					characteristicAdvances: {},
 				},
@@ -148,12 +154,20 @@ describe("advancement view model — name resolution precedence", () => {
 			makeInput({
 				career: {
 					ranks: [
-						{ rank: 1, xpLevel: 5000, advances: [row({ key: "furious-charge", type: "skill" })] },
+						{
+							rank: 1,
+							xpLevel: 5000,
+							advances: [row({ key: "furious-charge", type: "skill" })],
+						},
 					],
 					characteristicAdvances: {},
 				},
 				skillDocs: [
-					{ key: "furious-charge", name: "Furious Charge (skill)", characteristic: "ws" },
+					{
+						key: "furious-charge",
+						name: "Furious Charge (skill)",
+						characteristic: "ws",
+					},
 				],
 			}),
 		);
@@ -164,7 +178,13 @@ describe("advancement view model — name resolution precedence", () => {
 describe("advancement view model — owned state + multiplier", () => {
 	test("ledger purchases matching (type, key, rank) count; multiplier caps remaining", () => {
 		const ledger: AdvanceLedgerEntry[] = [
-			{ type: "talent", key: "furious-charge", name: "Furious Charge", cost: 200, rank: 1 },
+			{
+				type: "talent",
+				key: "furious-charge",
+				name: "Furious Charge",
+				cost: 200,
+				rank: 1,
+			},
 		];
 		const rows = rowsFor(makeInput({ ledger }));
 		const furious = rows.find((r) => r.key === "furious-charge")!;
@@ -177,7 +197,13 @@ describe("advancement view model — owned state + multiplier", () => {
 
 	test("a fully purchased (multiplier 1) row has remaining 0", () => {
 		const ledger: AdvanceLedgerEntry[] = [
-			{ type: "skill", key: "awareness", name: "Awareness", cost: 100, rank: 1 },
+			{
+				type: "skill",
+				key: "awareness",
+				name: "Awareness",
+				cost: 100,
+				rank: 1,
+			},
 		];
 		const rows = rowsFor(makeInput({ ledger }));
 		expect(rows.find((r) => r.key === "awareness")!.remaining).toBe(0);
@@ -185,7 +211,13 @@ describe("advancement view model — owned state + multiplier", () => {
 
 	test("ledgerIndex points at the matching ledger entry for the GM refund", () => {
 		const ledger: AdvanceLedgerEntry[] = [
-			{ type: "talent", key: "furious-charge", name: "Furious Charge", cost: 200, rank: 1 },
+			{
+				type: "talent",
+				key: "furious-charge",
+				name: "Furious Charge",
+				cost: 200,
+				rank: 1,
+			},
 		];
 		const rows = rowsFor(makeInput({ ledger }));
 		const furious = rows.find((r) => r.key === "furious-charge")!;
@@ -349,8 +381,24 @@ describe("advancement view model — characteristic tiers", () => {
 
 	test("prior +5 purchases advance through intermediate/trained/expert", () => {
 		const ledger: AdvanceLedgerEntry[] = [
-			{ type: "characteristic", key: "", name: "WS simple", cost: 250, rank: 0, characteristic: "ws", tier: "simple" },
-			{ type: "characteristic", key: "", name: "WS intermediate", cost: 500, rank: 0, characteristic: "ws", tier: "intermediate" },
+			{
+				type: "characteristic",
+				key: "",
+				name: "WS simple",
+				cost: 250,
+				rank: 0,
+				characteristic: "ws",
+				tier: "simple",
+			},
+			{
+				type: "characteristic",
+				key: "",
+				name: "WS intermediate",
+				cost: 500,
+				rank: 0,
+				characteristic: "ws",
+				tier: "intermediate",
+			},
 		];
 		const vm = vmFor(makeInput({ ledger }));
 		const ws = vm.characteristics.find((c) => c.key === "ws")!;
@@ -360,15 +408,17 @@ describe("advancement view model — characteristic tiers", () => {
 	});
 
 	test("four purchases exhaust the scheme (next null, no tier label)", () => {
-		const ledger: AdvanceLedgerEntry[] = [250, 500, 750, 1000].map((cost, i) => ({
-			type: "characteristic" as const,
-			key: "",
-			name: `WS tier ${i}`,
-			cost,
-			rank: 0,
-			characteristic: "ws" as const,
-			tier: ["simple", "intermediate", "trained", "expert"][i]!,
-		}));
+		const ledger: AdvanceLedgerEntry[] = [250, 500, 750, 1000].map(
+			(cost, i) => ({
+				type: "characteristic" as const,
+				key: "",
+				name: `WS tier ${i}`,
+				cost,
+				rank: 0,
+				characteristic: "ws" as const,
+				tier: ["simple", "intermediate", "trained", "expert"][i]!,
+			}),
+		);
 		const vm = vmFor(makeInput({ ledger }));
 		const ws = vm.characteristics.find((c) => c.key === "ws")!;
 		expect(ws.purchased).toBe(4);
@@ -417,23 +467,29 @@ describe("advancement view model — affordability", () => {
 	test("scheme rows compare their cost against the same pool", () => {
 		const vm = vmFor(makeInput());
 		// s's simple tier is 70,000 xp: unaffordable from the 6,500 pool.
-		expect(vm.characteristics.find((c) => c.key === "s")!.affordable).toBe(false);
+		expect(vm.characteristics.find((c) => c.key === "s")!.affordable).toBe(
+			false,
+		);
 		// ws's simple tier (250) is affordable; fel is exhausted.
-		expect(vm.characteristics.find((c) => c.key === "ws")!.affordable).toBe(true);
+		expect(vm.characteristics.find((c) => c.key === "ws")!.affordable).toBe(
+			true,
+		);
 	});
 });
 
 describe("advancement view model — precomputed prerequisites", () => {
 	test("unmet prereqs are listed on the row (chips, not only at purchase)", () => {
 		const rows = rowsFor(makeInput());
-		expect(
-			rows.find((r) => r.key === "furious-charge")!.unmetPrereqs,
-		).toEqual(["Acrobatic"]);
+		expect(rows.find((r) => r.key === "furious-charge")!.unmetPrereqs).toEqual([
+			"Acrobatic",
+		]);
 	});
 
 	test("owned talents satisfy talent-chain prereqs", () => {
 		const rows = rowsFor(makeInput({ ownedTalentNames: ["Acrobatic"] }));
-		expect(rows.find((r) => r.key === "furious-charge")!.unmetPrereqs).toEqual([]);
+		expect(rows.find((r) => r.key === "furious-charge")!.unmetPrereqs).toEqual(
+			[],
+		);
 	});
 
 	test("characteristic thresholds evaluate against the actor snapshot", () => {
@@ -485,9 +541,9 @@ describe("advancement view model — talent benefit tooltips", () => {
 		const rows = rowsFor(makeInput());
 		const furious = rows.find((r) => r.key === "furious-charge")!;
 		expect(furious.benefitTooltip).toHaveLength(300);
-		expect(
-			furious.benefitTooltip,
-		).toBe(TALENT_DOCS[0]!.description!.slice(0, 300));
+		expect(furious.benefitTooltip).toBe(
+			TALENT_DOCS[0]!.description!.slice(0, 300),
+		);
 		expect(rows.find((r) => r.key === "awareness")!.benefitTooltip).toBe("");
 	});
 
@@ -500,7 +556,12 @@ describe("advancement view model — talent benefit tooltips", () => {
 							rank: 1,
 							xpLevel: 5000,
 							advances: [
-								row({ key: "", name: "furious charge", type: "talent", prerequisites: [] }),
+								row({
+									key: "",
+									name: "furious charge",
+									type: "talent",
+									prerequisites: [],
+								}),
 							],
 						},
 					],
@@ -515,8 +576,18 @@ describe("advancement view model — talent benefit tooltips", () => {
 describe("advancement view model — pack doc links (bead ha1y)", () => {
 	/** Fixtures with uuids: the dialog passes the {key, name, uuid} catalogs. */
 	const LINKED_SKILL_DOCS: PackSkillLike[] = [
-		{ key: "awareness", name: "Awareness", characteristic: "per", uuid: "Compendium.rogue-trader.character-options.Item.awarenessId" },
-		{ key: "tech-use", name: "Tech-Use", characteristic: "int", uuid: "Compendium.rogue-trader.character-options.Item.techUseId" },
+		{
+			key: "awareness",
+			name: "Awareness",
+			characteristic: "per",
+			uuid: "Compendium.rogue-trader.character-options.Item.awarenessId",
+		},
+		{
+			key: "tech-use",
+			name: "Tech-Use",
+			characteristic: "int",
+			uuid: "Compendium.rogue-trader.character-options.Item.techUseId",
+		},
 	];
 	const LINKED_TALENT_DOCS: PackTalentLike[] = [
 		{
@@ -585,9 +656,7 @@ describe("advancement view model — pack doc links (bead ha1y)", () => {
 						{
 							rank: 1,
 							xpLevel: 5000,
-							advances: [
-								row({ key: "", name: "Tech-Use", type: "skill" }),
-							],
+							advances: [row({ key: "", name: "Tech-Use", type: "skill" })],
 						},
 					],
 					characteristicAdvances: {},
@@ -652,7 +721,11 @@ describe("advancement view model — rank groups and default rank chip", () => {
 		// Spent 4,500 has NOT crossed rank 1's 5,000 threshold, so the metric
 		// still points at rank 1 itself, and rank 2 rows are not offered yet.
 		expect(vm.rank).toBe(1);
-		expect(vm.progress).toEqual({ nextRank: 1, nextXpLevel: 5000, remaining: 500 });
+		expect(vm.progress).toEqual({
+			nextRank: 1,
+			nextXpLevel: 5000,
+			remaining: 500,
+		});
 		expect(vm.rankGroups.map((g) => g.rank)).toEqual([1]);
 	});
 
@@ -665,9 +738,27 @@ describe("advancement view model — rank groups and default rank chip", () => {
 		// Buy both rank-1 rows plus a filler entry big enough to cross
 		// Rank 3's 10,000 threshold; Rank 2 (Tech-Use) stays unpurchased.
 		const ledger: AdvanceLedgerEntry[] = [
-			{ type: "skill", key: "awareness", name: "Awareness", cost: 100, rank: 1 },
-			{ type: "talent", key: "furious-charge", name: "Furious Charge", cost: 200, rank: 1 },
-			{ type: "talent", key: "furious-charge", name: "Furious Charge", cost: 200, rank: 1 },
+			{
+				type: "skill",
+				key: "awareness",
+				name: "Awareness",
+				cost: 100,
+				rank: 1,
+			},
+			{
+				type: "talent",
+				key: "furious-charge",
+				name: "Furious Charge",
+				cost: 200,
+				rank: 1,
+			},
+			{
+				type: "talent",
+				key: "furious-charge",
+				name: "Furious Charge",
+				cost: 200,
+				rank: 1,
+			},
 			{ type: "talent", key: "elite", name: "GM filler", cost: 5000, rank: 1 },
 		];
 		const vm = vmFor(makeInput({ ledger, xpTotal: 15000 }));
@@ -680,14 +771,34 @@ describe("advancement view model — rank groups and default rank chip", () => {
 
 	test("everything purchased falls back to the highest held rank with rows", () => {
 		const ledger: AdvanceLedgerEntry[] = [
-			{ type: "skill", key: "awareness", name: "Awareness", cost: 100, rank: 1 },
-			{ type: "talent", key: "furious-charge", name: "Furious Charge", cost: 200, rank: 1 },
-			{ type: "talent", key: "furious-charge", name: "Furious Charge", cost: 200, rank: 1 },
+			{
+				type: "skill",
+				key: "awareness",
+				name: "Awareness",
+				cost: 100,
+				rank: 1,
+			},
+			{
+				type: "talent",
+				key: "furious-charge",
+				name: "Furious Charge",
+				cost: 200,
+				rank: 1,
+			},
+			{
+				type: "talent",
+				key: "furious-charge",
+				name: "Furious Charge",
+				cost: 200,
+				rank: 1,
+			},
 			{ type: "talent", key: "elite", name: "GM filler", cost: 5000, rank: 1 },
 			{ type: "skill", key: "tech-use", name: "Tech-Use", cost: 100, rank: 2 },
 		];
 		const vm = vmFor(makeInput({ ledger, xpTotal: 15000 }));
-		expect(vm.rankGroups.every((g) => g.rows.every((r) => r.remaining === 0))).toBe(true);
+		expect(
+			vm.rankGroups.every((g) => g.rows.every((r) => r.remaining === 0)),
+		).toBe(true);
 		expect(vm.defaultRank).toBe(2);
 	});
 });
@@ -703,15 +814,29 @@ describe("advancement view model — safe empty shapes", () => {
 		expect(vm.canBuy).toBe(false);
 		// Still one row per known characteristic, all exhausted.
 		expect(vm.characteristics).toHaveLength(9);
-		expect(vm.characteristics.every((c) => c.next === null && c.purchased === 0 && !c.affordable)).toBe(true);
-		expect(vm.progress).toEqual({ nextRank: null, nextXpLevel: null, remaining: 0 });
+		expect(
+			vm.characteristics.every(
+				(c) => c.next === null && c.purchased === 0 && !c.affordable,
+			),
+		).toBe(true);
+		expect(vm.progress).toEqual({
+			nextRank: null,
+			nextXpLevel: null,
+			remaining: 0,
+		});
 	});
 
 	test("missing career with rows offered as alternates still enriches them", () => {
 		const rows = rowsFor(
 			makeInput({
 				career: null,
-				alternateRows: [{ ...row({ key: "sneak-attack", type: "talent" }), source: "pickpocket", sourceName: "Pickpocket" }],
+				alternateRows: [
+					{
+						...row({ key: "sneak-attack", type: "talent" }),
+						source: "pickpocket",
+						sourceName: "Pickpocket",
+					},
+				],
 			}),
 		);
 		expect(rows).toHaveLength(1);
@@ -730,13 +855,17 @@ describe("advancement view model — filter helper (epic lzeb child 2)", () => {
 
 	test("no filter returns every row", () => {
 		expect(filterAdvancementRows(rows, {})).toHaveLength(rows.length);
-		expect(filterAdvancementRows(rows, { search: "  " })).toHaveLength(rows.length); // blank = no filter
+		expect(filterAdvancementRows(rows, { search: "  " })).toHaveLength(
+			rows.length,
+		); // blank = no filter
 	});
 
 	test("search matches the resolved name", () => {
 		const matched = filterAdvancementRows(rows, { search: "aware" });
 		expect(matched.length).toBeGreaterThan(0);
-		expect(matched.every((r) => r.name.toLowerCase().includes("aware"))).toBe(true);
+		expect(matched.every((r) => r.name.toLowerCase().includes("aware"))).toBe(
+			true,
+		);
 	});
 
 	test("search matches prereq text and the benefit tooltip", () => {
@@ -752,20 +881,33 @@ describe("advancement view model — filter helper (epic lzeb child 2)", () => {
 
 	test("affordableOnly drops over-pool and exhausted rows", () => {
 		const emptyLedger = vmFor(makeInput()).rankGroups[0]!.rows;
-		expect(filterAdvancementRows(emptyLedger, { affordableOnly: true }))
-			.toHaveLength(emptyLedger.length);
+		expect(
+			filterAdvancementRows(emptyLedger, { affordableOnly: true }),
+		).toHaveLength(emptyLedger.length);
 		// Drain the pool: nothing costed is affordable.
 		const broke = vmFor(makeInput({ xpTotal: 4500 })).rankGroups[0]!.rows;
-		expect(filterAdvancementRows(broke, { affordableOnly: true }))
-			.toHaveLength(0);
+		expect(filterAdvancementRows(broke, { affordableOnly: true })).toHaveLength(
+			0,
+		);
 		// Multiplier exhausted rows drop even when the pool could cover them.
 		const spent: AdvanceLedgerEntry[] = [
-			{ type: "skill", key: "awareness", name: "Awareness", cost: 100, rank: 1 },
-			{ type: "skill", key: "awareness", name: "Awareness", cost: 100, rank: 1 },
+			{
+				type: "skill",
+				key: "awareness",
+				name: "Awareness",
+				cost: 100,
+				rank: 1,
+			},
+			{
+				type: "skill",
+				key: "awareness",
+				name: "Awareness",
+				cost: 100,
+				rank: 1,
+			},
 		];
-		const exhausted = vmFor(
-			makeInput({ ledger: spent, xpTotal: 15000 }),
-		).rankGroups[0]!.rows;
+		const exhausted = vmFor(makeInput({ ledger: spent, xpTotal: 15000 }))
+			.rankGroups[0]!.rows;
 		const remaining = filterAdvancementRows(exhausted, {
 			affordableOnly: true,
 		});
@@ -774,11 +916,16 @@ describe("advancement view model — filter helper (epic lzeb child 2)", () => {
 
 	test("unownedOnly drops rows already in the ledger", () => {
 		const ledger: AdvanceLedgerEntry[] = [
-			{ type: "skill", key: "awareness", name: "Awareness", cost: 100, rank: 1 },
+			{
+				type: "skill",
+				key: "awareness",
+				name: "Awareness",
+				cost: 100,
+				rank: 1,
+			},
 		];
-		const enriched = vmFor(
-			makeInput({ ledger, xpTotal: 15000 }),
-		).rankGroups[0]!.rows;
+		const enriched = vmFor(makeInput({ ledger, xpTotal: 15000 })).rankGroups[0]!
+			.rows;
 		const unowned = filterAdvancementRows(enriched, { unownedOnly: true });
 		expect(unowned.some((r) => r.key === "awareness")).toBe(false);
 		expect(filterAdvancementRows(enriched, {})).toHaveLength(enriched.length);
@@ -789,6 +936,8 @@ describe("advancement view model — filter helper (epic lzeb child 2)", () => {
 			affordableOnly: true,
 			unownedOnly: true,
 		});
-		expect(brokeUnowned.every((r) => r.affordable && r.purchased === 0)).toBe(true);
+		expect(brokeUnowned.every((r) => r.affordable && r.purchased === 0)).toBe(
+			true,
+		);
 	});
 });

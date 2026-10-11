@@ -6,10 +6,18 @@ import {
 	LADDER_MAX,
 } from "../skills-domain";
 import { sheetContext } from "../context";
+import { characterOptionDocsOnce, openPackDocUuid } from "../pack-resolve";
+// Bead 656m: the shared pack-doc catalog builders — the inline mapping
+// loops that duplicated the character creator's grant catalog lived here.
 import {
-	characterOptionDocsOnce,
-	openPackDocUuid,
-} from "../pack-resolve";
+	buildSkillCatalog,
+	buildTalentCatalog,
+	type OptionDocLike,
+	type SkillCatalogEntry,
+	type TalentCatalogEntry,
+} from "../catalog";
+// Bead npnn: the shared imperative input-wiring helpers (dataset.wired guard).
+import { wireInput } from "../dom-wire";
 // Shared doc-link library (epic 61pk, bead n2b2): the resolvers live there,
 // re-exported through pack-resolve (see below); no local copies.
 import { resolveSkillDoc } from "../pack-doc-links";
@@ -19,23 +27,27 @@ import {
 	evaluateAlternateRankGate,
 	ledgerEntryFor,
 	totalSpent,
-	validatePurchase,
 	type AdvanceLedgerEntry,
 	type AdvanceRowLike,
 	type CharacteristicSchemeLike,
 	type RankThresholdLike,
 } from "../../rules/advancement";
 import {
-	evaluatePrerequisites,
-	parsePrerequisites,
-} from "../../rules/prereq";
-import {
 	buildAdvancementViewModel,
 	filterAdvancementRows,
-	skillAtCapReason,
 } from "./advancement-view-model";
 import { CHARACTERISTIC_KEYS } from "../../data/actor/character";
 import { talentGrant, promptParameterisedSubject } from "./grant-helpers";
+// Bead avah: the PURE purchase helpers (validation, ledger update, talent
+// grant) — #buyRow orchestrates over them.
+import {
+	applyTalentGrant,
+	advanceConfirmReasons,
+	updateLedger,
+	validateAdvancePurchase,
+	type TalentGrantDeps,
+} from "./advancement-buy";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
@@ -56,7 +68,9 @@ const { ApplicationV2 } = foundry.applications.api;
  * Purchase = ledger append + live application (skill ladder bump or item
  * grant, characteristic +5). Ineligible rows soft-confirm (GM overridable).
  */
-export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+export class AdvancementDialog extends HandlebarsApplicationMixin(
+	ApplicationV2,
+) {
 	static DEFAULT_OPTIONS = {
 		id: "rogue-trader-advancement-dialog",
 		classes: ["rogue-trader", "dialog", "advancement-dialog"],
@@ -95,39 +109,29 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 	 * rows are offered alongside the primary career's, tagged with their
 	 * source career. Requirements/Other Requirements stay soft (GM-confirm).
 	 */
-	#alternateRows: Array<AdvanceRowLike & { source: string; sourceName: string }> =
-		[];
+	#alternateRows: Array<
+		AdvanceRowLike & { source: string; sourceName: string }
+	> = [];
 
 	/** Eligible alternate ranks for the header hint. */
 	#alternateOffers: Array<{ name: string; notesText: string }> = [];
 
 	/** Skill catalog docs from the compendium (for grants by key/name). */
-	#skillDocs: Array<{
-		id: string;
-		name: string;
-		key: string;
-		characteristic: string;
-		/** Pack document uuid (bead ha1y row links). */
-		uuid: string;
-	}> = [];
+	#skillDocs: SkillCatalogEntry[] = [];
 
 	/** Talent catalog docs: name resolution + benefit tooltips (lzeb child 1). */
-	#talentDocs: Array<{
-		key: string;
-		name: string;
-		description: string;
-		/** Pack document uuid (bead ha1y row links). */
-		uuid: string;
-	}> = [];
+	#talentDocs: TalentCatalogEntry[] = [];
 
-	constructor(options: {
-		actor: foundry.documents.Actor;
-	} & object) {
+	constructor(
+		options: {
+			actor: foundry.documents.Actor;
+		} & object,
+	) {
 		super(options as never);
 		this.actor = options.actor;
 	}
 
-	// ----------------------------------------------------------------- 
+	// -----------------------------------------------------------------
 	// Dialog-held UI state (epic lzeb child 2, creatorState pattern): rank
 	// chip selection + search/filter toolbar. Purely presentational — never
 	// touches the ledger; re-rendered on interaction.
@@ -143,13 +147,14 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 
 	static PARTS = {
 		form: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/parts/advancement-dialog.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/advancement-dialog.hbs`,
 		},
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options as never));
+		const context = sheetContext(
+			await super._prepareContext(_options as never),
+		);
 		const system = systemOf(this.actor);
 		const ledger = (system.advances ?? []) as AdvanceLedgerEntry[];
 		const spent = totalSpent(ledger);
@@ -194,7 +199,9 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			};
 		}> = [];
 		if (careerKey) {
-			allCareers = (await characterOptionDocsOnce("career")) as unknown as typeof allCareers;
+			allCareers = (await characterOptionDocsOnce(
+				"career",
+			)) as unknown as typeof allCareers;
 			const doc = allCareers.find((d) => d.system.key === careerKey);
 			if (doc) {
 				this.#career = {
@@ -214,46 +221,18 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				};
 			}
 		}
-		{
-			const docs = (await characterOptionDocsOnce("skill")) as unknown as Array<{
-				id?: string;
-				name?: string;
-				uuid?: string;
-				system: { key?: string; characteristic?: string };
-			}>;
-			for (const doc of docs) {
-				if (doc.name) {
-					this.#skillDocs.push({
-						id: doc.id ?? "",
-						name: doc.name,
-						key: doc.system.key ?? "",
-						characteristic: doc.system.characteristic ?? "int",
-						uuid: doc.uuid ?? "",
-					});
-				}
-			}
-		}
+		// Bead 656m: mapped by the SHARED builder (the shape that carries
+		// uuid/key, so rank-row doc links keep working).
+		this.#skillDocs = buildSkillCatalog(
+			(await characterOptionDocsOnce("skill")) as unknown as OptionDocLike[],
+		);
 		// Talents pack for name resolution of key-only rows ("psy-rating",
 		// "psychic-technique", ...) and the benefit tooltips (lzeb child 1:
 		// name + description resolution moved into the pure view model).
-		this.#talentDocs = [];
-		{
-			const docs = (await characterOptionDocsOnce("talent")) as unknown as Array<{
-				name?: string;
-				uuid?: string;
-				system: { key?: string; description?: string };
-			}>;
-			for (const doc of docs) {
-				if (doc.name && doc.system.key) {
-					this.#talentDocs.push({
-						key: doc.system.key,
-						name: doc.name,
-						description: doc.system.description ?? "",
-						uuid: doc.uuid ?? "",
-					});
-				}
-			}
-		}
+		// Bead 656m: mapped by the SHARED talent builder.
+		this.#talentDocs = buildTalentCatalog(
+			(await characterOptionDocsOnce("talent")) as unknown as OptionDocLike[],
+		);
 
 		const thresholds: RankThresholdLike[] = (this.#career?.ranks ?? []).map(
 			(r) => ({ rank: r.rank, xpLevel: r.xpLevel }),
@@ -282,7 +261,8 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			for (const doc of allCareers) {
 				const alt = doc.system;
 				if (alt.key === this.#career.key) continue;
-				if (!alt.requiredCareer && !alt.requiredRace && !alt.alternateRank) continue;
+				if (!alt.requiredCareer && !alt.requiredRace && !alt.alternateRank)
+					continue;
 				const evaluation = evaluateAlternateRankGate(
 					{
 						requiredCareer: alt.requiredCareer ?? "",
@@ -353,8 +333,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 
 		// Rank chip selection (lzeb child 2): null selection follows the
 		// view model's defaultRank (lowest rank with unpurchased rows).
-		const selectedRank =
-			this.#selectedRank ?? viewModel.defaultRank ?? null;
+		const selectedRank = this.#selectedRank ?? viewModel.defaultRank ?? null;
 		context.selectedRank = selectedRank;
 		context.search = this.#search;
 		context.onlyAffordable = this.#onlyAffordable;
@@ -365,14 +344,13 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			unownedOnly: this.#onlyUnowned,
 		};
 		const shown =
-			viewModel.rankGroups.find((group) => group.rank === selectedRank) ??
-			null;
+			viewModel.rankGroups.find((group) => group.rank === selectedRank) ?? null;
 		context.shownGroup = shown
 			? { ...shown, rows: filterAdvancementRows(shown.rows, filter) }
 			: null;
 		context.shownEmpty =
 			Boolean(shown) &&
-			((context.shownGroup as { rows: unknown[] }).rows.length === 0);
+			(context.shownGroup as { rows: unknown[] }).rows.length === 0;
 
 		// Meter: % toward the next rank inside THIS rank's window (spent from
 		// the current rank threshold to the next one).
@@ -448,21 +426,20 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		await super._onRender(context as never, options as never);
 		const input = this.element?.querySelector<HTMLInputElement>(
 			'input[name="advancement-search"]',
-			);
+		);
 		if (!input) return;
 		if (this.#refocusSearch) {
 			this.#refocusSearch = false;
 			input.focus();
 			input.setSelectionRange(input.value.length, input.value.length);
 		}
-		if (!input.dataset.wired) {
-			input.dataset.wired = "1";
-			input.addEventListener("input", () => {
-				this.#search = input.value;
-				this.#refocusSearch = true;
-				this.render({ force: true } as never);
-			});
-		}
+		// Shared imperative guard (bead npnn); the dialog re-renders on change
+		// and asks for the caret back via the #refocusSearch flag.
+		wireInput(input, (value) => {
+			this.#search = value;
+			this.#refocusSearch = true;
+			this.render({ force: true } as never);
+		});
 	}
 
 	/** Rank chip click: show that rank's table (presentational state only). */
@@ -527,7 +504,8 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 		const scheme = this.#career.characteristicAdvances[key];
 		if (!scheme) return;
 		const purchased = ledger.filter(
-			(entry) => entry.type === "characteristic" && entry.characteristic === key,
+			(entry) =>
+				entry.type === "characteristic" && entry.characteristic === key,
 		).length;
 		const next = characteristicNextAdvance(scheme, purchased);
 		if (!next) return;
@@ -595,106 +573,99 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 			rank: r.rank,
 			xpLevel: r.xpLevel,
 		}));
-		const validation = validatePurchase(row, {
+		// Bead avah: the validation is the PURE validateAdvancePurchase —
+		// shared rule validator + structured prereq eval (bead tfk, only UNMET
+		// prereqs) + the skill-at-cap soft-confirm (bead i1f4). The dialog
+		// localizes the pieces and confirms.
+		const validation = validateAdvancePurchase(row, {
 			spent,
 			pool,
 			ledger,
 			derivedRank: derivedRank(thresholds, spent),
-		});
-		// Bead tfk: structured prereq evaluation joins the confirm reasons —
-		// only UNMET prereqs; unparseable strings stay GM-confirm text.
-		const prereqSnapshot = {
 			characteristics: characteristicValues(system),
-			talents: this.actor.items
+			ownedTalents: this.actor.items
 				.filter((item) => (item.type as string) === "talent")
 				.map((item) => item.name ?? ""),
 			psyRating: system.psyRating ?? 0,
-		};
-		const { unmet: unmetPrereqs } = evaluatePrerequisites(
-			parsePrerequisites(row.prerequisites.join(", ")),
-			prereqSnapshot,
-		);
-		for (const unmet of unmetPrereqs) {
-			validation.reasons.push(
-				game.i18n!.format("ADVANCE.PREREQ_PREFIX", {
-					prereq: unmet,
-				}),
-			);
-		}
-		// Bead i1f4: a skill row whose owned skill is already at the ladder cap
-		// (+20, Core Rulebook p74) soft-confirms instead of silently charging xp
-		// for a no-op bump — same shared matcher as the preview (maxed flag)
-		// and the live application; the helper self-guards on row.type.
-		const atCap = skillAtCapReason(
-			row,
-			this.actor.items
+			ownedSkills: this.actor.items
 				.filter((item) => (item.type as string) === "skill")
 				.map((item) => ({
 					key: (item.system as unknown as { key?: string }).key ?? "",
 					name: item.name ?? "",
 					ladder: (item.system as unknown as { ladder?: number }).ladder ?? 1,
 				})),
-			row.name, // data-name is already the resolved display name
-		);
-		// The helper is pure and returns the LANG KEY: localize here so the
-		// confirm bullet renders in the character's language.
-		if (atCap) {
-			validation.reasons.push(game.i18n!.localize(atCap));
+			// data-name is already the resolved display name
+			rowName: row.name,
+		});
+		if (
+			!(await this.#confirmReasons(
+				advanceConfirmReasons(
+					validation,
+					(key: string) => game.i18n!.localize(key),
+					(key: string, vars?: Record<string, string>) =>
+					game.i18n!.format(key, vars),
+				),
+			))
+		) {
+			return;
 		}
-		if (!(await this.#confirmReasons(validation.reasons))) return;
 
 		const entry = ledgerEntryFor(row, source ?? this.#career.key);
-		const updates: Record<string, unknown> = {
-			advances: [...ledger, entry],
-		};
 
 		if (row.type === "skill") {
 			const applied = await this.#applySkillAdvance(row);
 			if (!applied) return;
-		} else if (
-			row.key === "psy-rating" ||
-			/^psy rating/i.test(row.name)
-		) {
+		} else if (row.key === "psy-rating" || /^psy rating/i.test(row.name)) {
 			// Psy Rating advance (bead m4me): raises the actor's Psy Rating by
 			// 1 instead of granting a talent item (the rating lives on the
 			// actor, Core Rulebook p182 psykers).
-			const system = systemOf(this.actor);
+			const live = systemOf(this.actor);
 			await this.actor.update({
-				system: { psyRating: (system.psyRating ?? 0) + 1 },
+				system: { psyRating: (live.psyRating ?? 0) + 1 },
 			} as never);
 		} else {
-			// Talent: idempotent grant by name (matching the talent picker).
-			// yclz: parameterised rows ("Peer", "Enemy (choose one)") prompt for
-			// their subject first; cancelled prompt = no grant, no ledger entry.
-			let grantName = row.name;
-			const prompted = await promptParameterisedSubject(grantName);
-			if (prompted === null) return;
-			grantName = prompted;
-			// meh0: clone the pack document so granted talents carry their
-			// description/category/effects instead of arriving bare.
-			const payload = await talentGrant(grantName);
-			const owned = this.actor.items.find(
-				(item) => (item.type as string) === "talent" && item.name === grantName,
-			);
-			if (!owned) {
-				await this.actor.createEmbeddedDocuments("Item", [payload] as never);
-			}
+			// Talent: idempotent grant by name (matching the talent picker);
+			// a CANCELLED parameterised-subject prompt grants nothing and
+			// records no ledger entry (yclz).
+			const granted = await applyTalentGrant(row, this.#talentGrantDeps());
+			if (!granted) return;
 		}
 
-		const nextLedger = [...ledger, entry];
-		updates.xp = { spent: totalSpent(nextLedger) };
-		// p38: the Rank rises automatically once the threshold is crossed.
-		const derived = derivedRank(thresholds, totalSpent(nextLedger));
-		if (derived > (system.rank ?? 1)) {
-			updates.rank = derived;
-			getPorts().notify.info("ADVANCE.RANK_UP", { rank: String(derived) });
-		}
+		// The ledger + rank updates are the PURE updateLedger (p38: the Rank
+		// rises automatically once the threshold is crossed).
+		const { updates, rankUp } = updateLedger(
+			ledger,
+			entry,
+			thresholds,
+			system.rank ?? 1,
+		);
 		await this.actor.update({ system: updates } as never);
+		if (rankUp) {
+			getPorts().notify.info("ADVANCE.RANK_UP", { rank: String(rankUp) });
+		}
 		getPorts().notify.info("ADVANCE.BOUGHT", {
 			name: row.name,
 			cost: String(row.cost),
 		});
 		this.render({ force: true } as never);
+	}
+
+	/**
+	 * The Foundry edges of the talent-grant branch, injected into the pure
+	 * applyTalentGrant: the parameterised-subject prompt (yclz), the pack
+	 * clone (meh0), the exact-name owned check and the embedded create.
+	 */
+	#talentGrantDeps(): TalentGrantDeps {
+		return {
+			promptSubject: (name: string) => promptParameterisedSubject(name),
+			grantPayload: (name: string) => talentGrant(name),
+			ownedTalentNames: () =>
+				this.actor.items
+					.filter((item) => (item.type as string) === "talent")
+					.map((item) => item.name ?? ""),
+			createItems: (payload: object) =>
+				this.actor.createEmbeddedDocuments("Item", [payload] as never),
+		};
 	}
 
 	/** Skill advance: bump the ladder of an owned skill, or grant it. */
@@ -783,7 +754,10 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(ApplicationV2)
 				xp: { spent: totalSpent(ledger) },
 			},
 		} as never);
-		getPorts().notify.info("ADVANCE.REFUNDED", { name: removed.name, cost: String(removed.cost) });
+		getPorts().notify.info("ADVANCE.REFUNDED", {
+			name: removed.name,
+			cost: String(removed.cost),
+		});
 		this.render({ force: true } as never);
 	}
 }

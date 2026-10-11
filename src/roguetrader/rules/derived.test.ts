@@ -21,15 +21,18 @@ const char = {
 describe("derived character values", () => {
 	describe("woundsMax", () => {
 		test("stored base + Sound Constitution levels (bead hbu: book formula)", () => {
-			expect(woundsMax(buildActorView({ system: char }))).toBe(14); // stored base (2xTB + 1d5+2)
+			expect(woundsMax(buildActorView({ type: "explorer", system: char }))).toBe(14); // stored base (2xTB + 1d5+2)
 			const withTalent = woundsMax(
 				buildActorView({
+					type: "explorer",
 					system: char,
 					items: [
 						{
 							type: "talent",
 							name: "Sound Constitution",
-							system: { effects: [{ kind: "wounds-max" }, { kind: "wounds-max" }] },
+							system: {
+								effects: [{ kind: "wounds-max" }, { kind: "wounds-max" }],
+							},
 						},
 						{
 							type: "talent",
@@ -51,6 +54,7 @@ describe("derived character values", () => {
 			expect(
 				woundsMax(
 					buildActorView({
+						type: "explorer",
 						system: char,
 						items: [
 							{
@@ -75,10 +79,14 @@ describe("derived character values", () => {
 				},
 			});
 			expect(
-				woundsMax(buildActorView({ system: char, items: [gearItem("carried")] })),
+				woundsMax(
+					buildActorView({ type: "explorer", system: char, items: [gearItem("carried")] }),
+				),
 			).toBe(16);
 			expect(
-				woundsMax(buildActorView({ system: char, items: [gearItem("stowed")] })),
+				woundsMax(
+					buildActorView({ type: "explorer", system: char, items: [gearItem("stowed")] }),
+				),
 			).toBe(14);
 		});
 	});

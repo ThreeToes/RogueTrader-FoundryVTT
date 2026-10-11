@@ -15,7 +15,11 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { getPorts, resetPorts, setPorts } from "../infrastructure/foundry/ports";
+import {
+	getPorts,
+	resetPorts,
+	setPorts,
+} from "../infrastructure/foundry/ports";
 import type { EncounterEndEffectLike } from "../rules/conditions";
 
 const globals = globalThis as Record<string, unknown>;
@@ -46,7 +50,9 @@ describe("hook-registration scan guard (bead cneb)", () => {
 		);
 		expect(source).toMatch(/Hooks\.on\(\s*"deleteCombat"/);
 		// The single-executor guard: the hook fires on every connected client.
-		expect(source).toMatch(/userId !== \(game as \{ userId\?: string \}\)\.userId/);
+		expect(source).toMatch(
+			/userId !== \(game as \{ userId\?: string \}\)\.userId/,
+		);
 	});
 });
 
@@ -67,9 +73,7 @@ interface FakeActor {
 	effects: EncounterEndEffectLike[];
 }
 
-function fakeCombat(
-	actors: Array<{ actor: FakeActor | null }>,
-): {
+function fakeCombat(actors: Array<{ actor: FakeActor | null }>): {
 	combatants: Array<{ actor: unknown }>;
 } {
 	return { combatants: actors.map((a) => ({ actor: a.actor })) };
@@ -78,8 +82,9 @@ function fakeCombat(
 async function registerHook(): Promise<
 	(combat: unknown, options: unknown, userId: string) => void
 > {
-	let captured: ((combat: unknown, options: unknown, userId: string) => void) | null =
-		null;
+	let captured:
+		| ((combat: unknown, options: unknown, userId: string) => void)
+		| null = null;
 	globals.Hooks = {
 		on: (name: string, fn: unknown) => {
 			if (name === "deleteCombat") captured = fn as typeof captured;
@@ -117,7 +122,10 @@ describe("removeEncounterLengthConditions (bead cneb adapter)", () => {
 		};
 		const victim: FakeActor = {
 			name: "victim",
-			effects: [fakeEffect("ae-fleeing", ["fleeing"]), fakeEffect("ae-snapped", ["unnerved"])],
+			effects: [
+				fakeEffect("ae-fleeing", ["fleeing"]),
+				fakeEffect("ae-snapped", ["unnerved"]),
+			],
 		};
 		const bystander: FakeActor = { name: "bystander", effects: [] };
 		const combat = fakeCombat([
@@ -210,9 +218,9 @@ describe("removeEncounterLengthConditions (bead cneb adapter)", () => {
 		if (rejected) (rejected as (error: unknown) => void)(failure);
 		await removeEncounterPromise();
 		console.error = savedError;
-		expect(errors.some((e) => e.includes("encounter-end condition cleanup failed"))).toBe(
-			true,
-		);
+		expect(
+			errors.some((e) => e.includes("encounter-end condition cleanup failed")),
+		).toBe(true);
 	});
 });
 

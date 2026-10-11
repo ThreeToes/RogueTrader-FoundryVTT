@@ -17,10 +17,7 @@ const { Origin } = await import("./origin");
 // readers go through rules/origins.ts's replacedKeys.
 describe("Origin data model", () => {
 	test("replaces is an array-of-string field, not a bare string", () => {
-		const schema = Origin.defineSchema() as unknown as Record<
-			string,
-			unknown
-		>;
+		const schema = Origin.defineSchema() as unknown as Record<string, unknown>;
 		const replaces = schema.replaces as StubArrayField;
 		expect(replaces.of instanceof StubField).toBe(true);
 		expect((replaces.of as StubField).opts.initial).toBe("");

@@ -57,8 +57,8 @@ describe("isReady (bead p5nw)", () => {
 		// encumbrance.ts: armour worn OR non-armour carried.
 		const item = { type: "gear", system: { equipState: "carried" } };
 		expect(isReady(item)).toBe(true);
-		expect(
-			isReady({ type: "armour", system: { equipState: "stowed" } }),
-		).toBe(false);
+		expect(isReady({ type: "armour", system: { equipState: "stowed" } })).toBe(
+			false,
+		);
 	});
 });

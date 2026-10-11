@@ -25,8 +25,15 @@ describe("range modifier (book p220)", () => {
 		expect(rangeModifier(4, 2)).toEqual({ modifier: 10, reason: "half" });
 		expect(rangeModifier(4, 4)).toEqual({ modifier: 0, reason: "normal" });
 		expect(rangeModifier(4, 8)).toEqual({ modifier: -10, reason: "long" });
-		// Twice the weapon's range is the hard maximum (book p219).
-		expect(rangeModifier(4, 9).modifier).toBe(-10);
+	});
+	test("twice the weapon's range is the hard maximum (book p219)", () => {
+		// Exactly 2x range is still fireable at -10...
+		expect(rangeModifier(4, 8).modifier).toBe(-10);
+		// ...beyond it the shot is refused outright, not fired at -10.
+		expect(rangeModifier(4, 9)).toEqual({
+			modifier: 0,
+			reason: "out-of-range",
+		});
 	});
 });
 
@@ -56,17 +63,23 @@ describe("void shields (book p220-221)", () => {
 
 describe("damage vs armour (book p220-221)", () => {
 	test("armour subtracts from the combined damage total", () => {
-		expect(resolveSalvoDamage({ damageTotal: 16, armour: 15, lance: false })).toEqual({
+		expect(
+			resolveSalvoDamage({ damageTotal: 16, armour: 15, lance: false }),
+		).toEqual({
 			hullDamage: 1,
 			armourAbsorbed: 15,
 		});
-		expect(resolveSalvoDamage({ damageTotal: 10, armour: 15, lance: false })).toEqual({
+		expect(
+			resolveSalvoDamage({ damageTotal: 10, armour: 15, lance: false }),
+		).toEqual({
 			hullDamage: 0,
 			armourAbsorbed: 10,
 		});
 	});
 	test("lances ignore armour entirely (book p220)", () => {
-		expect(resolveSalvoDamage({ damageTotal: 9, armour: 15, lance: true })).toEqual({
+		expect(
+			resolveSalvoDamage({ damageTotal: 9, armour: 15, lance: true }),
+		).toEqual({
 			hullDamage: 9,
 			armourAbsorbed: 0,
 		});
@@ -79,14 +92,22 @@ describe("book worked example (p221, Sabre vs raider)", () => {
 		expect(hits).toBe(3);
 		const shields = applyVoidShields(hits, 1);
 		expect(shields.through).toBe(2);
-		const outcome = resolveSalvoDamage({ damageTotal: 16, armour: 15, lance: false });
+		const outcome = resolveSalvoDamage({
+			damageTotal: 16,
+			armour: 15,
+			lance: false,
+		});
 		expect(outcome.hullDamage).toBe(1);
 	});
 	test("lance follow-up hits the unshielded raider for full damage", () => {
 		const hits = hitsScored("lance", 4, 4);
 		expect(hits).toBe(2);
 		expect(isCritical(4, 4)).toBe(true);
-		const outcome = resolveSalvoDamage({ damageTotal: 9, armour: 15, lance: true });
+		const outcome = resolveSalvoDamage({
+			damageTotal: 9,
+			armour: 15,
+			lance: true,
+		});
 		expect(outcome.hullDamage).toBe(9);
 	});
 });
@@ -161,14 +182,27 @@ describe("component states + repairs (book p223-224, bead cj6k)", () => {
 	});
 
 	test("repair time: 1d5 turns, -1 per degree, minimum one (book p218)", () => {
-		expect(emergencyRepairsOutcome(0).turns).toBe(5);
-		expect(emergencyRepairsOutcome(2).turns).toBe(3);
-		expect(emergencyRepairsOutcome(9).turns).toBe(1); // clamped
+		expect(emergencyRepairsOutcome(0, 5).turns).toBe(5);
+		expect(emergencyRepairsOutcome(2, 5).turns).toBe(3);
+		expect(emergencyRepairsOutcome(9, 5).turns).toBe(1); // clamped
+		// The die result is consumed, not a hard-coded 5 (bead 5lnc).
+		expect(emergencyRepairsOutcome(1, 2).turns).toBe(1);
+		expect(emergencyRepairsOutcome(1, 5).turns).toBe(4);
 	});
 
 	test("hazard crew damage dice (book p223-224)", () => {
-		expect(HAZARD_CREW_DAMAGE.fire).toMatchObject({ populationFaces: 5, moraleFaces: 10 });
-		expect(HAZARD_CREW_DAMAGE.depressurisation).toMatchObject({ populationFaces: 10, moraleFaces: 5 });
-		expect(VENT_FIRE_CREW_DAMAGE).toMatchObject({ populationFaces: 5, moraleDice: 2, moraleFaces: 10 });
+		expect(HAZARD_CREW_DAMAGE.fire).toMatchObject({
+			populationFaces: 5,
+			moraleFaces: 10,
+		});
+		expect(HAZARD_CREW_DAMAGE.depressurisation).toMatchObject({
+			populationFaces: 10,
+			moraleFaces: 5,
+		});
+		expect(VENT_FIRE_CREW_DAMAGE).toMatchObject({
+			populationFaces: 5,
+			moraleDice: 2,
+			moraleFaces: 10,
+		});
 	});
 });

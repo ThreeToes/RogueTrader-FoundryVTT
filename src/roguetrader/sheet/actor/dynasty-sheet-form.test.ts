@@ -48,7 +48,8 @@ const parts = Object.entries(
 	DynastySheet.PARTS as never as Record<string, { template: string }>,
 );
 const TABS_NAV_TEMPLATE = parts.find(([id]) => id === "tabs")![1].template;
-const CHOICE_TEMPLATE = parts.find(([id]) => id === WARRANT_ROWS[0])![1].template;
+const CHOICE_TEMPLATE = parts.find(([id]) => id === WARRANT_ROWS[0])![1]
+	.template;
 
 describe("DynastySheet tab anatomy (bead twtq)", () => {
 	test("it declares the shared tabs nav part", () => {
@@ -76,12 +77,14 @@ describe("DynastySheet tab anatomy (bead twtq)", () => {
 	});
 
 	test("TABS group primary starts on record and lists record + all six rows", () => {
-		const group = (DynastySheet.TABS as never as {
-			primary: {
-				tabs: Array<{ id: string; group: string; label: string }>;
-				initial: string;
-			};
-		}).primary;
+		const group = (
+			DynastySheet.TABS as never as {
+				primary: {
+					tabs: Array<{ id: string; group: string; label: string }>;
+					initial: string;
+				};
+			}
+		).primary;
 		expect(group.tabs.map((tab) => tab.id)).toEqual(TAB_IDS);
 		expect(group.tabs.every((tab) => tab.group === "primary")).toBe(true);
 		expect(group.initial).toBe("record");
@@ -105,8 +108,8 @@ describe("DynastySheet tab anatomy (bead twtq)", () => {
 			"template/sheet/actor/tabs/dynasty-choice.hbs",
 			"utf8",
 		);
-		expect(source).toContain("data-group=\"primary\"");
-		expect(source).toContain("data-tab=\"{{rowId}}\"");
+		expect(source).toContain('data-group="primary"');
+		expect(source).toContain('data-tab="{{rowId}}"');
 		// One shared template: it must NOT hardwire a specific row id or name.
 		for (const row of WARRANT_ROWS) {
 			expect(source).not.toContain(`data-tab="${row}"`);
@@ -169,13 +172,16 @@ describe("DynastySheet permissions (bead twtq owner decision)", () => {
 	});
 
 	test("players still get the read-only picked-chips line outside the editors", () => {
-		const chips = source.slice(source.indexOf("{{#each warrantChoices as |c|}}"));
+		const chips = source.slice(
+			source.indexOf("{{#each warrantChoices as |c|}}"),
+		);
 		expect(chips).toContain("warrant-row-label");
 		expect(chips).toContain("chip");
 		// The chips line must NOT be inside an editable branch.
 		const chipAt = source.indexOf("{{#each warrantChoices as |c|}}");
 		const branchOpen = source.lastIndexOf("{{#if editable}}", chipAt);
-		const branchClose = branchOpen === -1 ? -1 : source.indexOf("{{/if}}", branchOpen);
+		const branchClose =
+			branchOpen === -1 ? -1 : source.indexOf("{{/if}}", branchOpen);
 		expect(branchClose < chipAt || branchOpen === -1).toBe(true);
 	});
 });

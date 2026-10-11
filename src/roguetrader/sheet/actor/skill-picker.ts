@@ -2,7 +2,10 @@ import { Character } from "../../data/actor/character";
 import { characteristics } from "../../registry";
 import { sheetContext } from "../context";
 import { getCharacterOptionDocs } from "../pack-resolve";
+import { findPackDoc, warnPackDocMissing } from "./grant-helpers";
 import { OwnedItemPicker } from "./owned-picker";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
+import { clonePackDocPayload } from "./creator-apply";
 
 /**
  * Minimal skill picker: lists the catalog from the skills compendium pack and
@@ -24,13 +27,14 @@ export class SkillPicker extends OwnedItemPicker {
 
 	static PARTS = {
 		form: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/parts/skill-picker.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/skill-picker.hbs`,
 		},
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options as never));
+		const context = sheetContext(
+			await super._prepareContext(_options as never),
+		);
 		const catalog: Array<{ id: string; name: string; characteristic: string }> =
 			[];
 		const documents = (await getCharacterOptionDocs(
@@ -65,12 +69,21 @@ export class SkillPicker extends OwnedItemPicker {
 	): Promise<void> {
 		const name = target.dataset.name;
 		if (!name || !this.actor) return;
-		const documents = (await getCharacterOptionDocs(
+		// bead 38io: the shared case-insensitive pack-by-name resolve (was a
+		// case-sensitive docs.find() that silently no-opped on a miss).
+		const source = (await findPackDoc(
 			"skill",
-		)) as foundry.documents.Item[];
-		const source = documents.find((doc) => doc.name === name);
-		if (!source) return;
-		await this.actor.createEmbeddedDocuments("Item", [source.toObject()]);
+			name,
+		)) as foundry.documents.Item | null;
+		if (!source) {
+			warnPackDocMissing("skill", name, "grant skipped");
+			return;
+		}
+		// The clone must not carry the pack doc's _id (two Items cannot share
+		// an _id; shared strip via clonePackDocPayload, bead xynx).
+		await this.actor.createEmbeddedDocuments("Item", [
+			clonePackDocPayload(source.toObject()),
+		]);
 		this.render({ force: false });
 	}
 

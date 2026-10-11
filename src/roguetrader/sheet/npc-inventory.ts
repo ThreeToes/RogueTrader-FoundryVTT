@@ -44,7 +44,12 @@ export interface NpcInventoryItem {
 export function compendiumSourceOf(item: NpcInventoryItemLike): string {
 	// Namespace from the profile (bead pwn0): the stamp lives under the
 	// active system's chat-flag namespace.
-	return readRtFlag(item as { flags?: Record<string, Record<string, unknown>> }, "compendiumSource") ?? "";
+	return (
+		readRtFlag(
+			item as { flags?: Record<string, Record<string, unknown>> },
+			"compendiumSource",
+		) ?? ""
+	);
 }
 
 export interface NpcInventoryGroup {
@@ -53,17 +58,19 @@ export interface NpcInventoryGroup {
 }
 
 /** Group order (rendered top to bottom) and the types each group collects. */
-const GROUP_ORDER: ReadonlyArray<{ types: readonly string[]; labelKey: string }> =
-	[
-		{ types: ["ranged-weapon"], labelKey: "TYPES.Item.ranged-weapon" },
-		{ types: ["melee-weapon"], labelKey: "TYPES.Item.melee-weapon" },
-		{ types: ["talent"], labelKey: "TYPES.Item.talent" },
-		{ types: ["gear"], labelKey: "TYPES.Item.gear" },
-		// Ammunition (bead 8uc7): owned ordnance must be visible on the tab
-		// so the GM can drag it onto a launcher's weapon sheet. NOT equippable
-		// (stow/carry does not apply) — it gets no toggle anchor.
-		{ types: ["ammunition"], labelKey: "TYPES.Item.ammunition" },
-	];
+const GROUP_ORDER: ReadonlyArray<{
+	types: readonly string[];
+	labelKey: string;
+}> = [
+	{ types: ["ranged-weapon"], labelKey: "TYPES.Item.ranged-weapon" },
+	{ types: ["melee-weapon"], labelKey: "TYPES.Item.melee-weapon" },
+	{ types: ["talent"], labelKey: "TYPES.Item.talent" },
+	{ types: ["gear"], labelKey: "TYPES.Item.gear" },
+	// Ammunition (bead 8uc7): owned ordnance must be visible on the tab
+	// so the GM can drag it onto a launcher's weapon sheet. NOT equippable
+	// (stow/carry does not apply) — it gets no toggle anchor.
+	{ types: ["ammunition"], labelKey: "TYPES.Item.ammunition" },
+];
 
 /** Types handled elsewhere on the tab (armour panel) or other tabs. */
 const EXCLUDED_TYPES: ReadonlySet<string> = new Set([
@@ -108,7 +115,11 @@ export function npcInventoryGroups(
 		const bucket = buckets.find((b) => b.typeSet.has(type));
 		(bucket ?? other).items.push(entry);
 	}
-	return [...buckets.map(({ labelKey, items: bItems }) => ({ labelKey, items: bItems })), other].filter(
-		(group) => group.items.length > 0,
-	);
+	return [
+		...buckets.map(({ labelKey, items: bItems }) => ({
+			labelKey,
+			items: bItems,
+		})),
+		other,
+	].filter((group) => group.items.length > 0);
 }

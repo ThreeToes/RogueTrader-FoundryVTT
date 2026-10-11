@@ -22,6 +22,7 @@ import { getPorts } from "./ports";
 
 interface PackLike {
 	getDocuments(): Promise<unknown[]>;
+	getDocument(id: string): Promise<unknown>;
 }
 
 function packGet(packId: string): PackLike | undefined {
@@ -36,19 +37,55 @@ function packGet(packId: string): PackLike | undefined {
 /**
  * Every document in a pack, or null when the pack is not installed.
  *
- * The ONE compendium list-fetch primitive (bead s4lu): both the ContentPort
- * and sheet/pack-resolve.ts read packs through it, so the `game.packs`
- * lookup lives in exactly one place. Callers that want a loud
- * missing-pack warning (pack-resolve) distinguish null from an empty pack;
- * the rules-facing ContentPort collapses null to [].
+ * The ONE compendium list-fetch primitive (bead s4lu): the ContentPort
+ * implementation below and everything behind it read packs through it, so the
+ * `game.packs` lookup lives in exactly one place. Callers that want a loud
+ * missing-pack warning (the sheet-side pack fetch) distinguish null from an
+ * empty pack; the rules-facing ContentPort collapses null to [].
  */
 export async function packDocuments(packId: string): Promise<unknown[] | null> {
 	const pack = packGet(packId);
 	return pack ? await pack.getDocuments() : null;
 }
 
+/**
+ * The uuid shape the packer stamps and the doc-link library resolves. One
+ * document type segment ("Item"); a future Document type would extend the
+ * regex, not fork the resolver.
+ */
+const COMPENDIUM_UUID = /^Compendium\.([^.]+)\.([^.]+)\.Item\.([^.]+)$/;
+
+async function resolveDocument(uuid: string): Promise<unknown | null> {
+	const parts = COMPENDIUM_UUID.exec(uuid);
+	if (parts) {
+		const pack = packGet(`${parts[1]}.${parts[2]}`);
+		if (pack) {
+			const doc = await pack.getDocument(parts[3]);
+			if (!doc) {
+				console.warn(
+					`rogue-trader | pack document ${parts[3]} not found in ${parts[1]}.${parts[2]}`,
+				);
+			}
+			return doc ?? null;
+		}
+		console.warn(
+			`rogue-trader | compendium pack ${parts[1]}.${parts[2]} not found`,
+		);
+		return null;
+	}
+	// fvtt-types types fromUuid's parameter as a template-literal UUID union,
+	// but a uuid here is an arbitrary string — cast at this one boundary (the
+	// rules/adapter documentFromUuid precedent).
+	return (await foundry.utils.fromUuid(uuid as never)) ?? null;
+}
+
 function asTable(doc: unknown): ContentTable {
 	return doc as ContentTable;
+}
+
+/** The rules-facing list view: a missing pack is an empty pack. */
+async function documentsOf(packId: string): Promise<unknown[]> {
+	return (await packDocuments(packId)) ?? [];
 }
 
 export const foundryContent: ContentPort = {
@@ -65,14 +102,23 @@ export const foundryContent: ContentPort = {
 			skillCatalog: false,
 		};
 	},
-	async documents(packId: string): Promise<unknown[]> {
-		return (await packDocuments(packId)) ?? [];
+	documents(packId: string): Promise<unknown[]> {
+		return documentsOf(packId);
+	},
+	async documentsOrNull(packId: string): Promise<unknown[] | null> {
+		return packDocuments(packId);
 	},
 	async find(packId: string, name: string): Promise<ContentTable | null> {
-		const docs = await foundryContent.documents(packId);
-		const found = docs.find(
-			(doc) => (doc as { name?: string }).name === name,
-		);
+		const docs = await documentsOf(packId);
+		const found = docs.find((doc) => (doc as { name?: string }).name === name);
 		return found ? asTable(found) : null;
+	},
+
+	// Sheet-side semantics (bead wwuc root cause), now behind the port: the
+	// direct-from-pack resolution must NOT become a generic fromUuid call, or
+	// PsychicPicker et al. break again (fromUuid is undefined in-world for our
+	// LevelDB comps).
+	document(uuid: string): Promise<unknown | null> {
+		return resolveDocument(uuid);
 	},
 };

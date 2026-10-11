@@ -34,8 +34,16 @@ const row = (over: Partial<AdvanceRowLike> = {}): AdvanceRowLike => ({
 });
 
 const LINKED_SKILL_DOCS: PackDocLike[] = [
-	{ key: "awareness", name: "Awareness", uuid: "Compendium.rogue-trader.character-options.Item.awarenessId" },
-	{ key: "tech-use", name: "Tech-Use", uuid: "Compendium.rogue-trader.character-options.Item.techUseId" },
+	{
+		key: "awareness",
+		name: "Awareness",
+		uuid: "Compendium.rogue-trader.character-options.Item.awarenessId",
+	},
+	{
+		key: "tech-use",
+		name: "Tech-Use",
+		uuid: "Compendium.rogue-trader.character-options.Item.techUseId",
+	},
 ];
 
 const LINKED_TALENT_DOCS: PackDocLike[] = [
@@ -61,14 +69,11 @@ describe("pack-doc links — the shared resolvers (moved parity spec, bead n2b2)
 	});
 
 	test("resolveSkillDoc: key first, then exact name; empty key/name match nothing (mirrored guard)", () => {
+		expect(resolveSkillDoc(row({ key: "tech-use" }), LINKED_SKILL_DOCS)).toBe(
+			LINKED_SKILL_DOCS[1],
+		);
 		expect(
-			resolveSkillDoc(row({ key: "tech-use" }), LINKED_SKILL_DOCS),
-		).toBe(LINKED_SKILL_DOCS[1]);
-		expect(
-			resolveSkillDoc(
-				row({ key: "", name: "Tech-Use" }),
-				LINKED_SKILL_DOCS,
-			),
+			resolveSkillDoc(row({ key: "", name: "Tech-Use" }), LINKED_SKILL_DOCS),
 		).toBe(LINKED_SKILL_DOCS[1]);
 		expect(
 			resolveSkillDoc(row({ key: "", name: "tech-use" }), LINKED_SKILL_DOCS),
@@ -105,7 +110,11 @@ describe("pack-doc links — docLinkUuid (type-scoped uuid stamp, bead ha1y)", (
 
 	test("skill rows stamp the skill doc's uuid (key, then exact name)", () => {
 		expect(
-			docLinkUuid(row({ key: "tech-use" }), LINKED_SKILL_DOCS, LINKED_TALENT_DOCS),
+			docLinkUuid(
+				row({ key: "tech-use" }),
+				LINKED_SKILL_DOCS,
+				LINKED_TALENT_DOCS,
+			),
 		).toBe("Compendium.rogue-trader.character-options.Item.techUseId");
 		expect(
 			docLinkUuid(
@@ -118,7 +127,11 @@ describe("pack-doc links — docLinkUuid (type-scoped uuid stamp, bead ha1y)", (
 
 	test("rows without a type take the skill branch (chat-card names, creator chips)", () => {
 		expect(
-			docLinkUuid({ key: "", name: "Tech-Use" }, LINKED_SKILL_DOCS, LINKED_TALENT_DOCS),
+			docLinkUuid(
+				{ key: "", name: "Tech-Use" },
+				LINKED_SKILL_DOCS,
+				LINKED_TALENT_DOCS,
+			),
 		).toBe("Compendium.rogue-trader.character-options.Item.techUseId");
 	});
 
@@ -159,8 +172,11 @@ describe("pack-doc links — packDocAnchor (the one-helper-call adoption surface
 	test("the anchor action is the documented data-action convention", () => {
 		expect(OPEN_PACK_DOC_ACTION).toBe("openPackDoc");
 		expect(
-			packDocAnchor(row({ key: "awareness" }), LINKED_SKILL_DOCS, LINKED_TALENT_DOCS)
-				?.action,
+			packDocAnchor(
+				row({ key: "awareness" }),
+				LINKED_SKILL_DOCS,
+				LINKED_TALENT_DOCS,
+			)?.action,
 		).toBe("openPackDoc");
 	});
 
@@ -200,7 +216,10 @@ describe("pack-doc links — library adoption guard (bead n2b2)", () => {
 		"src/roguetrader/sheet/actor/advancement-dialog.ts",
 		"utf8",
 	);
-	const resolvePath = readFileSync("src/roguetrader/sheet/pack-resolve.ts", "utf8");
+	const resolvePath = readFileSync(
+		"src/roguetrader/sheet/pack-resolve.ts",
+		"utf8",
+	);
 
 	test("the advancement view model imports the library (no local copies)", () => {
 		expect(view).toContain('from "../pack-doc-links"');
@@ -210,25 +229,39 @@ describe("pack-doc links — library adoption guard (bead n2b2)", () => {
 		// No local resolver definitions may return after the extraction.
 		expect(view).not.toMatch(/export function resolve(Talent|Skill)Doc\(/);
 		expect(view).not.toMatch(/function docLinkUuid\(/);
-		expect(view).not.toMatch(/export function resolvePackDocument|async function openDocumentSheet/);
+		expect(view).not.toMatch(
+			/export function resolvePackDocument|async function openDocumentSheet/,
+		);
 	});
 
 	test("the advancement dialog consumes the library import path", () => {
 		expect(dialog).toContain('from "../pack-doc-links"');
-		expect(dialog).not.toContain("resolveSkillDoc,\n} from \"./advancement-view-model\"");
+		expect(dialog).not.toContain(
+			'resolveSkillDoc,\n} from "./advancement-view-model"',
+		);
 	});
 
 	test("pack-resolve re-exports the library with the open path (one adopter import point)", () => {
-		expect(resolvePath).toContain('export {');
-		for (const name of ["docLinkUuid", "packDocAnchor", "resolveSkillDoc", "resolveTalentDoc"]) {
+		expect(resolvePath).toContain("export {");
+		for (const name of [
+			"docLinkUuid",
+			"packDocAnchor",
+			"resolveSkillDoc",
+			"resolveTalentDoc",
+		]) {
 			expect(resolvePath).toContain(name);
 		}
 	});
 
 	test("the library module stays Foundry-free (no open path duplicated into it)", () => {
-		const library = readFileSync("src/roguetrader/sheet/pack-doc-links.ts", "utf8");
+		const library = readFileSync(
+			"src/roguetrader/sheet/pack-doc-links.ts",
+			"utf8",
+		);
 		// Definitions only — the doc comment may reference the open path.
-		expect(library).not.toMatch(/export (async )?function (openDocumentSheet|resolvePackDocument)/);
+		expect(library).not.toMatch(
+			/export (async )?function (openDocumentSheet|resolvePackDocument)/,
+		);
 		expect(library).not.toContain("getPorts");
 		expect(library).not.toContain("game.");
 	});

@@ -188,7 +188,9 @@ export interface RollMechanics {
 }
 
 /** Parse a weapon's `special` strings into roll-mechanic inputs. */
-export function parseSpecialMechanics(special: string[] | undefined): RollMechanics {
+export function parseSpecialMechanics(
+	special: string[] | undefined,
+): RollMechanics {
 	const out: RollMechanics = { tearing: false, toxic: false, blast: null };
 	for (const entry of special ?? []) {
 		const key = entry.trim().toLowerCase();
@@ -205,7 +207,7 @@ export function parseSpecialMechanics(special: string[] | undefined): RollMechan
 				// resolve to a static radius. Ignoring them silently would hide a
 				// modifier; warn so the data gets fixed or the engine extended.
 				console.warn(
-					`rogue-trader: unparseable blast quality "${entry}" — no static blast radius applied.`,
+					`rogue-trader | unparseable blast quality "${entry}" — no static blast radius applied.`,
 				);
 			}
 		}
@@ -237,7 +239,8 @@ export function collectRollMechanicEffects(
 	const absorb = (parsed: RollMechanics) => {
 		out.tearing ||= parsed.tearing;
 		out.toxic ||= parsed.toxic;
-		if (parsed.blast !== null) out.blast = Math.max(out.blast ?? 0, parsed.blast);
+		if (parsed.blast !== null)
+			out.blast = Math.max(out.blast ?? 0, parsed.blast);
 	};
 	if (opts.special?.length) absorb(parseSpecialMechanics(opts.special));
 	const itemWhere = (item: { type: string; id: string }) =>
@@ -265,7 +268,8 @@ export function collectRollMechanicEffects(
 		opts.weaponId !== undefined
 			? view.items.find((item) => item.id === opts.weaponId)
 			: undefined;
-	if (weapon?.special.length) absorb(parseSpecialMechanics([...weapon.special]));
+	if (weapon?.special.length)
+		absorb(parseSpecialMechanics([...weapon.special]));
 	return out;
 }
 
@@ -314,7 +318,10 @@ export function targetToughnessMultiplier(
 export function collectTargetTraitDamageEffects(
 	view: ActorView,
 ): TargetTraitDamageCollection {
-	const out: TargetTraitDamageCollection = { tbMultiplier: null, reduction: [] };
+	const out: TargetTraitDamageCollection = {
+		tbMultiplier: null,
+		reduction: [],
+	};
 	for (const hit of collectEffects(view, {
 		channel: "target-soak",
 		itemWhere: (item) => item.type === "trait",

@@ -128,10 +128,7 @@ export function nextMutationThreshold(corruptionPoints: number): number | null {
 	return next <= 90 ? next : null;
 }
 
-import {
-	carriedConditions,
-	snapOutReady,
-} from "./conditions";
+import { carriedConditions, snapOutReady } from "./conditions";
 
 export type AfflictionKind = "disorder" | "malignancy" | "mutation";
 
@@ -213,7 +210,8 @@ export function madnessSheetContext(
 	const ofType = (type: string, kind?: string) =>
 		owned.filter(
 			(item) =>
-				item.type === type && (kind === undefined || item.system?.kind === kind),
+				item.type === type &&
+				(kind === undefined || item.system?.kind === kind),
 		);
 	const groupOf = (label: string, items: OwnedAfflictionLike[]) => ({
 		label,
@@ -226,7 +224,8 @@ export function madnessSheetContext(
 			// (bead kam1) gets a roll chip on its affliction row. `damage` is
 			// the discriminator: an all-blank block means "no attack", so
 			// prose that merely mentions combat does not become a button.
-			canAttack: item.type === "mutation" && Boolean(item.system?.attack?.damage),
+			canAttack:
+				item.type === "mutation" && Boolean(item.system?.attack?.damage),
 		})),
 	});
 	const disorders = ofType("madnessentry", "disorder");

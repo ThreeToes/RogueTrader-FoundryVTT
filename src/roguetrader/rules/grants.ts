@@ -184,10 +184,13 @@ export function talentGrantPayload(
 	const system: Record<string, unknown> = {};
 	if (source.category !== undefined) system.category = source.category;
 	if (source.tier !== undefined) system.tier = source.tier;
-	if (source.prereqTalent !== undefined) system.prereqTalent = source.prereqTalent;
-	if (source.shortDescription) system.shortDescription = source.shortDescription;
+	if (source.prereqTalent !== undefined)
+		system.prereqTalent = source.prereqTalent;
+	if (source.shortDescription)
+		system.shortDescription = source.shortDescription;
 	if (source.description) system.description = source.description;
-	if (source.effects && source.effects.length > 0) system.effects = source.effects;
+	if (source.effects && source.effects.length > 0)
+		system.effects = source.effects;
 	if (options.grantedBy) system.grantedBy = options.grantedBy;
 	return { name, type: "talent", system };
 }

@@ -10,14 +10,38 @@ import {
 
 describe("Table 1-5 starting PF/SP (p33)", () => {
 	it("maps the 1d10 ladder", () => {
-		expect(startingProfitFactorAndShipPoints(1)).toEqual({ profitFactor: 60, shipPoints: 30 });
-		expect(startingProfitFactorAndShipPoints(2)).toEqual({ profitFactor: 50, shipPoints: 40 });
-		expect(startingProfitFactorAndShipPoints(3)).toEqual({ profitFactor: 50, shipPoints: 40 });
-		expect(startingProfitFactorAndShipPoints(4)).toEqual({ profitFactor: 40, shipPoints: 50 });
-		expect(startingProfitFactorAndShipPoints(7)).toEqual({ profitFactor: 40, shipPoints: 50 });
-		expect(startingProfitFactorAndShipPoints(8)).toEqual({ profitFactor: 30, shipPoints: 60 });
-		expect(startingProfitFactorAndShipPoints(9)).toEqual({ profitFactor: 30, shipPoints: 60 });
-		expect(startingProfitFactorAndShipPoints(10)).toEqual({ profitFactor: 20, shipPoints: 70 });
+		expect(startingProfitFactorAndShipPoints(1)).toEqual({
+			profitFactor: 60,
+			shipPoints: 30,
+		});
+		expect(startingProfitFactorAndShipPoints(2)).toEqual({
+			profitFactor: 50,
+			shipPoints: 40,
+		});
+		expect(startingProfitFactorAndShipPoints(3)).toEqual({
+			profitFactor: 50,
+			shipPoints: 40,
+		});
+		expect(startingProfitFactorAndShipPoints(4)).toEqual({
+			profitFactor: 40,
+			shipPoints: 50,
+		});
+		expect(startingProfitFactorAndShipPoints(7)).toEqual({
+			profitFactor: 40,
+			shipPoints: 50,
+		});
+		expect(startingProfitFactorAndShipPoints(8)).toEqual({
+			profitFactor: 30,
+			shipPoints: 60,
+		});
+		expect(startingProfitFactorAndShipPoints(9)).toEqual({
+			profitFactor: 30,
+			shipPoints: 60,
+		});
+		expect(startingProfitFactorAndShipPoints(10)).toEqual({
+			profitFactor: 20,
+			shipPoints: 70,
+		});
 	});
 });
 
@@ -34,14 +58,17 @@ describe("acquisition target (Core Rulebook p272-273)", () => {
 
 	it("auto-fails at 0 or less", () => {
 		expect(
-			acquisitionTarget({ profitFactor: 30, availabilityModifier: -30 }).automatic,
+			acquisitionTarget({ profitFactor: 30, availabilityModifier: -30 })
+				.automatic,
 		).toBe("failure");
 	});
 
 	it("resolves rolls inside the band", () => {
 		expect(resolveAcquisition({ profitFactor: 40 }, 41).success).toBe(false);
 		expect(resolveAcquisition({ profitFactor: 40 }, 40).success).toBe(true);
-		expect(resolveAcquisition({ profitFactor: 60, extra: 40 }, 1).success).toBe(true);
+		expect(resolveAcquisition({ profitFactor: 60, extra: 40 }, 1).success).toBe(
+			true,
+		);
 		expect(resolveAcquisition({ profitFactor: 20 }, 100).success).toBe(false);
 	});
 });
@@ -77,7 +104,11 @@ describe("weaponTrainingCoverage (book printed pp272, 95, 100, 104-105)", () => 
 
 	it("Melee (Universal) includes Chain, Shock, and Power (p104)", () => {
 		const cov = weaponTrainingCoverage(["Melee Weapon Training (Universal)"]);
-		expect([...cov.byCategory.melee].sort()).toEqual(["chain", "power", "shock"]);
+		expect([...cov.byCategory.melee].sort()).toEqual([
+			"chain",
+			"power",
+			"shock",
+		]);
 	});
 
 	it("Heavy has no Universal group (p100)", () => {
@@ -148,35 +179,65 @@ describe("isTrainedFor (book printed p272 bullet 2 + p95)", () => {
 
 	it("covers family-matched weapons within their category", () => {
 		expect(
-			isTrainedFor(cov, { class: "basic", weaponFamily: "las", name: "Lasgun" }),
+			isTrainedFor(cov, {
+				class: "basic",
+				weaponFamily: "las",
+				name: "Lasgun",
+			}),
 		).toBe(true);
 		expect(
-			isTrainedFor(cov, { class: "melee", weaponFamily: "primitive", name: "Sword" }),
+			isTrainedFor(cov, {
+				class: "melee",
+				weaponFamily: "primitive",
+				name: "Sword",
+			}),
 		).toBe(true);
 	});
 
 	it("does not cross categories (Basic (Las) cannot take a Bow)", () => {
 		expect(
-			isTrainedFor(cov, { class: "basic", weaponFamily: "primitive", name: "Bow" }),
+			isTrainedFor(cov, {
+				class: "basic",
+				weaponFamily: "primitive",
+				name: "Bow",
+			}),
 		).toBe(false);
 		// ...and Melee (Primitive) cannot take a Chainsword.
 		expect(
-			isTrainedFor(cov, { class: "melee", weaponFamily: "chain", name: "Chainsword" }),
+			isTrainedFor(cov, {
+				class: "melee",
+				weaponFamily: "chain",
+				name: "Chainsword",
+			}),
 		).toBe(false);
 	});
 
 	it("thrown weapons: Thrown training OR melee family coverage", () => {
-		const thrown = weaponTrainingCoverage(["Thrown Weapon Training (Universal)"]);
+		const thrown = weaponTrainingCoverage([
+			"Thrown Weapon Training (Universal)",
+		]);
 		expect(
-			isTrainedFor(thrown, { class: "thrown", weaponFamily: "thrown", name: "Frag" }),
+			isTrainedFor(thrown, {
+				class: "thrown",
+				weaponFamily: "thrown",
+				name: "Frag",
+			}),
 		).toBe(true);
 		// A thrown primitive knife is also a melee primitive weapon.
 		expect(
-			isTrainedFor(cov, { class: "thrown", weaponFamily: "primitive", name: "Knife" }),
+			isTrainedFor(cov, {
+				class: "thrown",
+				weaponFamily: "primitive",
+				name: "Knife",
+			}),
 		).toBe(true);
 		// But a thrown exotic needs the proficiency.
 		expect(
-			isTrainedFor(cov, { class: "thrown", weaponFamily: "exotic", name: "Witch Lance" }),
+			isTrainedFor(cov, {
+				class: "thrown",
+				weaponFamily: "exotic",
+				name: "Witch Lance",
+			}),
 		).toBe(false);
 	});
 
@@ -192,7 +253,11 @@ describe("isTrainedFor (book printed p272 bullet 2 + p95)", () => {
 			}),
 		).toBe(true);
 		expect(
-			isTrainedFor(exotic, { class: "basic", weaponFamily: "exotic", name: "Needle Rifle" }),
+			isTrainedFor(exotic, {
+				class: "basic",
+				weaponFamily: "exotic",
+				name: "Needle Rifle",
+			}),
 		).toBe(false);
 	});
 

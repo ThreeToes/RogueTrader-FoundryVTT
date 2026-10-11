@@ -46,9 +46,7 @@ export function kitChoicesComplete(
 	picks: Record<number, number>,
 ): boolean {
 	if (!kit) return true;
-	return (
-		kit.slots ?? []
-	).every(
+	return (kit.slots ?? []).every(
 		(slot, index) =>
 			(slot?.options?.length ?? 0) <= 1 ||
 			(picks[index] !== undefined && picks[index] >= 0),

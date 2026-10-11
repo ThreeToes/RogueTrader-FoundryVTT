@@ -118,7 +118,9 @@ import { SHARED_PARTIALS } from "../src/roguetrader/sheet/partials";
 
 {
 	const sharedDir = join(TEMPLATE_ROOT, "shared/parts");
-	const onDisk = new Set((await readdir(sharedDir)).filter((f) => f.endsWith(".hbs")));
+	const onDisk = new Set(
+		(await readdir(sharedDir)).filter((f) => f.endsWith(".hbs")),
+	);
 	const listed = new Set(SHARED_PARTIALS.map((p) => p.split("/").pop()));
 	for (const file of onDisk) {
 		if (!listed.has(file)) {
@@ -131,7 +133,10 @@ import { SHARED_PARTIALS } from "../src/roguetrader/sheet/partials";
 
 for (const rel of SHARED_PARTIALS) {
 	const src = await readFile(join(TEMPLATE_ROOT, rel), "utf8");
-	const name = `rt/${rel.split("/").pop().replace(/\.hbs$/, "")}`;
+	const name = `rt/${rel
+		.split("/")
+		.pop()
+		.replace(/\.hbs$/, "")}`;
 	const compiled = Handlebars.compile(src);
 	// Block partials ({{> @partial-block}}) render fine at their call sites;
 	// render-verify them with a visible stub so a standalone render still

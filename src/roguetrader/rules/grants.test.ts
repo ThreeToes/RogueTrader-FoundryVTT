@@ -32,7 +32,9 @@ describe("parameterised talents (yclz)", () => {
 	});
 
 	it("resolves base + subject", () => {
-		expect(resolveParameterised("Peer", "Underworld")).toBe("Peer (Underworld)");
+		expect(resolveParameterised("Peer", "Underworld")).toBe(
+			"Peer (Underworld)",
+		);
 	});
 });
 
@@ -71,7 +73,9 @@ describe("talent grant payload (meh0)", () => {
 				prereqTalent: "air-of-authority",
 				shortDescription: "Short",
 				description: "Prerequisites: Fel 30.",
-				effects: [{ kind: "test-modifier", testKey: "", value: 10, label: "x" }],
+				effects: [
+					{ kind: "test-modifier", testKey: "", value: 10, label: "x" },
+				],
 			},
 		});
 		expect(payload).toEqual({
@@ -83,7 +87,9 @@ describe("talent grant payload (meh0)", () => {
 				prereqTalent: "air-of-authority",
 				shortDescription: "Short",
 				description: "Prerequisites: Fel 30.",
-				effects: [{ kind: "test-modifier", testKey: "", value: 10, label: "x" }],
+				effects: [
+					{ kind: "test-modifier", testKey: "", value: 10, label: "x" },
+				],
 			},
 		});
 	});
@@ -104,14 +110,28 @@ describe("talent grant payload (meh0)", () => {
 		const skill = skillGrantPayload("Survival", "int", {
 			grantedBy: GRANTED_BY_CREATOR,
 		});
-		expect(skill.system).toEqual({ characteristic: "int", ladder: 1, grantedBy: GRANTED_BY_CREATOR });
+		expect(skill.system).toEqual({
+			characteristic: "int",
+			ladder: 1,
+			grantedBy: GRANTED_BY_CREATOR,
+		});
 	});
 });
 
 describe("creator reconcile (iufv)", () => {
 	const items = [
-		{ id: "a", type: "talent", name: "Peer (Underworld)", system: { grantedBy: GRANTED_BY_CREATOR } },
-		{ id: "b", type: "skill", name: "Survival", system: { grantedBy: GRANTED_BY_CREATOR } },
+		{
+			id: "a",
+			type: "talent",
+			name: "Peer (Underworld)",
+			system: { grantedBy: GRANTED_BY_CREATOR },
+		},
+		{
+			id: "b",
+			type: "skill",
+			name: "Survival",
+			system: { grantedBy: GRANTED_BY_CREATOR },
+		},
 		{ id: "c", type: "talent", name: "Frenzy" }, // manual
 		{ id: "d", type: "talent", name: "Light Sleeper" }, // legacy creator grant
 	];
@@ -132,6 +152,8 @@ describe("creator reconcile (iufv)", () => {
 		expect(reconcileForCreator(items, new Set(["Light Sleeper"]))).toEqual({
 			deleteIds: ["a", "b", "d"],
 		});
-		expect(reconcileForCreator(items, new Set<string>())).toEqual({ deleteIds: ["a", "b"] });
+		expect(reconcileForCreator(items, new Set<string>())).toEqual({
+			deleteIds: ["a", "b"],
+		});
 	});
 });

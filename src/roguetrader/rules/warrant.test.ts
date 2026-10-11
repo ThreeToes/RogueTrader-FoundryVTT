@@ -108,7 +108,9 @@ beforeEach(() => {
 		entry("warrant-age", 2, "a2", 6, 4),
 		entry("warrant-age", 3, "a3", 8, 6),
 		entry("warrant-age", 4, "a4", 10, 8),
-		entry("warrant-age", 5, "a5", 12, 10, ["One Archeotech component may be purchased."]),
+		entry("warrant-age", 5, "a5", 12, 10, [
+			"One Archeotech component may be purchased.",
+		]),
 		entry("fortune-fate", 1, "b1", 12, 10),
 		entry("fortune-fate", 2, "b2", 10, 8),
 		entry("fortune-fate", 3, "b3", 8, 6),
@@ -121,7 +123,9 @@ beforeEach(() => {
 		entry("acquisition", 4, "c4", 10, 4),
 		entry("acquisition", 5, "c5", 12, 2),
 		entry("acquisition", 6, "c6", 16, 2),
-		entry("sanction", 1, "d1", 4, 10, ["One Xenostech Component may be purchased."]),
+		entry("sanction", 1, "d1", 4, 10, [
+			"One Xenostech Component may be purchased.",
+		]),
 		entry("sanction", 2, "d2", 6, 8),
 		entry("sanction", 3, "d3", 8, 6),
 		entry("sanction", 4, "d4", 10, 4),
@@ -208,9 +212,14 @@ describe("warrantEntryFromDoc (bead 5rk0, the shared pack mapping)", () => {
 	});
 
 	test("returns null for a doc missing its key or carrying an off-chart row", () => {
-		expect(warrantEntryFromDoc({ name: "Orphan", system: { row: "warrant-age" } })).toBeNull();
 		expect(
-			warrantEntryFromDoc({ name: "Orphan", system: { key: "x", row: "not-a-row" } }),
+			warrantEntryFromDoc({ name: "Orphan", system: { row: "warrant-age" } }),
+		).toBeNull();
+		expect(
+			warrantEntryFromDoc({
+				name: "Orphan",
+				system: { key: "x", row: "not-a-row" },
+			}),
 		).toBeNull();
 	});
 });

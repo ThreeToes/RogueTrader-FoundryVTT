@@ -57,7 +57,12 @@ export function vehicleTokenFootprint(size: string | null | undefined): {
 	width: number;
 	height: number;
 } {
-	const modifier = SIZE_MODIFIERS[String(size ?? "").trim().toLowerCase()];
+	const modifier =
+		SIZE_MODIFIERS[
+			String(size ?? "")
+				.trim()
+				.toLowerCase()
+		];
 	const side = Math.max(
 		DEFAULT_TOKEN_FOOTPRINT,
 		DEFAULT_TOKEN_FOOTPRINT + Math.floor((modifier ?? 0) / 10),

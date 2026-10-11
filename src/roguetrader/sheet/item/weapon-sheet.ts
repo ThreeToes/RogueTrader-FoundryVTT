@@ -1,4 +1,3 @@
-import { DamageType } from "../../data/item/damage-types";
 import { ITEM_DATA_TABS } from "../tabs";
 import { RangedWeapon } from "../../data/item/ranged-weapon";
 import {
@@ -6,16 +5,20 @@ import {
 	RANGED_CLASSES,
 	WeaponClass,
 } from "../../data/item/weapon-class";
-import { acceptsOrdnance, LAUNCHER_FAMILY } from "../../../ffg/domain/model/attack";
-import { weaponFamilies } from "../../registry";
+import {
+	acceptsOrdnance,
+	LAUNCHER_FAMILY,
+} from "../../../ffg/domain/model/attack";
+import { weaponFamilies, damageTypes } from "../../registry";
 import { cloneItemFromDrop } from "../drop-clone";
 import { getPorts } from "../../infrastructure/foundry/ports";
-import { effectActions, effectEditorChoices } from "./effect-actions";
-import { itemDescriptionHTML } from "../rich-text";
+import { effectActions } from "./effect-actions";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
 import { loadOrdnance, OrdnancePicker } from "./ordnance-picker";
 import { ModPicker } from "./mod-picker";
 import { attachedModIds, installMod, removeMod } from "./weapon-mods";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -36,23 +39,23 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		data: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/weapon-data.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/weapon-data.hbs`,
 		},
 		notes: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/notes.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/notes.hbs`,
 		},
 	};
 
 	static TABS = ITEM_DATA_TABS;
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const system = this.document.system;
 
 		// Class choices already restricted per weapon type at the schema level;
@@ -70,13 +73,9 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		// gate resolves against. Blank = uncurated (schema initial).
 		context.familyChoices = Object.fromEntries(weaponFamilies.entries());
 
-		// Damage type choices mirror the schema (E/I/R/X book types).
-		context.damageTypeChoices = Object.fromEntries(
-			Object.values(DamageType).map((value) => [
-				value,
-				`DAMAGE_TYPE.${value.toUpperCase()}`,
-			]),
-		);
+		// Damage type choices (bead seeg): ONE registry seed shared by every
+		// sheet — keys match the stored enum values.
+		context.damageTypeChoices = damageTypes.choices;
 
 		// Quality toggle-chips: lookup map so `checked` marks existing picks.
 		context.specialFlags = Object.fromEntries(
@@ -101,12 +100,11 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			String(system.weaponFamily ?? "").toLowerCase() === LAUNCHER_FAMILY
 		) {
 			const loadedAmmoId = String(system.loadedAmmoId ?? "");
-			const actor = (this.document as { actor?: foundry.documents.Actor | null })
-				.actor;
+			const actor = (
+				this.document as { actor?: foundry.documents.Actor | null }
+			).actor;
 			const loaded =
-				actor && loadedAmmoId
-					? (actor.items.get(loadedAmmoId) ?? null)
-					: null;
+				actor && loadedAmmoId ? (actor.items.get(loadedAmmoId) ?? null) : null;
 			context.launcher = {
 				acceptsAmmo: String(system.acceptsAmmo ?? ""),
 				loaded: loaded
@@ -133,9 +131,7 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		const mods = attachedModIds(modHost, (id) =>
 			Boolean(modOwner?.items.get(id)),
 		).map((id) => {
-			const mod = modOwner?.items.get(id) as
-				| foundry.documents.Item
-				| undefined;
+			const mod = modOwner?.items.get(id) as foundry.documents.Item | undefined;
 			return {
 				id,
 				name: mod?.name ?? "",
@@ -146,15 +142,9 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		});
 		context.mods = mods;
 
-		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(
-			context,
-			effectEditorChoices(),
-		);
-
-		// Description tab: enriched HTML from the system description
-		// (WeaponSheet/ArmourSheet don't extend GearSheet, which computes this).
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		// Item data keys (bead apxq): effect editor choices (bead bpd, localized
+		// kind labels + test keys) + the enriched description tab prose.
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 
@@ -175,9 +165,9 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		const actor = (this.document as { actor?: foundry.documents.Actor | null })
 			.actor;
 		if (!actor) return undefined;
-		const source = foundry.utils.fromUuidSync(data.uuid as never) as
-			| foundry.documents.Item
-			| null;
+		const source = foundry.utils.fromUuidSync(
+			data.uuid as never,
+		) as foundry.documents.Item | null;
 		if (!source) return undefined;
 		// Attached weapon modifications (bead huaf): a weapon-modification item
 		// INSTALLS regardless of launcher ordnance rules. Already-owned items
@@ -185,13 +175,14 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		// first (matching the load-ordnance drop semantics).
 		if ((source.type as string) === "weapon-modification") {
 			const owned =
-				actor.items.find(
-					(i) => i.uuid === source.uuid || i.id === source.id,
-					) ??
+				actor.items.find((i) => i.uuid === source.uuid || i.id === source.id) ??
 				(await cloneItemFromDrop(actor, event));
 			if (!owned) return undefined;
 			await installMod(
-				this.document as { system?: { modifications?: string[] }; update?: (d: object) => Promise<void> },
+				this.document as {
+					system?: { modifications?: string[] };
+					update?: (d: object) => Promise<void>;
+				},
 				owned.id ?? "",
 				(id) => Boolean(actor.items.get(id)),
 			);
@@ -218,9 +209,9 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	}
 
 	/** Load button: open the picker of the actor's accepted ordnance. */
-	static async #openOrdnancePicker(
-		this: { document: foundry.documents.Item },
-	): Promise<void> {
+	static async #openOrdnancePicker(this: {
+		document: foundry.documents.Item;
+	}): Promise<void> {
 		const actor = (this.document as { actor?: foundry.documents.Actor | null })
 			.actor;
 		if (!actor) {
@@ -241,9 +232,9 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	}
 
 	/** Mod install button: open the picker (owned rows + pack catalogue). */
-	static async #openModPicker(
-		this: { document: foundry.documents.Item },
-	): Promise<void> {
+	static async #openModPicker(this: {
+		document: foundry.documents.Item;
+	}): Promise<void> {
 		const actor = (this.document as { actor?: foundry.documents.Actor | null })
 			.actor;
 		if (!actor) {
@@ -267,7 +258,10 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		const actor = (this.document as { actor?: foundry.documents.Actor | null })
 			.actor;
 		await removeMod(
-			this.document as { system?: { modifications?: string[] }; update?: (d: object) => Promise<void> },
+			this.document as {
+				system?: { modifications?: string[] };
+				update?: (d: object) => Promise<void>;
+			},
 			itemId,
 			(id) => Boolean(actor?.items.get(id)),
 		);

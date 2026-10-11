@@ -52,6 +52,7 @@ interface OwnedItem {
  * current user does not own (bead qiuo), which a cache normally is.
  */
 import { imageActions } from "../image-actions";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
@@ -69,7 +70,7 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	static PARTS = {
 		form: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/cache.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/cache.hbs`,
 		},
 	};
 
@@ -98,7 +99,10 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			deleteAction: this.isEditable ? "deleteItem" : "",
 		}));
 		context.items = rows;
-		context.totalWeight = rows.reduce((sum, r) => sum + Math.max(0, r.weight), 0);
+		context.totalWeight = rows.reduce(
+			(sum, r) => sum + Math.max(0, r.weight),
+			0,
+		);
 		context.hasItems = rows.length > 0;
 		// The take actions need somewhere to put the loot. Surfaced so the
 		// buttons can be disabled with a reason instead of failing on click.
@@ -121,8 +125,8 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	 */
 	static #taker(): { name: string; createEmbeddedDocuments?: unknown } | null {
 		return (
-			(game as unknown as { user?: { character?: { name: string } | null } }).user
-				?.character ?? null
+			(game as unknown as { user?: { character?: { name: string } | null } })
+				.user?.character ?? null
 		);
 	}
 
@@ -157,7 +161,10 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	/** Remove an item from the cache (GM only — the sheet is not editable for players). */
-	static async #onDeleteItem(this: CacheSheet, event: MouseEvent): Promise<void> {
+	static async #onDeleteItem(
+		this: CacheSheet,
+		event: MouseEvent,
+	): Promise<void> {
 		if (!this.isEditable) return;
 		const id = (event.currentTarget as HTMLElement | null)?.dataset.itemId;
 		if (!id) return;
@@ -191,17 +198,15 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	 */
 	static async #take(sheet: CacheSheet, uuids: string[]): Promise<void> {
 		if (uuids.length === 0) return;
-		const taker = CacheSheet.#taker() as
-			| {
-					name: string;
-					items?: Array<{ type?: string }>;
-					system?: { characteristicBonus?(key: string): number };
-					createEmbeddedDocuments?: (
-						type: string,
-						payloads: unknown[],
-					) => Promise<unknown>;
-			  }
-			| null;
+		const taker = CacheSheet.#taker() as {
+			name: string;
+			items?: Array<{ type?: string }>;
+			system?: { characteristicBonus?(key: string): number };
+			createEmbeddedDocuments?: (
+				type: string,
+				payloads: unknown[],
+			) => Promise<unknown>;
+		} | null;
 		if (!taker?.createEmbeddedDocuments) {
 			getPorts().notify.warn("CACHE.NO_TAKER");
 			return;

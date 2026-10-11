@@ -30,7 +30,13 @@
  * on malformed manifest/level — never silent.
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { isPackReference, parseChangesets, renderReleaseNotes, selectBump, SYSTEMS } from "./changesets.mjs";
+import {
+	isPackReference,
+	parseChangesets,
+	renderReleaseNotes,
+	selectBump,
+	SYSTEMS,
+} from "./changesets.mjs";
 
 const DEFAULT_SYSTEM = "rogue-trader";
 const DEFAULT_CHANGESET_DIR = ".changeset";
@@ -59,7 +65,12 @@ export function bumpVersion(version, level) {
 }
 
 /** Patch the release manifest in place; returns {version, tag, download}. */
-export function bumpManifest(manifestPath, level, rawBase = RAW_BASE, artifact = ARTIFACT_NAME) {
+export function bumpManifest(
+	manifestPath,
+	level,
+	rawBase = RAW_BASE,
+	artifact = ARTIFACT_NAME,
+) {
 	const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 	if (typeof manifest.version !== "string") {
 		throw new Error(`release manifest has no string version: ${manifestPath}`);
@@ -126,7 +137,9 @@ export function bumpFromChangesets({
 function main() {
 	const { argv } = process;
 	const systemArg = argv.find((arg) => arg.startsWith("--system="));
-	const system = systemArg ? systemArg.slice("--system=".length) : DEFAULT_SYSTEM;
+	const system = systemArg
+		? systemArg.slice("--system=".length)
+		: DEFAULT_SYSTEM;
 	let result;
 	try {
 		result = bumpFromChangesets({ system });

@@ -51,18 +51,21 @@ export function toPackDocCatalog(
 	docs: unknown[],
 	keep: (doc: { type?: string }) => boolean = () => true,
 ): PackDocLike[] {
-	return docs.filter((doc) => keep(doc as { type?: string })).map((doc) => {
-		const d = doc as {
-			name?: string;
-			uuid?: string;
-			system?: { key?: string };
-		};
-		return {
-			key: d.system?.key ?? "",
-			name: d.name ?? "",
-			uuid: d.uuid ?? "",
-		};
-	}).filter((doc) => doc.name !== "" && doc.uuid !== "");
+	return docs
+		.filter((doc) => keep(doc as { type?: string }))
+		.map((doc) => {
+			const d = doc as {
+				name?: string;
+				uuid?: string;
+				system?: { key?: string };
+			};
+			return {
+				key: d.system?.key ?? "",
+				name: d.name ?? "",
+				uuid: d.uuid ?? "",
+			};
+		})
+		.filter((doc) => doc.name !== "" && doc.uuid !== "");
 }
 
 /**
@@ -93,7 +96,9 @@ async function loadCatalog(kind: ChatDocKind): Promise<PackDocLike[]> {
 	]);
 	return [
 		...toPackDocCatalog(equipment, (doc) => WEAPON_TYPES.has(doc.type ?? "")),
-		...toPackDocCatalog(afflictions, (doc) => MUTATION_TYPES.has(doc.type ?? "")),
+		...toPackDocCatalog(afflictions, (doc) =>
+			MUTATION_TYPES.has(doc.type ?? ""),
+		),
 	];
 }
 

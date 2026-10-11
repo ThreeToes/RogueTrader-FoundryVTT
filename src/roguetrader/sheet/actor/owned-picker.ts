@@ -55,7 +55,9 @@ export abstract class OwnedItemPicker extends HandlebarsApplicationMixin(
 	 * The DEFAULT_OPTIONS shell every picker shares: identity, resizable
 	 * window and the subclass's own actions.
 	 */
-	protected static pickerOptions<Actions extends Record<string, unknown>>(config: {
+	protected static pickerOptions<
+		Actions extends Record<string, unknown>,
+	>(config: {
 		/** DOM id for the window. */
 		id: string;
 		/** Extra class after "rogue-trader sheet". */

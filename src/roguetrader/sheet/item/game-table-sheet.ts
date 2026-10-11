@@ -1,6 +1,7 @@
 import { effectActions } from "./effect-actions";
-import { itemDescriptionHTML } from "../rich-text";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -22,16 +23,15 @@ export class GameTableSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		content: {
-			template:
-				"systems/rogue-trader/template/sheet/item/parts/game-table-content.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/game-table-content.hbs`,
 		},
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const sys = this.document.system as unknown as Record<string, unknown>;
 		// Optional stat-block columns, shown only when authored.
 		const columns = (
@@ -64,7 +64,7 @@ export class GameTableSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			}))
 			.filter((c) => c.value !== "" && c.value !== "0");
 		context.columns = columns;
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

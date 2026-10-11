@@ -36,8 +36,22 @@ describe("totalSpent (Core Rulebook p13)", () => {
 
 	test("ledger entries add on top of the baseline", () => {
 		const ledger: AdvanceLedgerEntry[] = [
-			{ type: "skill", key: "awareness", name: "Awareness", cost: 100, rank: 1 },
-			{ type: "characteristic", key: "", name: "WS", cost: 250, rank: 0, characteristic: "ws", tier: "simple" },
+			{
+				type: "skill",
+				key: "awareness",
+				name: "Awareness",
+				cost: 100,
+				rank: 1,
+			},
+			{
+				type: "characteristic",
+				key: "",
+				name: "WS",
+				cost: 250,
+				rank: 0,
+				characteristic: "ws",
+				tier: "simple",
+			},
 		];
 		expect(totalSpent(ledger)).toBe(4850);
 	});
@@ -96,9 +110,33 @@ describe("rankProgress", () => {
 
 describe("availableRows (p38: any rank held or previously held)", () => {
 	const rows: AdvanceRowLike[] = [
-		{ key: "a", name: "A", type: "skill", cost: 100, multiplier: 1, prerequisites: [], rank: 1 },
-		{ key: "b", name: "B", type: "talent", cost: 200, multiplier: 1, prerequisites: [], rank: 2 },
-		{ key: "c", name: "C", type: "talent", cost: 300, multiplier: 1, prerequisites: [], rank: 3 },
+		{
+			key: "a",
+			name: "A",
+			type: "skill",
+			cost: 100,
+			multiplier: 1,
+			prerequisites: [],
+			rank: 1,
+		},
+		{
+			key: "b",
+			name: "B",
+			type: "talent",
+			cost: 200,
+			multiplier: 1,
+			prerequisites: [],
+			rank: 2,
+		},
+		{
+			key: "c",
+			name: "C",
+			type: "talent",
+			cost: 300,
+			multiplier: 1,
+			prerequisites: [],
+			rank: 3,
+		},
 	];
 
 	test("only ranks up to the derived rank are available", () => {
@@ -124,9 +162,7 @@ describe("multiplierRemaining (p39)", () => {
 	});
 
 	test("decreases per purchase of the same row", () => {
-		const ledger = [
-			ledgerEntryFor(row, "rogue-trader"),
-		];
+		const ledger = [ledgerEntryFor(row, "rogue-trader")];
 		expect(multiplierRemaining(row, ledger)).toBe(1);
 	});
 
@@ -146,10 +182,22 @@ describe("characteristicNextAdvance (p38)", () => {
 	const scheme = { simple: 250, intermediate: 500, trained: 750, expert: 1000 };
 
 	test("tiers consumed in order, cumulative costs", () => {
-		expect(characteristicNextAdvance(scheme, 0)).toEqual({ tier: "simple", cost: 250 });
-		expect(characteristicNextAdvance(scheme, 1)).toEqual({ tier: "intermediate", cost: 500 });
-		expect(characteristicNextAdvance(scheme, 2)).toEqual({ tier: "trained", cost: 750 });
-		expect(characteristicNextAdvance(scheme, 3)).toEqual({ tier: "expert", cost: 1000 });
+		expect(characteristicNextAdvance(scheme, 0)).toEqual({
+			tier: "simple",
+			cost: 250,
+		});
+		expect(characteristicNextAdvance(scheme, 1)).toEqual({
+			tier: "intermediate",
+			cost: 500,
+		});
+		expect(characteristicNextAdvance(scheme, 2)).toEqual({
+			tier: "trained",
+			cost: 750,
+		});
+		expect(characteristicNextAdvance(scheme, 3)).toEqual({
+			tier: "expert",
+			cost: 1000,
+		});
 	});
 
 	test("null after Expert", () => {
@@ -212,7 +260,9 @@ describe("validatePurchase (soft enforcement, g7k 4)", () => {
 			{ spent: 4500, pool: 500, ledger: [], derivedRank: 1 },
 		);
 		expect(result.ok).toBe(false);
-		expect(result.reasons.join(" ")).toContain("beyond the character's current rank");
+		expect(result.reasons.join(" ")).toContain(
+			"beyond the character's current rank",
+		);
 	});
 
 	test("exhausted multiplier is flagged", () => {
@@ -260,7 +310,9 @@ describe("evaluateAlternateRankGate (bead g45s)", () => {
 		otherRequirements: "",
 		...over,
 	});
-	const context = (over: Partial<AlternateGateContext> = {}): AlternateGateContext => ({
+	const context = (
+		over: Partial<AlternateGateContext> = {},
+	): AlternateGateContext => ({
 		careerKey: "seneschal",
 		careerName: "Seneschal",
 		speciesKey: "",
@@ -277,7 +329,10 @@ describe("evaluateAlternateRankGate (bead g45s)", () => {
 
 	test("a matching Required Career and met rank/xp is eligible", () => {
 		const result = evaluateAlternateRankGate(
-			gate({ requiredCareer: "Seneschal", alternateRank: "3 (10,000 xp) or higher" }),
+			gate({
+				requiredCareer: "Seneschal",
+				alternateRank: "3 (10,000 xp) or higher",
+			}),
 			context(),
 		);
 		expect(result.eligible).toBe(true);
@@ -297,7 +352,10 @@ describe("evaluateAlternateRankGate (bead g45s)", () => {
 
 	test("rank and xp floors below the printed value are hard fails", () => {
 		const result = evaluateAlternateRankGate(
-			gate({ requiredCareer: "Any", alternateRank: "Rank 4 or Higher (13,000 xp)" }),
+			gate({
+				requiredCareer: "Any",
+				alternateRank: "Rank 4 or Higher (13,000 xp)",
+			}),
 			context({ rank: 2, spent: 7000 }),
 		);
 		expect(result.eligible).toBe(false);
@@ -307,7 +365,9 @@ describe("evaluateAlternateRankGate (bead g45s)", () => {
 
 	test("Any + except excludes the named career", () => {
 		const result = evaluateAlternateRankGate(
-			gate({ requiredCareer: "Any, except Explorator, Missionary, Ork, and Kroot." }),
+			gate({
+				requiredCareer: "Any, except Explorator, Missionary, Ork, and Kroot.",
+			}),
 			context({ careerKey: "explorator", careerName: "Explorator" }),
 		);
 		expect(result.eligible).toBe(false);
@@ -316,7 +376,9 @@ describe("evaluateAlternateRankGate (bead g45s)", () => {
 
 	test("Any + except passes a career not on the exclusion list", () => {
 		const result = evaluateAlternateRankGate(
-			gate({ requiredCareer: "Any, except Explorator, Missionary, Ork, and Kroot." }),
+			gate({
+				requiredCareer: "Any, except Explorator, Missionary, Ork, and Kroot.",
+			}),
 			context({ careerKey: "seneschal", careerName: "Seneschal" }),
 		);
 		expect(result.eligible).toBe(true);
@@ -350,7 +412,10 @@ describe("evaluateAlternateRankGate (bead g45s)", () => {
 			context({ speciesKey: "kroot", speciesLabel: "Kroot" }),
 		);
 		expect(kroot.eligible).toBe(true);
-		const human = evaluateAlternateRankGate(gate({ requiredRace: "Kroot" }), context());
+		const human = evaluateAlternateRankGate(
+			gate({ requiredRace: "Kroot" }),
+			context(),
+		);
 		expect(human.eligible).toBe(false);
 	});
 

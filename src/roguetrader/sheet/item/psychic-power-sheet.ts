@@ -1,14 +1,15 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
-import { DamageType } from "../../data/item/damage-types";
+import { damageTypes } from "../../registry";
 import { ITEM_DATA_TABS } from "../tabs";
-import { itemDescriptionHTML } from "../rich-text";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
 import {
 	psychicPowerClasses,
 	psychicPowerSubtypes,
 } from "../../data/item/psychic-power";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const labeled = (values: readonly string[]) =>
 	Object.fromEntries(
@@ -24,24 +25,23 @@ export class PsychicPowerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		data: {
-			template:
-				"systems/rogue-trader/template/sheet/item/tabs/psychic-power-data.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/psychic-power-data.hbs`,
 		},
 		notes: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/notes.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/notes.hbs`,
 		},
 	};
 
 	static TABS = ITEM_DATA_TABS;
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		context.powerClassChoices = labeled(psychicPowerClasses);
 		context.subtypeChoices = labeled(psychicPowerSubtypes);
 		// Epic 0hap: how the owned copy is cast (blank inherits the actor).
@@ -50,10 +50,10 @@ export class PsychicPowerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			psychic: "PSYCHIC_POWER.CAST_AS_PSYCHIC",
 			sorcery: "PSYCHIC_POWER.CAST_AS_SORCERY",
 		};
-		context.damageTypeChoices = Object.fromEntries(
-			Object.values(DamageType).map((value) => [value, value]),
-		);
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		// Bead seeg: the shared damageTypes registry seed — localized like the
+		// weapon/gear sheets (the raw-value map was an unlocalized copy).
+		context.damageTypeChoices = damageTypes.choices;
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

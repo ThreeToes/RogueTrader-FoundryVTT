@@ -116,7 +116,11 @@ export class Gearset extends foundry.abstract.TypeDataModel<
 							}),
 							/** Weapon-modification pack names installed at grant. */
 							mods: new fields.ArrayField(
-								new fields.StringField({ required: true, nullable: false, initial: "" }),
+								new fields.StringField({
+									required: true,
+									nullable: false,
+									initial: "",
+								}),
 								{ initial: () => [] },
 							),
 						}),

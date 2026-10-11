@@ -2,6 +2,7 @@ import { acceptsOrdnance } from "../../../ffg/domain/model/attack";
 import { OwnedItemPicker } from "../actor/owned-picker";
 import { sheetContext } from "../context";
 import { getPorts } from "../../infrastructure/foundry/ports";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 /**
  * Load-ordnance picker (bead 4obp, epic nlsh load-model): lists the OWNING
@@ -72,17 +73,20 @@ export class OrdnancePicker extends OwnedItemPicker {
 
 	static PARTS = {
 		form: {
-			template:
-				"systems/rogue-trader/template/sheet/item/parts/ordnance-picker.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/ordnance-picker.hbs`,
 		},
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options as never));
+		const context = sheetContext(
+			await super._prepareContext(_options as never),
+		);
 		// Only launchers load; anything else lists nothing (loud empty state).
 		const candidates = isLauncher(this.#weapon)
 			? this.actor.items
-					.filter((item) => acceptsOrdnance(this.#weapon as never, item as never))
+					.filter((item) =>
+						acceptsOrdnance(this.#weapon as never, item as never),
+					)
 					.map((item) => ({
 						id: item.id ?? "",
 						name: item.name ?? "",

@@ -11,11 +11,19 @@
  * 3. THE CHIP VIEW MODEL — grey wiring + tooltip composition through
  *    actionChipRows (the localiser is injected, so no Foundry here).
  */
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	describe,
+	expect,
+	test,
+} from "bun:test";
 import { readFileSync } from "node:fs";
 import Handlebars from "handlebars";
 import { actionCostParts, setActionCatalog } from "../../rules/actions";
 import { actionChipRows, type ActionChipRow } from "./actions-view";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 beforeAll(() => {
 	// The template's Foundry-built helper, stubbed like verify-templates does.
@@ -82,25 +90,27 @@ describe("CharacterSheet actions-tab anatomy", () => {
 	test("the actions part is a scrolling tab part on the real template", () => {
 		const part = parts.actions;
 		expect(part, "PARTS.actions missing").toBeDefined();
-		expect(part.template).toBe(
-			"systems/rogue-trader/template/sheet/actor/tabs/actions.hbs",
-		);
+		expect(part.template).toBe(`${TEMPLATE_ROOT}sheet/actor/tabs/actions.hbs`);
 		expect(part.scrollable, "actions tab must preserve scroll").toEqual([""]);
 	});
 
 	test("the nav carries the actions tab with the TAB.ACTIONS label", () => {
-		const tabs = (CharacterSheet.TABS as unknown as {
-			primary: { tabs: Array<{ id: string; label: string }> };
-		}).primary.tabs;
+		const tabs = (
+			CharacterSheet.TABS as unknown as {
+				primary: { tabs: Array<{ id: string; label: string }> };
+			}
+		).primary.tabs;
 		const tab = tabs.find((t) => t.id === "actions");
 		expect(tab, "no actions tab in TABS.primary").toBeDefined();
 		expect(tab?.label).toBe("TAB.ACTIONS");
 	});
 
 	test("the chip click action is registered as combatAction", () => {
-		const actions = (CharacterSheet.DEFAULT_OPTIONS as unknown as {
-			actions: Record<string, unknown>;
-		}).actions;
+		const actions = (
+			CharacterSheet.DEFAULT_OPTIONS as unknown as {
+				actions: Record<string, unknown>;
+			}
+		).actions;
 		expect(actions.combatAction).toBe(combatActionChipAction);
 	});
 });
@@ -121,7 +131,10 @@ describe("the actions tab template (31-row render)", () => {
 	}));
 
 	test("all 31 actions render as two-column chips", () => {
-		const html = compiled({ tabs: { actions: { cssClass: "" } }, actions: rows });
+		const html = compiled({
+			tabs: { actions: { cssClass: "" } },
+			actions: rows,
+		});
 		const container = html.match(/class="action-list/) ?? [];
 		expect(container.length, "the two-column chip grid is missing").toBe(1);
 		// Two-column = the CSS grid on .action-list (the design-language token);
@@ -147,27 +160,40 @@ describe("the actions tab template (31-row render)", () => {
 		expect(html.match(/action-roll-hint/g)?.length).toBe(31);
 		expect(html.match(/action-roll-hint unseen/g)?.length).toBe(20); // ≡1,2 (mod 3)
 		// And the fixed-width right-aligned cell (consistent sizing).
-		expect(css).toContain(".action-chip .action-cost {\n\tflex: none;\n\tmin-width: 3.4em;");
+		expect(css).toContain(
+			".action-chip .action-cost {\n\tflex: none;\n\tmin-width: 3.4em;",
+		);
 		// The vertical rule down the middle of the two columns.
 		expect(css).toContain(".action-list::before {");
 	});
 
 	test("unmet chips carry the .unmet grey class (visible, never hidden)", () => {
-		const html = compiled({ tabs: { actions: { cssClass: "" } }, actions: rows });
+		const html = compiled({
+			tabs: { actions: { cssClass: "" } },
+			actions: rows,
+		});
 		expect(html.match(/action-row unmet/g)?.length).toBe(
 			10, // indexes ≡ 1 (mod 3) across 31 rows
 		);
 	});
 
 	test("chips carry the lookup-card data attributes (name + roll flag + uuid)", () => {
-		const html = compiled({ tabs: { actions: { cssClass: "" } }, actions: rows });
+		const html = compiled({
+			tabs: { actions: { cssClass: "" } },
+			actions: rows,
+		});
 		expect(html).toContain('data-action="combatAction"');
 		expect(html).toContain('data-has-roll="true"');
-		expect(html).toContain('data-uuid="Compendium.rogue-trader.actions.Item.0"');
+		expect(html).toContain(
+			'data-uuid="Compendium.rogue-trader.actions.Item.0"',
+		);
 	});
 
 	test("the tab root carries the scroll-container anatomy", () => {
-		const html = compiled({ tabs: { actions: { cssClass: "active" } }, actions: [] });
+		const html = compiled({
+			tabs: { actions: { cssClass: "active" } },
+			actions: [],
+		});
 		expect(html).toContain('<section class="tab');
 		expect(html).toContain('data-tab="actions"');
 		expect(html).toContain('data-group="primary"');

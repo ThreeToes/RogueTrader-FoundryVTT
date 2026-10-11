@@ -13,7 +13,8 @@
  * - `strength`      → the characteristic handler ("s");
  * - `dodge`         → the skill handler through the actor's trained Dodge
  *   skill item when owned, the untrained fallback otherwise (evasion.ts's
- *   Dodge-untrained precedent: Agility with the raw −10 row).
+ *   Dodge-untrained precedent: HALF Agility round down via the profile's
+ *   untrainedSkill model, Core Rulebook p74).
  *
  * The printed difficulty (entry.difficulty, classified in rules/actions) is
  * the book's OWN data: a numeric label ("Hard (–20)") lands as a PRE-DIALOG
@@ -38,10 +39,7 @@ import {
 import type { RollHandler } from "../../rules/roll-contract";
 import { postCard } from "../../rules/chat-flags";
 import { getPorts } from "../../infrastructure/foundry/ports";
-import {
-	characteristicHandler,
-	skillHandler,
-} from "./characteristic-skill";
+import { characteristicHandler, skillHandler } from "./characteristic-skill";
 
 // ------------------------------------------------------------- the test vocabulary
 
@@ -132,7 +130,8 @@ export const actionHandler: RollHandler<"action"> = {
 			underlying = await skillHandler.prepare(
 				itemId !== undefined
 					? { kind: "skill", actor, itemId }
-					: // Untrained fallback (the evasion precedent): raw Agility −10.
+					: // Untrained fallback (the evasion precedent): HALF the Agility
+						// characteristic (SystemProfile.untrainedSkill, Core Rulebook p74).
 						{
 							kind: "skill",
 							actor,

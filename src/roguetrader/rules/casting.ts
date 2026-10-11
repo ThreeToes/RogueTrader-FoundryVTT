@@ -144,7 +144,9 @@ export function resolveCasting(
 		// "Whenever a Sorcerer is required to roll on the Psychic Phenomena
 		// Table... he adds his Corruption Point total" (EA p86) — a per-
 		// CHARACTER rule, so a hybrid's psychic powers add it too.
-		phenomenaFlat: sorcerer ? Math.max(0, Math.floor(actor.corruption ?? 0)) : 0,
+		phenomenaFlat: sorcerer
+			? Math.max(0, Math.floor(actor.corruption ?? 0))
+			: 0,
 		ritualRequired: mode === "sorcery",
 	};
 }

@@ -8,6 +8,7 @@
  */
 
 import type { ActorView } from "../../ffg/domain/model/actor";
+import { isCharacterView } from "../../ffg/domain/model/actor";
 import { collectEffects } from "../../ffg/domain/effects";
 import type { EffectData } from "../../ffg/domain/model/effect";
 
@@ -42,7 +43,12 @@ export interface CharacterSystemLike {
  * contribute only when live (equipped).
  */
 export function woundsMax(view: ActorView): number {
-	const base = Math.max(0, view.system.wounds?.max ?? 0);
+	// Bead l2wz: the view's system types as the family union; wounds are a
+	// character-family field, and every other family has none (a ship's
+	// `view.system.wounds` was always undefined) — so the guard changes nothing.
+	const base = isCharacterView(view)
+		? Math.max(0, view.system.wounds?.max ?? 0)
+		: 0;
 	let levels = 0;
 	for (const hit of collectEffects(view, { channel: "derived" })) {
 		if (hit.spec.kind !== "wounds-max") continue;

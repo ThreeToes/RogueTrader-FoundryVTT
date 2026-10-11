@@ -33,9 +33,7 @@ describe("advancement dialog template affordances (bead 8aba)", () => {
 	test("the template exists at the shipped path", () => {
 		// The dialog's PARTS template must match the file the guards scan,
 		// otherwise these assertions pin a stale copy.
-		expect(TEMPLATE).toBe(
-			"template/sheet/actor/parts/advancement-dialog.hbs",
-		);
+		expect(TEMPLATE).toBe("template/sheet/actor/parts/advancement-dialog.hbs");
 	});
 
 	test("rank chips: .rank-chips region selects ranks via selectRank", () => {
@@ -93,14 +91,16 @@ describe("advancement dialog template affordances (bead 8aba)", () => {
 
 	test("refund stays a GM-only affordance gated on row.purchased", () => {
 		expect(code).toContain('data-action="refund"');
-		expect(code).toContain('{{#if ../isGM}}');
+		expect(code).toContain("{{#if ../isGM}}");
 	});
 
 	test("every buy button keeps its action and its full data-* payload", () => {
 		// #onBuy rebuilds the row from these attributes — dropping one silently
 		// corrupts the ledger entry (cost/name/type/rank default to falsy).
 		expect((code.match(/data-action="buy"/g) ?? []).length).toBe(1);
-		expect((code.match(/data-action="buyCharacteristic"/g) ?? []).length).toBe(1);
+		expect((code.match(/data-action="buyCharacteristic"/g) ?? []).length).toBe(
+			1,
+		);
 		const buyStart = code.indexOf('data-action="buy"');
 		const buyButton = code.slice(
 			code.lastIndexOf("<button", buyStart),
@@ -132,9 +132,9 @@ function eachDepthAtBuyButtons(): Array<{ action: string; depth: number }> {
 			/\{\{(#|\/)(each|if|unless|with)\b[^{}]*\}\}|\{\{else\b[^{}]*\}\}/g,
 		),
 	].map((match) => ({ pos: match.index!, text: match[0] }));
-	const buys = [
-		...code.matchAll(/data-action="(buyCharacteristic|buy)"/g),
-	].map((match) => ({ pos: match.index!, action: match[1]! }));
+	const buys = [...code.matchAll(/data-action="(buyCharacteristic|buy)"/g)].map(
+		(match) => ({ pos: match.index!, action: match[1]! }),
+	);
 
 	const stack: Array<"each" | "other"> = [];
 	const depths: Array<{ action: string; depth: number }> = [];
@@ -193,9 +193,7 @@ describe("advancement dialog depth scoping (child-2 disabled-buttons incident)",
 
 	test("the search input is the template's ONLY named form control", () => {
 		const names = [
-			...code.matchAll(
-				/<(?:input|select|textarea)\b[^>]*?\bname="([^"]+)"/g,
-			),
+			...code.matchAll(/<(?:input|select|textarea)\b[^>]*?\bname="([^"]+)"/g),
 		].map((match) => match[1]);
 		// The character-sheet duplicate-name invariant (foundry array-submit
 		// bug) extends here: the dialog's form must not gain a second bound
@@ -233,7 +231,9 @@ describe("advancement dialog doc links (bead ha1y)", () => {
 	});
 
 	test("characteristic scheme rows carry NO doc link (no pack doc exists)", () => {
-		const start = code.indexOf('<h2>{{localize "ADVANCE.CHARACTERISTIC_SCHEME"}}</h2>');
+		const start = code.indexOf(
+			'<h2>{{localize "ADVANCE.CHARACTERISTIC_SCHEME"}}</h2>',
+		);
 		const end = code.indexOf('class="next-rank-preview locked"');
 		expect(start).toBeGreaterThan(-1);
 		expect(end).toBeGreaterThan(start);
@@ -248,7 +248,14 @@ describe("advancement dialog i18n completeness (bead 8aba)", () => {
 			"src/roguetrader/sheet/actor/advancement-dialog.ts",
 			"utf8",
 		);
-		const sources = [code, ts];
+		// Bead avah: the PREREQ_PREFIX format moved into advancement-buy.ts's
+		// pure advanceConfirmReasons — the dialog still owns the key, so the
+		// buy helpers are scanned with the dialog.
+		const buy = readFileSync(
+			"src/roguetrader/sheet/actor/advancement-buy.ts",
+			"utf8",
+		);
+		const sources = [code, ts, buy];
 		const keys = sources.flatMap((source) => [
 			// {{localize "KEY"}} in templates; localize("KEY") in code.
 			...source.matchAll(/(?:localize|i18n\.t)\(\s*"([A-Z][A-Z0-9_.]+)"/g),
@@ -289,9 +296,7 @@ describe("advancement dialog i18n completeness (bead 8aba)", () => {
 			) as Record<string, string>;
 			const missing = keys.filter(
 				(key) =>
-					dict[key] === undefined ||
-					dict[key] === "" ||
-					dict[key] === key,
+					dict[key] === undefined || dict[key] === "" || dict[key] === key,
 			);
 			expect(
 				missing,
@@ -311,8 +316,16 @@ describe("advancement dialog i18n completeness (bead 8aba)", () => {
 			"ADVANCE.TIER_EXPERT",
 		];
 		const atCapKeys = ["ADVANCE.AT_CAP_REASON"];
-	const characteristicKeys = [
-			"WS", "BS", "S", "T", "AG", "INT", "PER", "WP", "FEL",
+		const characteristicKeys = [
+			"WS",
+			"BS",
+			"S",
+			"T",
+			"AG",
+			"INT",
+			"PER",
+			"WP",
+			"FEL",
 		].map((key) => `CHARACTERISTIC.${key}`);
 		for (const lang of ["en", "es", "fr", "pl"]) {
 			const dict = JSON.parse(

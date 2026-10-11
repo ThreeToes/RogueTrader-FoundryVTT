@@ -74,22 +74,64 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 			mass: textField(),
 			crew: textField(),
 			accel: textField(),
-			speed: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
-			manoeuvrability: new foundry.data.fields.NumberField({ integer: true, initial: 0 }),
-			detection: new foundry.data.fields.NumberField({ integer: true, initial: 0 }),
-			hullIntegrity: new foundry.data.fields.SchemaField({
-				value: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
-				max: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
+			speed: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 0,
 			}),
-			armour: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
-			turretRating: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
+			manoeuvrability: new foundry.data.fields.NumberField({
+				integer: true,
+				initial: 0,
+			}),
+			detection: new foundry.data.fields.NumberField({
+				integer: true,
+				initial: 0,
+			}),
+			hullIntegrity: new foundry.data.fields.SchemaField({
+				value: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
+				max: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
+			}),
+			armour: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 0,
+			}),
+			turretRating: new foundry.data.fields.NumberField({
+				min: 0,
+				integer: true,
+				initial: 0,
+			}),
 			space: new foundry.data.fields.SchemaField({
-				total: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
-				used: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
+				total: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
+				used: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
 			}),
 			sp: new foundry.data.fields.SchemaField({
-				total: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
-				spent: new foundry.data.fields.NumberField({ min: 0, integer: true, initial: 0 }),
+				total: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
+				spent: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
 			}),
 			weaponCapacity: textField(),
 			/** Void shields remaining (bead om4j, Table 8-3 book p201). */

@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { NO_CONTENT_PORT, type ContentPort } from "../../ffg/application/ports";
 import {
-	NO_CONTENT_PORT,
-	type ContentPort,
-} from "../../ffg/application/ports";
-import {
+	applyDamageWithCriticals,
 	criticalSheetContext,
 	criticalsOf,
 	currentRound,
@@ -102,9 +100,9 @@ describe("repairSkillFor (Tau Guide p31: Hard (-20) Tech-Use or Trade (Armourer)
 	});
 
 	test("falls back to a Trade item, named variant or bare", () => {
-		expect(
-			repairSkillFor(actorWith([skill("Trade (Armourer)")]))?.name,
-		).toBe("Trade (Armourer)");
+		expect(repairSkillFor(actorWith([skill("Trade (Armourer)")]))?.name).toBe(
+			"Trade (Armourer)",
+		);
 		expect(repairSkillFor(actorWith([skill("Trade")]))?.name).toBe("Trade");
 	});
 
@@ -232,9 +230,89 @@ describe("content-optional criticals (epic kof0, phase 3)", () => {
 		expect(outcome.effects[0]?.text).toBe("");
 	});
 
+	// A gapped table (a malformed/incomplete pack range): the roll lands in no
+	// row. The critical must STILL be recorded so the location's accumulated
+	// Critical Damage rises — otherwise the next critical in that location
+	// computes too low a severity (bead 152z).
+	const GAP_TABLE: ContentPort = {
+		// Spread for the port's content-optional defaults (bead p7o5 added
+		// documentsOrNull/document); the overrides below shape the table find.
+		...NO_CONTENT_PORT,
+		capabilities: () => ({
+			...NO_CONTENT_PORT.capabilities(),
+			criticalTables: true,
+		}),
+		documents: async () => [],
+		find: async () => ({
+			name: "Impact Critical Effects",
+			formula: "1d100",
+			// Everything except 40-59: a roll landing in 40-59 hits the gap.
+			results: [
+				{ text: "Below the gap", range: [1, 39] },
+				{ text: "Above the gap", range: [60, 100] },
+			],
+		}),
+	};
+
+	test("a gapped table still records the critical and warns", async () => {
+		const actor = actorWith([]);
+		const outcome = await resolveCritical({
+			actor,
+			damageType: "Impact",
+			location: "body",
+			excess: 3,
+			tableRoll: 42,
+			content: GAP_TABLE,
+		});
+		expect(outcome.warning).toBe("Critical Hit (Impact, Body)");
+		expect(outcome.manual).toBe(true);
+		expect(outcome.effects).toHaveLength(1);
+		expect(outcome.effects[0]?.manual).toBe(true);
+		expect(outcome.effects[0]?.severity).toBe(3);
+		expect(outcome.effects[0]?.roll).toBe(42);
+		expect(outcome.effects[0]?.location).toBe("body");
+		expect(outcome.effects[0]?.source).toBe("core");
+		expect(outcome.effects[0]?.text).toBe("");
+	});
+
+	test("applyDamageWithCriticals persists the gap-rolled critical's severity", async () => {
+		const updateCalls: object[] = [];
+		const actor = {
+			uuid: "Actor.test",
+			items: [],
+			system: { criticals: {}, criticalEffects: [], wounds: { value: 5 } },
+			update: async (data: object) => {
+				updateCalls.push(data);
+				return data;
+			},
+		};
+		// 8 damage against 5 wounds → 5 applied, 3 excess.
+		const outcome = await applyDamageWithCriticals({
+			actor,
+			damage: 8,
+			damageType: "Impact",
+			location: "body",
+			tableRoll: 42,
+			content: GAP_TABLE,
+		});
+		expect(outcome.warning).toBe("Critical Hit (Impact, Body)");
+		expect(outcome.excess).toBe(3);
+		const update = updateCalls[0] as { system?: Record<string, unknown> };
+		const criticals = update.system?.criticals as Record<string, number>;
+		expect(criticals.body).toBe(3);
+		// and it is stored as a manual effect so the player applies it by hand
+		const effects = update.system?.criticalEffects as Array<{ manual?: boolean }>;
+		expect(effects).toHaveLength(1);
+		expect(effects[0]?.manual).toBe(true);
+	});
+
 	test("with content installed the table text is used", async () => {
 		const content: ContentPort = {
-			capabilities: () => ({ ...NO_CONTENT_PORT.capabilities(), criticalTables: true }),
+			...NO_CONTENT_PORT,
+			capabilities: () => ({
+				...NO_CONTENT_PORT.capabilities(),
+				criticalTables: true,
+			}),
 			documents: async () => [],
 			find: async () => ({
 				name: "Impact Critical Effects",

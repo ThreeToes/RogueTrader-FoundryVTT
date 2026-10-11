@@ -5,7 +5,14 @@
  * Split out of the former sheet/init.ts composition root.
  */
 
-import { applyConditionFromCard, applyDamageFromCard, openPackDocFromCard, rollDamageButton, spendOrdnanceFromCard, toxicToughnessTestFromCard } from "../presentation/chat-actions";
+import {
+	applyConditionFromCard,
+	applyDamageFromCard,
+	openPackDocFromCard,
+	rollDamageButton,
+	spendOrdnanceFromCard,
+	toxicToughnessTestFromCard,
+} from "../presentation/chat-actions";
 import { registerCombatEncounterEndHook } from "../presentation/combat-end";
 import { registerCreatorMenus } from "../presentation/creator-menus";
 import { registerTokenContextMenus } from "../presentation/token-menus";
@@ -37,7 +44,7 @@ function registerChatActions(): void {
 			);
 			if (docLinkAnchor?.closest(".message")) {
 				openPackDocFromCard(docLinkAnchor).catch((error) =>
-					console.error("rogue-trader: chat doc link failed", error),
+					console.error("rogue-trader | chat doc link failed", error),
 				);
 				return;
 			}
@@ -47,7 +54,7 @@ function registerChatActions(): void {
 			if (applyButton) {
 				if (!applyButton.disabled) {
 					applyDamageFromCard(applyButton).catch((error) =>
-						console.error("rogue-trader: apply-damage failed", error),
+						console.error("rogue-trader | apply-damage failed", error),
 					);
 				}
 				return;
@@ -59,7 +66,7 @@ function registerChatActions(): void {
 			if (damageButton) {
 				if (!damageButton.disabled) {
 					rollDamageButton(damageButton).catch((error) =>
-						console.error("rogue-trader: damage roll failed", error),
+						console.error("rogue-trader | damage roll failed", error),
 					);
 				}
 				return;
@@ -73,7 +80,7 @@ function registerChatActions(): void {
 			if (toxicButton) {
 				if (!toxicButton.disabled) {
 					toxicToughnessTestFromCard(toxicButton).catch((error) =>
-						console.error("rogue-trader: toxic toughness test failed", error),
+						console.error("rogue-trader | toxic toughness test failed", error),
 					);
 				}
 				return;
@@ -87,7 +94,7 @@ function registerChatActions(): void {
 			if (conditionButton) {
 				if (!conditionButton.disabled) {
 					applyConditionFromCard(conditionButton).catch((error) =>
-						console.error("rogue-trader: condition apply failed", error),
+						console.error("rogue-trader | condition apply failed", error),
 					);
 				}
 				return;
@@ -99,7 +106,7 @@ function registerChatActions(): void {
 			);
 			if (!spendButton || spendButton.disabled) return;
 			spendOrdnanceFromCard(spendButton).catch((error) =>
-				console.error("rogue-trader: ordnance spend failed", error),
+				console.error("rogue-trader | ordnance spend failed", error),
 			);
 		});
 	});

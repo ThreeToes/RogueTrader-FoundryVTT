@@ -70,10 +70,7 @@ function fakeMessage(
 }
 
 /** A message element wrapper carrying the message id (dataset.messageId). */
-function fakeButton(
-	messageId?: string,
-	disabled = false,
-): HTMLButtonElement {
+function fakeButton(messageId?: string, disabled = false): HTMLButtonElement {
 	return {
 		disabled,
 		closest: () =>
@@ -134,7 +131,9 @@ describe("rollDamageButton (bead pk1j retryable failure)", () => {
 		await rollDamageButton(button);
 		expect(button.disabled).toBe(false);
 		expect(updates).toEqual([]); // rolled: true was NEVER persisted
-		expect(notifications).toEqual([{ level: "warn", key: "CHAT.DAMAGE_ROLL_FAIL" }]);
+		expect(notifications).toEqual([
+			{ level: "warn", key: "CHAT.DAMAGE_ROLL_FAIL" },
+		]);
 		expect(errors.some((e) => e.includes("damage roll failed"))).toBe(true);
 	});
 
@@ -166,7 +165,11 @@ describe("rollDamageButton (bead pk1j retryable failure)", () => {
 			(updates[0] as { flags: Record<string, Record<string, unknown>> }).flags[
 				NAMESPACE
 			].damageRoll,
-		).toEqual({ attackerUuid: "Actor.gone", weaponUuid: undefined, rolled: true });
+		).toEqual({
+			attackerUuid: "Actor.gone",
+			weaponUuid: undefined,
+			rolled: true,
+		});
 		// Success keeps the button resolved (disabled — no second roll).
 		expect(button.disabled).toBe(true);
 		expect(notifications).toEqual([]);

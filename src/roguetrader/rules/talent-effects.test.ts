@@ -33,13 +33,27 @@ const collectSorceryRank = (actor: LooseActor) =>
 
 const crushingBlow = {
 	type: "talent",
-	system: { effects: [{ kind: "damage-flat", testKey: "melee", value: 2, label: "Crushing Blow" }] },
+	system: {
+		effects: [
+			{
+				kind: "damage-flat",
+				testKey: "melee",
+				value: 2,
+				label: "Crushing Blow",
+			},
+		],
+	},
 };
 const crackShot = {
 	type: "talent",
 	system: {
 		effects: [
-			{ kind: "critical-damage", testKey: "ranged", value: 2, label: "Crack Shot" },
+			{
+				kind: "critical-damage",
+				testKey: "ranged",
+				value: 2,
+				label: "Crack Shot",
+			},
 		],
 	},
 };
@@ -85,7 +99,9 @@ describe("collectTalentDamageEffects", () => {
 		const wildcard = {
 			type: "talent",
 			system: {
-				effects: [{ kind: "damage-flat", testKey: "", value: 1, label: "Any Weapon" }],
+				effects: [
+					{ kind: "damage-flat", testKey: "", value: 1, label: "Any Weapon" },
+				],
 			},
 		};
 		for (const attackType of ["melee-weapon", "ranged-weapon"] as const) {
@@ -100,7 +116,22 @@ describe("collectTalentDamageEffects", () => {
 	test("contributions stack across talents", () => {
 		const { critical } = collectTalentDamageEffects(
 			{
-				items: [crackShot, { ...crackShot, system: { effects: [{ kind: "critical-damage", testKey: "ranged", value: 4, label: "Crippling Shot" }] } }],
+				items: [
+					crackShot,
+					{
+						...crackShot,
+						system: {
+							effects: [
+								{
+									kind: "critical-damage",
+									testKey: "ranged",
+									value: 4,
+									label: "Crippling Shot",
+								},
+							],
+						},
+					},
+				],
 			},
 			{ attackType: "ranged-weapon" },
 		);
@@ -125,10 +156,18 @@ describe("collectTalentDamageEffects", () => {
 	test("non-talent items and non-damage kinds are ignored", () => {
 		const actor = {
 			items: [
-				{ type: "weapon", system: { effects: [{ kind: "damage-flat", value: 99 }] } },
+				{
+					type: "weapon",
+					system: { effects: [{ kind: "damage-flat", value: 99 }] },
+				},
 				{
 					type: "talent",
-					system: { effects: [{ kind: "wounds-max", value: 1 }, { kind: "test-modifier", testKey: "ws", value: 10 }] },
+					system: {
+						effects: [
+							{ kind: "wounds-max", value: 1 },
+							{ kind: "test-modifier", testKey: "ws", value: 10 },
+						],
+					},
 				},
 			],
 		};
@@ -169,17 +208,15 @@ describe("talent effect registry kinds (bead fjw)", () => {
 
 	test("handlers return the effect value", () => {
 		const talent = { name: "Crushing Blow", system: { effects: [] } };
-		const [flat] = talentEffectHandlers.run(
-			{},
-			talent,
-			{ kind: "damage-flat", value: 2 },
-		);
+		const [flat] = talentEffectHandlers.run({}, talent, {
+			kind: "damage-flat",
+			value: 2,
+		});
 		expect(flat).toBe(2);
-		const [crit] = talentEffectHandlers.run(
-			{},
-			talent,
-			{ kind: "critical-damage", value: 4 },
-		);
+		const [crit] = talentEffectHandlers.run({}, talent, {
+			kind: "critical-damage",
+			value: 4,
+		});
 		expect(crit).toBe(4);
 	});
 });
@@ -221,7 +258,9 @@ describe("weapon-scoped damage effects (bead 2k5)", () => {
 		);
 		expect(damage).toHaveLength(1);
 		expect(damage[0].label).toBe("Serrated");
-		expect(damage[0].id).toContain("Chainsword");
+		// Bead 2040: the id keys on the weapon's own id (not just its name),
+		// so two same-named weapons stay additive.
+		expect(damage[0].id).toBe("weapon-damage:weapon-1:damage-flat:Serrated:any");
 	});
 
 	test("other weapons' effects do not leak into the attack", () => {
@@ -310,10 +349,7 @@ describe("collectRollMechanicEffects", () => {
 		const talent = {
 			type: "talent",
 			system: {
-				effects: [
-					{ kind: "blast", value: 3 },
-					{ kind: "tearing" },
-				],
+				effects: [{ kind: "blast", value: 3 }, { kind: "tearing" }],
 			},
 		};
 		const m = collectRollMechanicEffects(
@@ -325,7 +361,11 @@ describe("collectRollMechanicEffects", () => {
 	});
 
 	test("other actors' weapons are ignored; only the attacking weapon", () => {
-		const other = { id: "w2", type: "ranged-weapon", system: { special: ["tearing"] } };
+		const other = {
+			id: "w2",
+			type: "ranged-weapon",
+			system: { special: ["tearing"] },
+		};
 		const m = collectRollMechanicEffects(
 			{ items: [other, weapon([])] },
 			{ weaponId: "w1", attackType: "ranged-weapon" },
@@ -384,16 +424,19 @@ describe("collectTargetTraitDamageEffects (bead zyv1)", () => {
 	test("damage-reduction rows become additive Modifier contributors", () => {
 		const t = collectTargetTraitDamageEffects({
 			items: [
-				trait("Machine (6)", [
-					{ kind: "damage-reduction", value: 6 },
+				trait("Machine (6)", [{ kind: "damage-reduction", value: 6 }]),
+				trait("Plated", [
+					{ kind: "damage-reduction", value: 2, label: "Plating" },
 				]),
-				trait("Plated", [{ kind: "damage-reduction", value: 2, label: "Plating" }]),
 			],
 		});
 		expect(t.reduction).toHaveLength(2);
 		expect(t.reduction.reduce((s, m) => s + m.value, 0)).toBe(8);
 		expect(t.reduction[0].label).toBe("Machine (6)");
-		expect(t.reduction[0].source).toEqual({ type: "item", label: "SOURCE.FROM_TRAITS" });
+		expect(t.reduction[0].source).toEqual({
+			type: "item",
+			label: "SOURCE.FROM_TRAITS",
+		});
 		expect(t.reduction[1].id).toContain("Plated");
 	});
 
@@ -440,15 +483,24 @@ describe("collectSorceryRank (epic 0hap)", () => {
 		expect(
 			collectSorceryRank({
 				items: [
-					{ type: "talent", system: { effects: [{ kind: "sorcery-rank", value: 1 }] } },
+					{
+						type: "talent",
+						system: { effects: [{ kind: "sorcery-rank", value: 1 }] },
+					},
 				],
 			}),
 		).toBe(1);
 		expect(
 			collectSorceryRank({
 				items: [
-					{ type: "talent", system: { effects: [{ kind: "sorcery-rank", value: 1 }] } },
-					{ type: "talent", system: { effects: [{ kind: "sorcery-rank", value: 2 }] } },
+					{
+						type: "talent",
+						system: { effects: [{ kind: "sorcery-rank", value: 1 }] },
+					},
+					{
+						type: "talent",
+						system: { effects: [{ kind: "sorcery-rank", value: 2 }] },
+					},
 				],
 			}),
 		).toBe(2);
@@ -458,8 +510,14 @@ describe("collectSorceryRank (epic 0hap)", () => {
 		expect(
 			collectSorceryRank({
 				items: [
-					{ type: "psychicpower", system: { effects: [{ kind: "sorcery-rank", value: 2 }] } },
-					{ type: "talent", system: { effects: [{ kind: "wounds-max", value: 1 }] } },
+					{
+						type: "psychicpower",
+						system: { effects: [{ kind: "sorcery-rank", value: 2 }] },
+					},
+					{
+						type: "talent",
+						system: { effects: [{ kind: "wounds-max", value: 1 }] },
+					},
 				],
 			}),
 		).toBe(0);

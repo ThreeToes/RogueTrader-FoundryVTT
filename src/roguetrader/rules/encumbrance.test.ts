@@ -72,7 +72,9 @@ describe("resolveEncumbrance (book states, p268)", () => {
 	});
 
 	test("stateLabel keys match the uppercase lang-file keys (bead n84)", () => {
-		expect(resolveEncumbrance(40, 56, 112).stateLabel).toBe("INVENTORY.STATE_OK");
+		expect(resolveEncumbrance(40, 56, 112).stateLabel).toBe(
+			"INVENTORY.STATE_OK",
+		);
 		expect(resolveEncumbrance(60, 56, 112).stateLabel).toBe(
 			"INVENTORY.STATE_ENCUMBERED",
 		);
@@ -136,9 +138,7 @@ describe("actorEncumbrance", () => {
 	});
 
 	test("item quantity multiplies into the load", () => {
-		expect(
-			actorEncumbrance([item(5, { quantity: 3 })], 4 + 4).weight,
-		).toBe(15);
+		expect(actorEncumbrance([item(5, { quantity: 3 })], 4 + 4).weight).toBe(15);
 	});
 
 	test("state boundaries per the book: <= carrying ok; 56.1 encumbered", () => {

@@ -70,7 +70,11 @@ describe("ship component schema (bead f5xu)", () => {
 		// defaulting to 0/0.
 		for (const bound of ["min", "max"]) {
 			expect(range[bound]).toBeDefined();
-			expect(range[bound].opts).toMatchObject({ min: 0, integer: true, initial: 0 });
+			expect(range[bound].opts).toMatchObject({
+				min: 0,
+				integer: true,
+				initial: 0,
+			});
 		}
 	});
 

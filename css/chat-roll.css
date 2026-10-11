@@ -13,6 +13,14 @@
 	color: var(--rt-gold-soft);
 }
 
+/* Bead 279v: the salvo card's stat list is a left-aligned inline block so
+   the row labels stack tightly beside the centred card (was a static
+   inline style=... on the template, moved into the bundle). */
+.rogue-trader.chat .salvo-list {
+	text-align: left;
+	display: inline-block;
+}
+
 .rogue-trader.chat.roll .roll-summary {
 	display: flex;
 	gap: 12px;
@@ -49,36 +57,31 @@
 	color: var(--rt-danger-alarm);
 }
 
-.rogue-trader.chat.roll ul.modifier-breakdown {
+/* Bead j8jg: the four chat-card note surfaces share ONE note anatomy —
+   muted ink token, small margin, smaller type. The two lists also indent
+   (padding-left); the paragraphs are plain block notes on the card flow. */
+.rogue-trader.chat.roll ul.modifier-breakdown,
+.rogue-trader.chat.damage ul.quality-notes,
+.rogue-trader.chat.roll p.action-note,
+.rogue-trader.chat.damage p.ordnance-usage {
 	margin: 4px 0 0;
-	padding-left: 1.2em;
 	font-size: var(--rt-fs-lg);
-	color: #4a3f31;
+	color: var(--rt-chat-note);
 }
-/* Bead gci0: roll-mechanic quality notes (Tearing/Toxic/Blast) on the
-   damage card - same treatment as the modifier breakdown list. */
+
+.rogue-trader.chat.roll ul.modifier-breakdown,
 .rogue-trader.chat.damage ul.quality-notes {
-	margin: 4px 0 0;
 	padding-left: 1.2em;
-	font-size: var(--rt-fs-lg);
-	color: #4a3f31;
 }
-/* Bead et5a (epic moew): the combat-action roll card's manual-resolution
+
+/* Bead gci0: roll-mechanic quality notes (Tearing/Toxic/Blast) on the
+   damage card - same treatment as the modifier breakdown list.
+   Bead et5a (epic moew): the combat-action roll card's manual-resolution
    note (Opposed tests) — same treatment as the damage card's note rows. */
-.rogue-trader.chat.roll p.action-note {
-	margin: 4px 0 0;
-	font-size: var(--rt-fs-lg);
-	color: #4a3f31;
-}
 
 /* Bead 4obp: launcher-ordnance usage chip on the damage card - what fired,
    the remaining quantity (manual tracking, no auto-consumption) and the
    player's one-click spend button. */
-.rogue-trader.chat.damage p.ordnance-usage {
-	margin: 4px 0 0;
-	font-size: var(--rt-fs-lg);
-	color: #4a3f31;
-}
 
 .rogue-trader.chat.damage p.ordnance-usage .fired-quantity {
 	font-weight: bold;

@@ -32,7 +32,7 @@ export class Career extends foundry.abstract.TypeDataModel<
 		string,
 		{ simple: number; intermediate: number; trained: number; expert: number }
 	>;
-declare startingSkills: string[];
+	declare startingSkills: string[];
 	declare startingTalents: string[];
 	declare startingGear: string[];
 	declare ranks: CareerRank[];
@@ -83,10 +83,9 @@ declare startingSkills: string[];
 			 * follow-up): the `home-world` origin keys this career pairs well
 			 * with. The creator highlights the matching career chips.
 			 */
-			suggestedHomeWorlds: new foundry.data.fields.ArrayField(
-				textField(),
-				{ initial: () => [] },
-			),
+			suggestedHomeWorlds: new foundry.data.fields.ArrayField(textField(), {
+				initial: () => [],
+			}),
 			/** Citation: which book/page this career (or alt-rank set) came from.
 			 * Bead zzlq: unified on the shared sourceField — book is the
 			 * books.yaml SLUG (display resolves via books.yaml titles). */

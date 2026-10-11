@@ -74,9 +74,7 @@ describe("Vehicle data model", () => {
 	});
 
 	test("template.json vehicle block keeps only the load-bearing keys", async () => {
-		const template = (await import(
-			"../../../../template.json"
-		)) as unknown as {
+		const template = (await import("../../../../template.json")) as unknown as {
 			Actor: { types: string[]; vehicle: Record<string, unknown> };
 		};
 		// template.json's `types` list is a legacy declaration — the Create Actor
@@ -105,7 +103,10 @@ describe("Vehicle data model", () => {
 			"description",
 		]) {
 			expect(schema[key], `schema missing ${key}`).toBeDefined();
-			expect(vehicle[key], `vehicle.${key} must not be in the template`).toBeUndefined();
+			expect(
+				vehicle[key],
+				`vehicle.${key} must not be in the template`,
+			).toBeUndefined();
 		}
 
 		// The two survivors. armour is a genuine non-default pre-population:

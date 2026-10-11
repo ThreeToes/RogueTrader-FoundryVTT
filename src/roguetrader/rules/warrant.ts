@@ -176,7 +176,11 @@ export function pruneWarrantPicks(
 ): Record<string, string> {
 	const pruned: Record<string, string> = { ...picks };
 	let prevCol = warrantPickColumn(pruned, fromRow);
-	for (let i = WARRANT_ROWS.indexOf(fromRow) + 1; i < WARRANT_ROWS.length; i++) {
+	for (
+		let i = WARRANT_ROWS.indexOf(fromRow) + 1;
+		i < WARRANT_ROWS.length;
+		i++
+	) {
 		const row = WARRANT_ROWS[i];
 		if (!pruned[row]) {
 			prevCol = null;

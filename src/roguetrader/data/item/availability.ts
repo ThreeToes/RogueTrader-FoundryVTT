@@ -26,11 +26,14 @@ export enum Availability {
 const KNOWN = new Set<string>(Object.values(Availability));
 
 export function normalizeAvailability(value: unknown): string {
-	const raw = String(value ?? "").trim().toLowerCase().replace(/\s+/g, "-");
+	const raw = String(value ?? "")
+		.trim()
+		.toLowerCase()
+		.replace(/\s+/g, "-");
 	if (KNOWN.has(raw)) return raw;
 	if (raw !== "" && raw !== "—" && raw !== "-") {
 		console.warn(
-			`rogue-trader: unknown availability "${String(value)}" — falling back to "common".`,
+			`rogue-trader | unknown availability "${String(value)}" — falling back to "common".`,
 		);
 	}
 	return Availability.Common;

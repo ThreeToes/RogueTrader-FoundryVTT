@@ -56,8 +56,7 @@ export function validatePointBuy(
 	return {
 		total,
 		remaining: profile.pointBuyBudget - total,
-		valid:
-			total <= profile.pointBuyBudget && overCap.length === 0,
+		valid: total <= profile.pointBuyBudget && overCap.length === 0,
 		overCap,
 	};
 }
@@ -97,7 +96,10 @@ export function finalCharacteristics(
 ): Record<CharacteristicKey, number> {
 	const result = {} as Record<CharacteristicKey, number>;
 	for (const key of CHARACTERISTIC_KEYS) {
-		result[key] = Math.min(100, Math.max(0, (base[key] ?? 0) + (deltas[key] ?? 0)));
+		result[key] = Math.min(
+			100,
+			Math.max(0, (base[key] ?? 0) + (deltas[key] ?? 0)),
+		);
 	}
 	return result;
 }
@@ -112,7 +114,11 @@ export function woundsFromOrigin(
 	woundsDiceTotals: number[],
 	woundBonus: number,
 ): number {
-	return toughnessBonus * 2 + woundsDiceTotals.reduce((a, b) => a + b, 0) + woundBonus;
+	return (
+		toughnessBonus * 2 +
+		woundsDiceTotals.reduce((a, b) => a + b, 0) +
+		woundBonus
+	);
 }
 
 /**

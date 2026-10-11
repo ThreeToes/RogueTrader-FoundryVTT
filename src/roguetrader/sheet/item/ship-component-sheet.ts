@@ -1,12 +1,14 @@
-import { effectActions, effectEditorChoices } from "./effect-actions";
+import { effectActions } from "./effect-actions";
 
 import {
 	formatShipWeaponRange,
 	normalizeShipWeaponRange,
 	type ShipWeaponRange,
 } from "../../data/item/ship-weapon-range";
-import { enrichText, itemDescriptionHTML } from "../rich-text";
+import { enrichText } from "../rich-text";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -30,7 +32,7 @@ const TYPE_LABELS: Readonly<Record<string, string>> = {
 	"life-sustainer": "SHIP_CREATOR.TYPE_LIFE_SUSTAINER",
 	"crew-quarters": "SHIP_CREATOR.TYPE_CREW_QUARTERS",
 	"augur-array": "SHIP_CREATOR.TYPE_AUGUR_ARRAY",
-	"macrobattery": "SHIP_COMBAT.MACROBATTERY",
+	macrobattery: "SHIP_COMBAT.MACROBATTERY",
 	lance: "SHIP_COMBAT.LANCE",
 	"nova-cannon": "STARSHIP.COMPONENTS_NOVA_CANNON",
 	"torpedo-tube": "STARSHIP.COMPONENTS_TORPEDO_TUBES",
@@ -67,21 +69,17 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		content: {
-			template:
-				"systems/rogue-trader/template/sheet/item/parts/ship-component-content.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/ship-component-content.hbs`,
 		},
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const localize = (key: string) => game.i18n.localize(key);
-		const sys = this.document.system as unknown as Record<
-			string,
-			unknown
-		> & {
+		const sys = this.document.system as unknown as Record<string, unknown> & {
 			componentType?: string;
 			category?: string;
 			space?: number;
@@ -103,7 +101,6 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 		const isWeapon = this.document.type === "ship-weapon-component";
 		const componentType = String(sys.componentType ?? "");
 		const category = String(sys.category ?? "");
-		Object.assign(context, effectEditorChoices());
 		context.isWeapon = isWeapon;
 		context.typeLabel = localize(TYPE_LABELS[componentType] ?? componentType);
 		context.categoryLabel = localize(CATEGORY_LABELS[category] ?? category);
@@ -113,9 +110,10 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 		context.categoryChoices = Object.entries(CATEGORY_LABELS).map(
 			([value, key]) => ({ value, label: localize(key) }),
 		);
-		context.stateChoices = Object.entries(STATE_LABELS).map(
-			([value, key]) => ({ value, label: localize(key) }),
-		);
+		context.stateChoices = Object.entries(STATE_LABELS).map(([value, key]) => ({
+			value,
+			label: localize(key),
+		}));
 		context.stateLabel = localize(STATE_LABELS[String(sys.state ?? "")] ?? "");
 		// Weapon range band (bead gq2g): normalise legacy single-number docs
 		// once here — the template binds min/max inputs to the computed pair
@@ -124,13 +122,14 @@ export class ShipComponentSheet extends HandlebarsApplicationMixin(
 		context.rangeMin = range.min;
 		context.rangeMax = range.max;
 		context.rangeLabel = formatShipWeaponRange(range);
-		context.specialHTML =
-			await enrichText(
-				String(sys.special ?? ""),
-				this.document,
-				{ secrets: this.document.isOwner },
-			);
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		context.specialHTML = await enrichText(
+			String(sys.special ?? ""),
+			this.document,
+			{ secrets: this.document.isOwner },
+		);
+		// Item data keys (bead apxq): effect editor choices (bead bpd, localized
+		// kind labels + test keys) + the enriched description prose.
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

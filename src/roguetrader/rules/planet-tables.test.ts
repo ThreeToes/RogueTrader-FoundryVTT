@@ -38,12 +38,12 @@ describe("planet creator draw helpers", () => {
 
 	describe("resultLabelFromRow", () => {
 		test("strips the table prefix at the em-dash", () => {
-			expect(
-				resultLabelFromRow("Planet Body — Rocky 2-3 Small"),
-			).toBe("Rocky 2-3 Small");
-			expect(
-				resultLabelFromRow("Inhabitants (Table 1-26) — Eldar"),
-			).toBe("Eldar");
+			expect(resultLabelFromRow("Planet Body — Rocky 2-3 Small")).toBe(
+				"Rocky 2-3 Small",
+			);
+			expect(resultLabelFromRow("Inhabitants (Table 1-26) — Eldar")).toBe(
+				"Eldar",
+			);
 		});
 
 		test("names without an em-dash pass through unchanged", () => {

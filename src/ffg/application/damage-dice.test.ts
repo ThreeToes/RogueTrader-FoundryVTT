@@ -9,11 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import {
-	damageTerm,
-	righteousFuryTriggered,
-	tearingBase,
-} from "./damage-dice";
+import { damageTerm, righteousFuryTriggered, tearingBase } from "./damage-dice";
 import type { DiceResult, DiceTerm } from "./ports";
 
 /** A roll result from explicit terms, with `dice` flattened as the port does. */
@@ -77,6 +73,44 @@ describe("righteousFuryTriggered (RT core: natural 10 on a damage die)", () => {
 			terms: [{ faces: 0, results: [10] }, die(10, [3])],
 		};
 		expect(righteousFuryTriggered(result)).toBe(false);
+	});
+});
+
+describe("tearingBase (bead 4jl4: multi-die weapons)", () => {
+	test("a 2d10 rolled as separate terms contributes BOTH dice", () => {
+		// Foundry merges consecutive same-denomination dice, but a numeric term
+		// or a hand-built roll can yield die(10) and die(10) as distinct terms.
+		expect(tearingBase(roll([die(10, [8]), die(10, [2])]))).toEqual({
+			faces: 10,
+			results: [8, 2],
+		});
+	});
+
+	test("2d10 [8,2] with extra 5 nets +3 (Tearing discards the 2)", () => {
+		// applyTearing's math over the widened results:
+		// added = extra - min(results..., extra) = 5 - 2 = 3.
+		const { results, faces } = tearingBase(roll([die(10, [8]), die(10, [2])]));
+		expect(Math.min(...results, 5)).toBe(2);
+		expect(5 - Math.min(...results, 5)).toBe(3);
+		expect(faces).toBe(10);
+	});
+
+	test("a non-die term between the damage dice does not break collection", () => {
+		const split = roll([{ faces: 0, results: [] }, die(10, [7]), die(10, [1])]);
+		expect(tearingBase(split)).toEqual({ faces: 10, results: [7, 1] });
+	});
+
+	test("a smaller mixed-formula die after the first die still stays out", () => {
+		// The d5 of 1d10+1d5 is a die term, but not of the damage die's size —
+		// bead k98i's fix (only the weapon's own damage dice compete) holds.
+		expect(tearingBase(roll([die(10, [4]), die(10, [2])]))).toEqual({
+			faces: 10,
+			results: [4, 2],
+		});
+		expect(tearingBase(roll([die(10, [4]), die(5, [2])]))).toEqual({
+			faces: 10,
+			results: [4],
+		});
 	});
 });
 

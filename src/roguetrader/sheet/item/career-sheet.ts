@@ -1,8 +1,10 @@
 import { careers } from "../../registry";
 import type { CareerRank } from "../../data/item/career";
+import { OPEN_PACK_DOC_ACTION, openPackDocUuid } from "../pack-resolve";
 import { ITEM_DESCRIPTION_TABS } from "../tabs";
-import { itemDescriptionHTML } from "../rich-text";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -60,18 +62,19 @@ function keyIndexMap(): Map<string, { uuid: string; name: string }> {
 }
 
 /**
- * Open the linked talent/skill document from the compendium.
+ * Open the linked talent/skill document from the compendium. Bead xhyu:
+ * delegate to the SHARED open path — resolvePackDocument fixes the LevelDB
+ * packs where fromUuid silently no-opped in-world (bead wwuc), and failures
+ * are loud (console + toast) instead of dropping the click on the floor.
  */
 async function openAdvance(
 	_event: unknown,
 	target: HTMLElement,
 ): Promise<void> {
-	const uuid = target.dataset.uuid;
-	if (!uuid) return;
-	const doc = (await foundry.utils.fromUuid(uuid)) as {
-		sheet?: { render: (force?: boolean) => Promise<unknown> };
-	} | null;
-	await doc?.sheet?.render(true);
+	await openPackDocUuid(target.dataset.uuid ?? "", {
+		notifyKey: "ADVANCE.OPEN_DOC_FAIL",
+		label: "career advance link",
+	});
 }
 
 /**
@@ -88,23 +91,24 @@ export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		width: 560,
 		height: 480,
 		actions: {
-			openAdvance,
+			// Bead xhyu: share the pack-doc action convention with the other
+			// doc-link surfaces (advancement dialog, creator, chat card).
+			[OPEN_PACK_DOC_ACTION]: openAdvance,
 		},
 	});
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		description: {
-			template:
-				"systems/rogue-trader/template/sheet/item/tabs/career-description.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/career-description.hbs`,
 		},
 		data: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/career-data.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/career-data.hbs`,
 		},
 	};
 
@@ -116,7 +120,7 @@ export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static TABS = ITEM_DESCRIPTION_TABS;
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		context.tabs = this._prepareTabs("primary");
 		const system = this.document.system as CareerLike;
 		context.careerChoices = Object.fromEntries(careers.entries());
@@ -153,7 +157,7 @@ export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.startingSkills = system.startingSkills ?? [];
 		context.startingTalents = system.startingTalents ?? [];
 		context.startingGear = system.startingGear ?? [];
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

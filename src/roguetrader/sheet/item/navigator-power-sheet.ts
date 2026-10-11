@@ -1,7 +1,8 @@
 import { effectActions } from "./effect-actions";
 import { NavigatorPower } from "../../data/item/navigator-power";
-import { itemDescriptionHTML } from "../rich-text";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -22,16 +23,15 @@ export class NavigatorPowerSheet extends HandlebarsApplicationMixin(
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		content: {
-			template:
-				"systems/rogue-trader/template/sheet/item/navigator-power.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/navigator-power.hbs`,
 		},
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		context.characteristicChoices = NavigatorPower.characteristicChoices;
 		context.masteryChoices = Object.fromEntries(
 			["novice", "adept", "master"].map((m) => [
@@ -51,7 +51,7 @@ export class NavigatorPowerSheet extends HandlebarsApplicationMixin(
 			adept: "",
 			master: "",
 		};
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

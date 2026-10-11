@@ -27,6 +27,7 @@ import {
 	warrantEntryFromDoc,
 	warrantPickColumn,
 } from "../../rules/warrant";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class WarrantCreator extends CreatorApplication {
 	static DEFAULT_OPTIONS = CreatorApplication.creatorOptions({
@@ -51,8 +52,7 @@ export class WarrantCreator extends CreatorApplication {
 
 	static PARTS = {
 		form: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/warrant-creator.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/warrant-creator.hbs`,
 		},
 	};
 
@@ -94,7 +94,9 @@ export class WarrantCreator extends CreatorApplication {
 
 	async _prepareContext(_options: object = {}) {
 		await this.#ensurePool();
-		const context = sheetContext(await super._prepareContext(_options as never));
+		const context = sheetContext(
+			await super._prepareContext(_options as never),
+		);
 		const index = Math.max(0, Math.min(this.step, WARRANT_ROWS.length - 1));
 		this.step = index;
 		const row = WARRANT_ROWS[index];
@@ -197,7 +199,11 @@ export class WarrantCreator extends CreatorApplication {
 			// Clicking the selected chip clears it; the chain is broken, so any
 			// downstream pick loses its anchor and is cleared too.
 			delete picks[row];
-			for (let i = WARRANT_ROWS.indexOf(row) + 1; i < WARRANT_ROWS.length; i++) {
+			for (
+				let i = WARRANT_ROWS.indexOf(row) + 1;
+				i < WARRANT_ROWS.length;
+				i++
+			) {
 				delete picks[WARRANT_ROWS[i]];
 			}
 		}

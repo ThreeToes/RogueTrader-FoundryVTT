@@ -4,17 +4,26 @@
  */
 
 export {
+	CHARACTER_ACTOR_TYPES,
 	type ActorSystemView,
 	type ActorView,
+	type AnySystemView,
+	type CharacterActorTypes,
 	type CharacteristicView,
 	type CharacterSystemView,
 	type EffectView,
 	type ItemView,
-	itemById,
-	itemsOfType,
+	STARSHIP_ACTOR_TYPES,
+	type ShipActorTypes,
 	type ShipSystemView,
 	type SystemViewBase,
+	type SystemViewOfActorType,
+	VEHICLE_ACTOR_TYPES,
+	type VehicleActorTypes,
 	type VehicleSystemView,
+	isCharacterView,
+	itemById,
+	itemsOfType,
 } from "./actor";
 export {
 	type AttackProfile,

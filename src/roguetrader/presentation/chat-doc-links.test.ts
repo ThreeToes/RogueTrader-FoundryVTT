@@ -107,12 +107,8 @@ describe("chat card doc links — template guards (bead qg4z)", () => {
 
 	test("damage.hbs: every existing card button survives (bead ncc/d8bc/4obp)", () => {
 		const code = templateCode("template/chat/damage.hbs");
-		expect((code.match(/<button class="apply-damage"/g) ?? []).length).toBe(
-			1,
-		);
-		expect((code.match(/<button class="rt-toxic-test"/g) ?? []).length).toBe(
-			1,
-		);
+		expect((code.match(/<button class="apply-damage"/g) ?? []).length).toBe(1);
+		expect((code.match(/<button class="rt-toxic-test"/g) ?? []).length).toBe(1);
 		expect(
 			(code.match(/<button class="rt-ammo-decrement"/g) ?? []).length,
 		).toBe(1);
@@ -149,10 +145,7 @@ describe("chat card doc links — template guards (bead qg4z)", () => {
 		expect(resolve).toContain("openPackDocUuid");
 		// All three surfaces delegate the BODY (no per-surface copies):
 		expect(
-			readFileSync(
-				"src/roguetrader/sheet/actor/advancement-dialog.ts",
-				"utf8",
-			),
+			readFileSync("src/roguetrader/sheet/actor/advancement-dialog.ts", "utf8"),
 		).toContain("openPackDocUuid");
 		expect(
 			readFileSync("src/roguetrader/sheet/actor/character-creator.ts", "utf8"),
@@ -234,8 +227,7 @@ describe("chatCardTitleDoc — catalog resolution through the pack caches (bead 
 								{
 									name: "Smite",
 									type: "psychicpower",
-									uuid:
-										"Compendium.rogue-trader.character-options.Item.smiteId",
+									uuid: "Compendium.rogue-trader.character-options.Item.smiteId",
 									system: { key: "smite" },
 								},
 							],

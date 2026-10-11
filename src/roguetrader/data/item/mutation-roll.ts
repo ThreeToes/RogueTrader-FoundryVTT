@@ -24,9 +24,7 @@ export function rollMutation(
 ): { name: string } | null {
 	const candidates = rows.filter(
 		(row) =>
-			row.tableKey === tableKey &&
-			d100 >= row.rollMin &&
-			d100 <= row.rollMax,
+			row.tableKey === tableKey && d100 >= row.rollMin && d100 <= row.rollMax,
 	);
 	if (candidates.length === 0) return null;
 	return { name: candidates[0].name ?? "" };

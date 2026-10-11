@@ -32,7 +32,9 @@ export const MAX_CRITICAL_SEVERITY = 10;
  * across both limbs ("Critical Hit (Energy, Arm)" is used for either arm), which
  * is why left- and right- variants fold together here.
  */
-export function criticalRegion(location: string | null | undefined): CriticalRegion {
+export function criticalRegion(
+	location: string | null | undefined,
+): CriticalRegion {
 	const key = (location ?? "").toLowerCase();
 	if (key.includes("head")) return "Head";
 	if (key.includes("arm")) return "Arm";

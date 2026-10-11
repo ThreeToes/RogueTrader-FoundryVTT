@@ -25,7 +25,10 @@ import Handlebars from "handlebars";
 /** Stub helper set: only what these three templates + inv-row need. */
 const stubs = {
 	localize: (key: unknown) => String(key ?? ""),
-	selectOptions: (choices: unknown, opts?: { hash?: { selected?: string } }) => {
+	selectOptions: (
+		choices: unknown,
+		opts?: { hash?: { selected?: string } },
+	) => {
 		const selected = opts?.hash?.selected;
 		const entries = Object.entries(choices ?? {});
 		return new Handlebars.SafeString(
@@ -37,8 +40,7 @@ const stubs = {
 				.join(""),
 		);
 	},
-	concat: (...parts: unknown[]) =>
-		parts.slice(0, -1).map(String).join(""),
+	concat: (...parts: unknown[]) => parts.slice(0, -1).map(String).join(""),
 	ifThen: (cond: unknown, thenValue: unknown, elseValue: unknown) =>
 		cond ? thenValue : elseValue,
 	eq: (a: unknown, b: unknown) => a === b,
@@ -47,10 +49,7 @@ const stubs = {
 
 /** The shared partials the sheets register (init time). */
 const INV_ROW = readFileSync("template/shared/parts/inv-row.hbs", "utf8");
-const WEAPON_ROW = readFileSync(
-	"template/shared/parts/weapon-row.hbs",
-	"utf8",
-);
+const WEAPON_ROW = readFileSync("template/shared/parts/weapon-row.hbs", "utf8");
 const COMBAT_WEAPON_ROW = readFileSync(
 	"template/shared/parts/combat-weapon-row.hbs",
 	"utf8",
@@ -99,8 +98,18 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		// Per-weapon slot chips (owner round 7): validity computed in the
 		// sheet context; the harness pins that the template renders them.
 		slotChips: [
-			{ key: "dorsal", label: "STARSHIP.SLOT_DORSAL", disabled: false, reason: "" },
-			{ key: "prow", label: "STARSHIP.SLOT_PROW", disabled: true, reason: "STARSHIP.ISSUE_UNKNOWN_SLOT" },
+			{
+				key: "dorsal",
+				label: "STARSHIP.SLOT_DORSAL",
+				disabled: false,
+				reason: "",
+			},
+			{
+				key: "prow",
+				label: "STARSHIP.SLOT_PROW",
+				disabled: true,
+				reason: "STARSHIP.ISSUE_UNKNOWN_SLOT",
+			},
 		],
 	};
 	const refitContext = {
@@ -192,7 +201,9 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		const render = compile("npc-main.hbs");
 		const html = render({
 			editable: true,
-			skills: [{ id: "s1", name: "Pilot (Spacecraft)", ladderOptions: { a: "A" } }],
+			skills: [
+				{ id: "s1", name: "Pilot (Spacecraft)", ladderOptions: { a: "A" } },
+			],
 		});
 		// With the old ../editable the #if fell to the else branch always.
 		expect(html).toContain("npc-ladder-select");
@@ -254,7 +265,9 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 	});
 
 	it("combat-weapon-row honours explicit caller action names (NPC override)", () => {
-		const render = compilePartial("template/shared/parts/combat-weapon-row.hbs");
+		const render = compilePartial(
+			"template/shared/parts/combat-weapon-row.hbs",
+		);
 		const html = render({
 			id: "w1",
 			name: "Lasgun",
@@ -274,7 +287,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 	// backAction and it was missing from the partial's documented params — so
 	// Handlebars resolved it to undefined and every back button rendered
 	// data-action="" (a DEAD CLICK, same class as txf2).
-	it("creator-nav back button defaults to a real action, not data-action=\"\"", () => {
+	it('creator-nav back button defaults to a real action, not data-action=""', () => {
 		const render = compilePartial("template/shared/parts/creator-nav.hbs");
 		const html = render({
 			backLabel: "CREATOR.BACK",
@@ -299,7 +312,11 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 
 	it("creator-nav hides back on the first step but keeps a live forward", () => {
 		const render = compilePartial("template/shared/parts/creator-nav.hbs");
-		const html = render({ backHidden: true, backLabel: "Back", forwardLabel: "Next" });
+		const html = render({
+			backHidden: true,
+			backLabel: "Back",
+			forwardLabel: "Next",
+		});
 		expect(html).not.toContain("rt-creator-nav-back");
 		expect(html).toContain('data-action="next"');
 	});
@@ -325,7 +342,13 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 				{
 					labelKey: "TYPES.Item.talent",
 					items: [
-						{ id: "t1", name: "Rapid Reload", type: "talent", equippable: false, ready: false },
+						{
+							id: "t1",
+							name: "Rapid Reload",
+							type: "talent",
+							equippable: false,
+							ready: false,
+						},
 					],
 				},
 			],
@@ -359,7 +382,14 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 				{
 					labelKey: "TYPES.Item.gear",
 					items: [
-						{ id: "g1", name: "Rope", type: "gear", equippable: true, ready: true, source: "" },
+						{
+							id: "g1",
+							name: "Rope",
+							type: "gear",
+							equippable: true,
+							ready: true,
+							source: "",
+						},
 					],
 				},
 			],
@@ -373,7 +403,9 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 	});
 
 	it("combat-weapon-row renders the pack link only when a uuid is passed (bead kwm9)", () => {
-		const render = compilePartial("template/shared/parts/combat-weapon-row.hbs");
+		const render = compilePartial(
+			"template/shared/parts/combat-weapon-row.hbs",
+		);
 		const withUuid = render({
 			id: "w1",
 			name: "Lasgun",

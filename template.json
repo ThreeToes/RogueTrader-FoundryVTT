@@ -1,108 +1,101 @@
 {
-    "Actor": {
-        "types": [
-            "explorer",
-            "npc",
-            "dynasty",
-            "starship",
-            "vehicle",
-            "cache"
-        ],
-        "npc": {
-            "prototypeToken": {
-                "bar1": {
-                    "attribute": "wounds"
-                }
-            }
-        },
-        "dynasty": {
-            "prototypeToken": {
-                "actorLink": true,
-                "sight": {
-                    "enabled": false
-                }
-            }
-        },
-        "starship": {
-            "prototypeToken": {
-                "actorLink": true,
-                "bar1": {
-                    "attribute": "hullIntegrity"
-                },
-                "sight": {
-                    "enabled": false
-                }
-            }
-        },
-        "vehicle": {
-            "armour": {
-                "front": 0,
-                "left": 0,
-                "right": 0,
-                "rear": 0,
-                "top": 0,
-                "bottom": 0
-            },
-            "prototypeToken": {
-                "bar1": {
-                    "attribute": "system.structuralIntegrity"
-                },
-                "sight": {
-                    "enabled": false
-                }
-            }
-        },
-        "explorer": {
-            "prototypeToken": {
-                "actorLink": true,
-                "bar1": {
-                    "attribute": "wounds"
-                }
-            }
-        },
-        "cache": {
-            "prototypeToken": {
-                "sight": {
-                    "enabled": false
-                }
-            }
-        }
-    },
-    "Item": {
-        "types": [
-            "action",
-            "ammunition",
-            "aptitude",
-            "armour",
-            "armour-modification",
-            "battlesuit",
-            "battlesuit-system",
-            "career",
-            "drug",
-            "force-field",
-            "game-table",
-            "gear",
-            "gearset",
-            "heirloom",
-            "madnessentry",
-            "melee-weapon",
-            "mutation",
-            "navigatorpower",
-            "origin",
-            "origintrait",
-            "psychicpower",
-            "ranged-weapon",
-            "ship",
-            "ship-complication",
-            "ship-component",
-            "ship-weapon-component",
-            "skill",
-            "special-ability",
-            "talent",
-            "tool",
-            "trait",
-            "warrant-option",
-            "weapon-modification"
-        ]
-    }
+	"Actor": {
+		"types": ["explorer", "npc", "dynasty", "starship", "vehicle", "cache"],
+		"npc": {
+			"prototypeToken": {
+				"bar1": {
+					"attribute": "wounds"
+				}
+			}
+		},
+		"dynasty": {
+			"prototypeToken": {
+				"actorLink": true,
+				"sight": {
+					"enabled": false
+				}
+			}
+		},
+		"starship": {
+			"prototypeToken": {
+				"actorLink": true,
+				"bar1": {
+					"attribute": "hullIntegrity"
+				},
+				"sight": {
+					"enabled": false
+				}
+			}
+		},
+		"vehicle": {
+			"armour": {
+				"front": 0,
+				"left": 0,
+				"right": 0,
+				"rear": 0,
+				"top": 0,
+				"bottom": 0
+			},
+			"prototypeToken": {
+				"bar1": {
+					"attribute": "system.structuralIntegrity"
+				},
+				"sight": {
+					"enabled": false
+				}
+			}
+		},
+		"explorer": {
+			"prototypeToken": {
+				"actorLink": true,
+				"bar1": {
+					"attribute": "wounds"
+				}
+			}
+		},
+		"cache": {
+			"prototypeToken": {
+				"sight": {
+					"enabled": false
+				}
+			}
+		}
+	},
+	"Item": {
+		"types": [
+			"action",
+			"ammunition",
+			"aptitude",
+			"armour",
+			"armour-modification",
+			"battlesuit",
+			"battlesuit-system",
+			"career",
+			"drug",
+			"force-field",
+			"game-table",
+			"gear",
+			"gearset",
+			"heirloom",
+			"madnessentry",
+			"melee-weapon",
+			"mutation",
+			"navigatorpower",
+			"origin",
+			"origintrait",
+			"psychicpower",
+			"ranged-weapon",
+			"ship",
+			"ship-complication",
+			"ship-component",
+			"ship-weapon-component",
+			"skill",
+			"special-ability",
+			"talent",
+			"tool",
+			"trait",
+			"warrant-option",
+			"weapon-modification"
+		]
+	}
 }

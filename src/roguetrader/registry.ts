@@ -15,6 +15,7 @@
  * (i.e. during `init`). Schema field `choices` are captured at that point.
  */
 import { Registry } from "../ffg/domain/registry";
+import { DamageType } from "../ffg/domain/model/damage";
 
 /**
  * A `Registry<string>` of key -> i18n label key, plus the `choices` shape
@@ -330,6 +331,29 @@ const AFFLICTION_PROCEDURES = {
 } as const;
 
 /**
+ * MadnessEntry kinds (bead b76m, former sheet-local KIND_LABEL_KEYS): the
+ * affliction vocabulary the `madnessentry` docs take — disorders,
+ * malignancies, the track/trauma rows, plus the reference-table kinds the
+ * afflictions pack's rows carry (fear difficulties, psychic phenomena,
+ * perils of the warp, shock results; ~60 compendium rows). Modules extend
+ * the list at init: `CONFIG.ROGUE_TRADER.madnessEntryKinds.register(key,
+ * "MADNESS.KIND_X")` — the sheet falls back to the raw kind when the label
+ * is unregistered.
+ */
+const MADNESS_ENTRY_KINDS = {
+	disorder: "MADNESS.KIND_DISORDER",
+	malignancy: "MADNESS.KIND_MALIGNANCY",
+	"insanity-track": "MADNESS.KIND_INSANITY_TRACK",
+	"corruption-track": "MADNESS.KIND_CORRUPTION_TRACK",
+	trauma: "MADNESS.KIND_TRAUMA",
+	note: "MADNESS.KIND_NOTE",
+	"fear-difficulty": "MADNESS.KIND_FEAR_DIFFICULTY",
+	perils: "MADNESS.KIND_PERILS",
+	phenomena: "MADNESS.KIND_PHENOMENA",
+	"shock-table": "MADNESS.KIND_SHOCK_TABLE",
+} as const;
+
+/**
  * Core careers (Table 2-1, Core Rulebook p37). Labels are the career names
  * themselves (proper nouns, not localized). Splat books and homebrew
  * register additional careers via CONFIG.ROGUE_TRADER.careers at init.
@@ -373,6 +397,23 @@ const SORCERY_RANKS = {
 } as const;
 
 /**
+ * The book's damage types (Core Rulebook damage tables: Energy / Explosive /
+ * Impact / Rending). Keys are the DamageType enum values — the STORED
+ * values (weapon/gear/psychic-power sheets read them back with a `lookup`
+ * for display), labels are the DAMAGE_TYPE.* i18n keys. The *_SHORT
+ * single-letter variants (E/I/R/X book notation) live only in adapter.ts's
+ * damage-card rendering. The seed mirrors the domain enum, so a new damage
+ * type is a data-model change (DAMAGE_TYPE.* lang keys + enum entry), not a
+ * per-sheet edit (bead seeg).
+ */
+const DAMAGE_TYPES = Object.fromEntries(
+	Object.values(DamageType).map((value) => [
+		value,
+		`DAMAGE_TYPE.${value.toUpperCase()}`,
+	]),
+) as Record<string, string>;
+
+/**
  * The RT registry seed: registry name -> key -> i18n label. The seeds are
  * the RT wiring; the FACTORY (createRegistries) is generic, so a sibling
  * 40k system module can build its own registry set under its own CONFIG
@@ -394,10 +435,12 @@ const ROGUE_TRADER_SEEDS: RegistrySeeds = {
 	talents: TALENTS,
 	talentConditions: TALENT_CONDITIONS,
 	afflictionProcedures: AFFLICTION_PROCEDURES,
+	madnessEntryKinds: MADNESS_ENTRY_KINDS,
 	equipStates: EQUIP_STATES,
 	careers: CAREERS,
 	psychicDisciplines: PSYCHIC_DISCIPLINES,
 	sorceryRanks: SORCERY_RANKS,
+	damageTypes: DAMAGE_TYPES,
 };
 
 /** Registry name -> seed map (key -> i18n label). */
@@ -468,10 +511,12 @@ export const talentCategories = RT_REGISTRIES.talentCategories;
 export const talents = RT_REGISTRIES.talents;
 export const talentConditions = RT_REGISTRIES.talentConditions;
 export const afflictionProcedures = RT_REGISTRIES.afflictionProcedures;
+export const madnessEntryKinds = RT_REGISTRIES.madnessEntryKinds;
 export const equipStates = RT_REGISTRIES.equipStates;
 export const careers = RT_REGISTRIES.careers;
 export const psychicDisciplines = RT_REGISTRIES.psychicDisciplines;
 export const sorceryRanks = RT_REGISTRIES.sorceryRanks;
+export const damageTypes = RT_REGISTRIES.damageTypes;
 
 /**
  * Re-attach the RT registries to CONFIG.ROGUE_TRADER during init. Module

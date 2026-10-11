@@ -2,6 +2,7 @@ import { Skill } from "../../data/item/skill";
 import { LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -15,7 +16,7 @@ export class SkillSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	static PARTS = {
 		form: {
-			template: "systems/rogue-trader/template/sheet/item/skill.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/skill.hbs`,
 		},
 	};
 

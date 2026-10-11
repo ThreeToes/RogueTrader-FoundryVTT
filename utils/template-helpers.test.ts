@@ -34,7 +34,7 @@ describe("helper arity (bead 7tjo)", () => {
 		// Verbatim shape from ship-creator.hbs (bead 9cre follow-up).
 		const source = [
 			"{{#each hulls}}",
-			"  <li class=\"{{#if ../picked.has o.uuid}}on{{/if}}\">{{o.name}}</li>",
+			'  <li class="{{#if ../picked.has o.uuid}}on{{/if}}">{{o.name}}</li>',
 			"{{/each}}",
 		].join("\n");
 
@@ -125,9 +125,9 @@ describe("unknown helper names (bead 7tjo)", () => {
 		expect(checkHelperCalls("{{o.uuid}}")).toEqual([]);
 		expect(checkHelperCalls("{{../picked.has}}")).toEqual([]);
 		expect(checkHelperCalls("{{@index}}")).toEqual([]);
-		expect(checkHelperCalls("{{#each items as |o|}}{{o.uuid}}{{/each}}")).toEqual(
-			[],
-		);
+		expect(
+			checkHelperCalls("{{#each items as |o|}}{{o.uuid}}{{/each}}"),
+		).toEqual([]);
 		expect(checkHelperCalls("{{this}}")).toEqual([]);
 		expect(checkHelperCalls("{{tabs.data.cssClass}}")).toEqual([]);
 	});
@@ -148,8 +148,9 @@ describe("isSimpleName", () => {
 describe("walkAst", () => {
 	test("visits every node, including nested loop bodies", () => {
 		const types: string[] = [];
-		walkAst(Handlebars.parse("{{#each a}}{{#if b}}{{c}}{{/if}}{{/each}}"), (n) =>
-			types.push(n.type ?? "?"),
+		walkAst(
+			Handlebars.parse("{{#each a}}{{#if b}}{{c}}{{/if}}{{/each}}"),
+			(n) => types.push(n.type ?? "?"),
 		);
 		expect(types.filter((t) => t === "BlockStatement")).toHaveLength(2);
 		expect(types).toContain("MustacheStatement");

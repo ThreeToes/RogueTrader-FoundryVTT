@@ -61,10 +61,7 @@ describe("ForceField data model", () => {
 });
 
 describe("Gear quantity field (bead 1sxq)", () => {
-	const schema = Gear.defineSchema() as unknown as Record<
-		string,
-		StubField
-	>;
+	const schema = Gear.defineSchema() as unknown as Record<string, StubField>;
 	test("quantity is integer, min 0, initial 1, required", () => {
 		const quantity = schema.quantity as StubField;
 		expect(quantity.opts.initial).toBe(1);

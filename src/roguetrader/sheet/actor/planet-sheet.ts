@@ -46,6 +46,7 @@ interface AttachedTable {
  * authoritative row texts live on the items. Fully resizable.
  */
 import { imageActions } from "../image-actions";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class PlanetSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
@@ -61,11 +62,10 @@ export class PlanetSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	static PARTS = {
 		header: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/parts/planet-header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/planet-header.hbs`,
 		},
 		form: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/planet.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/planet.hbs`,
 		},
 	};
 
@@ -178,9 +178,11 @@ export class PlanetSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		);
 		const uuid = target?.getAttribute("data-item-uuid");
 		if (!uuid) return;
-		const item = (this.document as unknown as {
-			items: Map<string, foundry.documents.Item>;
-		}).items.get(uuid);
+		const item = (
+			this.document as unknown as {
+				items: Map<string, foundry.documents.Item>;
+			}
+		).items.get(uuid);
 		if (!item) return;
 		await item.delete();
 	}

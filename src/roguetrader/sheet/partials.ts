@@ -1,3 +1,4 @@
+import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
 /**
  * Shared Handlebars partials (consolidation pass 2026-09-06, beads bef7 /
  * 9v7c / 7c1y / 201f): the editor block, header portrait, paired value/max
@@ -23,12 +24,17 @@ export const SHARED_PARTIALS = [
 	"shared/parts/effect-editor.hbs",
 ] as const;
 
-const PREFIX = "systems/rogue-trader/template/";
+const PREFIX = TEMPLATE_ROOT;
 
 export function registerSharedPartials(): void {
 	for (const rel of SHARED_PARTIALS) {
 		const path = `${PREFIX}${rel}`;
-		const name = `rt/${rel.split("/").pop()?.replace(/\.hbs$/, "") ?? rel}`;
+		const name = `rt/${
+			rel
+				.split("/")
+				.pop()
+				?.replace(/\.hbs$/, "") ?? rel
+		}`;
 		// getTemplate is Foundry's load+compile cache; partials accept a
 		// compiled template function directly.
 		foundry.applications.handlebars.getTemplate(path).then((compiled) => {

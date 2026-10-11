@@ -15,13 +15,19 @@ const traumas = [
 describe("lookupMadnessRow (bead 06qc)", () => {
 	test("insanity track bands resolve (0-9 stable, 40+ disturbed)", () => {
 		expect(lookupMadnessRow(track, "insanity-track", 5)?.degree).toBe("Stable");
-		expect(lookupMadnessRow(track, "insanity-track", 10)?.degree).toBe("Unsettled");
-		expect(lookupMadnessRow(track, "insanity-track", 40)?.degree).toBe("Disturbed");
+		expect(lookupMadnessRow(track, "insanity-track", 10)?.degree).toBe(
+			"Unsettled",
+		);
+		expect(lookupMadnessRow(track, "insanity-track", 40)?.degree).toBe(
+			"Disturbed",
+		);
 	});
 
 	test("trauma rolls resolve including the 171+ tail", () => {
 		expect(lookupMadnessRow(traumas, "trauma", 1)?.degree).toBe("Withdrawn");
-		expect(lookupMadnessRow(traumas, "trauma", 45)?.degree).toBe("Compulsive Action");
+		expect(lookupMadnessRow(traumas, "trauma", 45)?.degree).toBe(
+			"Compulsive Action",
+		);
 		expect(lookupMadnessRow(traumas, "trauma", 999)?.degree).toBe("Catatonia");
 	});
 

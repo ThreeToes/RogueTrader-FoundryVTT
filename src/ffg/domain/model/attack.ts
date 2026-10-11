@@ -177,9 +177,7 @@ export const WEAPON_MOD_EFFECT_KINDS = ["pen-flat", "primitive-clear"] as const;
  * Actor-side lookup for one attached modification: `(id) => actor.items.get(id)`
  * — the SAME resolver instance as the ammo one (both resolve owned item ids).
  */
-export type ModResolver = (
-	id: string,
-) => AttachedWeaponMod | null | undefined;
+export type ModResolver = (id: string) => AttachedWeaponMod | null | undefined;
 
 /**
  * Resolve a weapon's attached modification ids (system.modifications) through
@@ -227,9 +225,7 @@ function foldWeaponMods(
 				// Mono makes the weapon count non-primitive for the qualities
 				// list too (the primitive-armour rule reads either form.
 				// Pure fold — never mutate the caller's profile object).
-				qualities = qualities.filter(
-					(q) => q.toLowerCase() !== "primitive",
-				);
+				qualities = qualities.filter((q) => q.toLowerCase() !== "primitive");
 			}
 		}
 	}
@@ -342,9 +338,7 @@ export function acceptsOrdnance(
  * plain ammunition, a damage-less grenade) — that is the warn-and-refuse
  * case, never a silent fallback to the launcher's own "—" damage.
  */
-export function ordnanceFieldsOf(
-	loaded: LoadableOrdnance | null | undefined,
-): {
+export function ordnanceFieldsOf(loaded: LoadableOrdnance | null | undefined): {
 	damage: string;
 	damageTypes: string[];
 	penetration: number;
@@ -465,6 +459,10 @@ export function attackProfileOf(
 		// standalone weapon: its own printed profile wins, and nothing load
 		// side is consulted (the empty acceptance means it accepts nothing —
 		// epic nlsh compatibility card).
+		// Attached weapon modifications (bead huaf/ujtg) fold into EVERY
+		// branch — install is not launcher-gated, so a missed fold would be a
+		// silent no-op (review finding, epic zlwc round 3).
+		const attachedMods = weaponModSources(item, modsResolver);
 		if (
 			!melee &&
 			String(
@@ -476,22 +474,20 @@ export function attackProfileOf(
 			)
 				.trim()
 				.toLowerCase();
-			if (!accepts) return base;
-			return launcherProfile(
-				base,
-				String(
-					((item.system ?? {}) as { loadedAmmoId?: string }).loadedAmmoId ??
-						"",
+			if (!accepts) return foldWeaponMods(base, attachedMods);
+			return foldWeaponMods(
+				launcherProfile(
+					base,
+					String(
+						((item.system ?? {}) as { loadedAmmoId?: string }).loadedAmmoId ??
+							"",
+					),
+					ammoResolver,
 				),
-				ammoResolver,
+				attachedMods,
 			);
 		}
-		// Attached weapon modifications (bead huaf/ujtg) fold into the fire
-		// profile — the damage path reads penetration/primitive from here.
-		return foldWeaponMods(
-			base,
-			weaponModSources(item, modsResolver),
-		);
+		return foldWeaponMods(base, attachedMods);
 	}
 	if (type !== "mutation") return null;
 	const attack = (item.system as { attack?: MutationAttackLike } | undefined)
@@ -508,7 +504,8 @@ export function attackProfileOf(
 		name: item.name ?? "",
 		// A Ballistic Skill attack is a ranged attack for effect matching even
 		// though the mutation is not a ranged weapon.
-		attackType: attack.characteristic === "ws" ? "melee-weapon" : "ranged-weapon",
+		attackType:
+			attack.characteristic === "ws" ? "melee-weapon" : "ranged-weapon",
 		characteristic: attack.characteristic || "bs",
 		damage: attack.damage,
 		damageTypes,

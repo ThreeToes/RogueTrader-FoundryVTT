@@ -20,7 +20,7 @@ function isDie(term: DiceTerm): boolean {
 	return term.class === undefined || term.class === "Die";
 }
 
-/** The first die term of a roll — the weapon's damage die. */
+/** Damage-die term of the roll — the first of the weapon's damage dice. */
 export function damageTerm(result: DiceResult): DiceTerm | undefined {
 	return result.terms.find(isDie);
 }
@@ -31,7 +31,9 @@ export function damageTerm(result: DiceResult): DiceTerm | undefined {
  * non-dice terms never do.
  */
 export function righteousFuryTriggered(result: DiceResult): boolean {
-	return result.terms.some((term) => isDie(term) && term.faces === 10 && term.results.includes(10));
+	return result.terms.some(
+		(term) => isDie(term) && term.faces === 10 && term.results.includes(10),
+	);
 }
 
 /**
@@ -42,6 +44,16 @@ export function tearingBase(result: DiceResult): {
 	faces: number;
 	results: number[];
 } {
-	const term = damageTerm(result);
-	return { faces: term?.faces ?? 10, results: term?.results ?? [] };
+	const first = damageTerm(result);
+	if (!first) return { faces: 10, results: [] };
+	// Bead 4jl4: a multi-die weapon can roll its damage dice as SEPARATE
+	// terms (Foundry merges consecutive same-denomination dice, but a
+	// numeric term — or a hand-built roll — can split them). Every die term
+	// of the damage die's own size competes for the discard; a smaller
+	// mixed-formula die (1d10+1d5, bead k98i) is not that die type and stays
+	// out.
+	const results = result.terms
+		.filter((term) => isDie(term) && term.faces === first.faces)
+		.flatMap((term) => term.results);
+	return { faces: first.faces, results };
 }

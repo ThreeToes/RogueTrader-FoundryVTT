@@ -22,8 +22,8 @@ export async function adjustTrack(
 	delta: number,
 ): Promise<number> {
 	if (!Number.isFinite(delta) || delta === 0) return 0;
-	const system = (actor as { system?: Record<string, unknown> } | null)
-		?.system ?? {};
+	const system =
+		(actor as { system?: Record<string, unknown> } | null)?.system ?? {};
 	const raw = Number(system[field]);
 	const current = Number.isFinite(raw) ? raw : 0;
 	await actors.update(actor, {

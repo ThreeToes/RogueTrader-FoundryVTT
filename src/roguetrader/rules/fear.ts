@@ -23,7 +23,7 @@ import type { Modifier } from "../../rules-engine/modifier";
 export function fearTestModifier(rating: number): number {
 	if (!Number.isInteger(rating) || rating < 1) {
 		// Loud data: an unparseable Fear (X) must never silently become +0.
-		throw new Error(`rogue-trader: invalid Fear rating "${rating}"`);
+		throw new Error(`rogue-trader | invalid Fear rating "${rating}"`);
 	}
 	const penalty = (rating - 1) * 10;
 	return penalty === 0 ? 0 : -penalty;
@@ -57,11 +57,16 @@ export function parseFearRating(
  * silently.
  */
 export function resolveFearRating(actor: unknown): number | null {
-	const items = (actor as { items?: Array<{
-		name?: string;
-		type?: string;
-		system?: { benefit?: string };
-	}> }).items ?? [];
+	const items =
+		(
+			actor as {
+				items?: Array<{
+					name?: string;
+					type?: string;
+					system?: { benefit?: string };
+				}>;
+			}
+		).items ?? [];
 	let best: number | null = null;
 	for (const item of items) {
 		if (item.type !== "trait") continue;
@@ -69,7 +74,7 @@ export function resolveFearRating(actor: unknown): number | null {
 		const rating = parseFearRating(item.name, item.system?.benefit);
 		if (rating === null) {
 			console.warn(
-				`rogue-trader: unparseable Fear trait "${item.name}" (bead jpbm)`,
+				`rogue-trader | unparseable Fear trait "${item.name}" (bead jpbm)`,
 			);
 			continue;
 		}

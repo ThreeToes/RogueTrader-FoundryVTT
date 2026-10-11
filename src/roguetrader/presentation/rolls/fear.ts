@@ -35,6 +35,7 @@ import {
 } from "../../rules/fear";
 import type { RollHandler } from "../../rules/roll-contract";
 import { runTest } from "./pipeline";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 // ---------------------------------------------------------------------------
 // Status conditions (bead q1ql) — Foundry-side helpers. The pure mapping
@@ -64,9 +65,15 @@ async function rollInsanityGain(formula: string): Promise<number> {
 
 /**
  * Apply a condition to the actor: replace any carried system-status effects
- * (one transient condition at a time), create the ActiveEffect (token marker
+ * (one translucent condition at a time), create the ActiveEffect (token marker
  * + system.testModifier change via the funnel's "effect" contributor), and
  * apply the book's Insanity gain to system.insanity (visible on the card).
+ *
+ * `preRolledInsanity` (bead 3u1p / eclw) threads a gain the caller has ALREADY
+ * rolled (the Shock card's displayed value, or the non-combat +1d5): the
+ * applied amount and the card then SHOW the same die. Pass undefined to keep
+ * the old roll-inside behaviour (critical-card path). Returns the gain
+ * actually applied to system.insanity (0 for none).
  *
  * EXPORTED (bead ronn): the critical card's one-click Stunned suggestion
  * walks the SAME write path, so card-applied conditions and fear/shock
@@ -76,7 +83,8 @@ export async function applyCondition(
 	actor: Actor,
 	condition: ConditionData,
 	rollTotal: number,
-): Promise<void> {
+	preRolledInsanity?: number,
+): Promise<number> {
 	const ports = getPorts();
 	const carried = carriedConditions(actor)
 		.map((c) => c.id)
@@ -91,17 +99,21 @@ export async function applyCondition(
 	);
 	if (!data) {
 		console.warn(
-			`rogue-trader: unknown condition status "${condition.statusId}" — not applied (bead q1ql)`,
+			`rogue-trader | unknown condition status "${condition.statusId}" — not applied (bead q1ql)`,
 		);
-		return;
+		return 0;
 	}
 	await ports.actors.createEffects(actor, [data]);
-	if (condition.insanity && condition.insanity !== "0") {
-		const gain = await rollInsanityGain(condition.insanity);
-		if (gain > 0) {
-			await adjustTrack(ports.actors, actor, "insanity", gain);
-		}
+	const gain =
+		preRolledInsanity !== undefined
+			? preRolledInsanity
+			: condition.insanity && condition.insanity !== "0"
+				? await rollInsanityGain(condition.insanity)
+				: 0;
+	if (gain > 0) {
+		await adjustTrack(ports.actors, actor, "insanity", gain);
 	}
+	return gain;
 }
 
 /** Fear Test (bead jpbm, Core Rulebook p294-296). */
@@ -187,20 +199,16 @@ export const fearHandler: RollHandler<"fear"> = {
 			const failedBy = degreesOfFailure(finalTarget, outcome.roll);
 			const condition = unnervedCondition();
 			const insanityGain = failedBy >= 4 ? await rollInsanityGain("1d5") : 0;
-			await applyCondition(request.actor, condition, outcome.roll);
-			await postCard(
-				request.actor,
-				"systems/rogue-trader/template/chat/fear-shock.hbs",
-				{
-					title: prepared.title,
-					shockText: ports.i18n.t("FEAR.NONCOMBAT_FAILURE"),
-					conditionName: conditionLabel(condition.statusId),
-					insanityNote:
-						failedBy >= 4
-							? `${ports.i18n.t("FEAR.NONCOMBAT_INSANITY")}${insanityGain ? ` (${insanityGain})` : ""}`
-							: "",
-				},
-			);
+			await applyCondition(request.actor, condition, outcome.roll, insanityGain);
+			await postCard(request.actor, `${TEMPLATE_ROOT}chat/fear-shock.hbs`, {
+				title: prepared.title,
+				shockText: ports.i18n.t("FEAR.NONCOMBAT_FAILURE"),
+				conditionName: conditionLabel(condition.statusId),
+				insanityNote:
+					failedBy >= 4
+						? `${ports.i18n.t("FEAR.NONCOMBAT_INSANITY")}${insanityGain ? ` (${insanityGain})` : ""}`
+						: "",
+			});
 			return;
 		}
 		// Combat failure (p295): Shock Table, d100 + 10 per degree of failure.
@@ -209,20 +217,17 @@ export const fearHandler: RollHandler<"fear"> = {
 			10 * degreesOfFailure(finalTarget, outcome.roll);
 		const row = shockOutcome(shockTotal);
 		// Apply the row's condition + Insanity gain (bead q1ql): statuses are
-		// the Foundry-native carrier; the card shows what landed.
+		// the Foundry-native carrier; the card shows what landed. The SAME dice
+		// result is displayed and applied (bead 3u1p) via the pre-rolled gain.
 		const condition = shockCondition(shockTotal);
 		const insanityGain = await rollInsanityGain(condition.insanity);
-		await applyCondition(request.actor, condition, shockTotal);
-		await postCard(
-			request.actor,
-			"systems/rogue-trader/template/chat/fear-shock.hbs",
-			{
-				title: prepared.title,
-				shockRoll: shockTotal,
-				shockText: ports.i18n.t(row.textKey),
-				conditionName: conditionLabel(condition.statusId),
-				insanityGain,
-			},
-		);
+		await applyCondition(request.actor, condition, shockTotal, insanityGain);
+		await postCard(request.actor, `${TEMPLATE_ROOT}chat/fear-shock.hbs`, {
+			title: prepared.title,
+			shockRoll: shockTotal,
+			shockText: ports.i18n.t(row.textKey),
+			conditionName: conditionLabel(condition.statusId),
+			insanityGain,
+		});
 	},
 };

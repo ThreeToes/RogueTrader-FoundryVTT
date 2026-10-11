@@ -24,7 +24,12 @@ import {
 import { getPorts } from "../infrastructure/foundry/ports";
 
 // The flag shapes are system-neutral; re-export them under the same names.
-export type { DamageApplyFlag, DamageRollFlag, MessageFlagPayload, MessageFlags };
+export type {
+	DamageApplyFlag,
+	DamageRollFlag,
+	MessageFlagPayload,
+	MessageFlags,
+};
 
 /**
  * The RT chat-message flag shape. The literal namespace remains the type key

@@ -25,13 +25,23 @@ describe("resolveEffectValues (epic nt8k)", () => {
 		expect(resolved).toEqual([
 			{ kind: "test-modifier", testKey: "skill:charm", value: -20 },
 			// dice kept for display; value is the settled (signed) roll.
-			{ kind: "characteristic-modifier", testKey: "ag", dice: "-2d10", value: -13 },
+			{
+				kind: "characteristic-modifier",
+				testKey: "ag",
+				dice: "-2d10",
+				value: -13,
+			},
 		]);
 	});
 
 	test("a row that already carries a value is left untouched", async () => {
 		const rows = [
-			{ kind: "characteristic-modifier", testKey: "s", dice: "-1d10", value: -4 },
+			{
+				kind: "characteristic-modifier",
+				testKey: "s",
+				dice: "-1d10",
+				value: -4,
+			},
 		];
 		expect(await resolveEffectValues(rows, async () => -99)).toEqual(rows);
 	});
@@ -73,7 +83,11 @@ describe("resolveAfflictionGrants (epic nt8k)", () => {
 		expect(
 			resolveAfflictionGrants([
 				{ name: "Tough Hide", type: "gear", system: fear.system },
-				{ name: "Brute", type: "mutation", system: { effects: [{ kind: "wounds-max", value: 5 }] } },
+				{
+					name: "Brute",
+					type: "mutation",
+					system: { effects: [{ kind: "wounds-max", value: 5 }] },
+				},
 			]),
 		).toEqual([]);
 	});
@@ -81,7 +95,15 @@ describe("resolveAfflictionGrants (epic nt8k)", () => {
 	test("collapses duplicate grants, keeps distinct benefits", () => {
 		const grants = resolveAfflictionGrants([
 			fear,
-			{ ...fear, name: "Nightmarish", system: { effects: [{ kind: "grants-item", testKey: "traits:Fear", label: "3" }] } },
+			{
+				...fear,
+				name: "Nightmarish",
+				system: {
+					effects: [
+						{ kind: "grants-item", testKey: "traits:Fear", label: "3" },
+					],
+				},
+			},
 			{ ...fear, name: "Copy" },
 		]);
 		expect(grants.map((g) => g.benefit)).toEqual(["1", "3"]);
@@ -107,10 +129,12 @@ describe("applyAfflictionProcedure (beads xu83/kam1)", () => {
 	};
 
 	test("degenerate-mind: 1-3 grants Frenzy", async () => {
-		expect(await applyAfflictionProcedure("degenerate-mind", ctx([3]))).toEqual({
-			effects: [{ kind: "grants-item", testKey: "talents:Frenzy" }],
-			grants: [],
-		});
+		expect(await applyAfflictionProcedure("degenerate-mind", ctx([3]))).toEqual(
+			{
+				effects: [{ kind: "grants-item", testKey: "talents:Frenzy" }],
+				grants: [],
+			},
+		);
 	});
 
 	test("degenerate-mind: 4-7 Fearless, 8-10 From Beyond", async () => {
@@ -120,7 +144,7 @@ describe("applyAfflictionProcedure (beads xu83/kam1)", () => {
 		).toBe("talents:Fearless");
 		expect(
 			(await applyAfflictionProcedure("degenerate-mind", ctx([10]))).effects[0]
-			?.testKey,
+				?.testKey,
 		).toBe("traits:From Beyond");
 	});
 
@@ -138,7 +162,12 @@ describe("applyAfflictionProcedure (beads xu83/kam1)", () => {
 		);
 		expect(out).toEqual({
 			effects: [
-				{ kind: "characteristic-modifier", testKey: "int", value: -8, label: "Mental Regressive" },
+				{
+					kind: "characteristic-modifier",
+					testKey: "int",
+					value: -8,
+					label: "Mental Regressive",
+				},
 			],
 			grants: [],
 		});
@@ -152,7 +181,12 @@ describe("applyAfflictionProcedure (beads xu83/kam1)", () => {
 		);
 		expect(out).toEqual({
 			effects: [
-				{ kind: "characteristic-modifier", testKey: "int", value: -18, label: "Mental Regressive" },
+				{
+					kind: "characteristic-modifier",
+					testKey: "int",
+					value: -18,
+					label: "Mental Regressive",
+				},
 			],
 			grants: [],
 		});
@@ -165,7 +199,12 @@ describe("applyAfflictionProcedure (beads xu83/kam1)", () => {
 		);
 		expect(out).toEqual({
 			effects: [
-				{ kind: "characteristic-modifier", testKey: "int", value: -35, label: "Mental Regressive" },
+				{
+					kind: "characteristic-modifier",
+					testKey: "int",
+					value: -35,
+					label: "Mental Regressive",
+				},
 			],
 			grants: [],
 		});

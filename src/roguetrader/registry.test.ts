@@ -14,6 +14,8 @@ import {
 	vehicleTraits,
 	weaponFamilies,
 	psychicDisciplines,
+	damageTypes,
+	madnessEntryKinds,
 	attachRegistriesToConfig,
 	createRegistries,
 } from "./registry";
@@ -91,6 +93,28 @@ describe("EntryRegistry", () => {
 		}
 	});
 
+	test("damage types are seeded from the domain enum (bead seeg)", () => {
+		// The keys are the STORED enum values (the sheets read them back for
+		// display); the labels are the DAMAGE_TYPE.* i18n keys.
+		expect(damageTypes.choices).toEqual({
+			Energy: "DAMAGE_TYPE.ENERGY",
+			Explosive: "DAMAGE_TYPE.EXPLOSIVE",
+			Impact: "DAMAGE_TYPE.IMPACT",
+			Rending: "DAMAGE_TYPE.RENDING",
+		});
+	});
+
+	test("madness entry kinds are seeded (bead b76m)", () => {
+		for (const key of madnessEntryKinds.keys()) {
+			expect(madnessEntryKinds.get(key)).toMatch(/^MADNESS\.KIND_/);
+		}
+		// Track rows + malignancies + the afflictions pack's reference-table
+		// kinds (fear difficulties, phenomena, perils, shock results).
+		expect(madnessEntryKinds.keys()).toHaveLength(10);
+		expect(madnessEntryKinds.choices).toHaveProperty("insanity-track");
+		expect(madnessEntryKinds.choices).toHaveProperty("shock-table");
+	});
+
 	test("weapon families are seeded with localization keys (bead erzk)", () => {
 		for (const key of weaponFamilies.keys()) {
 			expect(weaponFamilies.get(key)).toMatch(/^WEAPON_FAMILY\./);
@@ -134,9 +158,7 @@ describe("registry factory (bead hazf)", () => {
 		expect(talentConditions.has("charging")).toBe(true);
 		expect(talentConditions.get("charging")).toMatch(/^CONDITION\./);
 		expect(afflictionProcedures.has("degenerate-mind")).toBe(true);
-		expect(afflictionProcedures.get("degenerate-mind")).toMatch(
-			/^PROCEDURE\./,
-		);
+		expect(afflictionProcedures.get("degenerate-mind")).toMatch(/^PROCEDURE\./);
 	});
 
 	test("createRegistries builds one EntryRegistry per seed entry", () => {
@@ -161,9 +183,9 @@ describe("registry factory (bead hazf)", () => {
 		expect(g.CONFIG.MY_SYSTEM?.qualities).toBe(set.qualities);
 		// And a module can extend it through the namespace.
 		(set.qualities as EntryRegistry).register("extra", "QUALITY.EXTRA");
-		expect(
-			(g.CONFIG.MY_SYSTEM!.qualities as EntryRegistry).has("extra"),
-		).toBe(true);
+		expect((g.CONFIG.MY_SYSTEM!.qualities as EntryRegistry).has("extra")).toBe(
+			true,
+		);
 		delete g.CONFIG;
 	});
 

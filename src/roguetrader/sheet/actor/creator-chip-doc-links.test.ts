@@ -68,12 +68,14 @@ describe("character creator chip doc links — template scan (bead hjve)", () =>
 
 	test("origin chips: chooseOrigin preserved, and the doc affordance rides the chip", () => {
 		const chips = region(
-			'<h2>{{localize row.labelKey}}</h2>',
-			'{{#if row.detail}}',
+			"<h2>{{localize row.labelKey}}</h2>",
+			"{{#if row.detail}}",
 		);
 		expect(chips).toContain('data-action="chooseOrigin"');
 		// The de-deselect convention (data-key empty when already picked) survives.
-		expect(chips).toContain('data-key="{{#if opt.selected}}{{else}}{{opt.key}}{{/if}}"');
+		expect(chips).toContain(
+			'data-key="{{#if opt.selected}}{{else}}{{opt.key}}{{/if}}"',
+		);
 		const links = docLinks(chips);
 		expect(links.length).toBe(1);
 		for (const link of links) {
@@ -83,10 +85,7 @@ describe("character creator chip doc links — template scan (bead hjve)", () =>
 	});
 
 	test("talent option-pick chips: choosePickOption preserved, and the doc affordance rides the chip", () => {
-		const chips = region(
-			'data-kind="variant"',
-			'data-kind="charChoice"',
-		);
+		const chips = region('data-kind="variant"', 'data-kind="charChoice"');
 		expect(chips).toContain('data-action="choosePickOption"');
 		expect(chips).toContain('data-kind="option"');
 		const links = docLinks(chips);
@@ -101,9 +100,15 @@ describe("character creator chip doc links — template scan (bead hjve)", () =>
 		// Species/variant/charChoice/alternate/corruption-insanity/acquisition
 		// chips have no single pack doc; a fourth site needs conscious review.
 		expect((code.match(/chip-doc-link/g) ?? []).length).toBe(3);
-		expect((code.match(/data-action="\{\{career\.link\.action\}\}"/g) ?? []).length).toBe(1);
-		expect((code.match(/data-action="\{\{opt\.link\.action\}\}"/g) ?? []).length).toBe(1);
-		expect((code.match(/data-action="\{\{option\.link\.action\}\}"/g) ?? []).length).toBe(1);
+		expect(
+			(code.match(/data-action="\{\{career\.link\.action\}\}"/g) ?? []).length,
+		).toBe(1);
+		expect(
+			(code.match(/data-action="\{\{opt\.link\.action\}\}"/g) ?? []).length,
+		).toBe(1);
+		expect(
+			(code.match(/data-action="\{\{option\.link\.action\}\}"/g) ?? []).length,
+		).toBe(1);
 		// The pick actions the creator wizard depends on all still exist.
 		// ("finish" rides the shared creator-nav partial's forwardAction
 		// param — it is not a literal data-action here.)
@@ -149,7 +154,9 @@ globals.game = {
 	i18n: { localize: (key: string) => key, format: (key: string) => key },
 	system: { id: "rogue-trader" },
 };
-globals.ui = { notifications: { warn: () => undefined, info: () => undefined } };
+globals.ui = {
+	notifications: { warn: () => undefined, info: () => undefined },
+};
 globals.CONFIG = {};
 globals.Hooks = { once: () => undefined, on: () => undefined };
 globals.foundry = {
@@ -169,7 +176,11 @@ globals.foundry = {
 		renderTemplate: async () => "",
 		getTemplate: async () => () => "",
 	},
-	documents: { Item: class {}, Actor: class {}, ChatMessage: { get: () => undefined } },
+	documents: {
+		Item: class {},
+		Actor: class {},
+		ChatMessage: { get: () => undefined },
+	},
 	utils: { mergeObject: () => undefined, fromUuid: async () => undefined },
 };
 // Fake compendium (foundry.mjs:39440 shape via resolvePackDocument): pack
@@ -183,7 +194,7 @@ const { CharacterCreator } = await import("./character-creator");
 
 /** Ports stubs (setPorts seam): records every notify payload. */
 const notifications: Array<{ level: string; key: string; vars?: unknown }> = [];
-const { setPorts, resetPorts } = await import(
+const { setPorts, resetPorts, foundryPorts } = await import(
 	"../../../ffg/infrastructure/foundry/ports"
 );
 
@@ -198,7 +209,10 @@ afterAll(() => {
 /** The action handlers the creator exposes to Foundry. */
 function actionsOf(
 	ctor: unknown,
-): Record<string, (this: unknown, event: unknown, target: HTMLElement) => Promise<void>> {
+): Record<
+	string,
+	(this: unknown, event: unknown, target: HTMLElement) => Promise<void>
+> {
 	return (
 		ctor as unknown as { DEFAULT_OPTIONS: { actions: Record<string, never> } }
 	).DEFAULT_OPTIONS.actions as unknown as Record<
@@ -234,7 +248,10 @@ describe("character creator openPackDoc dispatch (bead hjve)", () => {
 				},
 			],
 		]);
+		// Spread the full port set (bead p7o5): resolvePackDocument now rides
+		// ports.content, whose foundry adapter reads the fake game.packs above.
 		setPorts({
+			...foundryPorts,
 			notify: {
 				info: (key: string) => notifications.push({ level: "info", key }),
 				warn: (key: string) => notifications.push({ level: "warn", key }),
@@ -243,11 +260,9 @@ describe("character creator openPackDoc dispatch (bead hjve)", () => {
 			},
 		} as never);
 		const handler = actionsOf(CharacterCreator).openPackDoc;
-		await handler.call(
-			new CharacterCreator() as unknown as object,
-			null,
-			{ dataset: { uuid: "Compendium.rogue-trader.character-options.Item.abc" } } as unknown as HTMLElement,
-		);
+		await handler.call(new CharacterCreator() as unknown as object, null, {
+			dataset: { uuid: "Compendium.rogue-trader.character-options.Item.abc" },
+		} as unknown as HTMLElement);
 		expect(rendered).toBe(1);
 		expect(notifications).toEqual([]);
 	});
@@ -259,7 +274,10 @@ describe("character creator openPackDoc dispatch (bead hjve)", () => {
 				{ getDocument: async () => undefined },
 			],
 		]);
+		// Same spread as the resolvable case (bead p7o5): the doc path reads
+		// ports.content, which reads the fake game.packs above.
 		setPorts({
+			...foundryPorts,
 			notify: {
 				info: (key: string) => notifications.push({ level: "info", key }),
 				warn: (key: string) => notifications.push({ level: "warn", key }),
@@ -268,11 +286,9 @@ describe("character creator openPackDoc dispatch (bead hjve)", () => {
 			},
 		} as never);
 		const handler = actionsOf(CharacterCreator).openPackDoc;
-		await handler.call(
-			new CharacterCreator() as unknown as object,
-			null,
-			{ dataset: { uuid: "Compendium.rogue-trader.character-options.Item.nope" } } as unknown as HTMLElement,
-		);
+		await handler.call(new CharacterCreator() as unknown as object, null, {
+			dataset: { uuid: "Compendium.rogue-trader.character-options.Item.nope" },
+		} as unknown as HTMLElement);
 		expect(notifications).toEqual([
 			{
 				level: "error",
@@ -288,11 +304,9 @@ describe("character creator openPackDoc dispatch (bead hjve)", () => {
 		notifications.length = 0;
 		resolvedPacks = new Map();
 		const handler = actionsOf(CharacterCreator).openPackDoc;
-		await handler.call(
-			new CharacterCreator() as unknown as object,
-			null,
-			{ dataset: {} } as unknown as HTMLElement,
-		);
+		await handler.call(new CharacterCreator() as unknown as object, null, {
+			dataset: {},
+		} as unknown as HTMLElement);
 		expect(notifications).toEqual([]);
 	});
 });

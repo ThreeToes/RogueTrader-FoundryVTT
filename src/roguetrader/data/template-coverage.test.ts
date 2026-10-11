@@ -182,7 +182,9 @@ describe("template.json Actor section (bead fi3o)", () => {
 	});
 
 	test("every listed Actor type has a registered DataModel", () => {
-		expect(template.Actor.types.filter((t) => !(t in ACTOR_MODELS))).toEqual([]);
+		expect(template.Actor.types.filter((t) => !(t in ACTOR_MODELS))).toEqual(
+			[],
+		);
 	});
 
 	test("the registered-but-unlisted Actor types are the intentional ones", () => {

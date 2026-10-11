@@ -1,248 +1,75 @@
 import type { CharacteristicKey } from "../../data/actor/character";
+import { heirloomForRoll } from "../../rules/heirlooms";
 import {
-	heirloomForRoll,
-} from "../../rules/heirlooms";
-import {
-	allowedColumns,
-	type CharMod,
-	entryColumns,
-	fateFromTable,
-	ORIGIN_ROW_LABEL_KEYS,
-	type OriginPick,
 	type OriginRow,
-	isOriginRow,
-	originByKey,
-	originRowsForSpecies,
-	originsInRow,
-	storedOriginPicks,
-	storedOriginsFromPicks,
 	type ResolvedOrigin,
 	resolveOrigins,
 } from "../../rules/origins";
-import {
-	availabilityModifier,
-	isTrainedFor,
-	WEAPON_CLASSES,
-	type WeaponTrainingCoverage,
-	weaponTrainingCoverage,
-} from "../../rules/acquisition";
-import {
-	careersForSpecies,
-	type CatalogSkill,
-	CREATOR_LAST_STEP,
-	creatorCanAdvance,
-	DEFAULT_SPECIES_WOUNDS,
-	type FateBand,
-	fateFromBands,
-	finalCharacteristics,
-	HUMAN_SPECIES_KEY,
-	isUnresolvedChoice,
-	matchOriginSkills,
-	POINT_BUY_MAX,
-	type SpeciesOption,
-	type SpeciesSource,
-	type SpeciesWoundsSpec,
-	speciesOptions,
-	validatePointBuy,
-	woundsFromOrigin,
-	woundsFromSpecies,
-} from "../../rules/creation";
-import {
-	GRANTED_BY_CREATOR,
-	type GrantPayload,
-	reconcileForCreator,
-	skillGrantPayload,
-} from "../../rules/grants";
+import { CREATOR_LAST_STEP, finalCharacteristics } from "../../rules/creation";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
+// Bead hldm: the creator's PURE state + transitions live in creator-state.ts,
+// the pack loaders in creator-packs.ts, the apply service in creator-apply.ts.
+// The builders (context assembly, summary card) are creator-context.ts. This
+// file is the thin Foundry orchestrator: constructor prefill, context
+// orchestration, the 17 #on* dispatch actions and the finalize tail.
+import {
+	baseCharacteristics,
+	buildCharacterSystemPayload,
+	buildCreatorContext,
+	type ExistingItemLike,
+} from "./creator-context";
+// The pure roll helpers stay re-exported here: ship-creator and the helpers'
+// unit test import them from this module path (beads 71gm/nxok).
+export {
+	rollCharacteristic,
+	rollAllCharacteristics,
+	toggleCollapse,
+} from "./creator-state";
+import {
+	allocatePointBuy,
+	chooseCorrInsTrack,
+	chooseCreatorCareer,
+	chooseOriginRow,
+	choosePickOption,
+	chooseSpecies,
+	type CreatorState,
+	emptyState,
+	prefillFromActor,
+	rerollCharacteristic,
+	rollAllCharacteristics,
+	rollCharacteristicInto,
+	rollOriginDice,
+	setCreatorMethod,
+	toggleCollapse,
+	toggleKitSlotPick,
+} from "./creator-state";
+import {
+	applyAcquisition,
+	applyGrantsAndSummary,
+	applyKit,
+	type ApplyableActor,
+	createOrUpdateActor,
+} from "./creator-apply";
+// The Foundry-coupled loaders + dice (bead hldm): the same fetch/caches the
+// class used to hold, moved out where they are shared with nothing else.
+import {
+	careerSuggestions,
+	creatorSpeciesOptions,
+	ensureTalentLinkDocs,
+	rollFormula,
+	startingAcquisitions,
+	startingCareerDocs,
+} from "./creator-packs";
+// Bead npnn: the shared imperative input-wiring helpers (dataset.wired guard).
+import { wireInput } from "../dom-wire";
 import { sheetContext } from "../context";
-import { readRtFlag } from "../../rules/chat-flags";
 import {
-	gearsetFor,
-	kitChoicesComplete,
-	type GearsetSlot,
-} from "../../rules/gearsets";
-import { waitForDefaultGrants } from "../default-grants";
-import {
-	characterOptionDocsOnce,
-	getCharacterOptionDocs,
 	getPackDocuments,
-} from "../pack-resolve";
-// The pack-doc link library (epic 61pk, bead hjve): one import point for the
-// pure anchor helper + the open path (pack-resolve re-exports pack-doc-links).
-import {
 	OPEN_PACK_DOC_ACTION,
-	packDocAnchor,
-	type PackDocLike,
 	openPackDocUuid,
 } from "../pack-resolve";
-// The warmed talent-doc link catalog (bead hjve): the creator resolves its
-// talent pick chips against this pool — warmed at ready (bootstrap/warmers);
-// this creator fills it on demand (#ensurePool precedent, warrant-creator).
-import {
-	getTalentLinkDocs,
-	setTalentLinkDocs,
-	talentLinkDocFromDoc,
-} from "../../rules/talent-catalog";
 import { CreatorApplication } from "./creator-application";
-import { promptParameterisedSubject, talentGrant } from "./grant-helpers";
-
-/** Career-doc suggestion cache (system.suggestedHomeWorlds), per session. */
-let careerSuggestionCache: Map<string, string[]> | null = null;
-
-/**
- * A careers-pack document, as far as the creator reads it (bead ghmn). The
- * creator is COMPENDIUM-DRIVEN: the species list, the per-species career list
- * and every base value come from these docs — nothing is authored in code.
- */
-interface CareerDocLike {
-	name?: string;
-	/** Pack document uuid (bead hjve): the career chip's doc link. */
-	uuid?: string;
-	system?: {
-		key?: string;
-		suggestedHomeWorlds?: string[];
-		/** Verbatim alternate/elite gate; blank = a starting career. */
-		requiredCareer?: string;
-		species?: SpeciesSource;
-	};
-}
-
-let careerDocsCache: CareerDocLike[] | null = null;
-
-/** The careers pack, read once. */
-async function careerDocs(): Promise<CareerDocLike[]> {
-	if (!careerDocsCache) {
-		careerDocsCache = (await getCharacterOptionDocs(
-			"career",
-		)) as unknown as CareerDocLike[];
-	}
-	return careerDocsCache;
-}
-
-const CHARACTERISTIC_ORDER: CharacteristicKey[] = [
-	"ws",
-	"bs",
-	"s",
-	"t",
-	"ag",
-	"int",
-	"per",
-	"wp",
-	"fel",
-];
-
-interface CreatorState {
-	name: string;
-	method: "roll" | "points";
-	/**
-	 * The species' per-characteristic 2d10 BASE (bead ghmn), copied from the
-	 * careers compendium when a species is chosen. Human = 25 across, which is
-	 * also the initial value, so an unchosen species behaves exactly as before.
-	 */
-	base: Record<CharacteristicKey, number>;
-	/** Chosen species key ("" = human) + its pack label/formulas for display. */
-	speciesKey: string;
-	speciesLabel: string;
-	speciesFate: number;
-	speciesFateFormula: string;
-	speciesWoundsFormula: string;
-	/** Structured species starter-Fate bands (bead g45s); empty = fixed/none. */
-	speciesFateBands: FateBand[];
-	/** Structured species starter-Wounds spec (bead g45s). */
-	speciesWounds: SpeciesWoundsSpec;
-	allocated: Partial<Record<CharacteristicKey, number>>;
-	rolled: Partial<Record<CharacteristicKey, number>>;
-	rerollUsed: boolean;
-	picks: Partial<Record<OriginRow, OriginPick>>;
-	/** Track choice for corruptionOrInsanityDice, per row key. */
-	corrOrInsTrack: Record<string, "corruption" | "insanity">;
-	careerKey: string;
-	/** Rolled totals for wounds/fate/insanity/corruption dice. */
-	rolledDice: {
-		wounds: number[];
-		fateD10: number | null;
-		/** Species-block wound dice (bead g45s); empty for the human path. */
-		speciesWounds: number[];
-		/** Species-block starting-Fate d10 (bead g45s). */
-		speciesFateD10: number | null;
-		insanity: number[];
-		corruption: number[];
-		corrOrInsanity: number[];
-	};
-	/** Stage 6: the starting free acquisition (item key + pack payload). */
-	acquisition: { key: string; name: string; payload: object } | null;
-	/** Stage 6 collapsed group state (bead a2rd): group key -> collapsed. */
-	acqCollapsed: Record<string, boolean>;
-	/** Stage 3.5 (bead rboc): rolled heirloom (1d100 result + entry name). */
-	heirloom: { roll: number; name: string } | null;
-	/**
-	 * Starting Kit picks (owner rework 2026, step 5): per-slot option index —
-	 * slot index -> chosen option index (the book's "or" groups). Fixed
-	 * slots (one option) never need a pick; `kitPicks` records the chosen
-	 * option slot anyway at grant (default 0).
-	 */
-	kitPicks: Record<number, number>;
-}
-
-interface AcqOption {
-	/** Stable chip key (pack + name); payloads live in #acquisitionPayloads. */
-	key: string;
-	name: string;
-	payload: object;
-	tooltip: string;
-	group: string;
-	/** Weapon-training gate (book p272 bullet 2): false = not selectable. */
-	selectable: boolean;
-	selected: boolean;
-}
-
-function emptyState(): CreatorState {
-	return {
-		name: "",
-		method: "roll",
-		base: {
-			ws: 25,
-			bs: 25,
-			s: 25,
-			t: 25,
-			ag: 25,
-			int: 25,
-			per: 25,
-			wp: 25,
-			fel: 25,
-		},
-		allocated: {},
-		rolled: {},
-		speciesKey: HUMAN_SPECIES_KEY,
-		speciesLabel: "",
-		speciesFate: 0,
-		speciesFateFormula: "",
-		speciesWoundsFormula: "",
-		speciesFateBands: [],
-		speciesWounds: { ...DEFAULT_SPECIES_WOUNDS },
-		rerollUsed: false,
-		picks: {},
-		corrOrInsTrack: {},
-		careerKey: "",
-		rolledDice: {
-			wounds: [],
-			fateD10: null,
-			speciesWounds: [],
-			speciesFateD10: null,
-			insanity: [],
-			corruption: [],
-			corrOrInsanity: [],
-		},
-		acquisition: null,
-		acqCollapsed: {},
-		heirloom: null,
-		kitPicks: {},
-	};
-}
-
-async function roll(formula: string): Promise<number> {
-	return (await getPorts().dice.roll(formula)).total ?? 0;
-}
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 /**
  * Character creator (bead ay0): a wizard over Core Rulebook Chapter I stages 1-2.
@@ -280,15 +107,13 @@ export class CharacterCreator extends CreatorApplication {
 			chooseCorrIns: CharacterCreator.#onChooseCorrIns,
 			chooseCareer: CharacterCreator.#onChooseCareer,
 			chooseSpecies: CharacterCreator.#onChooseSpecies,
-			// Epic 61pk, bead hjve: the pick chips' pack-doc link — same
-			// non-hijack anchor as the advancement dialog; the action name is
-			// the library constant, keyed so the convention cannot drift.
+			// Epic 61pk, bead hjve: the pick chips' doc-link action name is the
+			// library constant — the convention cannot drift.
 			[OPEN_PACK_DOC_ACTION]: CharacterCreator.#onOpenPackDoc,
 			chooseAcquisition: CharacterCreator.#onChooseAcquisition,
 			toggleAcqGroup: CharacterCreator.#onToggleAcqGroup,
 			rollHeirloom: CharacterCreator.#onRollHeirloom,
-			// Starting Kit picks (owner rework 2026, step 5): the book's "or"
-			// groups; data-slot + data-option identify the chip.
+			// Starting Kit picks (owner rework 2026, step 5).
 			chooseKitSlot: CharacterCreator.#onChooseKitSlot,
 			finish: CharacterCreator.#onCreate,
 		},
@@ -304,10 +129,17 @@ export class CharacterCreator extends CreatorApplication {
 	 * entry (the dice belong to the origin rows, not the species).
 	 */
 	protected override async onEnterStep(step: number): Promise<void> {
-		if (step === 2) await this.#rollOriginDice();
+		if (step === 2) {
+			await rollOriginDice(this.creatorState, this.#resolved, rollFormula);
+		}
 	}
 
 	creatorState: CreatorState = emptyState();
+
+	/** Payloads for the acquisition chips, keyed by AcqOption.key. Full
+	 * item JSON never goes through the DOM (the old data-payload attribute
+	 * broke on JSON quotes — the "fix that selection up" bug). */
+	#acquisitionPayloads = new Map<string, object>();
 
 	constructor(options: { actor?: foundry.documents.Actor } & object = {}) {
 		super(options);
@@ -321,26 +153,13 @@ export class CharacterCreator extends CreatorApplication {
 				?.characteristics,
 		);
 		this.targetActor = candidate && hasCharacteristics ? candidate : null;
-		if (this.targetActor) {
-			const system = this.targetActor.system as unknown as {
-				characteristics: Record<CharacteristicKey, { value: number }>;
-				careerKey?: string;
-			};
-			this.name = this.targetActor.name ?? "";
-			this.creatorState.careerKey = system.careerKey ?? "";
-			// Existing characteristics prefill as rolled values; the player can
-			// re-roll (book: one re-roll) or switch to point-buy.
-			for (const key of CHARACTERISTIC_ORDER) {
-				this.creatorState.rolled[key] =
-					system.characteristics[key]?.value ?? 25;
-			}
-		}
+		this.name = this.targetActor?.name ?? "";
+		prefillFromActor(this.creatorState, this.targetActor);
 	}
 
 	static PARTS = {
 		form: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/character-creator.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/character-creator.hbs`,
 		},
 	};
 
@@ -349,708 +168,55 @@ export class CharacterCreator extends CreatorApplication {
 	}
 
 	/**
-	 * The species list for the Species step (bead ghmn), derived from the
-	 * careers compendium's species blocks — human first, then each distinct
-	 * xeno species the pack defines. Empty pack (still loading) yields human
-	 * only, so the step is always safe to render.
+	 * The name field lives on step 0; keep it in state across re-renders
+	 * (shared dataset.wired guard, bead npnn).
 	 */
-	/**
-	 * The Origin rows for the chosen species (bead ghmn), DERIVED FROM THE
-	 * PACK: human uses the five core rows, and a xeno species uses whatever
-	 * rows its own entries declare (Kroot -> a single Kindred row; Into the
-	 * Storm p48 is explicit that they do not use the Origin Path). Every Origin
-	 * step check below goes through this, so nothing assumes the human five.
-	 */
-	#originRows(): OriginRow[] {
-		return originRowsForSpecies(this.creatorState.speciesKey);
-	}
-
-	/**
-	 * Ensure the talent-doc link catalog is loaded (bead hjve): normally
-	 * warmed at ready (bootstrap/warmers through rules/talent-catalog); if
-	 * the creator opens before the pack resolves, fill it here from the same
-	 * shared mapper — loudly empty is a bug, not a feature. A successfully
-	 * EMPTY fetch means the pack is absent and the chips degrade to plain
-	 * text (the same tolerated re-fetch #ensurePool accepts).
-	 */
-	async #ensureTalentLinkDocs(): Promise<PackDocLike[]> {
-		if (getTalentLinkDocs().length > 0) return getTalentLinkDocs();
-		setTalentLinkDocs(
-			(
-				// The CACHED fetch (bead oo5b F5): getCharacterOptionDocs would
-				// re-fetch the whole pack on EVERY re-render while the pack is
-				// absent — with an empty catalog the guard above always re-runs.
-				(await characterOptionDocsOnce("talent")) as unknown as Array<{
-					name?: string;
-					uuid?: string;
-					system?: unknown;
-				}>
-			).map((doc) => talentLinkDocFromDoc(doc)),
-		);
-		return getTalentLinkDocs();
-	}
-
-	async #speciesOptions(): Promise<SpeciesOption[]> {
-		const docs = await careerDocs();
-		return speciesOptions(docs.map((doc) => doc.system?.species));
-	}
-
-	/**
-	 * careerKey -> suggested home-world origin keys (Core Rulebook Table 1-1,
-	 * p24), read from the careers pack's `system.suggestedHomeWorlds` (epic
-	 * 1gb7 follow-up). Cached across re-renders; empty until the pack loads.
-	 */
-	async #suggestedHomeWorlds(): Promise<Map<string, string[]>> {
-		const docs = await careerDocs();
-		if (!careerSuggestionCache) {
-			careerSuggestionCache = new Map(
-				docs
-					.filter((doc) => doc.system?.key)
-					.map((doc) => [
-						String(doc.system?.key),
-						(doc.system?.suggestedHomeWorlds ?? []).map(String),
-					]),
-			);
-		}
-		return careerSuggestionCache;
-	}
-
-	/** The name field lives on step 0; keep it in state across re-renders. */
 	protected override async _onRender(
 		context: unknown,
 		options: unknown,
 	): Promise<void> {
 		await super._onRender(context as never, options as never);
-		const input = this.element?.querySelector<HTMLInputElement>(
-			'input[name="explorer-name"]',
+		wireInput(
+			this.element?.querySelector<HTMLInputElement>(
+				'input[name="explorer-name"]',
+			),
+			(value) => {
+				this.name = value;
+			},
 		);
-		if (input && !input.dataset.wired) {
-			input.dataset.wired = "1";
-			input.addEventListener("input", () => {
-				this.name = input.value;
-			});
-		}
-	}
-
-	#baseCharacteristics(): Record<CharacteristicKey, number> {
-		const base = {} as Record<CharacteristicKey, number>;
-		for (const key of CHARACTERISTIC_ORDER) {
-			base[key] =
-				this.creatorState.method === "roll"
-					? (this.creatorState.rolled[key] ?? this.creatorState.base[key])
-					: this.creatorState.base[key] +
-						(this.creatorState.allocated[key] ?? 0);
-		}
-		return base;
-	}
-
-	/**
-	 * Starting Wounds/Fate for the current character (bead g45s). A chosen
-	 * species uses its structured block (Wounds spec + Fate bands); the human
-	 * path uses the Origin Path tables. Only reads the pre-rolled dice in state,
-	 * so the Review card and the created actor always agree.
-	 */
-	#resolveVitals(
-		chars: Record<CharacteristicKey, number>,
-		resolved: ResolvedOrigin,
-	): {
-		wounds: number;
-		fate: number;
-		woundsBreakdown: string;
-		fateBreakdown: string;
-	} {
-		const state = this.creatorState;
-		const tb = Math.floor(chars.t / 10);
-		if (state.speciesKey !== HUMAN_SPECIES_KEY) {
-			const spec = state.speciesWounds;
-			const wounds = woundsFromSpecies(
-				spec,
-				tb,
-				state.rolledDice.speciesWounds,
-			);
-			const rolled = state.rolledDice.speciesFateD10 ?? 1;
-			const fate =
-				state.speciesFate > 0
-					? state.speciesFate
-					: fateFromBands(state.speciesFateBands, rolled);
-			const woundParts = [`${spec.toughnessMultiplier}×TB`];
-			const dice = state.rolledDice.speciesWounds.join(" + ");
-			if (dice) woundParts.push(dice);
-			if (spec.flat) woundParts.push(String(spec.flat));
-			return {
-				wounds,
-				fate,
-				woundsBreakdown: woundParts.join(" + "),
-				fateBreakdown:
-					state.speciesFate > 0
-						? `fixed ${fate}`
-						: `1d10: ${rolled} → ${fate}`,
-			};
-		}
-		const wounds = woundsFromOrigin(
-			tb,
-			state.rolledDice.wounds,
-			resolved.woundBonus,
-		);
-		const fateBase = resolved.fateTable
-			? fateFromTable(resolved.fateTable, state.rolledDice.fateD10 ?? 1)
-			: 0;
-		const woundParts = ["2×TB", ...state.rolledDice.wounds.map(String)];
-		if (resolved.woundBonus) woundParts.push(String(resolved.woundBonus));
-		return {
-			wounds,
-			fate: Math.max(0, fateBase + resolved.fateDelta),
-			woundsBreakdown: woundParts.join(" + "),
-			fateBreakdown:
-				`d10: ${state.rolledDice.fateD10 ?? "—"}` +
-				(resolved.fateDelta ? `; ${resolved.fateDelta}` : ""),
-		};
 	}
 
 	async _prepareContext(_options: object = {}) {
 		const context = sheetContext(
 			await super._prepareContext(_options as never),
 		);
-		const state = this.creatorState;
-		// Bead hjve: the talent-doc link catalog for the talent pick chips —
-		// warmed at ready (bootstrap/warmers via rules/talent-catalog), filled
-		// on demand here when the creator opens pre-ready (warrant-creator's
-		// #ensurePool precedent). Empty means no links; the chips degrade to
-		// plain text.
-		const talentDocs = await this.#ensureTalentLinkDocs();
-		context.step = this.step;
-		context.name = this.name;
-		context.isRoll = state.method === "roll";
-		context.isPoints = state.method === "points";
-		context.characteristics = CHARACTERISTIC_ORDER.map((key) => {
-			const labelKey = `CHARACTERISTIC.${key.toUpperCase()}`;
-			const rolled = state.rolled[key];
-			const alloc = state.allocated[key] ?? 0;
-			return {
-				key,
-				labelKey,
-				rolled: rolled ?? null,
-				alloc,
-				base:
-					state.method === "roll"
-						? (rolled ?? null)
-						: state.base[key] + alloc,
-			};
-		});
-		const pointBuy = validatePointBuy(state.allocated);
-		context.pointBuy = pointBuy;
-		context.canReroll = !state.rerollUsed;
-
-		// Origin path rows with adjacency-enforced options.
-		let prevCol: number | null = null;
-		const originRows = this.#originRows();
-		context.originRows = originRows.map((row) => {
-			const pick = state.picks[row];
-			const pickEntry = pick ? originByKey(pick.key) : undefined;
-			const allowed = allowedColumns(row, prevCol);
-			// Bead hjve: the chip's pack-doc anchor is resolved through the
-			// LIBRARY (packDocAnchor: key-first, exact-name against the row's
-			// own warmed catalog — the uuid rides on the entries since bead
-			// hjve, originEntryFromDoc). Null degrades the chip to plain text.
-			const rowEntries = originsInRow(row);
-			const options = rowEntries.map((entry) => ({
-				...entry,
-				// An expanded entry may substitute either of two core slots
-				// (bead b03f), so check every column it may occupy.
-				enabled: entryColumns(entry).some((col) => allowed.includes(col)),
-				selected: pick?.key === entry.key,
-				link: packDocAnchor({ key: entry.key, name: entry.name }, rowEntries, []),
-			}));
-			if (pickEntry) prevCol = pickEntry.col;
-
-			const entry = pickEntry;
-			const pickVariant = pick?.variantKey
-				? entry?.variants?.find((v) => v.key === pick.variantKey)
-				: undefined;
-			let detail: Record<string, unknown> | null = null;
-			if (entry) {
-				const mechanicsForPick = pickVariant
-					? pickVariant.mechanics
-					: entry.mechanics;
-				detail = {
-					entry,
-					effect: entry.effect ?? null,
-					variants: (entry.variants ?? []).map((v) => ({
-						...v,
-						selected: pick?.variantKey === v.key,
-					})),
-					pickVariant,
-					pickVariantEffect: pickVariant?.effect ?? null,
-					pickOption: pick?.optionChoice ?? null,
-					pickAlternate: pick?.alternate ?? null,
-					// Track choice is stored under the ROW key (the write side in
-					// #onChooseCorrIns uses data-row = row.row) — reading it under
-					// entry.key silently never matched (bug report 2026-09-05:
-					// "Choose a track" chips never highlighted).
-					corrIns: state.corrOrInsTrack[row] ?? null,
-					hasOptions: (mechanicsForPick?.optionChoice?.length ?? 0) > 0,
-					// Selection state precomputed here (not in Handlebars paths):
-					// each-scope relative paths were silently unresolvable.
-					options: (mechanicsForPick?.optionChoice ?? []).map((option) => ({
-						value: option,
-						selected: pick?.optionChoice === option,
-						// Bead hjve: the option-pick chips' values are TALENT names
-						// ("Jaded", "Peer (Academics)") — resolved through the library
-						// against the warmed talent catalog; a value that is not a real
-						// talent (e.g. a parameterised group) degrades to plain text.
-						link: packDocAnchor(
-							{ key: "", name: option, type: "talent" },
-							[],
-							talentDocs,
-						),
-					})),
-					hasCharChoice:
-						(mechanicsForPick?.characteristicChoice?.length ?? 0) > 0,
-					charChoices: (mechanicsForPick?.characteristicChoice ?? []).map(
-						(group: CharMod[]) => ({
-							value: JSON.stringify(group),
-							label: group
-								.map(
-									(m) =>
-										`${m.value > 0 ? "+" : ""}${m.value} ${m.key.toUpperCase()}`,
-								)
-								.join(", "),
-							selected:
-								JSON.stringify(pick?.charChoice ?? []) ===
-								JSON.stringify(group),
-						}),
-					),
-					hasAlternate: (mechanicsForPick?.alternateChoice?.length ?? 0) > 0,
-					alternates: (mechanicsForPick?.alternateChoice ?? []).map(
-						(alt, index) => ({
-							...alt,
-							index,
-							selected: pick?.alternate === index,
-						}),
-					),
-					hasCorrIns:
-						(mechanicsForPick?.corruptionOrInsanityDice?.length ?? 0) > 0,
-					corrOrInsDice: mechanicsForPick?.corruptionOrInsanityDice ?? [],
-					skills: mechanicsForPick?.skills ?? [],
-					talents: mechanicsForPick?.talents ?? [],
-					woundsDice: mechanicsForPick?.woundsDice ?? null,
-					fateTable: mechanicsForPick?.fateTable ?? null,
-					notes: mechanicsForPick?.notes ?? [],
-				};
-			}
-			return {
-				row,
-				labelKey: ORIGIN_ROW_LABEL_KEYS[row],
-				pickKey: pick?.key ?? "",
-				options,
-				detail,
-			};
-		});
-
-		// Review: resolved origin + dice totals.
-		const resolved = this.#resolved;
-		const base = this.#baseCharacteristics();
-		const chars = finalCharacteristics(base, resolved.characteristics);
-		const vitals = this.#resolveVitals(chars, resolved);
-		const woundsTotal = vitals.wounds;
-		const fateTotal = vitals.fate;
-		const corrInsTotal = state.rolledDice.corrOrInsanity.reduce(
-			(a, b) => a + b,
-			0,
-		);
-		const insanityTotal =
-			resolved.insanity +
-			state.rolledDice.insanity.reduce((a, b) => a + b, 0) +
-			(Object.values(state.corrOrInsTrack).includes("insanity")
-				? corrInsTotal
-				: 0);
-		const corruptionTotal =
-			resolved.corruption +
-			state.rolledDice.corruption.reduce((a, b) => a + b, 0) +
-			(Object.values(state.corrOrInsTrack).includes("corruption")
-				? corrInsTotal
-				: 0);
-		context.review = {
-			characteristics: CHARACTERISTIC_ORDER.map((key) => ({
-				key,
-				labelKey: `CHARACTERISTIC.${key.toUpperCase()}`,
-				value: chars[key],
-				delta: resolved.characteristics[key] ?? 0,
-			})),
-			woundsTotal,
-			fateTotal,
-			insanityTotal,
-			corruptionTotal,
-			woundsBreakdown: vitals.woundsBreakdown,
-			fateBreakdown: vitals.fateBreakdown,
-			initiativeBonus: resolved.initiativeBonus,
-			profitFactor: resolved.profitFactor,
-			xpTotal: 5000,
-			xpCost: resolved.xpCost,
-		};
-
-		// Career chips (free choice, p24) with Table 1-1 suggestions. The
-		// suggestion list now lives on each career doc (system.suggestedHomeWorlds).
-		// Bead ghmn: the LIST is the careers compendium filtered to the chosen
-		// species and to STARTING careers (blank requiredCareer) — a starting
-		// character cannot hold an alternate/elite rank, since every one of those
-		// gates needs rank 1+ AND 5,000+ XP. No career content lives in code.
-		const suggestions = await this.#suggestedHomeWorlds();
-		const homeWorld = state.picks["home-world"]?.key;
-		const suggested = homeWorld
-			? new Set(
-					[...suggestions.entries()]
-						.filter(([, worlds]) => worlds.includes(homeWorld))
-						.map(([career]) => career),
-				)
-			: new Set(suggestions.keys());
-		const docs = await careerDocs();
-		const starting = docs.filter(
-			(doc) => (doc.system?.requiredCareer ?? "").trim() === "",
-		);
-		// Bead hjve: the career catalog the chip doc links resolve against —
-		// {key, name, uuid} rows built from the same docs the chips are built
-		// FROM, so the round trip (resolve the chip through the library) cannot
-		// link a doc the player is not looking at.
-		const careerCatalog: PackDocLike[] = starting.map((doc) => ({
-			key: String(doc.system?.key ?? ""),
-			name: doc.name ?? "",
-			uuid: doc.uuid ?? "",
-		}));
-		const careerOptions = careersForSpecies(starting, state.speciesKey).map(
-			(doc) => {
-				const key = String(doc.system?.key ?? "");
-				return {
-					key,
-					label: doc.name ?? key,
-					selected: state.careerKey === key,
-					suggested: suggested.has(key),
-					// Bead hjve: the chip's pack-doc anchor, resolved through the
-					// library (key-first against the careers catalog above).
-					link: packDocAnchor(
-						{ key, name: doc.name ?? key },
-						careerCatalog,
-						[],
-					),
-				};
-			},
-		);
-		context.careers = careerOptions;
-		context.careerLabel =
-			careerOptions.find((career) => career.selected)?.label ?? "";
-
-		// Species step (bead ghmn): every option comes from the careers pack's
-		// species blocks, plus the human default. The chosen species supplies the
-		// stage-1 characteristic bases and its printed Fate/Wounds rules.
-		const speciesChoices = (await this.#speciesOptions()).map((option) => ({
-			key: option.key,
-			label: option.key
-				? option.label || option.key
-				: game.i18n!.localize("CREATOR.SPECIES_HUMAN"),
-			selected: state.speciesKey === option.key,
-		}));
-		context.speciesOptions = speciesChoices;
-		context.speciesLabel =
-			speciesChoices.find((option) => option.selected)?.label ?? "";
-		context.speciesFateFormula = state.speciesFateFormula;
-		context.speciesWoundsFormula = state.speciesWoundsFormula;
-		context.speciesFate = state.speciesFate;
-
-		// Stage 6 (gjvg): the starting free acquisition — items with a total
-		// modifier of +0 or better need no test (Core Rulebook printed p272,
-		// file page-0273, heading "Acquisition and Starting
-		// and Starting Characters"). Availability modifier ≥ 0 (scarce+).
-		// The group's PF/SP (stage 5) are a GROUP/GM-level decision and live
-		// on the dynasty document, NOT in the creator (owner redesign).
-		context.acquisitions = await this.#startingAcquisitions();
-		context.acquisitionGroups = this.#acquisitionGroups(
-			context.acquisitions as Array<Record<string, unknown>>,
-		);
-		context.acquisition = state.acquisition?.name ?? "";
-
-		// Stage 3.5 (bead rboc): the heirloom roll only applies when the Pride
-		// motivation's "Heirloom Item" alternative was taken.
-		const pridePick = state.picks.motivation;
-		context.heirloom = {
-			enabled: pridePick?.key === "pride" && pridePick.alternate === 0,
-			rolled: state.heirloom,
-		};
-
-		// Starting Kit (owner rework 2026, step 5): the career's kit row from
-		// the pack; alternative slots become pick-one chip rows. `kitRequired`
-		// gates Create only when the career HAS a kit at all.
-		const kit = gearsetFor(state.careerKey);
-		context.kit = kit
-			? {
-					present: true,
-					label: kit.label,
-					quote: kit.quote,
-					slots: (kit.slots ?? []).map((slot: GearsetSlot, index: number) => ({
-						index,
-						count: slot.options?.length ?? 0,
-						quote: slot.quote ?? "",
-						options: (slot.options ?? []).map((opt, optIndex) => ({
-							index: optIndex,
-							name: this.#kitOptionName(opt),
-							selectable: true,
-							selected:
-								state.kitPicks[index] === optIndex ||
-								(slot.options?.length === 1 &&
-									state.kitPicks[index] === undefined),
-						})),
-					})),
-					complete: kitChoicesComplete(kit, state.kitPicks),
-				}
-			: { present: false };
-
-		context.canCreate =
-			this.step === CREATOR_LAST_STEP &&
-			originRows.every((row) => Boolean(state.picks[row])) &&
-			Boolean(state.careerKey) &&
-			(state.method === "roll" ? true : pointBuy.valid) &&
-			// The kit's pick-one slots resolve (owner rework 2026): an unchosen
-			// "or" group would otherwise grant a silent default.
-			(
-				(context.kit as { present?: boolean; complete?: boolean })?.complete !==
-				false
-			) &&
-			// Every origin whose mechanics offer the corruption-or-insanity
-			// track must have the track chosen (book rule); otherwise the
-			// rolled dice would be silently dropped.
-			originRows.every((row) => {
-				const pick = state.picks[row];
-				if (!pick) return true;
-				const detail = (
-					context.originRows as Array<
-						{ row: string; detail: { hasCorrIns?: boolean } } | undefined
-					>
-				)?.find((r) => r?.row === row)?.detail;
-				if (!detail?.hasCorrIns) return true;
-				return Boolean(state.corrOrInsTrack[row]);
-			});
-		// The forward button must be enabled on every step before the last;
-		// `canCreate` is step-3 only, so it cannot gate Next directly.
-		context.canNext = creatorCanAdvance(
-			this.step,
-			Boolean(context.canCreate),
-		);
-		return context;
-	}
-
-	/** Payloads for the acquisition chips, keyed by AcqOption.key. Full
-	 * item JSON never goes through the DOM (the old data-payload attribute
-	 * broke on JSON quotes — the "fix that selection up" bug). */
-	#acquisitionPayloads = new Map<string, object>();
-
-	/**
-	 * Items from the equipment packs qualifying as the starting free
-	 * acquisition (availability modifier >= +0, Table 9-35; printed p272 —
-	 * the file-page-0273 heading "Acquisition and Starting Characters" is
-	 * printed page 272 under the dump's +1 offset). Book bullets:
-	 * "They may choose a single item with a total Acquisition Modifier of
-	 * +0 or more without the need to make an Acquisition Test" and "In the
-	 * case of weapons, a character may only choose those which he can use.
-	 * i.e., he must have a corresponding Weapon Training Talent."
-	 *
-	 * Weapon gate: the weapon schema has no family field (Las/SP/...), so
-	 * the gate is enforced at CLASS level — a weapon is selectable when the
-	 * PC has any Weapon Training of the matching class (Universal covers
-	 * everything). A specific-family talent only truly covers its families;
-	 * that finer check needs a name->family mapping that does not exist in
-	 * the schema (see comment on #coveredWeaponClasses).
-	 */
-	async #startingAcquisitions(): Promise<Array<AcqOption>> {
-		const out: AcqOption[] = [];
-		this.#acquisitionPayloads.clear();
-		const coverage = await this.#weaponTrainingCoverage();
-		const docs = (await getPackDocuments(
-			"rogue-trader.equipment",
-		)) as unknown as Array<{
-			name?: string;
-			type?: string;
-			flags?: Record<string, Record<string, unknown>>;
-			system?: {
-				availability?: string;
-				class?: string;
-				weaponFamily?: string;
-				source?: { book?: string };
-				description?: string;
-			};
-			toObject: () => object;
-		}>;
-		for (const doc of docs) {
-			if (!doc.name) continue;
-			// Acquisition buckets (bead n7hu): six packs became one `equipment`
-			// pack, so bucket by the build-time source flag. The Tau armoury is
-			// hand-authored mixed-type, so it buckets by item type; heirlooms and
-			// cybernetics are not acquisitions.
-			const source = readRtFlag(doc, "source") ?? "";
-			const group =
-				source === "tau-armoury"
-					? doc.type === "armour"
-						? "armour"
-						: doc.type === "gear"
-							? "gear"
-							: "weapons"
-					: source === "weapons" ||
-						  source === "armour" ||
-						  source === "gear" ||
-						  source === "drugs" ||
-						  source === "tools"
-						? source
-						: null;
-			if (!group) continue;
-			const modifier = availabilityModifier(doc.system?.availability ?? "");
-			if (modifier === null || modifier < 0) continue;
-			const key = `${source}::${doc.name}`;
-			const payload = doc.toObject() as object;
-			this.#acquisitionPayloads.set(key, payload);
-			const isWeapon =
-				doc.type === "melee-weapon" || doc.type === "ranged-weapon";
-			const selectable =
-				!isWeapon ||
-				isTrainedFor(coverage, {
-					class: doc.system?.class,
-					weaponFamily: doc.system?.weaponFamily,
-					name: doc.name,
-					source: doc.system?.source,
-				});
-			out.push({
-				key,
-				name: `${doc.name} (${game.i18n!.localize("CREATOR.ACQ_MODIFIER")} ${modifier >= 0 ? "+" : ""}${modifier})`,
-				payload,
-				tooltip: (doc.system?.description ?? "").slice(0, 300),
-				group,
-				selectable,
-				selected: this.creatorState.acquisition?.key === key,
-			});
-		}
-		return out.sort((a, b) => String(a.name).localeCompare(String(b.name)));
-	}
-
-	/**
-	 * Weapon-training coverage for the starting-acquisition gate, from the
-	 * chosen career's startingTalents plus origin talents (book p272 bullet
-	 * 2; pure rule logic in rules/acquisition.ts weaponTrainingCoverage).
-	 */
-	async #weaponTrainingCoverage(): Promise<WeaponTrainingCoverage> {
-		const state = this.creatorState;
-		if (!state.careerKey) {
-			// No career chosen yet (page navigation) — everything selectable,
-			// matching the pre-gate behaviour until the talent list exists.
-			return {
-				classes: new Set(WEAPON_CLASSES),
-				byCategory: {},
-				exotic: new Set(),
-				sources: new Set(),
-			};
-		}
-		const talentNames = [...(this.#resolved.talents ?? [])];
-		const careerDocs = (await getCharacterOptionDocs(
-			"career",
-		)) as unknown as Array<{
-			name?: string;
-			system?: { key?: string; startingTalents?: string[] };
-		}>;
-		const career = careerDocs.find((c) => c.system?.key === state.careerKey);
-		if (!career) {
-			return {
-				classes: new Set(WEAPON_CLASSES),
-				byCategory: {},
-				exotic: new Set(),
-				sources: new Set(),
-			};
-		}
-		talentNames.push(...(career.system?.startingTalents ?? []));
-		return weaponTrainingCoverage(talentNames);
-	}
-
-	/**
-	 * Stage 6 grouped view (bead a2rd, owner: collapsible groups): the flat
-	 * ~100+ chip list bucketed by item type, alphabetical WITHIN each group.
-	 * Groups start collapsed; a group containing the current selection
-	 * always renders open so the choice stays visible.
-	 */
-	#acquisitionGroups(items: Array<Record<string, unknown>>): Array<{
-		key: string;
-		labelKey: string;
-		count: number;
-		open: boolean;
-		items: Array<Record<string, unknown>>;
-	}> {
-		const state = this.creatorState;
-		const GROUPS: Array<{ key: string; labelKey: string }> = [
-			{ key: "weapons", labelKey: "CREATOR.ACQ_GROUP_WEAPONS" },
-			{ key: "armour", labelKey: "CREATOR.ACQ_GROUP_ARMOUR" },
-			{ key: "gear", labelKey: "CREATOR.ACQ_GROUP_GEAR" },
-			{ key: "drugs", labelKey: "CREATOR.ACQ_GROUP_DRUGS" },
-			{ key: "tools", labelKey: "CREATOR.ACQ_GROUP_TOOLS" },
-		];
-		return GROUPS.map(({ key, labelKey }) => {
-			const list = items
-				.filter((item) => (item.group ?? "gear") === key)
-				.sort((a, b) => String(a.name).localeCompare(String(b.name)));
-			return {
-				key,
-				labelKey,
-				count: list.length,
-				open:
-					!state.acqCollapsed[key] ||
-					list.some((item) => Boolean(item.selected)),
-				items: list,
-			};
+		// The orchestration tail is the PURE buildCreatorContext (bead hldm):
+		// every reviewed value — origin rows, review card, career/species chips,
+		// acquisitions, heirloom, kit, the Create gate — is computed there over
+		// the loaders' plain inputs, so the context shape tests headlessly.
+		return buildCreatorContext(context, this.creatorState, {
+			step: this.step,
+			name: this.name,
+			talentDocs: await ensureTalentLinkDocs(),
+			suggestions: await careerSuggestions(),
+			starting: await startingCareerDocs(),
+			species: await creatorSpeciesOptions(),
+			acquisitions: await startingAcquisitions(
+				this.creatorState,
+				this.#acquisitionPayloads,
+			),
+			localize: (key: string) => game.i18n!.localize(key),
 		});
 	}
 
-	/**
-	 * Roll the origin-path AND species-block vitals dice when entering the
-	 * Review step. A xeno's species block carries its own Wounds dice and Fate
-	 * bands (bead g45s); the human path uses the chosen Origin rows instead.
-	 */
-	async #rollOriginDice(): Promise<void> {
-		const resolved = this.#resolved;
-		const state = this.creatorState;
-		state.rolledDice = {
-			wounds: [],
-			fateD10: null,
-			speciesWounds: [],
-			speciesFateD10: null,
-			insanity: [],
-			corruption: [],
-			corrOrInsanity: [],
-		};
-		for (const notation of resolved.woundsDice) {
-			state.rolledDice.wounds.push(await roll(notation));
-		}
-		if (resolved.fateTable) state.rolledDice.fateD10 = await roll("1d10");
-		if (state.speciesKey !== HUMAN_SPECIES_KEY) {
-			if (state.speciesWounds.dice) {
-				state.rolledDice.speciesWounds.push(
-					await roll(state.speciesWounds.dice),
-				);
-			}
-			if (state.speciesFate <= 0 && state.speciesFateBands.length > 0) {
-				state.rolledDice.speciesFateD10 = await roll("1d10");
-			}
-		}
-		for (const notation of resolved.insanityDice) {
-			state.rolledDice.insanity.push(await roll(notation));
-		}
-		for (const notation of resolved.corruptionDice) {
-			state.rolledDice.corruption.push(await roll(notation));
-		}
-		for (const notation of resolved.corruptionOrInsanityDice) {
-			state.rolledDice.corrOrInsanity.push(await roll(notation));
-		}
-	}
+	// --- Static #on* action handlers (the Foundry dispatch edge) ----------
 
 	static async #onSetMethod(
 		this: CharacterCreator,
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		this.creatorState.method =
-			target.dataset.method === "points" ? "points" : "roll";
+		setCreatorMethod(this.creatorState, target.dataset.method);
 		this.render({ force: true });
 	}
 
@@ -1061,9 +227,7 @@ export class CharacterCreator extends CreatorApplication {
 	): Promise<void> {
 		const key = target.dataset.key as CharacteristicKey;
 		if (!key) return;
-		this.creatorState.rolled[key] = await roll(
-			`2d10+${this.creatorState.base[key]}`,
-		);
+		await rollCharacteristicInto(this.creatorState, getPorts().dice, key);
 		this.render({ force: true });
 	}
 
@@ -1073,22 +237,20 @@ export class CharacterCreator extends CreatorApplication {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		if (this.creatorState.rerollUsed) return;
 		const key = target.dataset.key as CharacteristicKey;
-		if (!key || this.creatorState.rolled[key] === undefined) return;
-		this.creatorState.rolled[key] = await roll(
-			`2d10+${this.creatorState.base[key]}`,
+		const changed = await rerollCharacteristic(
+			this.creatorState,
+			getPorts().dice,
+			key,
 		);
-		this.creatorState.rerollUsed = true;
-		this.render({ force: true });
+		if (changed) this.render({ force: true });
 	}
 
 	static async #onRollAll(this: CharacterCreator): Promise<void> {
-		for (const key of CHARACTERISTIC_ORDER) {
-			this.creatorState.rolled[key] = await roll(
-				`2d10+${this.creatorState.base[key]}`,
-			);
-		}
+		Object.assign(
+			this.creatorState.rolled,
+			await rollAllCharacteristics(getPorts().dice, this.creatorState),
+		);
 		this.render({ force: true });
 	}
 
@@ -1098,11 +260,8 @@ export class CharacterCreator extends CreatorApplication {
 		target: HTMLElement,
 	): Promise<void> {
 		const key = target.dataset.key as CharacteristicKey;
-		const delta = Number(target.dataset.delta ?? 0);
 		if (!key) return;
-		const current = this.creatorState.allocated[key] ?? 0;
-		const next = Math.min(POINT_BUY_MAX, Math.max(0, current + delta));
-		this.creatorState.allocated[key] = next;
+		allocatePointBuy(this.creatorState, key, Number(target.dataset.delta ?? 0));
 		this.render({ force: true });
 	}
 
@@ -1111,16 +270,12 @@ export class CharacterCreator extends CreatorApplication {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const row = target.dataset.row as OriginRow;
-		const key = target.dataset.key ?? "";
-		if (!row || !isOriginRow(row)) return;
-		if (!key) {
-			delete this.creatorState.picks[row];
-		} else {
-			this.creatorState.picks[row] = { key };
-			delete this.creatorState.corrOrInsTrack[row];
-		}
-		this.render({ force: true });
+		const changed = chooseOriginRow(
+			this.creatorState,
+			target.dataset.row as OriginRow,
+			target.dataset.key ?? "",
+		);
+		if (changed) this.render({ force: true });
 	}
 
 	static async #onChoosePickOption(
@@ -1128,18 +283,13 @@ export class CharacterCreator extends CreatorApplication {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const row = target.dataset.row as OriginRow;
-		const kind = target.dataset.kind;
-		const value = target.dataset.value ?? "";
-		const pick = this.creatorState.picks[row];
-		if (!pick) return;
-		if (kind === "variant") pick.variantKey = value || undefined;
-		else if (kind === "option") pick.optionChoice = value || undefined;
-		else if (kind === "charChoice")
-			pick.charChoice = value ? (JSON.parse(value) as CharMod[]) : undefined;
-		else if (kind === "alternate")
-			pick.alternate = value === "" ? undefined : Number(value);
-		this.render({ force: true });
+		const changed = choosePickOption(
+			this.creatorState,
+			target.dataset.row as OriginRow,
+			target.dataset.kind,
+			target.dataset.value ?? "",
+		);
+		if (changed) this.render({ force: true });
 	}
 
 	static async #onChooseCorrIns(
@@ -1147,11 +297,12 @@ export class CharacterCreator extends CreatorApplication {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const row = target.dataset.row as OriginRow;
-		const track = target.dataset.track as "corruption" | "insanity";
-		if (!row || (track !== "corruption" && track !== "insanity")) return;
-		this.creatorState.corrOrInsTrack[row] = track;
-		this.render({ force: true });
+		const changed = chooseCorrInsTrack(
+			this.creatorState,
+			target.dataset.row as OriginRow,
+			target.dataset.track,
+		);
+		if (changed) this.render({ force: true });
 	}
 
 	static async #onChooseCareer(
@@ -1159,7 +310,7 @@ export class CharacterCreator extends CreatorApplication {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		this.creatorState.careerKey = target.dataset.key ?? "";
+		chooseCreatorCareer(this.creatorState, target.dataset.key ?? "");
 		this.render({ force: true });
 	}
 
@@ -1181,11 +332,9 @@ export class CharacterCreator extends CreatorApplication {
 	}
 
 	/**
-	 * Species choice (bead ghmn). Everything the step needs comes from the
-	 * chosen pack option: the per-characteristic base used by BOTH stage-1
-	 * methods, and the printed Fate/Wounds rules shown on review. Changing
-	 * species therefore invalidates rolled values and any career that is no
-	 * longer legal, so both are cleared rather than left stale.
+	 * Species choice (bead ghmn): every state change (bases, Fate/Wounds,
+	 * invalidation of rolls and illegal picks/careers) is the PURE
+	 * chooseSpecies transition in creator-state.ts; the loaders fetch.
 	 */
 	static async #onChooseSpecies(
 		this: CharacterCreator,
@@ -1193,42 +342,17 @@ export class CharacterCreator extends CreatorApplication {
 		target: HTMLElement,
 	): Promise<void> {
 		const key = (target.dataset.key ?? "").trim();
-		const option = (await this.#speciesOptions()).find((o) => o.key === key);
+		const option = (await creatorSpeciesOptions()).find((o) => o.key === key);
 		if (!option) return;
-		const state = this.creatorState;
-		if (state.speciesKey === option.key) return;
-		state.speciesKey = option.key;
-		state.speciesLabel = option.label;
-		state.base = { ...option.base };
-		state.speciesFate = option.startingFate;
-		state.speciesFateFormula = option.fateFormula;
-		state.speciesWoundsFormula = option.woundsFormula;
-		state.speciesFateBands = [...option.fateBands];
-		state.speciesWounds = { ...option.wounds };
-		// The bases changed, so any roll taken at the old base is meaningless.
-		state.rolled = {};
-		state.rerollUsed = false;
-		// Species paths differ (bead ghmn): drop picks whose row the new species
-		// does not have, or a Kroot would carry human Home World/Birthright picks
-		// into a path that has no such rows.
-		const rows = new Set(originRowsForSpecies(option.key));
-		for (const row of Object.keys(state.picks) as OriginRow[]) {
-			if (!rows.has(row)) {
-				delete state.picks[row];
-				delete state.corrOrInsTrack[row];
-			}
-		}
-		// Drop a career the new species cannot take.
-		const docs = await careerDocs();
-		const legal = careersForSpecies(
-			docs.filter((doc) => (doc.system?.requiredCareer ?? "").trim() === ""),
-			option.key,
-		).some((doc) => String(doc.system?.key ?? "") === state.careerKey);
-		if (!legal) state.careerKey = "";
-		this.render({ force: true });
+		const changed = chooseSpecies(
+			this.creatorState,
+			option,
+			await startingCareerDocs(),
+		);
+		if (changed) this.render({ force: true });
 	}
 
-	/** Stage 6 (printed p272): choose the single starting free acquisition. */
+	/** Stage 6 group collapse (bead a2rd, owner: collapsible groups). */
 	static async #onToggleAcqGroup(
 		this: CharacterCreator,
 		_event: unknown,
@@ -1236,9 +360,7 @@ export class CharacterCreator extends CreatorApplication {
 	): Promise<void> {
 		const key = target.dataset.group;
 		if (!key) return;
-		const collapsed = this.creatorState.acqCollapsed;
-		if (collapsed[key]) delete collapsed[key];
-		else collapsed[key] = true;
+		toggleCollapse(this.creatorState, "acqCollapsed", key);
 		this.render({ force: true });
 	}
 
@@ -1249,13 +371,13 @@ export class CharacterCreator extends CreatorApplication {
 	 * starting acquisition.
 	 */
 	static async #onRollHeirloom(this: CharacterCreator): Promise<void> {
-		const rollTotal = await roll("1d100");
-		const total = Math.floor(rollTotal);
+		const total = Math.floor(await rollFormula("1d100"));
 		const entry = heirloomForRoll(total);
 		this.creatorState.heirloom = { roll: total, name: entry.name };
 		this.render({ force: true });
 	}
 
+	/** Stage 6 (printed p272): choose the single starting free acquisition. */
 	static async #onChooseAcquisition(
 		this: CharacterCreator,
 		_event: unknown,
@@ -1298,500 +420,70 @@ export class CharacterCreator extends CreatorApplication {
 		_event: unknown,
 		target: HTMLElement,
 	): Promise<void> {
-		const slot = Number(target.dataset.slot);
-		const option = Number(target.dataset.option);
-		if (!Number.isInteger(slot)) return;
-		if ({}.hasOwnProperty.call(this.creatorState.kitPicks, slot) && this.creatorState.kitPicks[slot] === option) {
-			// Toggle: clear the choice (Create re-gates).
-			delete this.creatorState.kitPicks[slot];
-		} else {
-			this.creatorState.kitPicks[slot] = option;
-		}
-		this.render({ force: true });
+		const changed = toggleKitSlotPick(
+			this.creatorState,
+			Number(target.dataset.slot),
+			Number(target.dataset.option),
+		);
+		if (changed) this.render({ force: true });
 	}
 
-	/** Build the new pc actor and apply the whole Stage 1-2 bundle. */
+	/**
+	 * Build the new pc actor and apply the whole Stage 1-2 bundle. The
+	 * create-vs-update branching and its confirm dialog live in the SHARED
+	 * helper (creator-apply.ts, bead w7zm) — the confirm-overwrite stays
+	 * character-creator-only (the ship creator applies silently, and that
+	 * asymmetry is deliberate); the apply service runs from a single
+	 * equipment-pack fetch (bead hldm).
+	 */
 	static async #onCreate(this: CharacterCreator): Promise<void> {
 		const state = this.creatorState;
 		const resolved = this.#resolved;
 		const chars = finalCharacteristics(
-			this.#baseCharacteristics(),
+			baseCharacteristics(state),
 			resolved.characteristics,
 		);
-		const { wounds, fate } = this.#resolveVitals(chars, resolved);
-		const corrInsTotal = state.rolledDice.corrOrInsanity.reduce(
-			(a, b) => a + b,
-			0,
-		);
-		const insanity =
-			resolved.insanity +
-			state.rolledDice.insanity.reduce((a, b) => a + b, 0) +
-			(Object.values(state.corrOrInsTrack).includes("insanity")
-				? corrInsTotal
-				: 0);
-		const corruption =
-			resolved.corruption +
-			state.rolledDice.corruption.reduce((a, b) => a + b, 0) +
-			(Object.values(state.corrOrInsTrack).includes("corruption")
-				? corrInsTotal
-				: 0);
-
-		const systemPayload = {
-			characteristics: Object.fromEntries(
-				CHARACTERISTIC_ORDER.map((key) => [
-					key,
-					{ value: chars[key], unnatural: 1 },
-				]),
-			),
-			wounds: { value: wounds, max: wounds },
-			fate: { value: fate, max: fate },
-			insanity,
-			corruption,
-			// Core Rulebook p13: characters begin with 4,500 xp already spent plus
-			// 500 to spend on Rank 1 advances; total earned = 5,000. Into the
-			// Storm's expanded Origin Path options deduct their xp cost from that
-			// starting pool (bead b03f), so they raise the spent baseline.
-			xp: { total: 5000, spent: 4500 + resolved.xpCost },
-			// Psyker status from the career (bead m4me): Astropaths start
-			// with Psy Rating 2 (their starting talents); Navigators are
-			// "considered a psyker for all game purposes" (p182) with no
-			// standard Psy Rating. Career-derived only — not editable (owner:
-			// stick to the book rules).
-			psyker:
-				state.careerKey === "astropath-transcendent" ||
-				state.careerKey === "navigator",
-			psyRating: state.careerKey === "astropath-transcendent" ? 2 : 0,
-			careerKey: state.careerKey,
-			rank: 1,
-			// Persist the Origin Path picks (bead ay0; species paths bead 58js):
-			// the consolidated Background tab reads these; the summary card is not
-			// the record.
-			//
-			// Built by the SHARED helper rather than by hand: a hand-written list
-			// of the five human fields is exactly how a xeno's picks were silently
-			// discarded. The helper writes the five named fields (keeping the
-			// existing "key|variantKey" convention) and puts every other row in
-			// `path`.
-			origins: storedOriginsFromPicks(state.picks),
-		};
-
+		// The system payload is the PURE buildCharacterSystemPayload (bead
+		// a87x) — the same vitals/totals math the Review card uses, so the
+		// two can no longer drift.
+		const systemPayload = buildCharacterSystemPayload(state, resolved, chars);
+		// The reconcile input is the update path's PRE-EXISTING snapshot.
+		let existingItems: ExistingItemLike[] = [];
+		let oldOrigins: Record<string, string> | undefined;
 		if (this.targetActor) {
-			// Right-clicked actor: update in place. Confirm overwrite when the
-			// actor already has content (blank new PCs apply silently).
-			const target = this.targetActor as unknown as {
-				update: (data: object) => Promise<unknown>;
-				createEmbeddedDocuments: (
-					t: string,
-					data: object[],
-				) => Promise<unknown>;
-				deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
-				sheet?: { render: (options?: object) => unknown };
-			};
-			const system = this.targetActor.system as unknown as {
-				xp?: { spent?: number; total?: number };
-			};
-			const hasContent =
-				this.targetActor.items.size > 0 ||
-				(system.xp?.spent ?? 0) > 0 ||
-				(system.xp?.total ?? 0) > 0;
-			if (hasContent) {
-				const confirmed = await foundry.applications.api.DialogV2.confirm({
-					window: {
-						title: game.i18n!.localize("CREATOR.APPLY_TITLE"),
-					},
-					content: game.i18n!.format("CREATOR.APPLY_CONFIRM", {
-						name: this.targetActor.name ?? "",
-					}),
-				});
-				if (!confirmed) return;
-			}
-			await target.update({
-				name: this.name || this.targetActor.name,
-				system: systemPayload,
-			} as never);
-			await this.#applyGrantsAndSummary(target, state, resolved);
-			await this.#applyAcquisition(target, state);
-			await this.#applyKit(target, state);
-			this.close();
-			target.sheet?.render({});
-			return;
-		}
-
-		const actor = (await foundry.documents.Actor.create({
-			name: this.name || game.i18n!.localize("CREATOR.DEFAULT_NAME"),
-			type: "explorer",
-			system: systemPayload,
-		} as never)) as unknown as {
-			uuid: string;
-			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
-			deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
-			sheet?: { render: (options?: object) => unknown };
-		};
-		if (!actor) return;
-
-		await this.#applyGrantsAndSummary(actor, state, resolved);
-		await this.#applyAcquisition(actor, state);
-		await this.#applyKit(actor, state);
-
-		this.close();
-		actor.sheet?.render({});
-	}
-
-	/** Display name for a kit option chip (craftsmanship + quantity hints). */
-	#kitOptionName(opt: {
-		name?: string;
-		note?: boolean;
-		craftsmanship?: string;
-		quantity?: number;
-	}): string {
-		const name = String(opt.name ?? "");
-		const cs = opt.craftsmanship
-			? `${opt.craftsmanship[0]?.toUpperCase() ?? ""}${
-				opt.craftsmanship.slice(1)
-			}-Craftsmanship `
-			: "";
-		const qty = Number(opt.quantity ?? 1) > 1 ? ` ×${opt.quantity}` : "";
-		return `${cs}${name}${qty}`;
-	}
-
-	/**
-	 * Starting Kit grant (owner rework 2026, step 5): clone the chosen pack
-	 * items — options resolve by (source folder, exact name) against the
-	 * equipment pack; craftsmanship/quantity overrides bake into the clone;
-	 * weapon mods clone and attach via system.modifications (bead huaf);
-	 * note options grant description-only gear. Everything stamps
-	 * grantedBy creator provenance. A missing item is a UI warning, never a
-	 * silent drop.
-	 */
-	async #applyKit(actor: unknown, state: CreatorState): Promise<void> {
-		const kit = gearsetFor(state.careerKey);
-		if (!kit) return;
-		const target = actor as {
-			createEmbeddedDocuments: (
-				t: string,
-				data: object[],
-			) => Promise<unknown>;
-			items?: { get?: (id: string) => { update?: (d: object) => Promise<unknown> } };
-		};
-		const docs = (await getPackDocuments("rogue-trader.equipment")) as unknown as Array<{
-			name?: string;
-			type?: string;
-			flags?: Record<string, Record<string, unknown>>;
-			toObject: () => { system?: Record<string, unknown> };
-		}>;
-		const sourceFolderOf = (d: { flags?: Record<string, Record<string, unknown>> }): string =>
-			String(
-				(d.flags?.["rogue-trader"] as { source?: string } | undefined)?.source ?? "",
-			);
-		for (let i = 0; i < (kit.slots ?? []).length; i++) {
-			const options = kit.slots[i]?.options ?? [];
-			const opt =
-				options[state.kitPicks[i] ?? 0] ??
-				options[0];
-			if (!opt) continue; // empty slot — the pack test forbids, belt only
-			if (opt.note) {
-				await target.createEmbeddedDocuments("Item", [
-					{
-						name: opt.name ?? "Starting gear",
-						type: "gear",
-						system: {
-							description: opt.description ?? "",
-							grantedBy: GRANTED_BY_CREATOR,
-						},
-					},
-				] as never);
-				continue;
-			}
-			const doc = docs.find(
-				(d) =>
-					d.name === opt.name &&
-					(!opt.source || sourceFolderOf(d) === opt.source),
-			);
-			if (!doc) {
-				getPorts().notify.warn("CREATOR.KIT_MISSING", { name: opt.name ?? "" });
-				continue;
-			}
-			const data = doc.toObject() as { system?: Record<string, unknown> };
-			const created = (await target.createEmbeddedDocuments("Item", [
-				{
-					...doc.toObject(),
-					...(opt.rename ? { name: opt.rename } : {}),
-					system: {
-						...data.system,
-						...(opt.craftsmanship
-							? { craftsmanship: opt.craftsmanship }
-							: {}),
-						...(Number(opt.quantity ?? 1) > 1
-							? { quantity: opt.quantity }
-							: {}),
-						grantedBy: GRANTED_BY_CREATOR,
-					},
-				},
-			] as never)) as unknown as Array<{ id?: string }>;
-			const weaponId = created?.[0]?.id ?? "";
-			const modIds: string[] = [];
-			for (const modName of opt.mods ?? []) {
-				const modDoc = docs.find(
-					(d) => d.name === modName && d.type === "weapon-modification",
-				);
-				if (!modDoc) {
-					getPorts().notify.warn("CREATOR.KIT_MOD_MISSING", { name: modName });
-					continue;
+			existingItems = (this.targetActor.items ??
+				[]) as unknown as ExistingItemLike[];
+			oldOrigins = (
+				(this.targetActor.system ?? {}) as {
+					origins?: Record<string, string>;
 				}
-				const modData = modDoc.toObject() as { system?: Record<string, unknown> };
-				const modCreated = (await target.createEmbeddedDocuments("Item", [
-					{
-						...modDoc.toObject(),
-						system: {
-							...modData.system,
-							grantedBy: GRANTED_BY_CREATOR,
-						},
-					},
-				] as never)) as unknown as Array<{ id?: string }>;
-				if (modCreated?.[0]?.id) modIds.push(modCreated[0].id);
-			}
-			if (modIds.length > 0 && weaponId && target.items?.get) {
-				const weapon = target.items.get(weaponId);
-				if (weapon?.update) {
-					await weapon.update({ system: { modifications: modIds } });
-				}
-			}
+			).origins;
 		}
-	}
-
-	/**
-	 * Stage 6 apply (bead gjvg): grant the character's single starting free
-	 * acquisition (printed p272, modifier +0 or better — chosen on step 3). The
-	 * group's PF/SP are NOT set here — they live on the dynasty document
-	 * (owner redesign: keep group-level decisions out of the creator).
-	 */
-	async #applyAcquisition(actor: unknown, state: CreatorState): Promise<void> {
-		if (state.acquisition && state.acquisition.payload) {
-			const target = actor as {
-				createEmbeddedDocuments: (
-					t: string,
-					data: object[],
-				) => Promise<unknown>;
-			};
-			await target.createEmbeddedDocuments("Item", [
-				{
-					...state.acquisition.payload,
-					system: {
-						...(state.acquisition.payload as { system?: object }).system,
-						grantedBy: GRANTED_BY_CREATOR,
-					},
-				},
-			] as never);
-		}
-		// Stage 3.5 heirloom (bead rboc; owner rework): the rolled Table 1-2 entry
-		// IS a real typed compendium item (the Heirlooms folder inherits normal
-		// gear at build time, craftsmanship baked in) — clone it by name, flag-
-		// markered, and stamp creator provenance. Same path as dragging from the
-		// compendium, so a missed grant can be repaired by hand.
-		if (state.heirloom) {
-			const docs = (await getPackDocuments("rogue-trader.equipment")) as Array<{
-				name?: string;
-				flags?: Record<string, Record<string, unknown>>;
-				toObject: () => object;
-			}>;
-			const doc = docs.find(
-				(d) =>
-					d.name === state.heirloom?.name &&
-					typeof (d.flags?.["rogue-trader"] as { item?: unknown })?.item ===
-						"string",
-			);
-			if (!doc) {
-				// Loud: the roll happened — a missed clone must not vanish silently.
-				getPorts().notify.warn("CREATOR.HEIRLOOM_MISSING", {
-					name: state.heirloom.name,
+		await createOrUpdateActor(
+			this.targetActor as unknown as ApplyableActor | null,
+			{ name: this.name, type: "explorer", system: systemPayload },
+			async (actor) => {
+				await applyGrantsAndSummary(actor, state, resolved, {
+					actorName: this.name,
+					existingItems,
+					oldOrigins,
 				});
-				return;
-			}
-			const target = actor as {
-				createEmbeddedDocuments: (
-					t: string,
-					data: object[],
-				) => Promise<unknown>;
-			};
-			const data = doc.toObject() as {
-				system?: Record<string, unknown>;
-			};
-			await target.createEmbeddedDocuments("Item", [
-				{
-					...doc.toObject(),
-					system: {
-						...data.system,
-						grantedBy: GRANTED_BY_CREATOR,
-					},
+				const deps = {
+					docs: await getPackDocuments("rogue-trader.equipment"),
+					notify: getPorts().notify,
+				};
+				await applyAcquisition(actor, state, deps);
+				await applyKit(actor, state, deps);
+			},
+			{
+				confirmOverwrite: true,
+				fallbackNameKey: "CREATOR.DEFAULT_NAME",
+				confirmKeys: {
+					title: "CREATOR.APPLY_TITLE",
+					content: "CREATOR.APPLY_CONFIRM",
 				},
-			] as never);
-		}
-	}
-
-	/**
-	 * Shared apply tail (create or in-place update): grant starting
-	 * skills/talents as live items, post the summary chat card.
-	 */
-	async #applyGrantsAndSummary(
-		actor: {
-			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
-			deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
-			system?: unknown;
-			uuid?: string;
-			items?:
-				| {
-						size?: number;
-						map: (cb: (i: { name?: string }) => string) => string[];
-				  }
-				| undefined;
-		},
-		state: CreatorState,
-		resolved: ResolvedOrigin,
-	): Promise<void> {
-		// The createActor hook's common-skill grant is async and NOT awaited by
-		// Actor.create — wait for it before merging on name, or the dedupe set
-		// misses the defaults (bead t093).
-		await waitForDefaultGrants(actor.uuid);
-		// iufv: creator grants carry provenance; a re-run wipes ALL
-		// creator-granted items and re-grants from the new picks (owner
-		// decision: full wipe + re-grant). Manual items (no flag) are kept.
-		// Pre-flag legacy items are identified by name against the OLD picks
-		// and removed by this first re-run (remove-then-regrant).
-		const existing = (this.targetActor?.items ?? []) as unknown as Array<{
-			id?: string;
-			type?: string;
-			name?: string;
-			system?: { grantedBy?: string };
-		}>;
-		const legacyNames = new Set<string>();
-		const oldOrigins = (
-			(this.targetActor?.system ?? {}) as {
-				origins?: Record<string, string>;
-			}
-		).origins;
-		if (oldOrigins) {
-			// Bead 58js: read BOTH halves of the stored picks through the shared
-			// helper. The hand-rolled loop here mapped only the five camelCase
-			// human keys, so a xeno character's species-path picks were invisible
-			// to its own reconcile as well as to the resolver.
-			const oldPicks = storedOriginPicks(oldOrigins);
-			if (Object.keys(oldPicks).length > 0) {
-				const legacyResolved = resolveOrigins(oldPicks);
-				for (const name of [
-					...legacyResolved.skills,
-					...legacyResolved.options,
-					...legacyResolved.talents.filter((t) => !isUnresolvedChoice(t)),
-				]) {
-					legacyNames.add(name);
-				}
-			}
-		}
-		const { deleteIds } = reconcileForCreator(existing, legacyNames);
-		if (deleteIds.length > 0) {
-			await actor.deleteEmbeddedDocuments("Item", deleteIds);
-		}
-
-		// Grants: catalog-matched skills, then talents (cloning the pack
-		// document, meh0), then unmatched options (talents, or manual if
-		// unresolved).
-		const catalog: CatalogSkill[] = [];
-		const docs = (await getCharacterOptionDocs("skill")) as unknown as Array<{
-			name?: string;
-			system: { characteristic: string };
-		}>;
-		for (const doc of docs) {
-			if (doc.name)
-				catalog.push({
-					name: doc.name,
-					characteristic: doc.system.characteristic,
-				});
-		}
-		const { grants, unmatched } = matchOriginSkills(resolved, catalog);
-		const provenance = { grantedBy: GRANTED_BY_CREATOR };
-		// Merge on name, case-insensitive + trimmed.
-		const normName = (name: string) => name.trim().toLowerCase();
-		const itemGrants: GrantPayload[] = [];
-		const manual: string[] = [...resolved.notes];
-		// Dedupe on NAME against the actor's LIVE items (bead: duplicate skills
-		// on new explorers). On the create path the createActor hook has
-		// already embedded the common-skill defaults by the time this runs —
-		// `existing` (targetActor snapshot) is empty there, so origin/career
-		// skills overlapping the defaults (Awareness, Common Lore, ...) were
-		// granted a second time. Merging against the live actor items makes
-		// both flows idempotent.
-		const liveItems =
-			(actor.items as unknown as { contents?: Array<{ name?: string }> })
-				.contents ??
-			(actor.items as unknown as Array<{ name?: string }>) ??
-			[];
-		const seenNames = new Set(
-			liveItems.map((item) => normName(item.name ?? "")),
+				close: () => this.close(),
+			},
 		);
-		for (const grant of grants) {
-			if (seenNames.has(normName(grant.name))) continue;
-			seenNames.add(normName(grant.name));
-			itemGrants.push(
-				skillGrantPayload(grant.name, grant.system.characteristic, provenance),
-			);
-		}
-		for (const talentName of resolved.talents) {
-			if (isUnresolvedChoice(talentName)) {
-				manual.push(talentName);
-				continue;
-			}
-			// yclz: resolve parameterised talents ("Peer (choose one)") to a
-			// concrete subject before granting; cancelled prompt = skipped.
-			const resolvedName = await promptParameterisedSubject(talentName);
-			if (!resolvedName) continue;
-			if (seenNames.has(normName(resolvedName))) continue;
-			seenNames.add(normName(resolvedName));
-			itemGrants.push(await talentGrant(resolvedName, provenance));
-		}
-		for (const leftover of unmatched) {
-			if (isUnresolvedChoice(leftover)) manual.push(leftover);
-			else if (!seenNames.has(normName(leftover))) {
-				const resolvedName = await promptParameterisedSubject(leftover);
-				if (!resolvedName) continue;
-				if (seenNames.has(normName(resolvedName))) continue;
-				seenNames.add(normName(resolvedName));
-				itemGrants.push(await talentGrant(resolvedName, provenance));
-			}
-		}
-		if (itemGrants.length > 0) {
-			await actor.createEmbeddedDocuments("Item", itemGrants);
-		}
-
-		// Summary card: choices + everything needing manual application.
-		const rows = this.#originRows().map((rowKey) => {
-			const pick = state.picks[rowKey];
-			const entry = pick ? originByKey(pick.key) : undefined;
-			const variant = pick?.variantKey
-				? entry?.variants?.find((v) => v.key === pick.variantKey)?.name
-				: null;
-			const label = game.i18n!.localize(ORIGIN_ROW_LABEL_KEYS[rowKey]);
-			return `<li><strong>${label}:</strong> ${entry?.name ?? "—"}${variant ? ` (${variant})` : ""}</li>`;
-		}).join("");
-		// Bead ay0: origin trait notes live on the Background tab now (tgq9) —
-		// the card only points there instead of duplicating them.
-		const notes = `<p>${game.i18n!.localize("CREATOR.NOTES_POINTER")}</p>`;
-		const pf = resolved.profitFactor
-			? `<p>${game.i18n!.localize("CREATOR.PROFIT_FACTOR")}: ${resolved.profitFactor > 0 ? "+" : ""}${resolved.profitFactor}</p>`
-			: "";
-		const initiative = resolved.initiativeBonus
-			? `<p>${game.i18n!.localize("CREATOR.INIT_BONUS")}: +${resolved.initiativeBonus}</p>`
-			: "";
-		// Psyker note (bead m4me): Astropaths (Psy Rating 2) and Navigators.
-		const psykerNote =
-			state.careerKey === "astropath-transcendent" ||
-			state.careerKey === "navigator"
-				? `<p>${game.i18n!.localize("CREATOR.PSYKER")}${
-						state.careerKey === "astropath-transcendent"
-							? ` — ${game.i18n!.localize("CREATOR.PSY_RATING_2")}`
-							: ""
-					}</p>`
-				: "";
-		await foundry.documents.ChatMessage.create({
-			content: `<div class="rogue-trader creator-summary"><h3>${this.name}</h3><ul>${rows}</ul>${pf}${initiative}${psykerNote}${notes}</div>`,
-		} as never);
 	}
 }

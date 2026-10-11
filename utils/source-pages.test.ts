@@ -63,13 +63,17 @@ describe("the Autogun regression (bead nn96)", () => {
 	});
 
 	test("table mode cites the stat row, not the heading", () => {
-		expect(findPage(pages, "Autogun", { minPage: 114, mode: "table" })).toBe(118);
+		expect(findPage(pages, "Autogun", { minPage: 114, mode: "table" })).toBe(
+			118,
+		);
 	});
 
 	test("prose mode still cites the heading — that is what it is for", () => {
 		// This is not a bug: a prose pack's entry IS its heading. The bug was
 		// using this order for table packs.
-		expect(findPage(pages, "Autogun", { minPage: 114, mode: "prose" })).toBe(120);
+		expect(findPage(pages, "Autogun", { minPage: 114, mode: "prose" })).toBe(
+			120,
+		);
 	});
 
 	test("the default mode is prose, matching the historical behaviour", () => {
@@ -80,21 +84,28 @@ describe("the Autogun regression (bead nn96)", () => {
 		// The heading pass is moved, not removed: an entry with only a
 		// heading must still get a cite.
 		const headingOnly = makePages({ 121: ["Autogun"] });
-		expect(findPage(headingOnly, "Autogun", { minPage: 114, mode: "table" })).toBe(
-			120,
-		);
+		expect(
+			findPage(headingOnly, "Autogun", { minPage: 114, mode: "table" }),
+		).toBe(120);
 	});
 });
 
 describe("findPage", () => {
 	test("returns a PRINTED page: file page minus one", () => {
 		const pages = makePages({ 119: ["   Lasgun   100m"] });
-		expect(findPage(pages, "Lasgun", { minPage: 114, mode: "table" })).toBe(118);
+		expect(findPage(pages, "Lasgun", { minPage: 114, mode: "table" })).toBe(
+			118,
+		);
 	});
 
 	test("respects the section floor", () => {
-		const pages = makePages({ 100: ["   Lasgun   100m"], 119: ["   Lasgun   100m"] });
-		expect(findPage(pages, "Lasgun", { minPage: 114, mode: "table" })).toBe(118);
+		const pages = makePages({
+			100: ["   Lasgun   100m"],
+			119: ["   Lasgun   100m"],
+		});
+		expect(findPage(pages, "Lasgun", { minPage: 114, mode: "table" })).toBe(
+			118,
+		);
 	});
 
 	test("returns null rather than guessing", () => {
@@ -113,16 +124,21 @@ describe("findPage", () => {
 			30: ["   Quick Draw        100 Talent"],
 			150: ["   Quick Draw        100m"],
 		});
-		expect(
-			findPage(pages, "Quick Draw", { minPage: 24, mode: "table" }),
-		).toBe(149);
+		expect(findPage(pages, "Quick Draw", { minPage: 24, mode: "table" })).toBe(
+			149,
+		);
 	});
 
 	test("matches a wrapped name in a table cell", () => {
 		// "Heavy Stubber" / "(Orthlack)" is one cell across two dump lines.
-		const pages = makePages({ 119: ["   Heavy Stubber", "   (Orthlack)   100m"] });
+		const pages = makePages({
+			119: ["   Heavy Stubber", "   (Orthlack)   100m"],
+		});
 		expect(
-			findPage(pages, "Heavy Stubber (Orthlack)", { minPage: 114, mode: "table" }),
+			findPage(pages, "Heavy Stubber (Orthlack)", {
+				minPage: 114,
+				mode: "table",
+			}),
 		).toBe(118);
 	});
 
@@ -135,7 +151,9 @@ describe("findPage", () => {
 
 	test("matches a name that is a heading with a trailing colon", () => {
 		const pages = makePages({ 121: ["Autogun:"] });
-		expect(findPage(pages, "Autogun", { minPage: 114, mode: "table" })).toBe(120);
+		expect(findPage(pages, "Autogun", { minPage: 114, mode: "table" })).toBe(
+			120,
+		);
 	});
 });
 
@@ -182,7 +200,11 @@ describe("isCellMatch", () => {
 describe("isWrappedCellMatch", () => {
 	test("matches a name split across two lines", () => {
 		expect(
-			isWrappedCellMatch(["   Heavy Stubber", "   (Orthlack)   100m"], 0, "heavy stubber (orthlack)"),
+			isWrappedCellMatch(
+				["   Heavy Stubber", "   (Orthlack)   100m"],
+				0,
+				"heavy stubber (orthlack)",
+			),
 		).toBe(true);
 	});
 
@@ -195,13 +217,15 @@ describe("isWrappedCellMatch", () => {
 
 describe("isStatRow", () => {
 	test("accepts a weapon stat row", () => {
-		expect(isStatRow("   Boltgun   Basic  80m  S/3/– 1d10+4 X 2   18  Full")).toBe(
-			true,
-		);
+		expect(
+			isStatRow("   Boltgun   Basic  80m  S/3/– 1d10+4 X 2   18  Full"),
+		).toBe(true);
 	});
 
 	test("rejects prose that mentions damage", () => {
-		expect(isStatRow("Boltguns deal 1d10+4 damage at close range.")).toBe(false);
+		expect(isStatRow("Boltguns deal 1d10+4 damage at close range.")).toBe(
+			false,
+		);
 	});
 });
 
@@ -285,7 +309,9 @@ describe("findNicknamePage (bead r8rx)", () => {
 	});
 
 	test("returns null when the nickname appears nowhere", () => {
-		expect(findNicknamePage(pages, 'Clovis FP-14 "Absolution" Rifle')).toBe(null);
+		expect(findNicknamePage(pages, 'Clovis FP-14 "Absolution" Rifle')).toBe(
+			null,
+		);
 	});
 
 	test("returns null on ambiguity rather than guessing", () => {
@@ -424,68 +450,84 @@ function footerPrinted(
 	return printed;
 }
 
-describe.skipIf(!HAS_MULTI)("maker/nickname matchers against the real dumps", () => {
-	const books = new Map<string, PageLines[]>();
-	if (HAS_MULTI) for (const b of MULTI_BOOKS) books.set(b, loadBook(b));
+describe.skipIf(!HAS_MULTI)(
+	"maker/nickname matchers against the real dumps",
+	() => {
+		const books = new Map<string, PageLines[]>();
+		if (HAS_MULTI) for (const b of MULTI_BOOKS) books.set(b, loadBook(b));
 
-	test("the maker-on-its-own-line shape resolves the two Boltguns", () => {
-		const pages = books.get("hostile_acquisitions")!;
-		// Both entries share the base name "Boltgun" and differ only by the
-		// maker line after the stat row. The pack cited 50 and 51; the rows are
-		// both on printed 49.
-		expect(findMakerWrappedPage(pages, "Boltgun", "Footfall")).toBe(49);		expect(findMakerWrappedPage(pages, "Boltgun", "Archeotech")).toBe(49);
-		expect(findMakerWrappedPage(pages, "Bolt Pistol", "Footfall")).toBe(49);
-		expect(findMakerWrappedPage(pages, "Bolt Carbine", "Ceres")).toBe(49);
-		expect(findMakerWrappedPage(pages, "Shotgun", "Persecutor")).toBe(49);
-	});
+		test("the maker-on-its-own-line shape resolves the two Boltguns", () => {
+			const pages = books.get("hostile_acquisitions")!;
+			// Both entries share the base name "Boltgun" and differ only by the
+			// maker line after the stat row. The pack cited 50 and 51; the rows are
+			// both on printed 49.
+			expect(findMakerWrappedPage(pages, "Boltgun", "Footfall")).toBe(49);
+			expect(findMakerWrappedPage(pages, "Boltgun", "Archeotech")).toBe(49);
+			expect(findMakerWrappedPage(pages, "Bolt Pistol", "Footfall")).toBe(49);
+			expect(findMakerWrappedPage(pages, "Bolt Carbine", "Ceres")).toBe(49);
+			expect(findMakerWrappedPage(pages, "Shotgun", "Persecutor")).toBe(49);
+		});
 
-	test("the quoted nickname resolves the maker-named signature weapons", () => {
-		const fc = books.get("faith_and_coin")!;
-		expect(findNicknamePage(fc, 'Clovis FP-14 "Twist" Pistol')).toBe(81);
-		expect(findNicknamePage(fc, 'Merovech Model 481 "Persuader" Lasgun')).toBe(81);
-		expect(findNicknamePage(fc, 'Mars-pattern MkII "Scourge" Boltgun')).toBe(81);
+		test("the quoted nickname resolves the maker-named signature weapons", () => {
+			const fc = books.get("faith_and_coin")!;
+			expect(findNicknamePage(fc, 'Clovis FP-14 "Twist" Pistol')).toBe(81);
+			expect(
+				findNicknamePage(fc, 'Merovech Model 481 "Persuader" Lasgun'),
+			).toBe(81);
+			expect(findNicknamePage(fc, 'Mars-pattern MkII "Scourge" Boltgun')).toBe(
+				81,
+			);
 
-		const its = books.get("into_the_storm")!;
-		expect(findNicknamePage(its, 'Perinetus-pattern "Solo" Mark II Boltgun')).toBe(
-			113,
-		);
-		expect(findNicknamePage(its, 'Zepherus Mark I "Beamer" Meltagun')).toBe(113);
-		expect(findNicknamePage(its, 'Ryza-pattern "Wrath" Plasma Pistol')).toBe(113);
-	});
-
-	test("the derived pages agree with the page FOOTERS", () => {
-		// The point of the whole exercise: not that the matcher returns a
-		// number, but that the number is the page the row is actually printed
-		// on. Where the book prints a footer, the two must agree.
-		const cases: Array<[string, number | null, number]> = [
-			[
-				"hostile_acquisitions",
-				findMakerWrappedPage(books.get("hostile_acquisitions")!, "Boltgun", "Footfall"),
-				49,
-			],
-			[
-				"into_the_storm",
-				findNicknamePage(
-					books.get("into_the_storm")!,
-					'Perinetus-pattern "Solo" Mark II Boltgun',
-				),
+			const its = books.get("into_the_storm")!;
+			expect(
+				findNicknamePage(its, 'Perinetus-pattern "Solo" Mark II Boltgun'),
+			).toBe(113);
+			expect(findNicknamePage(its, 'Zepherus Mark I "Beamer" Meltagun')).toBe(
 				113,
-			],
-		];
-		for (const [book, derived, expected] of cases) {
-			expect(derived, book).toBe(expected);
-			// The stat row sits on FILE page (printed + 1); its footer confirms it.
-			const printed = footerPrinted(books.get(book)!, expected + 1);
-			if (printed !== null) expect(printed, `${book} footer`).toBe(expected);
-		}
-	});
+			);
+			expect(findNicknamePage(its, 'Ryza-pattern "Wrath" Plasma Pistol')).toBe(
+				113,
+			);
+		});
 
-	test("neither matcher invents an answer where there is none", () => {
-		// These must stay null: a fabricated page is worse than an admitted gap.
-		const fc = books.get("faith_and_coin")!;
-		const sr = books.get("soul_reaver")!;
-		expect(findNicknamePage(fc, "Lucius-pattern Mk22c Shotgun")).toBe(null);
-		expect(findNicknamePage(sr, "Splinter Cannon")).toBe(null);
-		expect(findMakerWrappedPage(fc, "No Such Weapon", "Nowhere")).toBe(null);
-	});
-});
+		test("the derived pages agree with the page FOOTERS", () => {
+			// The point of the whole exercise: not that the matcher returns a
+			// number, but that the number is the page the row is actually printed
+			// on. Where the book prints a footer, the two must agree.
+			const cases: Array<[string, number | null, number]> = [
+				[
+					"hostile_acquisitions",
+					findMakerWrappedPage(
+						books.get("hostile_acquisitions")!,
+						"Boltgun",
+						"Footfall",
+					),
+					49,
+				],
+				[
+					"into_the_storm",
+					findNicknamePage(
+						books.get("into_the_storm")!,
+						'Perinetus-pattern "Solo" Mark II Boltgun',
+					),
+					113,
+				],
+			];
+			for (const [book, derived, expected] of cases) {
+				expect(derived, book).toBe(expected);
+				// The stat row sits on FILE page (printed + 1); its footer confirms it.
+				const printed = footerPrinted(books.get(book)!, expected + 1);
+				if (printed !== null) expect(printed, `${book} footer`).toBe(expected);
+			}
+		});
+
+		test("neither matcher invents an answer where there is none", () => {
+			// These must stay null: a fabricated page is worse than an admitted gap.
+			const fc = books.get("faith_and_coin")!;
+			const sr = books.get("soul_reaver")!;
+			expect(findNicknamePage(fc, "Lucius-pattern Mk22c Shotgun")).toBe(null);
+			expect(findNicknamePage(sr, "Splinter Cannon")).toBe(null);
+			expect(findMakerWrappedPage(fc, "No Such Weapon", "Nowhere")).toBe(null);
+		});
+	},
+);

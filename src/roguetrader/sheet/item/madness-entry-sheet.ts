@@ -1,27 +1,11 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
-import { effectActions, effectEditorChoices } from "./effect-actions";
-import { itemDescriptionHTML } from "../rich-text";
+import { effectActions } from "./effect-actions";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
-
-/** MadnessEntry kind -> i18n key (data/item/madness.ts schema comment). */
-const KIND_LABEL_KEYS: Record<string, string> = {
-	disorder: "MADNESS.KIND_DISORDER",
-	malignancy: "MADNESS.KIND_MALIGNANCY",
-	"insanity-track": "MADNESS.KIND_INSANITY_TRACK",
-	"corruption-track": "MADNESS.KIND_CORRUPTION_TRACK",
-	trauma: "MADNESS.KIND_TRAUMA",
-	note: "MADNESS.KIND_NOTE",
-	// The afflictions pack's reference tables are madnessentry docs too
-	// (madness.yaml rows the packer types wholesale): the fear difficulties,
-	// psychic phenomena, perils of the warp and shock results. Without these
-	// the sheet falls back to the raw kind on ~60 compendium rows.
-	"fear-difficulty": "MADNESS.KIND_FEAR_DIFFICULTY",
-	perils: "MADNESS.KIND_PERILS",
-	phenomena: "MADNESS.KIND_PHENOMENA",
-	"shock-table": "MADNESS.KIND_SHOCK_TABLE",
-};
+import { madnessEntryKinds } from "../../registry";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 /**
  * Madness affliction sheet (bead fgm1): read-first reference sheet for the
@@ -46,16 +30,15 @@ export class MadnessEntrySheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		content: {
-			template:
-				"systems/rogue-trader/template/sheet/item/parts/madness-content.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/madness-content.hbs`,
 		},
 	};
 
 	async _prepareContext(options: object = {}) {
-		const context = await super._prepareContext(options);
+		const context = sheetContext(await super._prepareContext(options as never));
 		const localize = (key: string) => game.i18n.localize(key);
 		const sys = this.document.system as unknown as {
 			kind?: string;
@@ -66,7 +49,11 @@ export class MadnessEntrySheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 			acquiredSeverity?: string;
 		};
 		const kind = String(sys.kind ?? "");
-		context.kindLabel = localize(KIND_LABEL_KEYS[kind] ?? kind);
+		// Kind labels (bead b76m): the madnessEntryKinds registry, not a
+		// sheet-local map — modules register extra kinds at init
+		// (CONFIG.ROGUE_TRADER.madnessEntryKinds.register(...)) and the sheet
+		// picks them up; unknown kinds fall back to the raw value.
+		context.kindLabel = localize(madnessEntryKinds.get(kind) ?? kind);
 		const rollMin = Number(sys.rollMin ?? 0);
 		const rollMax = Number(sys.rollMax ?? 999);
 		context.rollMin = rollMin;
@@ -78,9 +65,9 @@ export class MadnessEntrySheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.modifier = Number(sys.modifier ?? 0);
 		context.showDegree = context.degree !== "" || context.modifier !== 0;
 		context.acquiredSeverity = String(sys.acquiredSeverity ?? "");
-		// Shared effect editor's dropdown choices (kind/test key labels).
-		Object.assign(context, effectEditorChoices());
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		// Item data keys (bead apxq): effect editor choices (bead bpd, localized
+		// kind labels + test keys) + the enriched description prose.
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

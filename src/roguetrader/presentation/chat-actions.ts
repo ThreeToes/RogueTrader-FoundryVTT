@@ -36,19 +36,44 @@ export async function applyDamageFromCard(
 				update: (u: object) => Promise<void>;
 			})
 		: undefined;
+	// Bead t2ei: a resolved (disabled) button cannot have originated a real
+	// DOM click — a second dispatch while the apply is in flight must not
+	// re-enter. Same posture as applyConditionFromCard.
+	if (button.disabled) return;
 	const data = readMessageFlag(getPorts(), message, "damageApply");
-	if (!message || !data || data.applied) {
+	if (!message || !data) {
 		// Fallback: the button itself carries the outcome (data-target /
 		// data-wounds) - usable even when the message flag is missing, e.g.
 		// on cards created before the flag existed.
+		// (Bead t2ei: the formerly OR'd `data.applied` here routed an
+		// ALREADY-applied card into this legacy branch, subtracting the
+		// button-dataset wounds a second time and re-rolling critical
+		// severity; the applied case is handled on its own below.)
 		const fallbackWounds = Number(button.dataset.wounds ?? 0);
 		const fallbackTarget = button.dataset.target;
 		if (!fallbackTarget || !fallbackWounds) return;
 		applyToTarget(fallbackTarget, fallbackWounds, message, button).catch(
-			(error) => console.error("rogue-trader: apply-damage failed", error),
+			(error) => console.error("rogue-trader | apply-damage failed", error),
 		);
 		return;
 	}
+	// Bead t2ei: the flag already records the outcome as APPLIED — the card
+	// was consumed (wounds subtracted, criticals landed, flag stamped). A
+	// re-rendered message re-arms the button, so this is the real double-apply
+	// gate: return silently, changing nothing.
+	//
+	// Accepted ordering (bead hb8w, reviewer A #2 — documented, not redesigned):
+	// applyToTarget applies the damage FIRST, then stamps `applied: true` on
+	// the message. If the stamp write throws after the apply succeeded, the
+	// card stays armed and a repeat click re-applies the same wounds — an
+	// accepted risk, since an apply whose damage write failed must stay
+	// retryable either way, and there is no transaction spanning actor update
+	// and chat message. Similarly, two clients clicking near-simultaneously
+	// can both read the un-stamped flag and both apply; client-side there is
+	// no lock, only the disabled button (which a re-render re-arms), so the
+	// double-apply window between the gate read and the flag stamp is
+	// accepted.
+	if (data.applied) return;
 	await applyToTarget(
 		data.targetUuid ?? "",
 		Number(data.wounds ?? 0),
@@ -98,11 +123,11 @@ async function applyToTarget(
 	});
 	if (message) {
 		await message.update({
-		// Namespace from the profile (bead p7jv): RT's value is
-		// "rogue-trader", so the wire format is unchanged.
-		flags: {
-			[messageFlagNamespace(getPorts())]: {
-				damageApply: {
+			// Namespace from the profile (bead p7jv): RT's value is
+			// "rogue-trader", so the wire format is unchanged.
+			flags: {
+				[messageFlagNamespace(getPorts())]: {
+					damageApply: {
 						...effective,
 						wounds: woundsAmount,
 						targetUuid,
@@ -112,14 +137,10 @@ async function applyToTarget(
 			},
 		});
 	}
-	await postCriticalCard(
-		target as unknown as { uuid?: string },
-		outcome,
-		{
-			damageType: effective.damageType ?? "Impact",
-			location: effective.location ?? "",
-		},
-	);
+	await postCriticalCard(target as unknown as { uuid?: string }, outcome, {
+		damageType: effective.damageType ?? "Impact",
+		location: effective.location ?? "",
+	});
 	getPorts().notify.info("DAMAGE.APPLIED", { wounds: outcome.woundsApplied });
 }
 
@@ -246,7 +267,7 @@ export async function rollDamageButton(
 		// lives again, NEVER persist the rolled flag, surface the error the
 		// way the sibling card actions do (console + a visible warn).
 		button.disabled = false;
-		console.error("rogue-trader: damage roll failed", error);
+		console.error("rogue-trader | damage roll failed", error);
 		getPorts().notify.warn("CHAT.DAMAGE_ROLL_FAIL");
 	}
 }
@@ -271,9 +292,10 @@ export async function spendOrdnanceFromCard(
 ): Promise<void> {
 	const uuid = button.dataset.uuid;
 	if (!uuid) return;
-	const item = foundry.utils.fromUuidSync(uuid as never) as unknown as
-		| { name?: string; isOwner?: boolean }
-		| null;
+	const item = foundry.utils.fromUuidSync(uuid as never) as unknown as {
+		name?: string;
+		isOwner?: boolean;
+	} | null;
 	if (!item) return;
 	// Spend permission = the fired item's owner or a GM — the same fails-
 	// closed qiuo gate the auto-consume funnel uses (bead 9b95 F5), and the

@@ -25,7 +25,11 @@ for (const key of ["game", "ui", "foundry"]) {
 	system: { id: "rogue-trader" },
 };
 (globalThis as Record<string, unknown>).ui = {
-	notifications: { warn: () => undefined, error: () => undefined, info: () => undefined },
+	notifications: {
+		warn: () => undefined,
+		error: () => undefined,
+		info: () => undefined,
+	},
 };
 (globalThis as Record<string, unknown>).foundry = {
 	applications: {
@@ -60,8 +64,9 @@ for (const key of ["game", "ui", "foundry"]) {
 	utils: { fromUuidSync: () => null },
 };
 
-const { performRoll } = await import("./perform");
+const { performRoll, rollSnapOut } = await import("./perform");
 const { TestDialog } = await import("../../rules/test-dialog");
+const { rollBattlesuitRepair } = await import("../../rules/battlesuit-repair");
 const { NO_CONTENT_PORT } = await import("../../../ffg/application/ports");
 const { foundryPorts, resetPorts, setPorts } = await import(
 	"../../infrastructure/foundry/ports"
@@ -73,7 +78,8 @@ import { actorFixture } from "../../../test-helpers/actor-fixture";
 
 afterAll(() => {
 	for (const [key, value] of Object.entries(originalGlobals)) {
-		if (value === undefined) delete (globalThis as Record<string, unknown>)[key];
+		if (value === undefined)
+			delete (globalThis as Record<string, unknown>)[key];
 		else (globalThis as Record<string, unknown>)[key] = value;
 	}
 });
@@ -118,6 +124,25 @@ const psychicPower = {
 	system: { focusTest: "Willpower", subtype: "attack", damage: "1d5" },
 };
 
+/**
+ * The fixture actor carrying a snap-out-capable condition (the carried
+ * effect's rt-namespace snapOut flag, bead pwn0 — the same read the sheet's
+ * "Snap out of it" button uses).
+ */
+function snapOutActor() {
+	const actor = fixtureActor() as unknown as {
+		effects: unknown[];
+	};
+	actor.effects = [
+		{
+			id: "fx1",
+			statuses: ["shaken"],
+			flags: { "rogue-trader": { snapOut: true } },
+		},
+	];
+	return actor as never;
+}
+
 /** The fixture actor as a psyker (needed by the psychic handler). */
 function psykerActor() {
 	const actor = fixtureActor([psychicPower]) as unknown as {
@@ -138,7 +163,7 @@ function installNoContent(): void {
 describe("pack-less pipeline: every roll kind still posts a card (bead jx0w)", () => {
 	// skipDialog keeps this about content, not dialogs; the dialog path is
 	// covered by roll-pipeline.test.ts.
-	const cases: Array<[string, () => Promise<void>]> = [
+	const cases: Array<[string, () => Promise<unknown>]> = [
 		[
 			"characteristic",
 			() =>
@@ -155,7 +180,12 @@ describe("pack-less pipeline: every roll kind still posts a card (bead jx0w)", (
 				performRoll({
 					kind: "skill",
 					actor: fixtureActor([
-						{ id: "s1", type: "skill", name: "Dodge", system: { characteristic: "ag", ladder: 1 } },
+						{
+							id: "s1",
+							type: "skill",
+							name: "Dodge",
+							system: { characteristic: "ag", ladder: 1 },
+						},
 					]),
 					itemId: "s1",
 					skipDialog: true,
@@ -223,6 +253,15 @@ describe("pack-less pipeline: every roll kind still posts a card (bead jx0w)", (
 				}),
 		],
 		[
+			"snap out of it (bead n0tp: the former hand-rolled dialog now rides the registry)",
+			() =>
+				performRoll({
+					kind: "snap-out",
+					actor: snapOutActor(),
+					skipDialog: true,
+				}),
+		],
+		[
 			"combat action (bead et5a: the entry rides the request, pack-less)",
 			() =>
 				performRoll({
@@ -251,7 +290,9 @@ describe("pack-less pipeline: every roll kind still posts a card (bead jx0w)", (
 		test(`${name}: posts a card with no content installed`, async () => {
 			installNoContent();
 			const originalShow = TestDialog.show;
-			TestDialog.show = (async () => ({ modifiers: [] })) as typeof TestDialog.show;
+			TestDialog.show = (async () => ({
+				modifiers: [],
+			})) as typeof TestDialog.show;
 			try {
 				// A rejection fails the test with its real error.
 				await run();
@@ -271,7 +312,9 @@ describe("pack-less pipeline: every roll kind still posts a card (bead jx0w)", (
 		// by checking the power was resolved at all (a card, no throw).
 		installNoContent();
 		const originalShow = TestDialog.show;
-		TestDialog.show = (async () => ({ modifiers: [] })) as typeof TestDialog.show;
+		TestDialog.show = (async () => ({
+			modifiers: [],
+		})) as typeof TestDialog.show;
 		try {
 			await performRoll({
 				kind: "psychic",
@@ -365,16 +408,53 @@ describe("ownership gate (bead qiuo)", () => {
 			["ship-weapon", { itemId: "c1" }],
 			["ship-repair", { itemId: "c1" }],
 			["fear", { severity: 1 }],
+			["snap-out", {}],
 		];
 		for (const [kind, extra] of kinds) {
 			posted.length = 0;
 			const warnings = captureWarnings();
-			const actor = fixtureActor([weapon, psychicPower, navigatorPower, damagedComponent]);
+			const actor = fixtureActor([
+				weapon,
+				psychicPower,
+				navigatorPower,
+				damagedComponent,
+			]);
 			(actor as unknown as { isOwner: boolean }).isOwner = false;
 			await performRoll({ kind, actor, skipDialog: true, ...extra } as never);
 			expect(posted, kind).toEqual([]);
 			expect(warnings, kind).toEqual(["ROLL.NOT_OWNER"]);
 		}
+	});
+
+	test("snap-out is gated too: a non-owner pressing Snap out of it", async () => {
+		// bead n0tp: rollSnapOut used to hand-roll its own dialog+test sequence
+		// and skipped performRoll's ownership gate entirely.
+		const warnings = captureWarnings();
+		const actor = fixtureActor() as unknown as { isOwner: boolean };
+		actor.isOwner = false;
+		await rollSnapOut(actor as never);
+		expect(posted).toEqual([]);
+		expect(rollCalls).toEqual([]);
+		expect(warnings).toEqual(["ROLL.NOT_OWNER"]);
+	});
+
+	test("the battlesuit-repair skill roll hits the gate as well", async () => {
+		// rollSkillOutcome re-entered the pipeline at runTest, skipping the gate;
+		// the battlesuit repair is its only caller and must refuse a non-owner.
+		const warnings = captureWarnings();
+		const actor = fixtureActor([
+			{
+				id: "tu1",
+				type: "skill",
+				name: "Tech-Use",
+				system: { characteristic: "int", ladder: 1 },
+			},
+		]) as unknown as { isOwner: boolean };
+		actor.isOwner = false;
+		const result = await rollBattlesuitRepair(actor);
+		expect(warnings).toEqual(["ROLL.NOT_OWNER"]);
+		expect(rollCalls).toEqual([]);
+		expect(result).toBeNull();
 	});
 
 	test("an owner is unaffected", async () => {

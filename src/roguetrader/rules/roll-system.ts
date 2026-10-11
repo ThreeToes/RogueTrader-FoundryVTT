@@ -47,7 +47,10 @@ export {
 export type { RollTestOptions } from "../presentation/rolls/perform";
 export { dialogContributors, runTest } from "../presentation/rolls/pipeline";
 export { psychicHandler } from "../presentation/rolls/psychic";
-export { shipRepairHandler, shipWeaponHandler } from "../presentation/rolls/ship";
+export {
+	shipRepairHandler,
+	shipWeaponHandler,
+} from "../presentation/rolls/ship";
 export { weaponHandler } from "../presentation/rolls/weapon";
 
 export type {

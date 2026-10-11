@@ -28,6 +28,14 @@ import {
 } from "../../rules/ship-systems";
 
 import { CreatorApplication } from "./creator-application";
+// Bead nxok: the shared collapsible-group toggle (same pattern mirrored
+// from the character creator).
+import { toggleCollapse } from "./character-creator";
+// Bead w7zm: the shared create-vs-update branching the creators mirror.
+import { createOrUpdateActor, type ApplyableActor } from "./creator-apply";
+// Bead npnn: the shared imperative input wiring helpers (dataset.wired guard).
+import { wireInput, wireSelect } from "../dom-wire";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 interface ShipPick {
 	uuid: string;
@@ -136,8 +144,7 @@ async function fetchComponentOptions(
 	const all = docs ?? (await fetchShipsPackDocs());
 	return all
 		.filter(
-			(d) =>
-				d.type === "ship-component" || d.type === "ship-weapon-component",
+			(d) => d.type === "ship-component" || d.type === "ship-weapon-component",
 		)
 		.map((d) => ({
 			uuid: d.uuid ?? "",
@@ -180,8 +187,7 @@ export class ShipCreator extends CreatorApplication {
 
 	static PARTS = {
 		form: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/ship-creator.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/ship-creator.hbs`,
 		},
 	};
 
@@ -236,7 +242,9 @@ export class ShipCreator extends CreatorApplication {
 	}
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options as never));
+		const context = sheetContext(
+			await super._prepareContext(_options as never),
+		);
 		const state = this.creatorState;
 		context.step = this.step;
 		context.name = this.name;
@@ -334,8 +342,7 @@ export class ShipCreator extends CreatorApplication {
 		// rating = hull's own implied rating is not a statline number, so the
 		// validation compares DRAWS against GENERATED (book p198-199).
 		const crew = crewQualityEffects(state.crewQuality);
-		const spSpent =
-			derived.spSpent + Number(hull.sp ?? 0) - crew.spDelta;
+		const spSpent = derived.spSpent + Number(hull.sp ?? 0) - crew.spDelta;
 		context.derived = {
 			...derived,
 			hullSpace: hull.space ?? 0,
@@ -377,23 +384,23 @@ export class ShipCreator extends CreatorApplication {
 	): Promise<void> {
 		await super._onRender(context as never, options as never);
 		// Free-text inputs (name, SP budget) wire imperatively per
-		// AGENT-GUIDE §3 — only change events reach data-action.
-		for (const [selector, key] of [
-			['input[name="ship-name"]', "name"],
-			['input[name="sp-budget"]', "spBudget"],
-		] as const) {
-			const input = this.element?.querySelector<HTMLInputElement>(selector);
-			if (input && !input.dataset.wired) {
-				input.dataset.wired = "1";
-				input.addEventListener("input", () => {
-						if (key === "spBudget") {
-							this.creatorState.spBudget = Number(input.value) || 0;
-						} else {
-							this.name = input.value;
-						}
-					});
-			}
-		}
+		// AGENT-GUIDE §3 — only change events reach data-action — through the
+		// shared guard helpers (bead npnn); the two creators store state
+		// WITHOUT re-rendering.
+		wireInput(
+			this.element?.querySelector<HTMLInputElement>('input[name="ship-name"]'),
+			(value) => {
+				this.name = value;
+			},
+		);
+		wireInput(
+			this.element?.querySelector<HTMLInputElement>(
+				'input[name="sp-budget"]',
+			),
+			(value) => {
+				this.creatorState.spBudget = Number(value) || 0;
+			},
+		);
 		// Essential-component dropdowns (bead 9cre rework, book p200): selects
 		// fire change (not click), so they wire imperatively like the NPC
 		// ladder selects. The handler replaces the pick of that essential
@@ -401,28 +408,27 @@ export class ShipCreator extends CreatorApplication {
 		for (const select of this.element?.querySelectorAll<HTMLSelectElement>(
 			"select.ship-essential-select:not([data-wired])",
 		) ?? []) {
-			select.dataset.wired = "1";
-			select.addEventListener("change", () => {
-				this.#onPickEssential(
-					select.dataset.componentType ?? "",
-					select.value,
-				).catch((error) =>
-					console.error("rogue-trader | ship creator pick failed:", error),
+			wireSelect(select, (value) => {
+				this.#onPickEssential(select.dataset.componentType ?? "", value).catch(
+					(error: unknown) =>
+						console.error(
+							"rogue-trader | ship creator pick failed:",
+							error,
+						),
 				);
 			});
 		}
 		// Hull dropdown (owner ask): change-wired like the essential selects.
-		const hullSelect = this.element?.querySelector<HTMLSelectElement>(
-			"select.ship-hull-select:not([data-wired])",
-		);
-		if (hullSelect) {
-			hullSelect.dataset.wired = "1";
-			hullSelect.addEventListener("change", () => {
-				this.#onPickHullUuid(hullSelect.value).catch((error) =>
+		wireSelect(
+			this.element?.querySelector<HTMLSelectElement>(
+				"select.ship-hull-select:not([data-wired])",
+			),
+			(value) => {
+				this.#onPickHullUuid(value).catch((error: unknown) =>
 					console.error("rogue-trader | ship creator hull failed:", error),
 				);
-			});
-		}
+			},
+		);
 	}
 
 	/**
@@ -495,9 +501,7 @@ export class ShipCreator extends CreatorApplication {
 	): Promise<void> {
 		const key = target.dataset.group;
 		if (!key) return;
-		const collapsed = this.creatorState.collapsed;
-		if (collapsed[key]) delete collapsed[key];
-		else collapsed[key] = true;
+		toggleCollapse(this.creatorState, "collapsed", key);
 		this.render({ force: true });
 	}
 
@@ -520,7 +524,7 @@ export class ShipCreator extends CreatorApplication {
 			// Essential components: ONE per category (book p200) — a new pick
 			// of an essential type REPLACES the previous pick of that type
 			// (this is what makes the dropdowns single-select).
-			const picks =<ShipPick[]>[
+			const picks = <ShipPick[]>[
 				...this.creatorState.picks.filter(
 					(p) => p.componentType !== option.componentType,
 				),
@@ -633,7 +637,8 @@ export class ShipCreator extends CreatorApplication {
 
 		// Resolve picks to pack docs (meh0 flavour: loud failures for unmatched
 		// entries happen at fromUuid below).
-		const pickedDocs: Array<{ name?: string; uuid?: string; system?: object }> = [];
+		const pickedDocs: Array<{ name?: string; uuid?: string; system?: object }> =
+			[];
 		for (const pick of state.picks) {
 			const doc = (await foundry.utils.fromUuid(pick.uuid)) as unknown as {
 				name?: string;
@@ -649,61 +654,51 @@ export class ShipCreator extends CreatorApplication {
 		}
 		// Stamp iufv-style provenance so a re-run wipes only creator items.
 		const payloads = pickedDocs.map((doc) => ({
-			...(doc as unknown as { name?: string; system?: Record<string, unknown> }),
+			...(doc as unknown as {
+				name?: string;
+				system?: Record<string, unknown>;
+			}),
 			system: {
 				...(doc.system as Record<string, unknown>),
 				grantedBy: "ship-creator",
 			},
 		}));
 
-		if (this.targetActor) {
-			const target = this.targetActor as unknown as {
-				update: (data: object) => Promise<unknown>;
-				items: unknown[];
-				createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
-				deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
-				sheet?: { render: (options?: object) => unknown };
-			};
-			// iufv reconcile: wipe previously creator-installed components
-			// (grantedBy: "ship-creator"); manual drops survive.
-			const stale = (target.items as Array<{ id?: string; system?: { grantedBy?: string } }>)
-				.filter(
-					(i) =>
-						i.system?.grantedBy === "ship-creator" &&
-						((i as { type?: string }).type === "ship-component" ||
-							(i as { type?: string }).type === "ship-weapon-component"),
-				)
-				.map((i) => i.id)
-				.filter((id): id is string => Boolean(id));
-			if (stale.length > 0) {
-				await target.deleteEmbeddedDocuments("Item", stale);
-			}
-			await target.update({
-				name: this.name || this.targetActor.name,
-				system: systemPayload,
-			} as never);
-			if (payloads.length > 0) {
-				await target.createEmbeddedDocuments("Item", payloads);
-			}
-			this.close();
-			target.sheet?.render({});
-			return;
-		}
-
-		const actor = (await foundry.documents.Actor.create({
-			name: this.name || game.i18n!.localize("SHIP_CREATOR.DEFAULT_NAME"),
-			type: "starship",
-			system: systemPayload,
-		} as never)) as unknown as {
-			uuid: string;
-			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
-			sheet?: { render: (options?: object) => unknown };
-		};
-		if (!actor) return;
-		if (payloads.length > 0) {
-			await actor.createEmbeddedDocuments("Item", payloads);
-		}
-		this.close();
-		actor.sheet?.render({});
+		// Shared create-vs-update edge (bead w7zm, creator-apply.ts): the
+		// character creator's in-place-update branch confirms overwrites; the
+		// ship creator applies silently and that asymmetry is preserved (no
+		// confirmOverwrite here).
+		await createOrUpdateActor(
+			this.targetActor as unknown as ApplyableActor | null,
+			{ name: this.name, type: "starship", system: systemPayload },
+			async (actor) => {
+				// iufv reconcile: wipe previously creator-installed components
+				// (grantedBy: "ship-creator"); manual drops survive. (Previously
+				// this ran before the system update; see the helper's reordering
+				// note — disjoint data trees, not observable.)
+				const items = (actor.items ?? []) as Array<
+					{ id?: string; type?: string; system?: { grantedBy?: string } }
+				>;
+				const stale = items
+					.filter(
+						(i) =>
+							i.system?.grantedBy === "ship-creator" &&
+							(i.type === "ship-component" ||
+								i.type === "ship-weapon-component"),
+					)
+					.map((i) => i.id)
+					.filter((id): id is string => Boolean(id));
+				if (stale.length > 0) {
+					await actor.deleteEmbeddedDocuments("Item", stale);
+				}
+				if (payloads.length > 0) {
+					await actor.createEmbeddedDocuments("Item", payloads as object[]);
+				}
+			},
+			{
+				fallbackNameKey: "SHIP_CREATOR.DEFAULT_NAME",
+				close: () => this.close(),
+			},
+		);
 	}
 }

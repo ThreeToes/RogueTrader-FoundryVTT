@@ -15,12 +15,12 @@ import {
 	emergencyRepairsCanFix,
 	SHIP_COMPONENT_STATES,
 } from "../../../rules-engine/index";
-import {
-	performRoll,
-	rollShipSalvo,
-} from "../../rules/adapter";
+import { performRoll, rollShipSalvo } from "../../rules/adapter";
 import { cloneItemFromDrop } from "../drop-clone";
-import { formatShipWeaponRange, normalizeShipWeaponRange } from "../../data/item/ship-weapon-range";
+import {
+	formatShipWeaponRange,
+	normalizeShipWeaponRange,
+} from "../../data/item/ship-weapon-range";
 import type { ShipWeaponRange } from "../../data/item/ship-weapon-range";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
@@ -50,6 +50,7 @@ const COMPONENT_CATEGORIES: Array<{ key: string; labelKey: string }> = [
  * 1d10), Ship Points and Space trackers, and notes. Fully resizable.
  */
 import { imageActions } from "../image-actions";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
@@ -72,34 +73,40 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	static PARTS = {
 		header: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/parts/ship-header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/ship-header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		hull: {
-			template: "systems/rogue-trader/template/sheet/actor/tabs/starship.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/starship.hbs`,
 		},
 		refit: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/tabs/ship-refit.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/ship-refit.hbs`,
 		},
 		combat: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/tabs/ship-combat.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/ship-combat.hbs`,
 		},
 		notes: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/tabs/ship-notes.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/ship-notes.hbs`,
 		},
 	};
 
 	static TABS = {
 		primary: {
 			tabs: [
-				{ id: "hull", group: "primary", label: "STARSHIP.TAB_HULL", cssClass: "" },
-				{ id: "refit", group: "primary", label: "STARSHIP.TAB_REFIT", cssClass: "" },
+				{
+					id: "hull",
+					group: "primary",
+					label: "STARSHIP.TAB_HULL",
+					cssClass: "",
+				},
+				{
+					id: "refit",
+					group: "primary",
+					label: "STARSHIP.TAB_REFIT",
+					cssClass: "",
+				},
 				{
 					id: "combat",
 					group: "primary",
@@ -160,9 +167,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// compendium effect — the effect ONLY when the ships pack provides
 		// it, never fabricated (owner round 6). The pack is fetched ONCE per
 		// render (bead yi5t) and shared by both complication lookups.
-		const shipsDocs = (await getPackDocuments(
-			"rogue-trader.ships",
-		)) as Array<{
+		const shipsDocs = (await getPackDocuments("rogue-trader.ships")) as Array<{
 			type?: string;
 			name?: string;
 			system?: { kind?: string; effect?: string };
@@ -181,13 +186,11 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.components = components;
 		// Installed components grouped by category (bead pyi3: inventory-style
 		// primary view; the pack pickers are demoted browse affordances).
-		context.installedGroups = COMPONENT_CATEGORIES.map(
-			({ key, labelKey }) => ({
-				key,
-				labelKey,
-				items: components.filter((c) => c.category === key),
-			}),
-		).filter((g) => g.items.length > 0);
+		context.installedGroups = COMPONENT_CATEGORIES.map(({ key, labelKey }) => ({
+			key,
+			labelKey,
+			items: components.filter((c) => c.category === key),
+		})).filter((g) => g.items.length > 0);
 		// Per-weapon slot chips (owner round 7): a slot chip is ENABLED when
 		// the hull declares capacity for it, the weapon could legally occupy
 		// it (broadsides are Port/Starboard only, Table 8-4), and the slot is
@@ -290,19 +293,21 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	/** Combat-tab context: status + weapons + repairable components. */
-	#combatContext(components: Array<{
-		id: string;
-		name: string;
-		type: string;
-		power: string;
-		space: number;
-		sp: string;
-		category: string;
-		slot: string;
-		special: string;
-		state: string;
-		stateLabel: string;
-	}>): Record<string, unknown> {
+	#combatContext(
+		components: Array<{
+			id: string;
+			name: string;
+			type: string;
+			power: string;
+			space: number;
+			sp: string;
+			category: string;
+			slot: string;
+			special: string;
+			state: string;
+			stateLabel: string;
+		}>,
+	): Record<string, unknown> {
 		const doc = this.document.system as unknown as {
 			hullIntegrity: { value: number; max: number };
 			crewPopulation: number;
@@ -429,7 +434,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 					sp?: string;
 					category?: string;
 					slot?: string;
-						special?: string;
+					special?: string;
 					state?: string;
 				};
 				return {
@@ -487,7 +492,10 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	/** Roll 1d10 on a complications table and record the result name. */
 	static async #onRollOddity(this: ShipSheet): Promise<void> {
-		await this.#rollComplication("machine-spirit-oddity", "machineSpiritOddity");
+		await this.#rollComplication(
+			"machine-spirit-oddity",
+			"machineSpiritOddity",
+		);
 	}
 
 	static async #onRollHistory(this: ShipSheet): Promise<void> {
@@ -537,11 +545,13 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	/** Clamp stored voidShields.current to the max granted by installed arrays. */
 	async #clampVoidShields(): Promise<void> {
 		const { voidShieldsMax } = deriveShipStats(this.#ownedComponents());
-		const current = (
-			this.document.system as unknown as { voidShields?: number }
-		).voidShields ?? 0;
+		const current =
+			(this.document.system as unknown as { voidShields?: number })
+				.voidShields ?? 0;
 		if (current > voidShieldsMax) {
-			await this.document.update({ system: { voidShields: voidShieldsMax } } as never);
+			await this.document.update({
+				system: { voidShields: voidShieldsMax },
+			} as never);
 		}
 	}
 
@@ -604,12 +614,18 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 					label: game.i18n.localize("SHIP_COMBAT.RANGE_LONG"),
 					callback: () => "long",
 				},
+				{
+					action: "out-of-range",
+					label: game.i18n.localize("SHIP_COMBAT.RANGE_OUT_OF_RANGE"),
+					callback: () => "out-of-range",
+				},
 			],
 		})) as string | null;
 		if (!choice) return;
-		const band = (choice === "half" || choice === "long"
-			? choice
-			: "normal") as "half" | "normal" | "long";
+		const band =
+			choice === "half" || choice === "long" || choice === "out-of-range"
+				? choice
+				: "normal";
 		await rollShipSalvo(this.document, id, band);
 	}
 
@@ -621,7 +637,11 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	): Promise<void> {
 		const id = target.dataset.itemId;
 		if (!id) return;
-		await performRoll({ kind: "ship-repair", actor: this.document, itemId: id } as never);
+		await performRoll({
+			kind: "ship-repair",
+			actor: this.document,
+			itemId: id,
+		} as never);
 	}
 
 	/** GM manual component-state override (book p223 condition vocabulary). */
@@ -655,7 +675,10 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			system?: { kind?: string; roll?: number };
 		}>;
 		const hit = docs.find(
-			(d) => d.type === "ship-complication" && d.system?.kind === kind && d.system?.roll === result,
+			(d) =>
+				d.type === "ship-complication" &&
+				d.system?.kind === kind &&
+				d.system?.roll === result,
 		);
 		await this.document.update({
 			system: { [field]: hit?.name ?? `? (roll ${result})` },

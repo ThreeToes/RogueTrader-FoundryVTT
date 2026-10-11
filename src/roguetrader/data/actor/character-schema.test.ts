@@ -65,9 +65,10 @@ describe("Character schema: blank-safe choice fields", () => {
 			const opts = field?.opts as Record<string, unknown> | undefined;
 			if (!opts?.choices) continue;
 			if (opts.initial !== "") continue;
-			expect(opts.blank, `${name} has choices + blank initial, needs blank: true`).toBe(
-				true,
-			);
+			expect(
+				opts.blank,
+				`${name} has choices + blank initial, needs blank: true`,
+			).toBe(true);
 		}
 	});
 

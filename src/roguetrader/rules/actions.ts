@@ -18,7 +18,11 @@
 import { equipStateOf, isWeaponType } from "../../ffg/domain/model/taxonomy";
 import { postCard } from "./chat-flags";
 import { nested, packSystem, str } from "../data/pack-fields";
-import { type PackDocAnchor, OPEN_PACK_DOC_ACTION } from "../sheet/pack-doc-links";
+import {
+	type PackDocAnchor,
+	OPEN_PACK_DOC_ACTION,
+} from "../sheet/pack-doc-links";
+import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
 
 // ------------------------------------------------------------------ the catalog
 
@@ -243,11 +247,13 @@ export async function ensureActionCatalog(
 	const entries = ((await load()) as unknown as Array<{ type?: string }>)
 		.filter((doc) => doc.type === ACTION_ITEM_TYPE)
 		.map((doc) =>
-			actionEntryFromDoc(doc as unknown as {
-				name?: string | null;
-				uuid?: string;
-				system?: unknown;
-			}),
+			actionEntryFromDoc(
+				doc as unknown as {
+					name?: string | null;
+					uuid?: string;
+					system?: unknown;
+				},
+			),
 		);
 	if (entries.length > 0) setActionCatalog(entries);
 	return actionCatalog;
@@ -294,7 +300,9 @@ const MULTIPLE_ATTACK_TALENTS = ["swift attack", "lightning attack"];
  * Only ranged weapons carry the rateOfFire block, so the two automatic-fire
  * capabilities both read it (prereq kind note above).
  */
-export function actionCapabilities(items: ActionOwnedItem[]): ActionCapabilities {
+export function actionCapabilities(
+	items: ActionOwnedItem[],
+): ActionCapabilities {
 	const caps: ActionCapabilities = {
 		heavyWeapon: false,
 		rangedFullAuto: false,
@@ -355,16 +363,14 @@ export function actionAvailable(
 // ------------------------------------------------------------- the lookup card
 
 /** The lookup chat card template (template/chat/action-lookup.hbs). */
-export const ACTION_LOOKUP_TEMPLATE =
-	"systems/rogue-trader/template/chat/action-lookup.hbs";
+export const ACTION_LOOKUP_TEMPLATE = `${TEMPLATE_ROOT}chat/action-lookup.hbs`;
 
 /**
  * The roll-RESULT card's template (template/chat/action-roll.hbs, bead et5a):
  * the lookup-card anatomy (doc link + cost + terse description) carrying the
  * roll result — the after-hook's follow-up to the inline roll card.
  */
-export const ACTION_ROLL_TEMPLATE =
-	"systems/rogue-trader/template/chat/action-roll.hbs";
+export const ACTION_ROLL_TEMPLATE = `${TEMPLATE_ROOT}chat/action-roll.hbs`;
 
 /**
  * Pure card vars (epic 61pk's titleDoc anatomy, template/chat/roll.hbs): the

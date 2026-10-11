@@ -31,8 +31,15 @@ describe("validatePointBuy (Core Rulebook p14)", () => {
 
 	test("budget spread across characteristics is valid", () => {
 		const result = validatePointBuy({
-			ws: 10, bs: 10, s: 10, t: 10,
-			ag: 10, int: 10, per: 10, wp: 10, fel: 20,
+			ws: 10,
+			bs: 10,
+			s: 10,
+			t: 10,
+			ag: 10,
+			int: 10,
+			per: 10,
+			wp: 10,
+			fel: 20,
 		});
 		expect(result.total).toBe(100);
 		expect(result.remaining).toBe(0);
@@ -41,8 +48,15 @@ describe("validatePointBuy (Core Rulebook p14)", () => {
 
 	test("over-budget allocation is invalid", () => {
 		const result = validatePointBuy({
-			ws: 20, bs: 20, s: 20, t: 20,
-			ag: 10, int: 10, per: 10, wp: 10, fel: 10,
+			ws: 20,
+			bs: 20,
+			s: 20,
+			t: 20,
+			ag: 10,
+			int: 10,
+			per: 10,
+			wp: 10,
+			fel: 10,
 		});
 		expect(result.total).toBe(130);
 		expect(result.valid).toBe(false);
@@ -57,7 +71,17 @@ describe("validatePointBuy (Core Rulebook p14)", () => {
 
 describe("finalCharacteristics", () => {
 	test("applies origin deltas and clamps to 0-100", () => {
-		const base = { ws: 30, bs: 30, s: 30, t: 30, ag: 30, int: 30, per: 30, wp: 30, fel: 30 };
+		const base = {
+			ws: 30,
+			bs: 30,
+			s: 30,
+			t: 30,
+			ag: 30,
+			int: 30,
+			per: 30,
+			wp: 30,
+			fel: 30,
+		};
 		const result = finalCharacteristics(base, { wp: 5, fel: -5, t: 75 });
 		expect(result.wp).toBe(35);
 		expect(result.fel).toBe(25);
@@ -84,7 +108,12 @@ describe("species vitals (bead g45s)", () => {
 		// Kroot p50: "Double Toughness Bonus plus 1d5+3" at TB 3, die 4.
 		expect(
 			woundsFromSpecies(
-				{ dice: "1d5", flat: 3, toughnessMultiplier: 2, ignoreUnnaturalToughness: false },
+				{
+					dice: "1d5",
+					flat: 3,
+					toughnessMultiplier: 2,
+					ignoreUnnaturalToughness: false,
+				},
 				3,
 				[4],
 			),
@@ -92,7 +121,12 @@ describe("species vitals (bead g45s)", () => {
 		// Ork p63: 1d5+1 + 2xTB (die 2) at TB 4.
 		expect(
 			woundsFromSpecies(
-				{ dice: "1d5", flat: 1, toughnessMultiplier: 2, ignoreUnnaturalToughness: true },
+				{
+					dice: "1d5",
+					flat: 1,
+					toughnessMultiplier: 2,
+					ignoreUnnaturalToughness: true,
+				},
 				4,
 				[2],
 			),
@@ -236,7 +270,9 @@ describe("creatorCanAdvance (character-creator Next gate, fix 2026-09-14)", () =
 		});
 
 		test("the template renders no step beyond the last", () => {
-			expect(template).not.toContain(`{{#if (eq step ${CREATOR_LAST_STEP + 1})}}`);
+			expect(template).not.toContain(
+				`{{#if (eq step ${CREATOR_LAST_STEP + 1})}}`,
+			);
 		});
 
 		test("the nav marks the last step as the primary Finish action", () => {
@@ -246,7 +282,9 @@ describe("creatorCanAdvance (character-creator Next gate, fix 2026-09-14)", () =
 			expect(template).toContain(
 				`(ifThen (eq step ${CREATOR_LAST_STEP}) "finish" "next")`,
 			);
-			expect(template).toContain(`forwardPrimary=(eq step ${CREATOR_LAST_STEP})`);
+			expect(template).toContain(
+				`forwardPrimary=(eq step ${CREATOR_LAST_STEP})`,
+			);
 		});
 
 		test("the step labels are translated in all four languages", () => {
@@ -307,7 +345,17 @@ describe("species options from the careers pack (bead ghmn)", () => {
 	const voidSpecies = {
 		key: "void-species",
 		label: "Void",
-		baseCharacteristics: { ws: 11, bs: 12, s: 13, t: 14, ag: 15, int: 16, per: 17, wp: 18, fel: 19 },
+		baseCharacteristics: {
+			ws: 11,
+			bs: 12,
+			s: 13,
+			t: 14,
+			ag: 15,
+			int: 16,
+			per: 17,
+			wp: 18,
+			fel: 19,
+		},
 		startingFate: 2,
 	};
 
@@ -334,14 +382,21 @@ describe("species options from the careers pack (bead ghmn)", () => {
 	});
 
 	test("blank/absent species blocks never create an option", () => {
-		const options = speciesOptions([{ key: "" }, { key: "   " }, undefined, {}]);
+		const options = speciesOptions([
+			{ key: "" },
+			{ key: "   " },
+			undefined,
+			{},
+		]);
 		expect(options).toHaveLength(1);
 	});
 
 	test("a characteristic the pack omits keeps the human base", () => {
 		// The pack stores the book's "2d10+" adds, so an absent key means
 		// "unchanged" rather than zero.
-		const options = speciesOptions([{ key: "partial", baseCharacteristics: { ws: 31 } }]);
+		const options = speciesOptions([
+			{ key: "partial", baseCharacteristics: { ws: 31 } },
+		]);
 		expect(options[1].base.ws).toBe(31);
 		expect(options[1].base.fel).toBe(25);
 	});
@@ -365,7 +420,10 @@ describe("species options from the careers pack (bead ghmn)", () => {
 	});
 
 	test("a custom human base is honoured (caller-supplied, not hardcoded)", () => {
-		const options = speciesOptions([{ key: "x", baseCharacteristics: { ws: 31 } }], 20);
+		const options = speciesOptions(
+			[{ key: "x", baseCharacteristics: { ws: 31 } }],
+			20,
+		);
 		expect(options[0].base.ws).toBe(20);
 		expect(options[1].base.fel).toBe(20);
 	});

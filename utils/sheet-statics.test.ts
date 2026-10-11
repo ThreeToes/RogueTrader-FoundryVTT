@@ -41,7 +41,9 @@ describe("sheet static config (bead rt9z)", () => {
 		const bad: string[] = [];
 		for (const file of sourceFiles(SRC)) {
 			const source = readFileSync(file, "utf8");
-			for (const match of source.matchAll(/position:\s*\{[^}]*height:\s*"auto"\s*[,}]/g)) {
+			for (const match of source.matchAll(
+				/position:\s*\{[^}]*height:\s*"auto"\s*[,}]/g,
+			)) {
 				const line = source.slice(0, match.index).split("\n").length;
 				bad.push(`${file}:${line} — needs \`"auto" as const\``);
 			}
@@ -73,11 +75,14 @@ describe("sheet static config (bead rt9z)", () => {
 		expect(withTabs.length).toBeGreaterThanOrEqual(5);
 	});
 
-	test("the item-sheet options helper types height as number | \"auto\"", () => {
+	test('the item-sheet options helper types height as number | "auto"', () => {
 		// Bead 9dma moved the item sheets onto itemSheetOptions(); their
 		// `height: "auto"` call-site arguments are only safe because this
 		// parameter keeps the literal from widening to `string`.
-		const source = readFileSync("src/roguetrader/sheet/sheet-options.ts", "utf8");
+		const source = readFileSync(
+			"src/roguetrader/sheet/sheet-options.ts",
+			"utf8",
+		);
 		expect(source).toMatch(/height:\s*number\s*\|\s*"auto"/);
 	});
 });

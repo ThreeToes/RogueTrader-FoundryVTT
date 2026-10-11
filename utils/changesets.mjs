@@ -22,7 +22,8 @@ export const SYSTEMS = {
 		title: "Rogue Trader",
 		manifest: "system-manifests/rogue-trader-release.json",
 		artifact: "rogue-trader.zip",
-		rawBase: "https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader",
+		rawBase:
+			"https://prancingpony.jumblerumbling.com/stephen/foundryvtt-rogue-trader",
 	},
 };
 
@@ -48,7 +49,10 @@ export function parseChangesetFile(path) {
 		if (idx < 0) {
 			throw new Error(`${path}: malformed frontmatter line: "${line}"`);
 		}
-		return { system: line.slice(0, idx).trim().replace(/^"|"$/g, ""), level: line.slice(idx + 1).trim() };
+		return {
+			system: line.slice(0, idx).trim().replace(/^"|"$/g, ""),
+			level: line.slice(idx + 1).trim(),
+		};
 	});
 	if (entries.length > 1) {
 		throw new Error(
@@ -87,7 +91,10 @@ export function selectBump(system, changesets) {
 	for (const changeset of changesets) {
 		if (changeset.system === system) {
 			consumed.push(changeset.path);
-			if (level === null || LEVELS.indexOf(changeset.level) > LEVELS.indexOf(level)) {
+			if (
+				level === null ||
+				LEVELS.indexOf(changeset.level) > LEVELS.indexOf(level)
+			) {
 				level = changeset.level;
 			}
 		} else {

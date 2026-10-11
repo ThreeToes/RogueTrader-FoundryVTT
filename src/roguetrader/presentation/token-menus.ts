@@ -39,8 +39,8 @@ type TokenMenuDocument = {
  * `[data-entry-id]` → the viewed scene's embedded tokens collection.
  */
 function resolveToken(element?: HTMLElement): TokenMenuDocument | undefined {
-	const entryId = element?.closest<HTMLElement>("[data-entry-id]")?.dataset
-		.entryId;
+	const entryId =
+		element?.closest<HTMLElement>("[data-entry-id]")?.dataset.entryId;
 	if (!entryId) return undefined;
 	const scene = canvas.scene;
 	const tokens = scene?.tokens as unknown as
@@ -85,7 +85,7 @@ export function registerTokenContextMenus(): void {
 					const token = resolveToken(element);
 					if (!token?.actor) return;
 					rollInitiativeAction(token.actor as never).catch((error) =>
-						console.error("rogue-trader: initiative roll failed", error),
+						console.error("rogue-trader | initiative roll failed", error),
 					);
 				},
 			});

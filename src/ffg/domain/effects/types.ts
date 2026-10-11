@@ -52,6 +52,14 @@ export interface EffectSpec {
 	readonly kind: string;
 	/** Channels this kind feeds. */
 	readonly channels: readonly EffectChannel[];
+	/**
+	 * I18n key (under `EFFECT_KIND.*`) the effect editor shows for the kind
+	 * in its dropdown. Carrying it on the spec is what keeps "adding a kind"
+	 * a single registration (bead ypbx): no second edit in the sheet layer.
+	 * Omit it only when the kind is deliberately not offered under a localized
+	 * label — the editor then falls back to the raw slug.
+	 */
+	readonly labelKey?: string;
 	/** Liveness gate for the carrying item (default: effectsAreLive). */
 	readonly live?: (item: ItemView) => boolean;
 	/** Applicability: key grammar + guard + any value sanity check. */

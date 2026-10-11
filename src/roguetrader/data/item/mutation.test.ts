@@ -20,7 +20,13 @@ describe("rollMutation (bead bfdz)", () => {
 	});
 
 	test("no covering row yields null (loud caller handling)", () => {
-		expect(rollMutation(rows.filter((r) => r.tableKey === "navigator-mutations"), "mutations", 50)).toBeNull();
+		expect(
+			rollMutation(
+				rows.filter((r) => r.tableKey === "navigator-mutations"),
+				"mutations",
+				50,
+			),
+		).toBeNull();
 	});
 });
 
@@ -28,7 +34,12 @@ describe("rollRavagedBody (bead kam1)", () => {
 	const table = [
 		{ tableKey: "mutations", rollMin: 1, rollMax: 50, name: "Grotesque" },
 		{ tableKey: "mutations", rollMin: 51, rollMax: 100, name: "Hellspawn" },
-		{ tableKey: "navigator-mutations", rollMin: 1, rollMax: 100, name: "Unused" },
+		{
+			tableKey: "navigator-mutations",
+			rollMin: 1,
+			rollMax: 100,
+			name: "Unused",
+		},
 	];
 
 	test("1d5 count then one d100 per mutation, keeping the dice", async () => {

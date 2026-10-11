@@ -35,10 +35,7 @@ import {
 	type CharacteristicKey,
 } from "../../../ffg/domain/model/taxonomy";
 
-import {
-	findOwnedSkillForRow,
-	LADDER_MAX,
-} from "../skills-domain";
+import { findOwnedSkillForRow, LADDER_MAX } from "../skills-domain";
 // The shared doc-link library (epic 61pk, bead n2b2): the row→pack-doc
 // resolvers + uuid stamp live in sheet/pack-doc-links.ts — this module is a
 // CONSUMER, not a second definition (behaviour-preserving extraction; the
@@ -92,7 +89,9 @@ export interface AdvancementViewModelInput {
 	/** Primary career, or null (no career — safe empty output). */
 	career: AdvancementCareerLike | null;
 	/** Rows from ELIGIBLE alternate ranks (tagged with source/sourceName). */
-	alternateRows?: Array<AdvanceRowLike & { source?: string; sourceName?: string }>;
+	alternateRows?: Array<
+		AdvanceRowLike & { source?: string; sourceName?: string }
+	>;
 	/** The actor's xp ledger. */
 	ledger: AdvanceLedgerEntry[];
 	/** Actor characteristic values (scheme rows + prereq snapshot). */
@@ -359,8 +358,8 @@ export function buildAdvancementViewModel(
 	// because the pack tiers are lowercase ("simple") and the lang keys are
 	// uppercase (the 2314e96 case bug — a template concat resolved a key that
 	// does not exist and rendered every tier raw).
-	const characteristicRows: AdvancementCharacteristicVM[] = CHARACTERISTIC_KEYS.map(
-		(key) => {
+	const characteristicRows: AdvancementCharacteristicVM[] =
+		CHARACTERISTIC_KEYS.map((key) => {
 			const scheme = input.career?.characteristicAdvances?.[key];
 			const purchased = ledger.filter(
 				(entry) =>
@@ -376,8 +375,7 @@ export function buildAdvancementViewModel(
 				tierLabelKey: next ? `ADVANCE.TIER_${next.tier.toUpperCase()}` : "",
 				affordable: next ? next.cost <= pool : false,
 			};
-		},
-	);
+		});
 
 	const rows = availableRows(
 		[
@@ -427,7 +425,8 @@ export function buildAdvancementViewModel(
 			benefitTooltip:
 				row.type === "talent" ? benefitTooltip(row, input.talentDocs) : "",
 			uuid: docLinkUuid(row, input.skillDocs, input.talentDocs),
-			skill: row.type === "skill" ? skillPreview(row, resolvedName, input) : null,
+			skill:
+				row.type === "skill" ? skillPreview(row, resolvedName, input) : null,
 		};
 	});
 

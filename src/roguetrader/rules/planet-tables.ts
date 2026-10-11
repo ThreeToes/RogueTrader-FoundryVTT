@@ -72,9 +72,7 @@ export function parseRollMap(
 		if (!m) return null;
 		const low = Number(m[1]);
 		const high = m[2] ? (m[2] === "00" ? 100 : Number(m[2])) : low;
-		const label = m[3]
-			.replace(/[†*]/g, "")
-			.trim();
+		const label = m[3].replace(/[†*]/g, "").trim();
 		if (!label) return null;
 		entries.push({ low, high, label });
 	}

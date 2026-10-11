@@ -205,7 +205,8 @@ export class Character extends foundry.abstract.TypeDataModel<
 				min: 0,
 				integer: true,
 				initial: 0,
-			}),			fate: new foundry.data.fields.SchemaField({
+			}),
+			fate: new foundry.data.fields.SchemaField({
 				value: new foundry.data.fields.NumberField({
 					min: 0,
 					integer: true,
@@ -335,7 +336,11 @@ export class Character extends foundry.abstract.TypeDataModel<
 			advances: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.SchemaField({
 					type: new foundry.data.fields.StringField({
-						choices: { skill: "ADVANCE.TYPE_SKILL", talent: "ADVANCE.TYPE_TALENT", characteristic: "ADVANCE.TYPE_CHARACTERISTIC" },
+						choices: {
+							skill: "ADVANCE.TYPE_SKILL",
+							talent: "ADVANCE.TYPE_TALENT",
+							characteristic: "ADVANCE.TYPE_CHARACTERISTIC",
+						},
 						initial: "skill",
 						required: true,
 						nullable: false,
@@ -443,7 +448,11 @@ export class Character extends foundry.abstract.TypeDataModel<
 					type?: string;
 					system?: {
 						equipState?: string;
-						effects?: Array<{ kind?: string; testKey?: string; value?: number }>;
+						effects?: Array<{
+							kind?: string;
+							testKey?: string;
+							value?: number;
+						}>;
 					};
 				}>;
 			} | null
@@ -487,17 +496,21 @@ export class Character extends foundry.abstract.TypeDataModel<
 	}
 
 	/**
-	 * Derived movement in AB-units: half = max(1, AB-1), full = AB,
-	 * charge = AB×2, run = AB×3. (Multiplier rules best-remembered RT core,
-	 * VERIFY against the book - display unit decided by the UI layer.)
+	 * Derived movement in AB-units (bead krph, VERIFIED against the Core
+	 * Rulebook movement section, printed p265, and the character sheet):
+	 * half = AB×1, full = AB×2, charge = AB×3, run = AB×6.
+	 *
+	 * The book defines no floor — a zeroed AB yields zeros (the old
+	 * Math.max(1, AB-1) clamp was an artifact of the wrong half=AB-1 model,
+	 * not book text).
 	 */
 	movement(): { half: number; full: number; charge: number; run: number } {
 		const ab = this.agilityBonus();
 		return {
-			half: Math.max(1, ab - 1),
-			full: ab,
-			charge: ab * 2,
-			run: ab * 3,
+			half: ab,
+			full: ab * 2,
+			charge: ab * 3,
+			run: ab * 6,
 		};
 	}
 
@@ -528,7 +541,11 @@ export class Character extends foundry.abstract.TypeDataModel<
 					type?: string;
 					system?: {
 						equipState?: string;
-						effects?: Array<{ kind?: string; testKey?: string; value?: number }>;
+						effects?: Array<{
+							kind?: string;
+							testKey?: string;
+							value?: number;
+						}>;
 					};
 				}>;
 			} | null

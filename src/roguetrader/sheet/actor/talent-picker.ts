@@ -1,14 +1,15 @@
 import { talents } from "../../registry";
 import { sheetContext } from "../context";
 import { characteristicValues } from "../skills-domain";
-import { getCharacterOptionDocs } from "../pack-resolve";
+import { evaluatePrerequisites, parsePrerequisites } from "../../rules/prereq";
 import {
-	evaluatePrerequisites,
-	parsePrerequisites,
-} from "../../rules/prereq";
-import { talentGrant, promptParameterisedSubject } from "./grant-helpers";
+	findPackDoc,
+	talentGrant,
+	promptParameterisedSubject,
+} from "./grant-helpers";
 import { parameterisedBase } from "../../rules/grants";
 import { OwnedItemPicker } from "./owned-picker";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 /**
  * Minimal talent picker: lists the talent registry (CONFIG.ROGUE_TRADER
@@ -18,7 +19,7 @@ import { OwnedItemPicker } from "./owned-picker";
 export class TalentPicker extends OwnedItemPicker {
 	static DEFAULT_OPTIONS = OwnedItemPicker.pickerOptions({
 		id: "rogue-trader-talent-picker",
-		slug: "skill-picker",
+		slug: "talent-picker",
 		titleKey: "TALENT.ADD",
 		width: 400,
 		height: 460,
@@ -29,13 +30,14 @@ export class TalentPicker extends OwnedItemPicker {
 
 	static PARTS = {
 		form: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/parts/talent-picker.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/talent-picker.hbs`,
 		},
 	};
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options as never));
+		const context = sheetContext(
+			await super._prepareContext(_options as never),
+		);
 		const owned = this.ownedItemNames("talent");
 		// NOTE(prereqs): per-entry prerequisite gating (Talent.canGrant) activates
 		// once the registry carries per-entry metadata (key -> {label, prereq} instead
@@ -63,7 +65,7 @@ export class TalentPicker extends OwnedItemPicker {
 		let name = game.i18n.localize(labelKey);
 		// yclz: parameterised talents ("Peer", "Enemy"...) prompt for their
 		// subject; a bare "Peer" is mechanically meaningless. Cancelled
-						// prompt = no grant.
+		// prompt = no grant.
 		if (parameterisedBase(name)) {
 			const prompted = await promptParameterisedSubject(name);
 			if (prompted === null) return;
@@ -105,12 +107,13 @@ export class TalentPicker extends OwnedItemPicker {
 	static async #findPackTalent(
 		name: string,
 	): Promise<{ prereqText: string } | null> {
-		const docs = (await getCharacterOptionDocs("talent")) as unknown as Array<{
-			name?: string;
-			system: { description?: string };
-		}>;
-		const doc = docs.find((d) => d.name === name);
-		if (!doc?.system.description) return null;
+		// bead 38io: the shared case-insensitive pack-by-name resolve; a
+		// missing doc has no prereq text, and talentGrant below owns the
+		// missing-doc warn + bare-item fallback for the actual grant.
+		const doc = (await findPackDoc("talent", name)) as {
+			system?: { description?: string };
+		} | null;
+		if (!doc?.system?.description) return null;
 		const match = /^Prerequisites:\s*([^.]*)/i.exec(doc.system.description);
 		return { prereqText: match?.[1]?.trim() ?? "" };
 	}
@@ -121,8 +124,8 @@ export class TalentPicker extends OwnedItemPicker {
 			psyRating?: number;
 		};
 		return {
-		characteristics: characteristicValues(system),
-		talents: this.actor.items
+			characteristics: characteristicValues(system),
+			talents: this.actor.items
 				.filter((item) => item.type === "talent")
 				.map((item) => item.name ?? ""),
 			psyRating: system.psyRating ?? 0,

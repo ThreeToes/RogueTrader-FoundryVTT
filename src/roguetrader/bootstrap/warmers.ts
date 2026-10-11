@@ -9,25 +9,11 @@
  * Split out of the former sheet/init.ts composition root.
  */
 
-import {
-	migrateLegacyActors,
-	removeLegacyCharacterTypes,
-} from "../migrations";
-import {
-	firstStr,
-	num,
-	packSystem,
-	str,
-} from "../data/pack-fields";
+import { migrateLegacyActors, removeLegacyCharacterTypes } from "../migrations";
+import { firstStr, num, packSystem, str } from "../data/pack-fields";
 import type { SkillSourceLike } from "../rules/default-skills";
-import {
-	setHeirloomEntries,
-	type HeirloomEntry,
-} from "../rules/heirlooms";
-import {
-	originEntryFromDoc,
-	setOriginEntries,
-} from "../rules/origins";
+import { setHeirloomEntries, type HeirloomEntry } from "../rules/heirlooms";
+import { originEntryFromDoc, setOriginEntries } from "../rules/origins";
 import type { OriginTraitDef } from "../rules/origin-traits";
 import {
 	setGearsetEntries,
@@ -39,7 +25,10 @@ import {
 	warrantEntryFromDoc,
 	type WarrantEntry,
 } from "../rules/warrant";
-import { getCharacterOptionDocs, getPackDocuments } from "../sheet/pack-resolve";
+import {
+	getCharacterOptionDocs,
+	getPackDocuments,
+} from "../sheet/pack-resolve";
 // The talent-link pool + shared mapper (bead hjve): rules module, the
 // warrant-pool precedent.
 import {
@@ -48,10 +37,7 @@ import {
 } from "../rules/talent-catalog";
 // Combat actions catalog (epic moew, bead 9r82): the shared doc→entry mapper
 // + setter live in rules/actions.ts (same shape as the talent-link pool).
-import {
-	actionEntryFromDoc,
-	setActionCatalog,
-} from "../rules/actions";
+import { actionEntryFromDoc, setActionCatalog } from "../rules/actions";
 import { rogueTraderConfig } from "./config";
 
 /**
@@ -156,9 +142,9 @@ function heirloomFlag(doc: foundry.documents.Item): {
 	table?: string;
 	range?: unknown;
 } {
-	const flag = ((
-		doc.flags as Record<string, unknown> | undefined
-	)?.["rogue-trader"] ?? {}) as {
+	const flag = ((doc.flags as Record<string, unknown> | undefined)?.[
+		"rogue-trader"
+	] ?? {}) as {
 		item?: unknown;
 		table?: unknown;
 		range?: unknown;

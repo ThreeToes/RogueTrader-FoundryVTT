@@ -23,7 +23,10 @@ describe("vehicle token footprints (bead yyd1)", () => {
 		expect(vehicleTokenFootprint("Enormous")).toEqual({ width: 3, height: 3 });
 		expect(vehicleTokenFootprint("Massive")).toEqual({ width: 4, height: 4 });
 		expect(vehicleTokenFootprint("Immense")).toEqual({ width: 5, height: 5 });
-		expect(vehicleTokenFootprint("Monumental")).toEqual({ width: 6, height: 6 });
+		expect(vehicleTokenFootprint("Monumental")).toEqual({
+			width: 6,
+			height: 6,
+		});
 		expect(vehicleTokenFootprint("Titanic")).toEqual({ width: 7, height: 7 });
 	});
 

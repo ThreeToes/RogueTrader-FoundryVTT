@@ -27,6 +27,7 @@ import {
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { CreatorApplication } from "./creator-application";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 /** One draw stage of the world-generation sequence. */
 interface PlanetStage {
@@ -50,18 +51,88 @@ interface PlanetStage {
  * GM applies each printed modifier via the stepper.
  */
 const STAGES: PlanetStage[] = [
-	{ key: "body", labelKey: "PLANET.BODY", kind: "soi-planet-body", die: 10, hintKey: "PLANET_CREATOR.HINT_BODY", mode: "ranged" },
-	{ key: "gravity", labelKey: "PLANET.GRAVITY", kind: "soi-gravity", die: 10, hintKey: "PLANET_CREATOR.HINT_GRAVITY", mode: "ranged" },
-	{ key: "orbital", labelKey: "PLANET.ORBITAL", kind: "soi-orbital", die: 100, hintKey: "PLANET_CREATOR.HINT_ORBITAL", mode: "ranged" },
-	{ key: "atmosphere", labelKey: "PLANET.ATMOSPHERE", kind: "soi-atmosphere", die: 10, hintKey: "PLANET_CREATOR.HINT_ATMOSPHERE", mode: "ranged" },
-	{ key: "composition", labelKey: "PLANET_CREATOR.COMPOSITION", kind: "soi-atmo-comp", die: 10, hintKey: "PLANET_CREATOR.HINT_COMPOSITION", mode: "ranged" },
-	{ key: "climate", labelKey: "PLANET.CLIMATE", kind: "soi-climate", die: 10, hintKey: "PLANET_CREATOR.HINT_CLIMATE", mode: "ranged" },
-	{ key: "habitability", labelKey: "PLANET.HABITABILITY", kind: "soi-habitability", die: 10, hintKey: "PLANET_CREATOR.HINT_HABITABILITY", mode: "ranged" },
+	{
+		key: "body",
+		labelKey: "PLANET.BODY",
+		kind: "soi-planet-body",
+		die: 10,
+		hintKey: "PLANET_CREATOR.HINT_BODY",
+		mode: "ranged",
+	},
+	{
+		key: "gravity",
+		labelKey: "PLANET.GRAVITY",
+		kind: "soi-gravity",
+		die: 10,
+		hintKey: "PLANET_CREATOR.HINT_GRAVITY",
+		mode: "ranged",
+	},
+	{
+		key: "orbital",
+		labelKey: "PLANET.ORBITAL",
+		kind: "soi-orbital",
+		die: 100,
+		hintKey: "PLANET_CREATOR.HINT_ORBITAL",
+		mode: "ranged",
+	},
+	{
+		key: "atmosphere",
+		labelKey: "PLANET.ATMOSPHERE",
+		kind: "soi-atmosphere",
+		die: 10,
+		hintKey: "PLANET_CREATOR.HINT_ATMOSPHERE",
+		mode: "ranged",
+	},
+	{
+		key: "composition",
+		labelKey: "PLANET_CREATOR.COMPOSITION",
+		kind: "soi-atmo-comp",
+		die: 10,
+		hintKey: "PLANET_CREATOR.HINT_COMPOSITION",
+		mode: "ranged",
+	},
+	{
+		key: "climate",
+		labelKey: "PLANET.CLIMATE",
+		kind: "soi-climate",
+		die: 10,
+		hintKey: "PLANET_CREATOR.HINT_CLIMATE",
+		mode: "ranged",
+	},
+	{
+		key: "habitability",
+		labelKey: "PLANET.HABITABILITY",
+		kind: "soi-habitability",
+		die: 10,
+		hintKey: "PLANET_CREATOR.HINT_HABITABILITY",
+		mode: "ranged",
+	},
 	// Reference rows: the kind carries ONE row whose prose holds the roll
 	// map (Table 1-13/1-26) — the draw resolves via parseRollMap.
-	{ key: "territories", labelKey: "PLANET.TERRITORIES", kind: "soi-territories-count", die: 5, hintKey: "PLANET_CREATOR.HINT_TERRITORIES", mode: "count" },
-	{ key: "inhabitants", labelKey: "PLANET.INHABITANTS", kind: "soi-inhabitants", die: 10, hintKey: "PLANET_CREATOR.HINT_INHABITANTS", mode: "map" },
-	{ key: "development", labelKey: "PLANET.DEVELOPMENT", kind: "soi-development", die: 10, hintKey: "PLANET_CREATOR.HINT_DEVELOPMENT", mode: "subtable" },
+	{
+		key: "territories",
+		labelKey: "PLANET.TERRITORIES",
+		kind: "soi-territories-count",
+		die: 5,
+		hintKey: "PLANET_CREATOR.HINT_TERRITORIES",
+		mode: "count",
+	},
+	{
+		key: "inhabitants",
+		labelKey: "PLANET.INHABITANTS",
+		kind: "soi-inhabitants",
+		die: 10,
+		hintKey: "PLANET_CREATOR.HINT_INHABITANTS",
+		mode: "map",
+	},
+	{
+		key: "development",
+		labelKey: "PLANET.DEVELOPMENT",
+		kind: "soi-development",
+		die: 10,
+		hintKey: "PLANET_CREATOR.HINT_DEVELOPMENT",
+		mode: "subtable",
+	},
 ];
 
 /** Fields the drawn row's name fills on the planet actor snapshot. */
@@ -113,7 +184,6 @@ function emptyStages(): Record<string, StageState> {
 	return stages;
 }
 
-
 export class PlanetCreator extends CreatorApplication {
 	static DEFAULT_OPTIONS = CreatorApplication.creatorOptions({
 		id: "rogue-trader-planet-creator",
@@ -141,8 +211,7 @@ export class PlanetCreator extends CreatorApplication {
 
 	static PARTS = {
 		form: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/planet-creator.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/planet-creator.hbs`,
 		},
 	};
 
@@ -188,7 +257,9 @@ export class PlanetCreator extends CreatorApplication {
 	}
 
 	async _prepareContext(_options: object = {}) {
-		const context = sheetContext(await super._prepareContext(_options as never));
+		const context = sheetContext(
+			await super._prepareContext(_options as never),
+		);
 		const index = Math.max(0, Math.min(this.step, STAGES.length - 1));
 		this.step = index;
 		const stage = STAGES[index];
@@ -213,7 +284,8 @@ export class PlanetCreator extends CreatorApplication {
 		// Running summary of every drawn row so far.
 		context.drawn = STAGES.filter((s) => this.stages[s.key].uuid).map((s) => ({
 			label: game.i18n.localize(s.labelKey),
-			name: this.stages[s.key].label || resultLabelFromRow(this.stages[s.key].name),
+			name:
+				this.stages[s.key].label || resultLabelFromRow(this.stages[s.key].name),
 			roll: this.stages[s.key].roll,
 		}));
 		return context;
@@ -388,10 +460,7 @@ export class PlanetCreator extends CreatorApplication {
 					t: string,
 					data: object[],
 				) => Promise<unknown>;
-				deleteEmbeddedDocuments: (
-					t: string,
-					ids: string[],
-				) => Promise<unknown>;
+				deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
 				sheet?: { render: (options?: object) => unknown };
 			};
 			// iufv reconcile: wipe previously creator-installed rows; manual
@@ -399,8 +468,7 @@ export class PlanetCreator extends CreatorApplication {
 			const stale = target.items
 				.filter(
 					(i) =>
-						i.type === "game-table" &&
-						i.system?.grantedBy === "planet-creator",
+						i.type === "game-table" && i.system?.grantedBy === "planet-creator",
 				)
 				.map((i) => i.id)
 				.filter((id): id is string => Boolean(id));
@@ -423,10 +491,7 @@ export class PlanetCreator extends CreatorApplication {
 			type: "planet",
 			system: systemPayload,
 		} as never)) as unknown as {
-			createEmbeddedDocuments: (
-				t: string,
-				data: object[],
-			) => Promise<unknown>;
+			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
 			sheet?: { render: (options?: object) => unknown };
 		};
 		if (!actor) return;

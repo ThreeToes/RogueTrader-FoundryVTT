@@ -1,17 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import "../../../test-helpers/foundry-schema-stub";
+import { effectKinds } from "../../../ffg/domain/effects";
 import { effectEditorChoices } from "./effect-actions";
 
 describe("effect editor choices (localized dropdowns)", () => {
-	const { kindChoices, testKeyChoices } = effectEditorChoices(
-		(key) => key,
-	);
+	const { kindChoices, testKeyChoices } = effectEditorChoices((key) => key);
 
 	test("kind dropdown covers registered kinds with label keys", () => {
 		expect(kindChoices["test-modifier"]).toBe("EFFECT_KIND.TEST_MODIFIER");
 		for (const kind of ["wounds-max", "damage-flat", "critical-damage"]) {
-			expect(kindChoices[kind]).toBe(`EFFECT_KIND.${kind.replace(/-/g, "_").toUpperCase()}`);
+			expect(kindChoices[kind]).toBe(
+				`EFFECT_KIND.${kind.replace(/-/g, "_").toUpperCase()}`,
+			);
 		}
 	});
 
@@ -26,7 +27,34 @@ describe("effect editor choices (localized dropdowns)", () => {
 				const keys = JSON.parse(
 					readFileSync(`lang/${lang}.json`, "utf8"),
 				) as Record<string, string>;
-				expect(keys[String(value)], `${String(value)} in ${lang}`).toBeDefined();
+				expect(
+					keys[String(value)],
+					`${String(value)} in ${lang}`,
+				).toBeDefined();
+			}
+		}
+	});
+
+	// Bead ypbx: labels live on the spec (labelKey), derived from the
+	// registry — a new kind must NOT need a second edit in this sheet layer.
+	// Guard: every registered kind appears in the dropdown under an
+	// EFFECT_KIND.* label that exists in ALL FOUR language files.
+	test("every effectKinds entry resolves a non-slug editor label", () => {
+		expect(effectKinds.all().length).toBeGreaterThan(0);
+		for (const spec of effectKinds.all()) {
+			expect(spec.labelKey, spec.kind).toBeDefined();
+			const label = kindChoices[spec.kind];
+			expect(label, spec.kind).toBeDefined();
+			expect(label, spec.kind).toBe(spec.labelKey); // localize is identity
+			expect(label, spec.kind).toMatch(/^EFFECT_KIND\./);
+			for (const lang of ["en", "es", "fr", "pl"]) {
+				const keys = JSON.parse(
+					readFileSync(`lang/${lang}.json`, "utf8"),
+				) as Record<string, string>;
+				expect(
+					keys[String(spec.labelKey)],
+					`${String(spec.labelKey)} in ${lang}`,
+				).toBeDefined();
 			}
 		}
 	});

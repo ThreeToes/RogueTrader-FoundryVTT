@@ -1,12 +1,12 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
-import { effectActions, effectEditorChoices } from "./effect-actions";
+import { effectActions } from "./effect-actions";
 import { ITEM_DATA_TABS } from "../tabs";
-import { DamageType } from "../../data/item/damage-types";
-import { sheetContext } from "../context";
-import { itemDescriptionHTML } from "../rich-text";
+import { damageTypes } from "../../registry";
+import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 	static DEFAULT_OPTIONS = itemSheetOptions({
@@ -18,16 +18,16 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 
 	static PARTS = {
 		header: {
-			template: "systems/rogue-trader/template/sheet/item/parts/header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		data: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/data.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/data.hbs`,
 		},
 		notes: {
-			template: "systems/rogue-trader/template/sheet/item/tabs/notes.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/tabs/notes.hbs`,
 		},
 	};
 
@@ -39,19 +39,16 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		// Context.tabs is a flat record keyed by tab id: { data: {...}, notes: {...} }.
 		context.tabs = this._prepareTabs("primary");
 
-		// Effect editor choices (bead bpd): localized kind labels + test keys.
-		Object.assign(context, effectEditorChoices());
-
 		// Tau battlesuit systems (bead i0dc) share this sheet: expose the category
 		// and the Hard Point cost the suit's budget is spent on. Guarded so plain
 		// gear renders exactly as before.
 		if (this.document.type === "battlesuit-system") {
-			const system = this.document.system as { category?: string; hardPointCost?: number };
+			const system = this.document.system as {
+				category?: string;
+				hardPointCost?: number;
+			};
 			context.battlesuitSystem = {
-				category: foundry.utils.getProperty(
-					this.document,
-					"system.category",
-				),
+				category: foundry.utils.getProperty(this.document, "system.category"),
 				hardPointCost: system.hardPointCost ?? 0,
 			};
 		}
@@ -78,15 +75,14 @@ export class GearSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 					qualities: (system.ordnance.qualities ?? []).map(String),
 				};
 			}
-			context.damageTypeChoices = Object.fromEntries(
-				Object.values(DamageType).map((value) => [
-					value,
-					`DAMAGE_TYPE.${value.toUpperCase()}`,
-				]),
-			);
+			// Damage type choices (bead seeg): ONE registry seed shared by every
+			// sheet — keys match the stored enum values.
+			context.damageTypeChoices = damageTypes.choices;
 		}
 
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		// Item data keys (bead apxq): effect editor choices (bead bpd, localized
+		// kind labels + test keys) + the enriched description tab prose.
+		Object.assign(context, await itemDataContext(this.document));
 		return context;
 	}
 }

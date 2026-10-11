@@ -125,6 +125,16 @@ const QUALITY_CONTRIBUTIONS: Record<
 	defensive: (context) => (context.kind === "attack" ? -10 : null),
 };
 
+/**
+ * QUALITY.<SLUG> i18n key for a weapon-quality slug (bead dfdv): the funnel
+ * stays Foundry-free, so it emits the KEY ("gyro-stabilised" →
+ * "QUALITY.GYRO_STABILISED" — the shape lang/*.json uses) and the display
+ * seams localize it for rendering.
+ */
+export function qualityLabelKey(quality: string): string {
+	return `QUALITY.${quality.toUpperCase().replace(/-/g, "_")}`;
+}
+
 testContributors.register("weapon-qualities", (_view, context) => {
 	if (context.kind !== "attack" || !context.weapon) return [];
 	const special = context.weapon.special ?? [];
@@ -134,10 +144,12 @@ testContributors.register("weapon-qualities", (_view, context) => {
 		if (!compute) continue;
 		const value = compute(context);
 		if (value === null || value === 0) continue;
+		// Bead dfdv: the label is the QUALITY.<SLUG> KEY (Foundry-free); the
+		// display seams localize it via localizeLabel.
 		mods.push({
 			id: `quality:${quality}`,
 			source: { type: "item", label: "WEAPON.SPECIAL" },
-			label: quality,
+			label: qualityLabelKey(quality),
 			value,
 		});
 	}

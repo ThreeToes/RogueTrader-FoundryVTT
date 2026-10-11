@@ -293,16 +293,73 @@ describe("resolveDamage (rt-core)", () => {
 });
 
 describe("locationForHit (rt-core)", () => {
-	test("tens digit maps through the profile table", () => {
-		expect(locationForHit(10, rtCore)).toBe("head");
-		expect(locationForHit(23, rtCore)).toBe("right-arm");
-		expect(locationForHit(66, rtCore)).toBe("body");
-		expect(locationForHit(89, rtCore)).toBe("right-leg");
-		expect(locationForHit(5, rtCore)).toBe("left-leg");
+	// Core Rulebook Table 9-6: Hit Locations (printed p244): the digits of
+	// the to-hit roll are REVERSED, then read as: 01-10 Head, 11-20 Right
+	// Arm, 21-30 Left Arm, 31-70 Body, 71-85 Right Leg, 86-00 Left Leg.
+	// Each case shows the reversed value the band is read against.
+	test("reversed roll reads the Table 9-6 bands (roll -> reversed -> location)", () => {
+		const cases: Array<[number, string]> = [
+			// 01-10 head
+			[10, "head"], // "10" -> 01
+			[20, "head"], // "20" -> 02
+			[90, "head"], // "90" -> 09
+			[1, "head"], // "01" -> 10
+			// 11-20 right-arm
+			[11, "right-arm"], // "11" -> 11
+			[21, "right-arm"], // "21" -> 12
+			[91, "right-arm"], // "91" -> 19
+			// 21-30 left-arm
+			[12, "left-arm"], // "12" -> 21
+			[22, "left-arm"], // "22" -> 22
+			[92, "left-arm"], // "92" -> 29
+			// 31-70 body
+			[13, "body"], // "13" -> 31
+			[7, "body"], // "07" -> 70
+			[66, "body"], // "66" -> 66
+			// 71-85 right-leg
+			[17, "right-leg"], // "17" -> 71
+			[57, "right-leg"], // "57" -> 75
+			[28, "right-leg"], // "28" -> 82
+			[58, "right-leg"], // "58" -> 85
+			// 86-00 left-leg
+			[68, "left-leg"], // "68" -> 86
+			[99, "left-leg"], // "99" -> 99
+		];
+		for (const [roll, location] of cases) {
+			expect(locationForHit(roll, rtCore)).toBe(location);
+		}
 	});
 
-	test("unknown digits fall back to body", () => {
-		expect(locationForHit(5, { ...rtCore, hitLocations: {} })).toBe("body");
+	test("Table 9-6 band boundaries: 10/85/86/95/00", () => {
+		// Head/right-arm boundary. A ROLLED 10 reverses to "01" — the
+		// 01-10 band's FIRST edge — and a rolled 11 reverses to "11", the
+		// first edge of right-arm. Rolls 1 and 2 walk the same boundary from
+		// the other side: "01" reverses to 10 (head band's LAST edge) and
+		// "02" reverses to 20 (right-arm band's LAST edge).
+		expect(locationForHit(10, rtCore)).toBe("head"); // "10" -> 01
+		expect(locationForHit(11, rtCore)).toBe("right-arm"); // 11
+		expect(locationForHit(1, rtCore)).toBe("head"); // "01" -> 10
+		expect(locationForHit(2, rtCore)).toBe("right-arm"); // "02" -> 20
+		// Body/leg edges: reversed 70 (last body, roll 7) vs 71 (first
+		// right-leg, roll 17).
+		expect(locationForHit(7, rtCore)).toBe("body"); // "07" -> 70
+		expect(locationForHit(17, rtCore)).toBe("right-leg"); // "17" -> 71
+		// Leg edges: reversed-value 85 (last right-leg, roll 58) and 86
+		// (first left-leg, roll 68).
+		expect(locationForHit(58, rtCore)).toBe("right-leg"); // 58 -> 85
+		expect(locationForHit(57, rtCore)).toBe("right-leg"); // 57 -> 75
+		expect(locationForHit(68, rtCore)).toBe("left-leg"); // 68 -> 86
+		expect(locationForHit(78, rtCore)).toBe("left-leg"); // 78 -> 87
+		// A rolled 95 reads as 59 -> body, not a leg.
+		expect(locationForHit(95, rtCore)).toBe("body"); // 95 -> 59
+		// A rolled 00/100 reads as 100 -> left-leg.
+		expect(locationForHit(0, rtCore)).toBe("left-leg"); // 00 -> 100
+		expect(locationForHit(100, rtCore)).toBe("left-leg");
+	});
+
+	test("out-of-band table falls back to body", () => {
+		expect(locationForHit(10, { ...rtCore, hitLocations: {} })).toBe("body");
+		expect(locationForHit(23, rtCore)).toBe("body"); // 23 -> 32: inside 31-70
 	});
 });
 

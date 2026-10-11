@@ -29,7 +29,11 @@ export class OriginTrait extends Gear {
 			traitKey: textField(),
 			/** modifier | grant | note. */
 			kind: new foundry.data.fields.StringField({
-				choices: { modifier: "ORIGIN_TRAIT.KIND_MODIFIER", grant: "ORIGIN_TRAIT.KIND_GRANT", note: "ORIGIN_TRAIT.KIND_NOTE" },
+				choices: {
+					modifier: "ORIGIN_TRAIT.KIND_MODIFIER",
+					grant: "ORIGIN_TRAIT.KIND_GRANT",
+					note: "ORIGIN_TRAIT.KIND_NOTE",
+				},
 				initial: "note",
 				required: true,
 				nullable: false,

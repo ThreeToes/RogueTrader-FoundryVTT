@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { NO_CONTENT } from "../../../ffg/application/ports";
 import { currentRound, resolveCritical } from "../../rules/criticals";
-import { foundryPorts, getPorts, resetPorts, setPorts } from "./ports";
+import {
+	foundryPorts,
+	getPorts,
+	KEY_SHAPE,
+	localizeLabel,
+	resetPorts,
+	setPorts,
+} from "./ports";
 
 // The ports (epic kof0, phase 3) are the seam that lets the rules run with no
 // Foundry at all: a test swaps in fakes, the rules behave identically.
@@ -118,11 +125,71 @@ describe("ports fail loudly rather than dropping writes (bead c9s3)", () => {
 	});
 
 	test("dice.roll explains an absent Foundry instead of throwing a bare ReferenceError", async () => {
-		if (typeof (globalThis as Record<string, unknown>).foundry !== "undefined") {
+		if (
+			typeof (globalThis as Record<string, unknown>).foundry !== "undefined"
+		) {
 			return; // another suite in this process stubbed Foundry
 		}
 		await expect(foundryPorts.dice.roll("1d100")).rejects.toThrow(
 			/Foundry is not available/,
 		);
+	});
+});
+
+// The display seams (TestDialog contributor rows, runTest card analysis)
+// pass every modifier label through localizeLabel: KEY-shaped labels resolve
+// through i18n, free text is untouched. Bead dfdv.
+describe("localizeLabel (bead dfdv)", () => {
+	const withFakeI18n = (
+		dict: Record<string, string>,
+		body: () => void,
+	): void => {
+		const saved = (globalThis as Record<string, unknown>).game;
+		(globalThis as Record<string, unknown>).game = {
+			i18n: { localize: (key: string) => dict[key] ?? `untranslated: ${key}` },
+		};
+		try {
+			body();
+		} finally {
+			if (saved === undefined)
+				delete (globalThis as Record<string, unknown>).game;
+			else (globalThis as Record<string, unknown>).game = saved;
+		}
+	};
+
+	test("KEY-shaped labels resolve through i18n (non-en dictionary)", () => {
+		withFakeI18n(
+			{
+				"QUALITY.ACCURATE": "Precisa",
+				"ROLL.AIM_HALF": "Apuntar (media acción)",
+			},
+			() => {
+				expect(localizeLabel("QUALITY.ACCURATE")).toBe("Precisa");
+				expect(localizeLabel("ROLL.AIM_HALF")).toBe("Apuntar (media acción)");
+			},
+		);
+	});
+
+	test("free text (names, custom rows, localized labels) passes through untouched", () => {
+		withFakeI18n({}, () => {
+			expect(localizeLabel("Lasgun")).toBe("Lasgun");
+			expect(localizeLabel("Aim (Half)")).toBe("Aim (Half)");
+			expect(localizeLabel("—")).toBe("—");
+		});
+	});
+
+	test("KEY_SHAPE matches dotted UPPER_SNAKE keys only", () => {
+		expect(KEY_SHAPE.test("ROLL.AIM_HALF")).toBe(true);
+		expect(KEY_SHAPE.test("QUALITY.GYRO_STABILISED")).toBe(true);
+		expect(KEY_SHAPE.test("CUSTOM")).toBe(false);
+		expect(KEY_SHAPE.test("TYPES.Item.weapon")).toBe(false);
+		expect(KEY_SHAPE.test("Accurate")).toBe(false);
+	});
+
+	test("headless (no game.i18n): a key passes through unchanged", () => {
+		if ((globalThis as Record<string, unknown>).game !== undefined) {
+			return; // another suite in this process stubbed game
+		}
+		expect(localizeLabel("QUALITY.ACCURATE")).toBe("QUALITY.ACCURATE");
 	});
 });

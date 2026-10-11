@@ -79,7 +79,9 @@ export function hullClassMatches(
 ): boolean {
 	const token = HULL_CLASS_TOKENS[hullClass] ?? hullClass;
 	if (!token) return true;
-	const tokens = (hullTypes ?? "").split(",").map((t) => t.trim().toLowerCase());
+	const tokens = (hullTypes ?? "")
+		.split(",")
+		.map((t) => t.trim().toLowerCase());
 	if (tokens.includes("all ships")) return true;
 	return tokens.some((t) => t === token || t.startsWith(token));
 }
@@ -165,7 +167,9 @@ export interface DerivedShipStats {
 }
 
 /** Derive the ship's running totals from its installed component items. */
-export function deriveShipStats(components: ShipComponentLike[]): DerivedShipStats {
+export function deriveShipStats(
+	components: ShipComponentLike[],
+): DerivedShipStats {
 	let powerGenerated = 0;
 	let powerUsed = 0;
 	let spaceUsed = 0;
@@ -226,7 +230,11 @@ export function validateWeaponSlots(
 			issues.push({ name: w.name, kind: "unknown-slot", slot });
 			continue;
 		}
-		if (broadsideWeapon(w.name, w.special) && slot !== "port" && slot !== "starboard") {
+		if (
+			broadsideWeapon(w.name, w.special) &&
+			slot !== "port" &&
+			slot !== "starboard"
+		) {
 			issues.push({ name: w.name, kind: "broadside-slot", slot });
 			continue;
 		}

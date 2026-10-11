@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { buildActorView } from "../model/build";
 import { collectEffects, collectEffectModifiers, effectKinds } from "./index";
+import { mergeModifiers } from "../../application/funnel";
 
 // The effect engine (epic kof0, phase 2) is the one walk every consumer uses.
 // These tests pin the collector contract and the extension seam.
@@ -93,7 +94,9 @@ describe("effect engine (epic kof0)", () => {
 					type: "talent",
 					name: "Guarded",
 					system: {
-						effects: [{ kind: "test-modifier", value: 5, condition: "charging" }],
+						effects: [
+							{ kind: "test-modifier", value: 5, condition: "charging" },
+						],
 					},
 				},
 			],
@@ -124,7 +127,11 @@ describe("effect engine (epic kof0)", () => {
 		});
 		const hits = collectEffects(view, { channel: "derived" });
 		expect(hits).toHaveLength(1);
-		expect(hits[0]?.spec.read?.(hits[0].item, hits[0].effect, { channel: "derived" })).toBe(7);
+		expect(
+			hits[0]?.spec.read?.(hits[0].item, hits[0].effect, {
+				channel: "derived",
+			}),
+		).toBe(7);
 	});
 
 	test("collectEffectModifiers maps the modifier-producing hits", () => {
@@ -133,7 +140,9 @@ describe("effect engine (epic kof0)", () => {
 				{
 					type: "talent",
 					name: "Sure Hand",
-					system: { effects: [{ kind: "test-modifier", value: 5, label: "Sure Hand" }] },
+					system: {
+						effects: [{ kind: "test-modifier", value: 5, label: "Sure Hand" }],
+					},
 				},
 			],
 		});
@@ -141,5 +150,77 @@ describe("effect engine (epic kof0)", () => {
 		expect(mods).toHaveLength(1);
 		expect(mods[0]?.id).toBe("talent:Sure Hand:any:Sure Hand:any");
 		expect(mods[0]?.value).toBe(5);
+	});
+
+	// Bead 2040: the id keys on the item's own id (name fallback), so two
+	// DIFFERENT documents sharing a name no longer collapse under
+	// mergeModifiers' first-wins dedupe.
+	test("bead 2040: two same-named items both contribute (additive)", () => {
+		const medikit = (id: string) => ({
+			id,
+			type: "talent",
+			name: "Medikit",
+			system: {
+				effects: [{ kind: "test-modifier", value: 5, label: "Medikit" }],
+			},
+		});
+		const view = buildActorView({ items: [medikit("a"), medikit("b")] });
+		const mods = collectEffectModifiers(view, { channel: "test" });
+		expect(mods).toHaveLength(2);
+		expect(new Set(mods.map((m) => m.id)).size).toBe(2);
+		expect(mods[0]?.id).toBe("talent:a:any:Medikit:any");
+		expect(mods[1]?.id).toBe("talent:b:any:Medikit:any");
+		// The funnel's merge keeps both and they sum.
+		const merged = mergeModifiers([], mods);
+		expect(merged).toHaveLength(2);
+		expect(merged.reduce((sum, m) => sum + m.value, 0)).toBe(10);
+	});
+
+	test("bead 2040: one item's duplicate rows still dedupe", () => {
+		const view = buildActorView({
+			items: [
+				{
+					id: "one",
+					type: "talent",
+					name: "Medikit",
+					system: {
+						effects: [
+							{ kind: "test-modifier", value: 5, label: "Medikit" },
+							{ kind: "test-modifier", value: 5, label: "Medikit" },
+						],
+					},
+				},
+			],
+		});
+		const mods = collectEffectModifiers(view, { channel: "test" });
+		expect(mods).toHaveLength(2);
+		expect(mergeModifiers([], mods)).toHaveLength(1);
+	});
+
+	// Bead gojg: the trait-reduction id keys on the item's own id (name
+	// fallback), matching the funnel/damage channels — two DIFFERENT trait
+	// documents sharing a name both soak instead of collapsing under a
+	// first-wins dedupe, while one trait's duplicate rows still dedupe.
+	test("bead gojg: two same-named traits both soak (additive)", () => {
+		const trait = (id: string) => ({
+			id,
+			type: "trait",
+			name: "Unnatural Toughness",
+			system: {
+				effects: [
+					{ kind: "damage-reduction", value: 2, label: "Unnatural Toughness" },
+				],
+			},
+		});
+		const view = buildActorView({ items: [trait("a"), trait("b")] });
+		const mods = collectEffectModifiers(view, { channel: "target-soak" });
+		expect(mods).toHaveLength(2);
+		expect(new Set(mods.map((m) => m.id)).size).toBe(2);
+		expect(mods[0]?.id).toBe(
+			"trait-reduction:a:Unnatural Toughness",
+		);
+		expect(mods[1]?.id).toBe(
+			"trait-reduction:b:Unnatural Toughness",
+			);
 	});
 });

@@ -1,6 +1,7 @@
 import { effectiveSorceryRank } from "./casting";
 import { collectSorceryRank } from "./talent-effects";
 import type { ActorView } from "../../ffg/domain/model/actor";
+import { isCharacterView } from "../../ffg/domain/model/actor";
 
 /**
  * Is this actor a psyker for UI purposes (bead n9x7)?
@@ -15,13 +16,16 @@ import type { ActorView } from "../../ffg/domain/model/actor";
  * Navigators count as psykers (Core Rulebook p182).
  */
 export function isPsykerLike(view: ActorView): boolean {
-	const system = view.system;
+	// Bead l2wz: the view's system now types as the family union, so character
+	// fields need narrowing. Non-character families still count via owned
+	// psychic/navigator powers (as the unconditional item scan did before).
+	const system = isCharacterView(view) ? view.system : undefined;
 	return (
-		system.psyker === true ||
-		(system.psyRating ?? 0) >= 1 ||
+		system?.psyker === true ||
+		(system?.psyRating ?? 0) >= 1 ||
 		effectiveSorceryRank(
 			collectSorceryRank(view),
-			typeof system.sorceryRank === "string" ? system.sorceryRank : undefined,
+			typeof system?.sorceryRank === "string" ? system.sorceryRank : undefined,
 		) !== "" ||
 		view.items.some(
 			(item) => item.type === "psychicpower" || item.type === "navigatorpower",

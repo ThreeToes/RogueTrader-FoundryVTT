@@ -1,5 +1,5 @@
 import { Vehicle } from "../../data/actor/vehicle";
-import { itemDescriptionHTML } from "../rich-text";
+import { itemDataContext, sheetContext } from "../context";
 import { isWeaponType } from "../../data/accessors";
 import { tokenFootprintLabel } from "../../rules/vehicle-tokens";
 import {
@@ -13,6 +13,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 import { imageActions } from "../image-actions";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
@@ -29,23 +30,19 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	static PARTS = {
 		header: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/parts/vehicle-header.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/parts/vehicle-header.hbs`,
 		},
 		tabs: {
-			template: "systems/rogue-trader/template/sheet/item/parts/tabs.hbs",
+			template: `${TEMPLATE_ROOT}sheet/item/parts/tabs.hbs`,
 		},
 		status: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/tabs/vehicle-status.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/vehicle-status.hbs`,
 		},
 		weapons: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/tabs/vehicle-weapons.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/vehicle-weapons.hbs`,
 		},
 		details: {
-			template:
-				"systems/rogue-trader/template/sheet/actor/tabs/vehicle-details.hbs",
+			template: `${TEMPLATE_ROOT}sheet/actor/tabs/vehicle-details.hbs`,
 		},
 	};
 
@@ -93,7 +90,7 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			(system.traits ?? []).map((t) => [t, true]),
 		);
 		context.facingChoices = Object.fromEntries(vehicleFacings.entries());
-		context.descriptionHTML = await itemDescriptionHTML(this.document);
+		Object.assign(context, await itemDataContext(this.document));
 
 		// Crew rows (resolved names from Actor UUIDs - references, not embedded).
 		context.crewRows = (system.crew ?? []).map((uuid) => ({

@@ -106,9 +106,9 @@ function resolveEntryActor(element?: HTMLElement): CreatorActor {
 		entryEl?.dataset.documentId ??
 		element?.dataset?.documentId;
 	if (!resolvedId) return undefined;
-	return (
-		game.actors as unknown as { get: (id: string) => unknown }
-	).get(resolvedId) as CreatorActor;
+	return (game.actors as unknown as { get: (id: string) => unknown }).get(
+		resolvedId,
+	) as CreatorActor;
 }
 
 /** Register every creator entry on the Actors directory context menu. */

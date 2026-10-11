@@ -139,6 +139,14 @@ All new keys go into **en, es, fr, pl in one change**. Missing keys fall back to
 Best-effort translations of es/fr/pl should be flagged as such — machine translation
 terminology has not been native-review-checked here.
 
+**Flat-key gotcha (expandObject):** Foundry loads each lang file through
+`foundry.utils.expandObject`, which THROWS when one flat key is a dotted prefix of
+another (a label leaf `RULES.X` plus a child `RULES.X.HINT`) — and the error is
+swallowed, silently dropping the WHOLE system dictionary so every sheet renders raw
+keys. A 2026-10 knob-hint regression shipped exactly this. Never make a key a dotted
+prefix of another: the knob hint keys are `RULES.<X>_HINT` (underscore, one leaf),
+not `RULES.<X>.HINT`. The parity guard scans for violated pairs (bead qgtz file).
+
 Visual conventions (palette, typography, layout patterns, sizing): see
 [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md) — match its tokens whenever restyling.
 

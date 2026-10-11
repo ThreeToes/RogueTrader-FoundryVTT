@@ -390,7 +390,7 @@ const SIBLING_KNOBS = [
 		key: "combat.standardMode",
 		path: ["fireModeBonus", "burst"],
 		labelKey: "RULES.COMBAT_STANDARD_MODE",
-		hintKey: "RULES.COMBAT_STANDARD_MODE.HINT",
+		hintKey: "RULES.COMBAT_STANDARD_MODE_HINT",
 		group: "combat",
 		control: "number",
 		hazard: "auto-recomputed",

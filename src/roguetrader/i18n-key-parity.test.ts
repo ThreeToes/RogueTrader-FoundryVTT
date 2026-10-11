@@ -67,6 +67,32 @@ describe("i18n key parity (bead qgtz)", () => {
 		}
 	});
 
+	test("no key is a dotted prefix of another key (Foundry expandObject constraint)", () => {
+		// Foundry's Localization loads every language file through
+		// foundry.utils.expandObject, which THROWS when one flat key is a
+		// dotted prefix of another (a label leaf "RULES.X" plus a child
+		// "RULES.X.HINT"), and its catch swallows the error — the whole
+		// package dictionary is dropped and every sheet renders raw keys
+		// (the 2026-10 knob-i18n regression). Keep every pair two leaves:
+		// "RULES.X" + "RULES.X_HINT". This is the runtime contract
+		// expandObject enforces, checked here where JSON.parse cannot see it.
+		for (const lang of LANGS) {
+			const keys = Object.keys(dictionaries[lang]).sort();
+			const collisions: string[] = [];
+			for (let i = 0; i < keys.length; i++) {
+				for (let j = i + 1; j < keys.length; j++) {
+					if (keys[j].startsWith(`${keys[i]}.`)) {
+						collisions.push(`${keys[i]} <-> ${keys[j]}`);
+					}
+				}
+			}
+			expect(
+				collisions,
+				`${lang}.json carries expandObject-prefix collisions:`,
+			).toEqual([]);
+		}
+	});
+
 	test("the parity scan sees a meaningful corpus (stays meaningful)", () => {
 		expect(listFiles("template", ".hbs").length).toBeGreaterThan(30);
 		expect(

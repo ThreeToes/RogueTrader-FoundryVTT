@@ -162,7 +162,7 @@ describe("rule-knob registry", () => {
 			"RULES.COMBAT_FIRE_MODE_BONUS_BURST",
 		);
 		expect(hintKeyFor("tables.hitLocations")).toBe(
-			"RULES.TABLES_HIT_LOCATIONS.HINT",
+			"RULES.TABLES_HIT_LOCATIONS_HINT",
 		);
 		// The shape matches the i18n parity guard's KEY_SHAPE, so the calls the
 		// later bead adds will satisfy its static-reference scan.

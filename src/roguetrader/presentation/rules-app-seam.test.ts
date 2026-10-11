@@ -121,7 +121,7 @@ const SIBLING_REGISTRY = {
 			key: "combat.standardMode",
 			path: ["fireModeBonus", "burst"],
 			labelKey: "RULES.COMBAT_STANDARD_MODE",
-			hintKey: "RULES.COMBAT_STANDARD_MODE.HINT",
+			hintKey: "RULES.COMBAT_STANDARD_MODE_HINT",
 			group: "combat",
 			control: "number",
 			hazard: "auto-recomputed",
@@ -131,7 +131,7 @@ const SIBLING_REGISTRY = {
 			key: "skills.untrainedPenalty",
 			path: ["untrainedSkill", "penalty"],
 			labelKey: "RULES.SKILLS_UNTRAINED_PENALTY",
-			hintKey: "RULES.SKILLS_UNTRAINED_PENALTY.HINT",
+			hintKey: "RULES.SKILLS_UNTRAINED_PENALTY_HINT",
 			group: "skills",
 			control: "number",
 			hazard: "auto-recomputed",
@@ -167,7 +167,7 @@ describe("the app resolves the ACTIVE system's registry", () => {
 		expect(groups.map((group) => group.group)).toEqual(["combat", "skills"]);
 		const standard = groups[0]!.fields[0]!;
 		expect(standard.labelKey).toBe("RULES.COMBAT_STANDARD_MODE");
-		expect(standard.hintKey).toBe("RULES.COMBAT_STANDARD_MODE.HINT");
+		expect(standard.hintKey).toBe("RULES.COMBAT_STANDARD_MODE_HINT");
 		expect(standard.hazardKey).toBe("RULES.HAZARD_AUTO_RECOMPUTED");
 		expect(standard.coreDisplay).toEqual({
 			none: false,

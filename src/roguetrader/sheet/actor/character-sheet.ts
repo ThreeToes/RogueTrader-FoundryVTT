@@ -4,6 +4,11 @@ import type { ActionOwnedItem } from "../../rules/actions";
 import { itemIdFromTarget } from "../dom";
 import { equipStateOf, isWeaponType, systemOf } from "../../data/accessors";
 import { sheetContext } from "../context";
+import {
+	INVENTORY_EXCLUDED_TYPES,
+	pcInventoryGroups,
+	type PcInventoryItemLike,
+} from "../pc-inventory";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -993,43 +998,45 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 						isWeapon: isWeaponType(type),
 					};
 				});
-		const inventory: Array<{
-			label: string;
-			items: Array<{
-				id: string | null;
-				name: string | null;
-				uuid: string;
-				weight: number;
-				equipState: string;
-				equipStateLabel: string;
-				equipped: boolean;
-				/** Only set on the ammunition group's rows (bead 8uc7). */
-				quantity?: number;
-				isAmmunition?: boolean;
-			}>;
-			addLabel?: string;
-			addAction?: string;
-		}> = [
-			{
-				label: "WEAPON.HEADER",
-				items: byType(["melee-weapon", "ranged-weapon"]),
-			},
-			{ label: "ARMOUR.HEADER", items: byType(["armour"]) },
-			{ label: "GEAR.HEADER", items: byType(["gear"]) },
-			// Ammunition group (bead 8uc7): owned ordnance was invisible on
-			// the inventory (no group in this context), so it could not be
-			// dragged onto a launcher. Rows stay draggable (core {type,
-			// uuid}); they show xN quantity in the weight slot and carry NO
-			// equip toggle (ammo is not equippable; the inventory template's
-			// isAmmunition branch renders them).
-			{
-				label: "AMMUNITION.HEADER",
-				items: byType(["ammunition"]).map((row) => ({
-					...row,
-					isAmmunition: true,
-				})),
-			},
-		];
+		// Inventory groups (bead packs-pu9): one row pass, then the pure grouping
+		// (the npc-inventory contract — a loud CATCH-ALL, so a dropped item of any
+		// type is rendered; the heirloom special-abilities (Table 1-2) landed
+		// invisibly before this). Weight display only — aggregation/encumbrance
+		// is deliberately NOT calculated here.
+		const inventory = pcInventoryGroups(
+			this.actor.items
+				.filter(
+					(item) => !INVENTORY_EXCLUDED_TYPES.has(item.type as string),
+				)
+				.map(
+					(item): PcInventoryItemLike => ({
+						id: item.id,
+						name: item.name,
+						uuid: item.uuid,
+						type: item.type as string,
+						weight:
+							(item.system as unknown as { weight?: number }).weight ?? 0,
+						// Gear-base quantity (bead 1sxq) - only the ammunition
+						// group renders it (xN usage count, bead 8uc7).
+						quantity:
+							(item.system as unknown as { quantity?: number }).quantity ?? 0,
+						equipState: equipStateOf(item),
+						// Localized label computed here (not via a template
+						// concat): module-registered states resolve through the
+						// registry when present, core states via the lang keys.
+						equipStateLabel: equipStateLabel(equipStateOf(item)),
+						equipped:
+							equipStateOf(item) === "carried" ||
+							equipStateOf(item) === "worn",
+						// Weapons get the inline attack/damage roll button.
+						isWeapon: isWeaponType(item.type as string),
+					}),
+			),
+		);
+
+		// Ammunition group note (bead 8uc7): rows stay draggable (core {type,
+		// uuid}); they show xN quantity in the weight slot and carry NO equip
+		// toggle (the pc-inventory module sets equippable/isAmmunition per row).
 
 		// Armour: highest AP per body location across WORN armour items (bead
 		// yb6 equip-state model: stowed armour contributes nothing, matching
@@ -1275,6 +1282,14 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// culled — the description field covers it).
 		context.motivationHTML = await enrich(system.life?.motivation ?? "");
 	}
+}
+
+/** Localized equip-state label: module-registered states resolve through the
+ * registry when present, core states via the lang keys (shared by the
+ * inventory rows; the byType talents path keeps its own inline copy). */
+function equipStateLabel(stateKey: string): string {
+	const registryLabel = equipStates.get(stateKey);
+	return registryLabel ? game.i18n!.localize(registryLabel) : (stateKey ?? "stowed");
 }
 
 // Affliction drop machinery — the mutation pack resolution, the procedure

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { pcInventoryGroups } from "../pc-inventory";
 
 // Static guard for the ammunition inventory group (bead 8uc7): owned
 // ordnance must stay visible + draggable on the character inventory. The
@@ -11,19 +12,62 @@ const template = readFileSync(
 	"template/sheet/actor/tabs/inventory.hbs",
 	"utf8",
 );
-const sheet = readFileSync(
-	"src/roguetrader/sheet/actor/character-sheet.ts",
-	"utf8",
-);
 
 describe("character inventory ammunition group (bead 8uc7)", () => {
-	test("the inventory context collects owned ammunition", () => {
-		expect(sheet).toContain('byType(["ammunition"])');
-		expect(sheet).toContain('label: "AMMUNITION.HEADER"');
+	test("the grouping module types the ammunition group (bead packs-pu9)", () => {
+		// The grouping moved into the pure pc-inventory module (packs-pu9); the
+		// ammunition group with its template marker lives there now.
+		const groups = pcInventoryGroups([
+			{
+				id: "a1",
+				name: "Frag Missile",
+				uuid: "Item.a1",
+				type: "ammunition",
+				weight: 0,
+				quantity: 2,
+				equipState: "stowed",
+				equipStateLabel: "stowed",
+				equipped: false,
+				isWeapon: false,
+			},
+		]);
+		expect(groups.map((group) => group.labelKey)).toEqual([
+			"AMMUNITION.HEADER",
+		]);
 	});
 
 	test("ammunition rows pass the isAmmunition marker to the template", () => {
-		expect(sheet).toContain("isAmmunition: true");
+		const groups = pcInventoryGroups([
+			{
+				id: "a1",
+				name: "Frag Missile",
+				uuid: "Item.a1",
+				type: "ammunition",
+				weight: 0,
+				quantity: 2,
+				equipState: "stowed",
+				equipStateLabel: "stowed",
+				equipped: false,
+				isWeapon: false,
+			},
+		]);
+		expect(groups[0].items[0].isAmmunition).toBe(true);
+		// Marker is on the row, never on the typed groups.
+		const notAmmo = pcInventoryGroups([
+			{
+				id: "g1",
+				name: "Rope",
+				uuid: "Item.g1",
+				type: "gear",
+				weight: 2,
+				quantity: 0,
+				equipState: "stowed",
+				equipStateLabel: "stowed",
+				equipped: false,
+				isWeapon: false,
+			},
+		]);
+		expect(notAmmo[0].items[0].isAmmunition).toBeUndefined();
 	});
 
 	// Slice out the ammunition row branch so the assertions only cover it,
@@ -45,7 +89,9 @@ describe("character inventory ammunition group (bead 8uc7)", () => {
 	});
 
 	test("ammunition rows show the xN quantity in the weight slot", () => {
-		expect(branch).toContain('weight=(concat "×" item.quantity)');
+		// The ×N label is now computed on the row (weightLabel) by the pure
+		// grouping; the template just passes it through (bead packs-pu9).
+		expect(branch).toContain("weight=item.weightLabel");
 	});
 
 	test("ammunition rows carry NO equip toggle (not equippable)", () => {

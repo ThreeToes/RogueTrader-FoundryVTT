@@ -914,6 +914,8 @@
 	"INVENTORY.STATE_ENCUMBERED": "Sobrecargado",
 	"INVENTORY.STATE_OVER": "Sobrepasado",
 	"INVENTORY.CALC_NOTES": "Los pesos agregados y los estados de sobrecarga llegarán con una actualización posterior de reglas.",
+	"INVENTORY.ABILITIES": "Capacidades especiales",
+	"INVENTORY.OTHER": "Otros objetos",
 	"GEAR.OPEN_SHEET": "Abrir ficha del objeto",
 	"GEAR.DELETE": "Borrar",
 	"AIMING.NONE": "Ninguna",

@@ -927,6 +927,8 @@
 	"INVENTORY.STATE_ENCUMBERED": "Encombré",
 	"INVENTORY.STATE_OVER": "Surchargé",
 	"INVENTORY.CALC_NOTES": "Les poids agrégés et les états d'encombrement arriveront avec une mise à jour ultérieure des règles.",
+	"INVENTORY.ABILITIES": "Capacités spéciales",
+	"INVENTORY.OTHER": "Autres objets",
 	"GEAR.OPEN_SHEET": "Ouvrir la fiche de l'objet",
 	"GEAR.DELETE": "Supprimer",
 	"AIMING.NONE": "Aucun",

@@ -951,6 +951,8 @@
 	"INVENTORY.STATE_ENCUMBERED": "Przeciążony",
 	"INVENTORY.STATE_OVER": "Przekroczono limit",
 	"INVENTORY.CALC_NOTES": "Zagregowane wagi i stany obciążenia pojawią się w późniejszej aktualizacji zasad.",
+	"INVENTORY.ABILITIES": "Umiejętności szczególne",
+	"INVENTORY.OTHER": "Inne przedmioty",
 	"GEAR.OPEN_SHEET": "Otwórz kartę przedmiotu",
 	"GEAR.DELETE": "Usuń",
 	"AIMING.NONE": "Brak",

@@ -1002,6 +1002,8 @@
 	"INVENTORY.STATE_ENCUMBERED": "Encumbered",
 	"INVENTORY.STATE_OVER": "Overloaded",
 	"INVENTORY.CALC_NOTES": "Aggregated item weights and encumbrance states come with a later rules update.",
+	"INVENTORY.ABILITIES": "Special Abilities",
+	"INVENTORY.OTHER": "Other Items",
 	"GEAR.OPEN_SHEET": "Open item sheet",
 	"GEAR.DELETE": "Delete",
 	"CAREER.HEADER": "Career",

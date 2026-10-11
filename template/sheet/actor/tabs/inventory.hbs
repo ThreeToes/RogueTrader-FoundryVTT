@@ -44,14 +44,14 @@
                  quantity as the xN usage count instead. --}}
             {{#> "rt/inv-row" id=item.id uuid=item.uuid name=item.name draggable=true gripVertical=true
                 openItem=true openItemTooltip=(localize "GEAR.OPEN_SHEET")
-                weight=(concat "×" item.quantity) weightTooltip=(localize "AMMUNITION.QUANTITY")
+                weight=item.weightLabel weightTooltip=(localize "AMMUNITION.QUANTITY")
                 deleteAction="deleteItem" deleteTooltip=(localize "GEAR.DELETE")}}
             {{/"rt/inv-row"}}
             {{else}}
             {{#> "rt/inv-row" id=item.id uuid=item.uuid name=item.name draggable=true gripVertical=true
                 openItem=true openItemTooltip=(localize "GEAR.OPEN_SHEET")
-                equipToggle=true equipped=item.equipped equipAction="toggleEquip" equipTooltip=item.equipStateLabel
-                weight=(concat item.weight " kg") weightTooltip=(localize "GEAR.WEIGHT")
+                equipToggle=item.equippable equipped=item.equipped equipAction="toggleEquip" equipTooltip=item.equipStateLabel
+                weight=item.weightLabel weightTooltip=(localize "GEAR.WEIGHT")
                 deleteAction="deleteItem" deleteTooltip=(localize "GEAR.DELETE")}}
             {{/"rt/inv-row"}}
             {{/if}}

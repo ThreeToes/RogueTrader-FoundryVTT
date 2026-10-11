@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, afterEach } from "bun:test";
 import { buildActorView } from "../model/build";
 import { collectEffects, collectEffectModifiers, effectKinds } from "./index";
 import { mergeModifiers } from "../../application/funnel";
@@ -7,6 +7,14 @@ import { mergeModifiers } from "../../application/funnel";
 // These tests pin the collector contract and the extension seam.
 
 describe("effect engine (epic kof0)", () => {
+	// bun test runs every file in ONE process: a kind registered here would
+	// reach the effect-editor-choices sweeps in effect-actions.test.ts when the
+	// file walk runs this file first (the order that broke CI). Unregister
+	// after every test, so the registry stays exactly what specs.ts shipped.
+	afterEach(() => {
+		effectKinds.unregister("test:module-bonus");
+	});
+
 	test("the core kinds are registered once", () => {
 		const kinds = effectKinds.kinds();
 		for (const kind of [

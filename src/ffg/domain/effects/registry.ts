@@ -20,6 +20,14 @@ export const effectKinds = {
 	register(spec: EffectSpec): void {
 		byKind.set(spec.kind, spec);
 	},
+	/** Remove a kind. The symmetric half of register: the extension-seam TEST
+	 * registers a bare kind and must not leak it into later sweeps of this
+	 * shared-process registry (bun test runs every file in ONE process, so a
+	 * leaked kind broke the editor-choices tests whenever the file walk ran
+	 * effects.test.ts first — the red CI on 2026-10-11). */
+	unregister(kind: string): void {
+		byKind.delete(kind);
+	},
 	get(kind: string): EffectSpec | undefined {
 		return byKind.get(kind);
 	},

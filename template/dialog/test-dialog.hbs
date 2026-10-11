@@ -1,14 +1,29 @@
 <div class="test-dialog">
+    {{!-- Bead wxut.7: the active house-rule profile is named where the roll's
+    numbers come from (AGENTS.md: modifiers are visible, silent modifiers are
+    bugs). Core rules render NOTHING here - no empty chip, no divider. The
+    button opens the rules app that edits the profile. --}}
+    {{#if profileIndicator}}
+    <button type="button" class="profile-indicator" data-action="openRules"
+        data-tooltip="{{profileIndicator.hint}}">
+        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        <span class="profile-indicator-label">{{profileIndicator.label}}</span>
+    </button>
+    {{/if}}
+
     {{#if attackContext}}
     <h3 class="dialog-group-label">{{localize "ROLL.SITUATIONAL"}}</h3>
     <div class="attack-context ledger">
+        {{!-- Bead 4hwl: the option bonus numbers are attackContext DATA
+        (homebrew-resolved fire-mode bonuses + AIM_BONUS constants) -- the
+        template carries no hardcoded bonus literals. --}}
         {{#if attackContext.ranged}}
         <div class="modifier-row fixed">
             <label class="ledger-field-label">{{localize "ROLL.FIRE_MODE"}}</label>
             <select class="attack-select" data-fire-mode>
                 <option value="single">{{localize "ROLL.FIRE_MODE_SINGLE"}}</option>
-                <option value="burst">{{localize "ROLL.FIRE_MODE_BURST"}} (+10)</option>
-                <option value="full">{{localize "ROLL.FIRE_MODE_FULL"}} (+20)</option>
+                <option value="burst">{{localize "ROLL.FIRE_MODE_BURST"}} (+{{attackContext.burstBonus}})</option>
+                <option value="full">{{localize "ROLL.FIRE_MODE_FULL"}} (+{{attackContext.fullBonus}})</option>
             </select>
         </div>
         {{/if}}
@@ -16,8 +31,8 @@
             <label class="ledger-field-label">{{localize "ROLL.AIM"}}</label>
             <select class="attack-select" data-aim>
                 <option value="none">{{localize "ROLL.AIM_NONE"}}</option>
-                <option value="half">{{localize "ROLL.AIM_HALF"}} (+10)</option>
-                <option value="full">{{localize "ROLL.AIM_FULL"}} (+20)</option>
+                <option value="half">{{localize "ROLL.AIM_HALF"}} (+{{attackContext.aimHalf}})</option>
+                <option value="full">{{localize "ROLL.AIM_FULL"}} (+{{attackContext.aimFull}})</option>
             </select>
         </div>
         {{#if attackContext.melee}}

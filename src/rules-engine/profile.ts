@@ -9,6 +9,8 @@
  * NOTE: rtCore currently encodes remembered Rogue Trainer core rules; the
  * crit handling (doubles) is flagged for verification against the core book.
  */
+import { MAX_CRITICAL_SEVERITY } from "./criticals";
+
 export interface RuleProfile {
 	/** Profile id, e.g. "rt-core". */
 	id: string;
@@ -34,9 +36,13 @@ export interface RuleProfile {
 	 */
 	righteousFury: { enabled: boolean; trigger: "damaging-hit" };
 	/**
-	 * Hit-location table: d100 TENS digit -> body location key. Keys follow
-	 * the bodyLocations registry (kebab case). (Best-remembered RT core spread,
-	 * VERIFY against the book.)
+	 * Hit-location table: reversed-roll range band -> body location key.
+	 * The Core Rulebook (Table 9-6: Hit Locations, printed p244) reverses the
+	 * digits of the to-hit percentile roll before reading the table, so bands
+	 * are keyed on the REVERSED value: e.g. roll 20 reads as 02.
+	 * Keys are "low-high" percents ("86-00" = 86 to 100, since 00 reads as
+	 * 100); values follow the bodyLocations registry (kebab case). Parsed by
+	 * locationForHit in test.ts.
 	 */
 	hitLocations: Record<string, string>;
 
@@ -88,6 +94,16 @@ export interface RuleProfile {
 	 * through the content port; a sibling system may pin pack ids.
 	 */
 	criticalTables?: { core: string | null; vehicle: string | null };
+	/**
+	 * Critical-Damage severity cap (bead wxut.1): the critical tables print ten
+	 * results, so a character cannot accumulate more than ten Critical Damage
+	 * in one location. Lifted out of criticals.ts as DATA so a house rule can
+	 * retune the cap; that module's constant stays the single source.
+	 *
+	 * Optional, like the other extension points, so a sibling profile only
+	 * carries what differs — consumers fall back to MAX_CRITICAL_SEVERITY.
+	 */
+	criticals?: { maxSeverity: number };
 }
 
 /** Rogue Trader core profile. */
@@ -99,17 +115,7 @@ export const rtCore: RuleProfile = {
 	primitiveArmourDouble: true,
 	righteousFury: { enabled: true, trigger: "damaging-hit" },
 	characteristics: {
-		keys: [
-			"ws",
-			"bs",
-			"s",
-			"t",
-			"ag",
-			"int",
-			"per",
-			"wp",
-			"fel",
-		],
+		keys: ["ws", "bs", "s", "t", "ag", "int", "per", "wp", "fel"],
 		labelPrefix: "CHARACTERISTIC",
 	},
 	skillCatalogPack: null,
@@ -118,17 +124,17 @@ export const rtCore: RuleProfile = {
 	startingFate: { model: "bands" },
 	psychic: { phenomenaTablePack: null },
 	criticalTables: { core: null, vehicle: null },
-	// tens digit of the to-hit roll -> body location (VERIFY against book)
+	// The critical severity cap as data (bead wxut.1) — read from the kernel
+	// constant rather than restated, so criticals.ts stays the single source.
+	criticals: { maxSeverity: MAX_CRITICAL_SEVERITY },
+	// Core Rulebook Table 9-6: Hit Locations (printed p244), keyed on the
+	// reversed roll: 01-10 / 11-20 / 21-30 / 31-70 / 71-85 / 86-00.
 	hitLocations: {
-		"0": "left-leg",
-		"1": "head",
-		"2": "right-arm",
-		"3": "right-arm",
-		"4": "left-arm",
-		"5": "left-arm",
-		"6": "body",
-		"7": "body",
-		"8": "right-leg",
-		"9": "right-leg",
+		"01-10": "head",
+		"11-20": "right-arm",
+		"21-30": "left-arm",
+		"31-70": "body",
+		"71-85": "right-leg",
+		"86-00": "left-leg",
 	},
 };

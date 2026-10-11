@@ -26,14 +26,18 @@ import {
 	criticalSeverity,
 	criticalTableName,
 	type CriticalResultRow,
+	MAX_CRITICAL_SEVERITY,
 	repairEffectCount,
 	selectCriticalResult,
 	splitWoundDamage,
 } from "../../rules-engine/index";
 import { ROLLTABLES_PACK } from "../application/packs";
 import { postCard } from "./chat-flags";
+import { bodyLocationLabelKey } from "./labels";
+import { effectiveProfile } from "./homebrew";
 import type { ContentPort } from "../../ffg/application/ports";
 import { getPorts } from "../infrastructure/foundry/ports";
+import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
 
 /** One suffered critical effect; stored on the actor until something clears it. */
 export interface CriticalEffectRow {
@@ -103,8 +107,7 @@ function itemsOf(actor: ActorLike): ItemLike[] {
  */
 export function wornBattlesuit(actor: unknown): ItemLike | undefined {
 	return itemsOf(asActor(actor)).find(
-		(item) =>
-			item.type === "battlesuit" && item.system?.equipState === "worn",
+		(item) => item.type === "battlesuit" && item.system?.equipState === "worn",
 	);
 }
 
@@ -138,9 +141,7 @@ export function criticalsOf(actor: unknown): Record<string, number> {
 
 /** Active critical effects on the actor. */
 export function criticalEffectsOf(actor: unknown): CriticalEffectRow[] {
-	return (
-		(asActor(actor).system?.criticalEffects as CriticalEffectRow[]) ?? []
-	);
+	return (asActor(actor).system?.criticalEffects as CriticalEffectRow[]) ?? [];
 }
 
 /** Total Critical Damage across every location (sheet summary). */
@@ -219,7 +220,13 @@ export async function resolveCritical(outcome: {
 
 	const location = outcome.location || "body";
 	const existing = Number(criticalsOf(actor)[location] ?? 0);
-	const severity = criticalSeverity(existing, excess);
+	// Bead wxut.2: the Critical Damage cap is profile DATA; the kernel
+	// constant stays the core value and registry source.
+	const effective = effectiveProfile();
+	const maxSeverity = Number.isFinite(effective.criticals?.maxSeverity)
+		? (effective.criticals?.maxSeverity ?? MAX_CRITICAL_SEVERITY)
+		: MAX_CRITICAL_SEVERITY;
+	const severity = criticalSeverity(existing, excess, maxSeverity);
 	const tableName = useBattlesuitTable
 		? BATTLESUIT_CRITICAL_TABLE
 		: criticalTableName(outcome.damageType, location);
@@ -246,7 +253,23 @@ export async function resolveCritical(outcome: {
 	const roll = outcome.tableRoll ?? (await rollDie(table.formula ?? "1d10"));
 	const row = selectCriticalResult(roll, Array.from(table.results ?? []));
 	if (!row) {
+		// A roll landing in no row means the installed table has a gap (a
+		// malformed/incomplete pack range). Report it — but still RECORD the
+		// critical the way the missing-table branch above does, so the location's
+		// accumulated Critical Damage is not lost: otherwise the NEXT critical in
+		// this location computes too low a severity (bead 152z).
 		result.warning = tableName;
+		result.manual = true;
+		result.effects.push({
+			id: effectId(),
+			location,
+			severity,
+			table: tableName,
+			roll,
+			source: useBattlesuitTable ? "battlesuit" : "core",
+			text: "",
+			manual: true,
+		});
 		return result;
 	}
 	result.effects.push({
@@ -280,15 +303,23 @@ export async function applyDamageWithCriticals(outcome: {
 	content?: ContentPort;
 }): Promise<CriticalOutcome> {
 	const actor = asActor(outcome.actor);
-	const supportsCriticals = actor.system?.criticals !== undefined &&
+	const supportsCriticals =
+		actor.system?.criticals !== undefined &&
 		actor.system?.criticalEffects !== undefined;
 	const currentWounds = Number(
 		(actor.system?.wounds as { value?: number } | undefined)?.value ?? 0,
 	);
 	const { applied, excess } = splitWoundDamage(currentWounds, outcome.damage);
 	if (!supportsCriticals) {
-		await actor.update?.({ system: { wounds: { value: Math.max(0, currentWounds - applied) } } });
-		return { effects: [], woundsApplied: applied, excess: 0, overrideUsed: false };
+		await actor.update?.({
+			system: { wounds: { value: Math.max(0, currentWounds - applied) } },
+		});
+		return {
+			effects: [],
+			woundsApplied: applied,
+			excess: 0,
+			overrideUsed: false,
+		};
 	}
 	const resolved = await resolveCritical({
 		actor: outcome.actor,
@@ -376,8 +407,7 @@ export function criticalSheetContext(actor: unknown): {
 	effects: Array<CriticalEffectRow & { locationLabelKey: string }>;
 	canRepair: boolean;
 } {
-	const labelKey = (location: string) =>
-		`BODY_LOCATION.${location.replace(/-/g, "_").toUpperCase()}`;
+	const labelKey = bodyLocationLabelKey;
 	const criticals = criticalsOf(actor);
 	const rows = Object.entries(criticals)
 		.filter(([, severity]) => Number(severity) > 0)
@@ -449,17 +479,17 @@ export async function postCriticalCard(
 		.map(() => ({ statusId: "stunned", labelKey: "STATUS.STUNNED" }));
 	await postCard(
 		actor,
-		"systems/rogue-trader/template/chat/critical.hbs",
+		`${TEMPLATE_ROOT}chat/critical.hbs`,
 		{
 			woundsApplied: retort.woundsApplied,
 			excess: retort.excess,
 			overrideUsed: retort.overrideUsed,
 			warning: retort.warning,
 			damageType: outcome.damageType,
-			locationLabelKey: `BODY_LOCATION.${outcome.location.toUpperCase()}`,
+			locationLabelKey: bodyLocationLabelKey(outcome.location),
 			effects: effects.map((effect) => ({
 				...effect,
-				locationLabelKey: `BODY_LOCATION.${effect.location.toUpperCase()}`,
+				locationLabelKey: bodyLocationLabelKey(effect.location),
 			})),
 			// The auto-suggested conditions + the target the button applies
 			// them to (bead ronn).

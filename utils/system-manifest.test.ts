@@ -21,8 +21,10 @@
  *
  * These guards keep it deleted and keep the shipped manifests ours.
  */
-import { existsSync, readFileSync } from "node:fs";
+
 import { describe, expect, it } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
+import { systemTarget } from "./systems";
 
 const MANIFESTS = [
 	"system-manifests/dev.json",
@@ -44,8 +46,23 @@ describe("repo manifest layout (bead v7wo)", () => {
 
 	it("the build ships from system-manifests and does not read the root", () => {
 		const build = readFileSync("utils/build.ts", "utf8");
-		expect(build).toContain("./system-manifests/dev.json");
-		expect(build).toContain("./release/rogue_trader/system.json");
+		// Bead w9sa.4: WHICH manifest ships is data in utils/systems.ts (one table
+		// for every buildable system), so the RT default is pinned there and
+		// build.ts resolves it through the table instead of spelling out its own
+		// paths. Same source of truth, one place it can drift.
+		expect(systemTarget("rogue-trader").manifest).toBe(
+			"./system-manifests/dev.json",
+		);
+		expect(readFileSync("utils/systems.ts", "utf8")).toContain(
+			"./system-manifests/dev.json",
+		);
+		expect(build).toContain("manifestSourceFor(target)");
+		// The output directory is likewise derived (the sibling has its own), so
+		// RT's destination is pinned through the target table.
+		expect(systemTarget("rogue-trader").packageDir).toBe("rogue_trader");
+		expect(build).toMatch(
+			/\.\/release\/\$\{target\.packageDir\}\/system\.json/,
+		);
 		// No reference to a root-level ./system.json as an INPUT.
 		expect(/readFile\(\s*["']\.\/system\.json["']/.test(build)).toBe(false);
 		expect(/existsSync\(\s*["']\.\/system\.json["']/.test(build)).toBe(false);

@@ -106,6 +106,32 @@ answerable there in minutes.
   Foundry refresh in the browser **IS the deploy step**.
 - Build prunes `release/rogue_trader/template`.
 - Foundry pack migrations regenerate gitignored LevelDB artifacts — don't delete them.
+- The LevelDB pack `LOG` journals are rewritten on every build (timestamps/sequence), so
+  two consecutive builds of unchanged sources differ in `release/**/packs/**/LOG` only.
+  Compare anything else byte-for-byte when checking a rebuild is inert.
+
+### 6a. Building the second system (Dark Heresy 2nd Edition, bead w9sa.4)
+
+One source tree, two Foundry systems. `bun run build` builds **Rogue Trader only** and
+its output is unchanged; the sibling is built by naming it:
+
+```bash
+bun utils/build.ts --system dark-heresy-2e   # or: SYSTEM=dark-heresy-2e bun run build
+```
+
+That writes `release/dark_heresy_2e/` (manifest + entry-point bundle). Its bundle resolves
+against the SHARED `src/ffg` + `src/rules-engine` and its own
+`src/dark_heresy_2e/**` module — there is deliberately no copy of `src/roguetrader`, and
+`src/dark_heresy_2e/bootstrap/index.test.ts` walks the import graph to keep it that way.
+Point a second world at it the way `~/Documents/rogue-trader-test` points at
+`release/rogue_trader`.
+
+What the DH2 package does NOT carry yet (each is later work, and none of it may be RT's
+files copied across): lang files, stylesheets, templates (including the roll card
+`rollCardTemplate` names), document types/sheets, and compendium packs. Until then a DH2
+world boots, resolves DH2's rules through the shared seams, and cannot yet create or roll
+for a character — the shared pipeline throws loudly naming the missing template rather
+than rendering an unresolved card.
 
 ## 7. i18n discipline
 
@@ -218,10 +244,26 @@ Session-earned map of where things live (beads fjw/yb6/r1k/bpd/ay0/g7k/tfk/9if):
   "or" = OR group; characteristic thresholds, "Psy Rating N", talent names,
   specials-as-names); soft confirm wired into the talent picker (parses
   "Prerequisites: ..." from the pack description) and the advancement dialog.
-- **Homebrew** (9if): `rules/homebrew.ts` — world setting `homebrewProfile`
-  (JSON) read via `CONFIG.ROGUE_TRADER.homebrew.getProfile` in the funnel;
-  pilot = fire-mode bonuses; add new overrides as profile fields + a resolver,
-  never if/else in contributors.
+- **Homebrew** (9if, profiles by epic wxut): `rules/homebrew.ts` is the
+  ONE rules seam — `effectiveProfile()` merges the ACTIVE profile's knob-keyed
+  delta over `rtCore` and memoises the result. Named profiles live in the two
+  world settings `ruleProfiles` (a JSON array of `{id, name, delta}`) and
+  `activeProfileId`, both `config: false` because they are edited by the
+  **rules app** (`presentation/rules-app.ts`, opened from a GM-only
+  `registerMenu` button) and nowhere else; the registry
+  (`src/ffg/domain/rule-knobs.ts`) describes every GM-tunable knob, and the
+  app's form, JSON tab, diff panel and import/export panel are all generated
+  from it (`presentation/rules-view-model.ts`). Sharing is a rules pack
+  (`rules/rule-profile-pack.ts`): `{kind, schemaVersion, profiles:
+  [{id, name, base, delta, snapshot?}]}`, exported to the clipboard or a .json
+  file and imported from a textarea or a picked file. Import is the LOUD path
+  (unlike the stored-setting read): a wrong kind, an unsupported schema version
+  or an unknown knob refuses the WHOLE pack and is named in the UI, the
+  snapshot is display-only metadata that never reaches resolution, and a
+  same-id profile is only replaced after the GM confirms. The retired
+  `homebrewProfile` setting is CLEARED on upgrade, never imported. Pilot =
+  fire-mode bonuses; add a new override as a registry entry, never as an
+  if/else in a contributor.
 - **Encumbrance** (yar): `rules/encumbrance.ts` — `carriedWeight` filters by
   equip state (carried weapons/gear, worn armour).
 

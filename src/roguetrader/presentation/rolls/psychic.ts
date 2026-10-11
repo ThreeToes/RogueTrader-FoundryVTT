@@ -17,7 +17,8 @@ import {
 	resolveCasting,
 	sorceryLearnable,
 } from "../../rules/casting";
-import { resolvePushCap, type HomebrewProfile } from "../../rules/homebrew";
+import { rtCore } from "../../../ffg/domain/system-profile";
+import { effectiveProfile } from "../../rules/homebrew";
 import { resolvePower } from "../../rules/power-resolution";
 import {
 	effectivePsyRating,
@@ -94,9 +95,19 @@ export const psychicHandler: RollHandler<"psychic"> = {
 		// Strength selection (Table 6-1): Fettered (half PR, no phenomena),
 		// Unfettered (full PR, doubles trigger phenomena), Push (+1..cap,
 		// automatic phenomena). Push cap: sanctioned +3, renegades/sorcerers
-		// +4 (book p157), overridable by the homebrew profile.
-		const homebrew = ports.config.homebrew() as HomebrewProfile | null;
-		const cap = resolvePushCap(homebrew, casting.sanctioned);
+		// +4 (book p157), overridable by the effective profile (bead wxut.2:
+		// resolvePushCap and psychic.ts#pushCap's literal copy are gone — the
+		// profile is the single representation).
+		const profile = effectiveProfile();
+		const rawCap = casting.sanctioned
+			? profile.pushCap.sanctioned
+			: profile.pushCap.other;
+		// Push must grant at least +1, and a non-finite house-rule value falls
+		// back to the core cap rather than poisoning the prompt.
+		const coreCap = rtCore.pushCap[casting.sanctioned ? "sanctioned" : "other"];
+		const cap = Number.isFinite(rawCap)
+			? Math.max(1, Math.floor(rawCap))
+			: coreCap;
 		const strength = request.skipDialog
 			? "unfettered"
 			: await promptStrength(cap);

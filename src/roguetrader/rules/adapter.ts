@@ -8,6 +8,7 @@ import {
 } from "../../rules-engine/index";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
 import { actorView } from "../../ffg/infrastructure/foundry/actor-view";
+import type { DiceResult, Ports } from "../../ffg/application/ports";
 import { getPorts } from "../infrastructure/foundry/ports";
 import * as damageDice from "../../ffg/application/damage-dice";
 import { bodyLocationLabelKey } from "./labels";
@@ -17,9 +18,11 @@ import {
 	collectTalentDamageEffects,
 	collectTargetTraitDamageEffects,
 	targetToughnessMultiplier,
+	type RollMechanics,
+	type TalentDamageCollection,
 } from "./talent-effects";
 import { postCard, type DamageRollFlag } from "./chat-flags";
-import { resolveAmmoAutoConsume, type HomebrewProfile } from "./homebrew";
+import { effectiveProfile } from "./homebrew";
 import { chatCardTitleDoc } from "../presentation/chat-doc-links";
 import {
 	type FireMode,
@@ -35,7 +38,11 @@ import {
 } from "../../ffg/application/funnel";
 import { TestDialog } from "./test-dialog";
 import { messageFlagNamespace } from "../../ffg/application/chat-flags";
-import { type AttackProfile, attackProfileOf } from "../../ffg/domain/model/attack";
+import {
+	type AttackProfile,
+	attackProfileOf,
+} from "../../ffg/domain/model/attack";
+import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
 
 /**
  * Thin Foundry adapter: the ONLY runtime Foundry-coupled rolling code.
@@ -124,12 +131,7 @@ export async function rollWeaponDamage(
 	// the throwaway d100 is rolled INSIDE postWeaponDamage (bead 9b95 F7:
 	// after the consume/refuse gates) — pass null to let it roll.
 	const target = ports.targets.actor() as Actor | null;
-	await postWeaponDamage(
-		actor,
-		(target ?? actor) as Actor,
-		profile,
-		null,
-	);
+	await postWeaponDamage(actor, (target ?? actor) as Actor, profile, null);
 }
 
 // DamageRollFlag moved to rules/chat-flags.ts (bead mvu2).
@@ -156,11 +158,12 @@ export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
 	const profile = attackProfileOf(
 		weapon as never,
 		owner ? ownedItemResolver(owner) : undefined,
-		owner ? ownedItemResolver(owner) as never : undefined,
+		owner ? (ownedItemResolver(owner) as never) : undefined,
 	);
 	if (!attacker || !profile) return;
+	const ports = getPorts();
 	if (profile.unusable) {
-		getPorts().notify.warn("ROLL.LAUNCHER_UNLOADED", { weapon: profile.name });
+		ports.notify.warn("ROLL.LAUNCHER_UNLOADED", { weapon: profile.name });
 		return;
 	}
 	const target = data.targetUuid
@@ -214,18 +217,16 @@ async function consumeFiredOrdnance(
 	const fired = profile.fired;
 	if (!fired?.uuid) return true;
 	const ports = getPorts();
-	const homebrew = ports.config.homebrew() as HomebrewProfile | null;
-	if (!resolveAmmoAutoConsume(homebrew)) return true;
+	const effective = effectiveProfile();
+	if (!effective.ammoAutoConsume) return true;
 	// F5 (bead 9b95): the ownership gate — a non-owner firing skips the
 	// consume (no write, no card death); the damage itself still posts.
 	if (!ports.permissions.canRoll(attacker)) return true;
-	const item = documentFromUuid(fired.uuid) as
-		| {
-				name?: string;
-				system?: { quantity?: number };
-				update?: (data: object) => Promise<void>;
-		  }
-		| null;
+	const item = documentFromUuid(fired.uuid) as {
+		name?: string;
+		system?: { quantity?: number };
+		update?: (data: object) => Promise<void>;
+	} | null;
 	// Loud, not silent: the profile claims a fired item that no longer
 	// resolves — refusing to pretend the shot was free (bead c9s3).
 	if (typeof item?.update !== "function") {
@@ -265,14 +266,296 @@ async function consumeFiredOrdnance(
 }
 
 /**
+ * The damage type as carried on the profile/card (bead d3yc): the canonical
+ * enum when the profile normalises, or the literal recovered from the parsed
+ * notation suffix (rules-engine parseDamageFormula).
+ */
+type DamageTypeLike =
+	| DamageType
+	| "Energy"
+	| "Impact"
+	| "Rending"
+	| "Explosive";
+
+/**
+ * Parsed damage notation for the card + the kernel roll (bead d3yc step,
+ * formerly inlined in postWeaponDamage): RT notation allows a trailing
+ * damage-type suffix ("1d10+4 E") which Foundry's Roll parser rejects —
+ * strip it first (bead 6tr); the parsed type also backfills profiles that
+ * never had a type set. A mutation attack may print ALTERNATIVES ("1d10+2 R
+ * (or E)", Corrosive Bile p369): the first is the default and the rest are
+ * surfaced on the card.
+ */
+function resolveDamageNotation(
+	ports: Ports,
+	profile: AttackProfile,
+): {
+	damageType: DamageTypeLike;
+	damageTypeLabelKey: string;
+	damageTypeAlternatives: string;
+	formula: string;
+} {
+	const parsed = parseDamageFormula(profile.damage || "1d5");
+	const damageType =
+		normaliseDamageType(profile.damageTypes[0]) ??
+		parsed.type ??
+		DamageType.Impact;
+	const damageTypeLabelKey = `DAMAGE_TYPE.${damageType.toUpperCase()}_SHORT`;
+	// A mutation attack can print damage-type ALTERNATIVES (Corrosive Bile,
+	// Core p369: "1d10+2 R (or E)"). The card resolves against the first, so
+	// the remaining choices are shown beside it rather than dropped silently.
+	const damageAlternatives = profile.damageTypes.slice(1).filter(Boolean);
+	const damageTypeAlternatives =
+		damageAlternatives.length > 0
+			? `${ports.i18n.t("CHAT.DAMAGE_TYPE_OR")} ${damageAlternatives.join(" / ")}`
+			: "";
+	return {
+		damageType,
+		damageTypeLabelKey,
+		damageTypeAlternatives,
+		formula: parsed.formula,
+	};
+}
+
+/**
+ * Roll-mechanic quality step (bead d3yc, formerly inlined in
+ * postWeaponDamage): Tearing rolls one extra damage die (lowest result
+ * discarded — book wording, NOT roll-twice) and bumps the total; Blast,
+ * unparryable and full-action restrictions are VISIBLE card notes — neither
+ * restriction is enforced by the pipeline (the target's reaction stays a
+ * manual decision), so it must be shown or the rule would be silently lost:
+ * Corrosive Bile "can be dodged, but not parried" and "Using it is a full
+ * action". Toxic is conditional on the hit actually wounding (book: "anyone
+ * that takes Damage from a Toxic weapon, after reduction for Armour and
+ * Toughness Bonus"); its note is added after resolveDamage (the gate is
+ * toxicActivates, rules/toxic.ts).
+ */
+async function applyRollQualityMechanics(
+	ports: Ports,
+	damageRoll: DiceResult,
+	mechanics: RollMechanics,
+	profile: AttackProfile,
+): Promise<{ damageTotal: number; qualityNotes: string[] }> {
+	let damageTotal = damageRoll.total;
+	const qualityNotes: string[] = [];
+	if (mechanics.tearing) {
+		// The DAMAGE die's results only (bead k98i): a mixed formula's other
+		// terms are not damage dice, so Tearing must not discard one of them.
+		const { faces, results: baseResults } = damageDice.tearingBase(damageRoll);
+		const extra = (await ports.dice.roll(`1d${faces}`)).total;
+		const tearing = applyTearing(baseResults, extra, faces);
+		if (tearing.added > 0) {
+			damageTotal += tearing.added;
+		}
+		qualityNotes.push(
+			ports.i18n.t("CHAT.QUALITY_TEARING", {
+				discarded: tearing.discarded,
+			}),
+		);
+	}
+	if (mechanics.blast !== null) {
+		qualityNotes.push(
+			ports.i18n.t("CHAT.QUALITY_BLAST", { rating: mechanics.blast }),
+		);
+	}
+	// Printed attack restrictions (bead kam1).
+	if (!profile.parryable) {
+		qualityNotes.push(ports.i18n.t("CHAT.ATTACK_UNPARRYABLE"));
+	}
+	if (profile.action === "full") {
+		qualityNotes.push(ports.i18n.t("CHAT.ATTACK_FULL_ACTION"));
+	}
+	return { damageTotal, qualityNotes };
+}
+
+/**
+ * Target soak inputs (bead d3yc step, formerly inlined in postWeaponDamage):
+ * the worn armour's value/primitive at the hit location, the weapon's
+ * primitive input and the Toughness Bonus the kernel soaks against.
+ *
+ * Bead xof: primitive-armour rule inputs — armourPrimitive from the worn
+ * armour's protectionType (any piece covering the location), weaponPrimitive
+ * from the weapon's boolean field or its "primitive" special quality.
+ *
+ * Bead zyv1: target-side trait damage machinery. Unnatural Toughness (×N)
+ * multiplies the TB; Machine is modelled in the pack as armour items and
+ * needs no extra handling here. The multiplier rule lives in the rules layer
+ * (targetToughnessMultiplier): max of the canonical characteristics.t.unnatural
+ * field and the trait tb-multiplier effects, so the same book trait carried
+ * both ways never double-counts.
+ */
+function collectTargetArmour(
+	target: Actor,
+	profile: AttackProfile,
+	location: ReturnType<typeof locationForHit>,
+): {
+	armourValue: number;
+	armourPrimitive: boolean;
+	weaponPrimitive: boolean;
+	toughnessBonus: number;
+	traitReduction: Modifier[];
+} {
+	const wornArmour = target.items.filter(
+		(i) => (i.type as string) === "armour" && equipStateOf(i) === "worn",
+	);
+	const armourPrimitive = wornArmour.some((i) => {
+		const sys = i.system as unknown as {
+			protectionType?: string;
+			armourAt(loc: string): number;
+		};
+		return sys.protectionType === "primitive" && sys.armourAt(location) > 0;
+	});
+	const weaponPrimitive =
+		profile.primitive ||
+		profile.qualities.some((q) => q.toLowerCase() === "primitive");
+	const armourValue = Math.max(
+		0,
+		...wornArmour.map((i) =>
+			(i.system as unknown as { armourAt(loc: string): number }).armourAt(
+				location,
+			),
+		),
+	);
+	const naturalToughnessBonus = Math.floor(
+		systemOf(target).effectiveCharacteristicValue("t") / 10,
+	);
+	const traitDamage = collectTargetTraitDamageEffects(actorView(target));
+	const toughnessBonus =
+		naturalToughnessBonus *
+		targetToughnessMultiplier(actorView(target), traitDamage);
+	return {
+		armourValue,
+		armourPrimitive,
+		weaponPrimitive,
+		toughnessBonus,
+		traitReduction: traitDamage.reduction,
+	};
+}
+
+/**
+ * Attacker talent damage effects (bead fjw step, formerly inlined in
+ * postWeaponDamage): damage-flat joins the roll before soak;
+ * critical-damage applies only when the to-hit was critical. Both are
+ * item-sourced talent effects, condition-guarded via flags.
+ */
+function collectAttackerTalentDamage(
+	attacker: Actor,
+	profile: AttackProfile,
+): TalentDamageCollection {
+	return collectTalentDamageEffects(actorView(attacker), {
+		attackType: profile.attackType,
+		// Bead 2k5: the attacking weapon's own damage effects apply; note
+		// the item id is needed for per-item matching.
+		weaponId: profile.id ?? undefined,
+	});
+}
+
+/**
+ * Card posting step (bead d3yc, formerly inlined in postWeaponDamage): the
+ * display-only damage card plus the apply-damage button flag so the click
+ * handler never recomputes, plus an application marker so the button cannot
+ * fire twice.
+ */
+async function postDamageCard(
+	ports: Ports,
+	attacker: Actor,
+	target: Actor,
+	profile: AttackProfile,
+	card: {
+		damage: ReturnType<typeof resolveDamage>;
+		location: ReturnType<typeof locationForHit>;
+		notation: {
+			damageType: DamageTypeLike;
+			damageTypeLabelKey: string;
+			damageTypeAlternatives: string;
+		};
+		damageContributors: Modifier[];
+		qualityNotes: string[];
+		toxicActivated: boolean;
+		isCritical: boolean;
+	},
+): Promise<void> {
+	const locationLabelKey = bodyLocationLabelKey(card.location);
+	await postCard(
+		attacker,
+		`${TEMPLATE_ROOT}chat/damage.hbs`,
+		{
+			title: `${attacker.name} → ${target.name} — ${profile.name}`,
+			// Bead qg4z: the weapon name (last title segment) links to its pack
+			// doc; the attacker → target part stays plain text.
+			titleDoc: await chatCardTitleDoc({
+				prefix: `${attacker.name} → ${target.name} — `,
+				name: profile.name,
+				kind: "weapon",
+			}),
+			hitSuccess: true,
+			locationLabelKey,
+			damageTypeLabelKey: card.notation.damageTypeLabelKey,
+			damageTypeAlternatives: card.notation.damageTypeAlternatives,
+			damage: card.damage,
+			// Bead atx: talent damage contributors shown as breakdown rows.
+			damageContributors: card.damageContributors,
+			// Bead gci0: roll-mechanic quality notes (Tearing/Toxic/Blast);
+			// Toxic only when the hit dealt damage after soak.
+			qualityNotes: card.qualityNotes,
+			// Bead d8bc: the Toughness-test prompt behind the damage-dealt
+			// gate — the penalty is computed once (−5 per damage point) and
+			// the button routes through the shared Test machinery.
+			toxic: card.toxicActivated
+				? {
+						targetUuid: target.uuid,
+						wounds: card.damage.wounds,
+						penalty: toxicToughnessPenalty(card.damage.wounds),
+						prompt: ports.i18n.t("CHAT.TOXIC_PROMPT", {
+							penalty: toxicToughnessPenalty(card.damage.wounds),
+							wounds: card.damage.wounds,
+						}),
+					}
+				: null,
+			isCriticalHit: card.isCritical,
+			targetUuid: target.uuid,
+			// Bead 4obp: the usage chip — what fired + the remaining quantity
+			// (the fired item's Gear.quantity), with the one-click spend button.
+			// Manual tracking: the chip never auto-consumes (bead mrl4 owns that).
+			fired: profile.fired ?? null,
+		},
+		// Apply-damage button data (bead ncc): the card stays a data-only
+		// kernel consumer - the flag carries the displayed outcome so the
+		// click handler never recomputes.
+		{
+			// Namespace from the profile (bead p7jv): RT's value is
+			// "rogue-trader", so the wire format is unchanged.
+			[messageFlagNamespace(ports)]: {
+				damageApply: {
+					wounds: card.damage.wounds,
+					targetUuid: target.uuid,
+					applied: false,
+					// Bead ks3k: the apply step converts damage past 0 Wounds into
+					// Critical Damage, which needs the type and the hit location.
+					damageType: String(card.notation.damageType ?? "Impact"),
+					location: card.location,
+				},
+			},
+		},
+	);
+}
+
+/**
  * b02/1h2 damage handoff: roll the weapon's damage formula, determine hit
- * location from the to-hit tens digit, resolve via the kernel against the
+ * location by reversing the to-hit roll's digits and reading the resulting
+ * value against the profile's Table 9-6 bands (locationForHit — a rolled 23
+ * reads as "32", a body hit), resolve via the kernel against the
  * target's worn armour and toughness bonus, and post the damage card. The
  * card is display-only - no HP mutation (apply-damage buttons later).
  *
  * Bead fjw: talent damage effects (kind "damage-flat" / "critical-damage",
  * e.g. Crushing Blow, Crack Shot) are collected from the attacker's owned
  * talents and fed into the kernel request; the card shows the breakdown.
+ *
+ * Bead d3yc: decomposed into named steps (resolveDamageNotation,
+ * applyRollQualityMechanics, collectTargetArmour, collectAttackerTalentDamage,
+ * postDamageCard) — a pure restructuring, no behaviour change; `ports` is
+ * bound once and reused.
  */
 async function postWeaponDamage(
 	attacker: Actor,
@@ -306,36 +589,15 @@ async function postWeaponDamage(
 	// Bead 9b95 F7: the sheet quick-damage path's throwaway 1d100 location
 	// die is rolled only AFTER the consume/refuse gates — an exhausted
 	// launcher refuses without burning a die.
-	const resolvedHitRoll =
-		hitRoll ?? (await ports.dice.roll("1d100")).total;
-	// RT notation allows a trailing damage-type suffix ("1d10+4 E") which
-	// Foundry's Roll parser rejects - strip it first (bead 6tr); the parsed
-	// type also backfills profiles that never had a type set. A mutation attack
-	// may print ALTERNATIVES ("1d10+2 R (or E)", Corrosive Bile p369): the
-	// first is the default and the rest are surfaced on the card.
-	const parsed = parseDamageFormula(profile.damage || "1d5");
-	const damageType =
-		normaliseDamageType(profile.damageTypes[0]) ??
-		parsed.type ??
-		DamageType.Impact;
-	const damageTypeLabelKey = `DAMAGE_TYPE.${damageType.toUpperCase()}_SHORT`;
-	// A mutation attack can print damage-type ALTERNATIVES (Corrosive Bile,
-	// Core p369: "1d10+2 R (or E)"). The card resolves against the first, so
-	// the remaining choices are shown beside it rather than dropped silently.
-	const damageAlternatives = profile.damageTypes.slice(1).filter(Boolean);
-	const damageTypeAlternatives =
-		damageAlternatives.length > 0
-			? `${getPorts().i18n.t("CHAT.DAMAGE_TYPE_OR")} ${damageAlternatives.join(" / ")}`
-			: "";
-	const { formula } = parsed;
-	const damageRoll = await getPorts().dice.roll(formula);
-	let damageTotal = damageRoll.total;
-
+	const resolvedHitRoll = hitRoll ?? (await ports.dice.roll("1d100")).total;
+	// Step d3yc-1: the notation — suffix strip (bead 6tr), type normalise
+	// and the card's type labels (see resolveDamageNotation).
+	const notation = resolveDamageNotation(ports, profile);
+	const damageRoll = await ports.dice.roll(notation.formula);
 	// Righteous Fury trigger (RT core, VERIFY wording): a natural 10 on a
 	// damage die. The dice port reports the terms, so the kernel need not see
 	// a Foundry roll (bead k98i).
 	const righteousFuryTriggered = damageDice.righteousFuryTriggered(damageRoll);
-
 	// Roll-mechanic weapon qualities (bead gci0): Tearing rolls one extra
 	// damage die (lowest result discarded — book wording, NOT roll-twice);
 	// Toxic/Blast are post-resolution prompts shown on the card.
@@ -346,121 +608,50 @@ async function postWeaponDamage(
 		// Tearing in its `attack.qualities`, not in a weapon system.special.
 		special: profile.qualities,
 	});
-	const qualityNotes: string[] = [];
-	if (mechanics.tearing) {
-		// The DAMAGE die's results only (bead k98i): a mixed formula's other
-		// terms are not damage dice, so Tearing must not discard one of them.
-		const { faces, results: baseResults } = damageDice.tearingBase(damageRoll);
-		const extra = (await getPorts().dice.roll(`1d${faces}`)).total;
-		const tearing = applyTearing(baseResults, extra, faces);
-		if (tearing.added > 0) {
-			damageTotal += tearing.added;
-		}
-		qualityNotes.push(
-			getPorts().i18n.t("CHAT.QUALITY_TEARING", {
-				discarded: tearing.discarded,
-			}),
-		);
-	}
-	if (mechanics.blast !== null) {
-		qualityNotes.push(
-			getPorts().i18n.t("CHAT.QUALITY_BLAST", { rating: mechanics.blast }),
-		);
-	}
-	// Printed attack restrictions (bead kam1). Neither is enforced by the
-	// pipeline (the target's reaction stays a manual decision), so they must
-	// be VISIBLE here or the rule would be silently lost: Corrosive Bile
-	// "can be dodged, but not parried" and "Using it is a full action".
-	if (!profile.parryable) {
-		qualityNotes.push(getPorts().i18n.t("CHAT.ATTACK_UNPARRYABLE"));
-	}
-	if (profile.action === "full") {
-		qualityNotes.push(getPorts().i18n.t("CHAT.ATTACK_FULL_ACTION"));
-	}
-	// Toxic is conditional on the hit actually wounding (book: "anyone that
-	// takes Damage from a Toxic weapon, after reduction for Armour and
-	// Toughness Bonus"); the note + test button are added after resolveDamage
-	// below (the gate is toxicActivates, rules/toxic.ts).
+	// Step d3yc-2: quality mechanics on the roll — Tearing bumps the total
+	// and Blast/unparryable/full-action become card notes (see
+	// applyRollQualityMechanics).
+	const { damageTotal, qualityNotes } = await applyRollQualityMechanics(
+		ports,
+		damageRoll,
+		mechanics,
+		profile,
+	);
 
 	// Bead yojf: the kernel profile resolves through ports.config.profile()
 	// instead of a direct rtCore import, so a sibling module swaps one binding.
-	const ruleProfile = getPorts().config.profile();
+	const ruleProfile = ports.config.profile();
 	const location = locationForHit(resolvedHitRoll ?? 0, ruleProfile);
-	const wornArmour = target.items.filter(
-		(i) =>
-			(i.type as string) === "armour" &&
-			equipStateOf(i) === "worn",
-	);
-	// Bead xof: primitive-armour rule inputs — armourPrimitive from the worn
-	// armour's protectionType (any piece covering the location), weaponPrimitive
-	// from the weapon's boolean field or its "primitive" special quality.
-	const armourPrimitive = wornArmour.some((i) => {
-		const sys = i.system as unknown as {
-			protectionType?: string;
-			armourAt(loc: string): number;
-		};
-		return sys.protectionType === "primitive" && sys.armourAt(location) > 0;
-	});
-	const weaponPrimitive =
-		profile.primitive ||
-		profile.qualities.some((q) => q.toLowerCase() === "primitive");
-	const armourValue = Math.max(
-		0,
-		...wornArmour.map((i) =>
-			(i.system as unknown as { armourAt(loc: string): number }).armourAt(
-				location,
-			),
-		),
-	);
-	const naturalToughnessBonus = Math.floor(
-		(systemOf(target)).effectiveCharacteristicValue("t") / 10,
-	);
-	// Bead zyv1: target-side trait damage machinery. Unnatural Toughness
-	// (×N) multiplies the TB; Machine is modelled in the pack as armour items
-	// and needs no extra handling here. The multiplier rule lives in the
-	// rules layer (targetToughnessMultiplier): max of the canonical
-	// characteristics.t.unnatural field and the trait tb-multiplier effects,
-	// so the same book trait carried both ways never double-counts.
-	const traitDamage = collectTargetTraitDamageEffects(actorView(target));
-	const toughnessBonus =
-		naturalToughnessBonus * targetToughnessMultiplier(actorView(target), traitDamage);
+	// Step d3yc-3: the target's soak inputs — worn armour value/primitive
+	// flags and the (trait-multiplied) Toughness Bonus (see
+	// collectTargetArmour).
+	const soak = collectTargetArmour(target, profile, location);
 
-	// Talent damage effects (bead fjw): damage-flat joins the roll before
-	// soak; critical-damage applies only when the to-hit was critical.
-	// Both are item-sourced talent effects, condition-guarded via flags.
-	const attackType = profile.attackType;
-	const talentDamage = collectTalentDamageEffects(actorView(attacker), {
-		attackType,
-		// Bead 2k5: the attacking weapon's own damage effects apply; note
-		// the item id is needed for per-item matching.
-		weaponId: profile.id ?? undefined,
-	});
+	// Step d3yc-4: attacker talent damage effects (bead fjw): damage-flat
+	// joins the roll before soak; critical-damage applies only when the to-hit
+	// was critical; both are condition-guarded via flags (see
+	// collectAttackerTalentDamage).
+	const talentDamage = collectAttackerTalentDamage(attacker, profile);
 	// Card breakdown: flat damage always; critical-damage rows only on a
 	// critical hit (they are gated in the kernel by isCritical); trait
 	// damage-reduction rows always (they soak regardless of the hit type).
 	const damageContributors = [
 		...(isCritical ? talentDamage.critical : []),
 		...talentDamage.damage,
-		...traitDamage.reduction,
+		...soak.traitReduction,
 	];
 
 	const damage = resolveDamage({
 		roll: damageTotal,
 		penetration: profile.penetration,
 		// Bead xof: wire the primitive-armour rule through at runtime.
-		weaponPrimitive,
-		armourPrimitive,
-		toughnessBonus,
+		weaponPrimitive: soak.weaponPrimitive,
+		armourPrimitive: soak.armourPrimitive,
+		toughnessBonus: soak.toughnessBonus,
 		location,
-		armourValue,
-		flatDamage: talentDamage.damage.reduce(
-			(sum, mod) => sum + mod.value,
-			0,
-		),
-		flatReduction: traitDamage.reduction.reduce(
-			(sum, mod) => sum + mod.value,
-			0,
-		),
+		armourValue: soak.armourValue,
+		flatDamage: talentDamage.damage.reduce((sum, mod) => sum + mod.value, 0),
+		flatReduction: soak.traitReduction.reduce((sum, mod) => sum + mod.value, 0),
 		criticalDamage: talentDamage.critical.reduce(
 			(sum, mod) => sum + mod.value,
 			0,
@@ -470,82 +661,25 @@ async function postWeaponDamage(
 		profile: ruleProfile,
 	});
 
-	const locationLabelKey = bodyLocationLabelKey(location);
-	// Toxic (beads gci0 + d8bc, owner rule text): the Toughness-test gate only
+	// Step d3yc-5: the toxic gate + the card (see postDamageCard). Toxic
+	// (beads gci0 + d8bc, owner rule text): the Toughness-test gate only
 	// when the hit dealt damage after Armour + Toughness reduction (zero
-	// damage = no poison). The card carries the computed −5-per-damage-point
-	// penalty and a button that routes the victim's Toughness Test through
-	// the shared Test machinery (visible funnel contributor); the GM-facing
-	// note on secondary effects is the CHAT.QUALITY_TOXIC line (1d10 Impact,
-	// no reduction — Core Rulebook printed p117; per-toxin extras stay
-	// GM-facing prose).
+	// damage = no poison); the GM-facing note is the CHAT.QUALITY_TOXIC line
+	// (1d10 Impact, no reduction — Core Rulebook printed p117; per-toxin
+	// extras stay GM-facing prose).
 	const toxicActivated = toxicActivates(mechanics.toxic, damage.wounds);
 	if (toxicActivated) {
-		qualityNotes.push(getPorts().i18n.t("CHAT.QUALITY_TOXIC"));
+		qualityNotes.push(ports.i18n.t("CHAT.QUALITY_TOXIC"));
 	}
-	await postCard(
-		attacker,
-		"systems/rogue-trader/template/chat/damage.hbs",
-		{
-			title: `${attacker.name} → ${target.name} — ${profile.name}`,
-			// Bead qg4z: the weapon name (last title segment) links to its pack
-			// doc; the attacker → target part stays plain text.
-			titleDoc: await chatCardTitleDoc({
-				prefix: `${attacker.name} → ${target.name} — `,
-				name: profile.name,
-				kind: "weapon",
-			}),
-			hitSuccess: true,
-			locationLabelKey,
-			damageTypeLabelKey,
-			damageTypeAlternatives,
-			damage,
-			// Bead atx: talent damage contributors shown as breakdown rows.
-			damageContributors,
-			// Bead gci0: roll-mechanic quality notes (Tearing/Toxic/Blast);
-			// Toxic only when the hit dealt damage after soak.
-			qualityNotes,
-			// Bead d8bc: the Toughness-test prompt behind the damage-dealt
-			// gate — the penalty is computed once (−5 per damage point) and
-			// the button routes through the shared Test machinery.
-			toxic: toxicActivated
-				? {
-						targetUuid: target.uuid,
-						wounds: damage.wounds,
-						penalty: toxicToughnessPenalty(damage.wounds),
-						prompt: getPorts().i18n.t("CHAT.TOXIC_PROMPT", {
-							penalty: toxicToughnessPenalty(damage.wounds),
-							wounds: damage.wounds,
-						}),
-					}
-				: null,
-			isCriticalHit: isCritical,
-			targetUuid: target.uuid,
-			// Bead 4obp: the usage chip — what fired + the remaining quantity
-			// (the fired item's Gear.quantity), with the one-click spend button.
-			// Manual tracking: the chip never auto-consumes (bead mrl4 owns that).
-			fired: profile.fired ?? null,
-		},
-		// Apply-damage button data (bead ncc): the card stays a data-only
-		// kernel consumer - the flag carries the displayed outcome so the
-		// click handler never recomputes, plus an application marker so the
-		// button cannot fire twice.
-		{
-			// Namespace from the profile (bead p7jv): RT's value is
-			// "rogue-trader", so the wire format is unchanged.
-			[messageFlagNamespace(ports)]: {
-				damageApply: {
-					wounds: damage.wounds,
-					targetUuid: target.uuid,
-					applied: false,
-					// Bead ks3k: the apply step converts damage past 0 Wounds into
-					// Critical Damage, which needs the type and the hit location.
-					damageType: String(damageType ?? "Impact"),
-					location,
-				},
-			},
-		},
-	);
+	await postDamageCard(ports, attacker, target, profile, {
+		damage,
+		location,
+		notation,
+		damageContributors,
+		qualityNotes,
+		toxicActivated,
+		isCritical,
+	});
 }
 
 /** Toggle a power in/out of the sustained list (bead sa6, book p157). */
@@ -617,8 +751,16 @@ export async function rollInitiativeAction(actor: Actor): Promise<unknown> {
 	) {
 		return undefined;
 	}
-	const agBonus = (system as { characteristicBonus: (k: string) => number }).characteristicBonus("ag");
-	// One collector — the same rows the model's initiativeBonus getter folds.
+	const agBonus = (
+		system as { characteristicBonus: (k: string) => number }
+	).characteristicBonus("ag");
+	// One collector — the same explicit rows the model's initiativeBonus
+	// getter folds (kind "initiative", exact key only). Wildcard/condition
+	// funnel rows apply on DIALOG paths and are deliberately NOT part of the
+	// algebra: the tracker's bulk formula roll cannot carry guarded or
+	// wildcard contributions, so both routes count the same explicit set and
+	// never double-count (review finding 4: the old comment said the
+	// opposite).
 	const collected = collectTestModifiers(actorView(actor), {
 		kind: "initiative",
 		key: "initiative",
@@ -645,31 +787,24 @@ export async function rollInitiativeAction(actor: Actor): Promise<unknown> {
 	// is both the arithmetic and the card's breakdown (never silent rows).
 	const merged = mergeModifiers(dialog.modifiers, rows);
 	const total = (await ports.dice.roll("1d10")).total + sumModifiers(merged);
-	// Combat integration: assign to the combatant when the actor is on the
-	// active tracker (core reads the value from there).
+	// Combat integration: assign to EVERY combatant of this actor on the
+	// active tracker (a multi-token actor keeps its tokens in step — the old
+	// core path rolled all of them; review finding 3).
 	const combatants = (
 		game as { combat?: { combatants?: Iterable<CombatantLike> } | null }
 	).combat?.combatants;
-	const assigned = combatants
-		? [...combatants].some((c) => c.actorId === (actor as { id?: string }).id)
-		: false;
-	const targetCombatant = combatants
-		? [...combatants].find(
-				(c) => c.actorId === (actor as { id?: string }).id,
-		)
-		: undefined;
-	if (targetCombatant) {
-		await targetCombatant.update({ initiative: total } as never);
+	const mine = combatants
+		? [...combatants].filter((c) => c.actorId === (actor as { id?: string }).id)
+		: [];
+	for (const combatant of mine) {
+		await combatant.update({ initiative: total } as never);
 	}
-	await postCard(
-		actor,
-		"systems/rogue-trader/template/chat/initiative.hbs",
-		{
-			title: actor.name ?? "",
-			value: total,
-			analysis: breakdown(merged),
-			assigned,
-		},
-	);
+	const assigned = mine.length > 0;
+	await postCard(actor, `${TEMPLATE_ROOT}chat/initiative.hbs`, {
+		title: actor.name ?? "",
+		value: total,
+		analysis: breakdown(merged),
+		assigned,
+	});
 	return total;
 }

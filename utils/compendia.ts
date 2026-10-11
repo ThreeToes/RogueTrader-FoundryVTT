@@ -144,6 +144,12 @@ const SOURCE_TOP_LABELS: Readonly<Record<string, string | null>> = {
 	tools: "Tools",
 	cybernetics: "Cybernetics",
 	"tau-armoury": "Tau Armoury",
+	// Tau battlesuit systems (bead g4vn): nested under the book TOC's own
+	// chapter heading "Tau Battlesuits" (Tau Character Guide printed p30;
+	// its Nanocrystalline Armour/Primary/Support/Signature/Weapons sections
+	// span pp31-37).
+	"tau-battlesuit-systems": "Tau Battlesuits",
+	"tau-weapon-systems": "Tau Battlesuits",
 	heirlooms: "Heirlooms",
 	// Starting kits (owner rework 2026): keyed by career inside the packs' kit
 	// source file; label mirrors the Heirlooms-style grouping.
@@ -254,6 +260,18 @@ const WEAPON_GROUP_LABELS: Record<string, string> = {
 	thrown: "Thrown Weapons",
 };
 
+/**
+ * Tau battlesuit-system `category` → folder label (bead g4vn): the book's own
+ * section headers — Primary Systems (Tau Character Guide printed p31),
+ * Support Systems (p33), Signature Systems (p35). Unmapped categories fail
+ * loudly in resolveEntryGroup, per conventions.
+ */
+const BATTLESUIT_SYSTEM_GROUP_LABELS: Readonly<Record<string, string>> = {
+	primary: "Primary Systems",
+	support: "Support Systems",
+	signature: "Signature Systems",
+};
+
 /** Armour name → folder label (rt_core pp137-139 sections; FC p93). */
 const ARMOUR_GROUPS: Record<string, string> = {
 	// rt_core Table 5-7: Primitive Armour (p137).
@@ -332,14 +350,14 @@ const ARMOUR_GROUPS: Record<string, string> = {
 	"Xenohide Cloak": "Dark Eldar Armour & Fields",
 	"Kabalite Armour": "Dark Eldar Armour & Fields",
 	"Ghostplate Armour": "Dark Eldar Armour & Fields",
-	"Wychsuit": "Dark Eldar Armour & Fields",
+	Wychsuit: "Dark Eldar Armour & Fields",
 	"Shadow Field": "Dark Eldar Armour & Fields",
 	"Clone Field": "Dark Eldar Armour & Fields",
 	// Faith and Coin relic (bead dfb8, printed p104) — a force field.
 	"The Halo of the Devoted": "Fields",
 	// Into the Storm Table 3-8 (bead dfb8, printed p129).
 	"Flexsteel Suit": "Exotic Armour",
-	"Delphis Mark II \"Ironclad\" Heavy Power Armour": "Power Armour",
+	'Delphis Mark II "Ironclad" Heavy Power Armour': "Power Armour",
 	'"Frost" Thermal Armour': "Exotic Armour",
 };
 
@@ -364,7 +382,12 @@ const GEAR_PAGE_GROUPS: Array<{
 	// (printed p57), unusual ammunition Table 2-15 (p59), gear and tools
 	// Table 2-18 (p65). Bands cover the table pages their entries cite.
 	{ book: "hostile_acquisitions", min: 57, max: 58, label: "Weapon Upgrades" },
-	{ book: "hostile_acquisitions", min: 59, max: 61, label: "Unusual Ammunition" },
+	{
+		book: "hostile_acquisitions",
+		min: 59,
+		max: 61,
+		label: "Unusual Ammunition",
+	},
 	{ book: "hostile_acquisitions", min: 64, max: 66, label: "Gear" },
 	// Into the Storm Ch III (bead dfb8): weapon upgrades Table 3-6 (printed
 	// p127), clothing Table 3-11 (printed pp132-133), Kroot gear Table 3-22
@@ -383,6 +406,11 @@ const GROUPED_PACKS: ReadonlySet<string> = new Set([
 	"gametables",
 	"npcs",
 	"warrant",
+	// Tau battlesuit machinery (bead g4vn): the generated system sources
+	// landed 34 root items in the merged equipment pack; grouped by the
+	// book's own section headers (BATTLESUIT_SYSTEM_GROUP_LABELS below).
+	"tau-battlesuit-systems",
+	"tau-weapon-systems",
 ]);
 
 /**
@@ -532,10 +560,10 @@ const GAME_TABLE_GROUPS: Readonly<Record<string, string>> = {
 	"test-difficulty": "Core Rulebook — Reference",
 	"skill-tests": "Core Rulebook — Reference",
 	"characteristic-tests": "Core Rulebook — Reference",
-	"movement": "Core Rulebook — Reference",
-	"size": "Core Rulebook — Reference",
+	movement: "Core Rulebook — Reference",
+	size: "Core Rulebook — Reference",
 	"encounter-difficulty": "Core Rulebook — Reference",
-	"dispositions": "Core Rulebook — Reference",
+	dispositions: "Core Rulebook — Reference",
 	"exploration-challenge": "Core Rulebook — Reference",
 	"investigation-benchmark": "Core Rulebook — Reference",
 	"investigation-reliability": "Core Rulebook — Reference",
@@ -721,8 +749,11 @@ export function resolveEntryGroup(
 		}
 		return label;
 	}
-	const source = ((entry.system ?? {}) as { source?: { book?: string; page?: number } })
-		.source ?? (entry.source as { book?: string; page?: number } | undefined) ?? {};
+	const source =
+		((entry.system ?? {}) as { source?: { book?: string; page?: number } })
+			.source ??
+		(entry.source as { book?: string; page?: number } | undefined) ??
+		{};
 	const book = String(source.book ?? "");
 	const page = Number(source.page ?? NaN);
 	if (pack === "gear") {
@@ -757,6 +788,23 @@ export function resolveEntryGroup(
 		return label;
 	}
 	if (pack === "npcs") return npcGroupLabel(entry);
+	// Tau battlesuit systems (bead g4vn): the book's own section headers —
+	// "Primary Systems" (Tau Character Guide printed p31), "Support Systems"
+	// (p33), "Signature Systems" (p35); the intra label nests under the
+	// "Tau Battlesuits" chapter heading via SOURCE_TOP_LABELS. Unmapped
+	// categories fail loudly, per conventions.
+	if (pack === "tau-battlesuit-systems") {
+		const label = BATTLESUIT_SYSTEM_GROUP_LABELS[String(system.category ?? "")];
+		if (!label) {
+			throw new Error(
+				`grouping: tau-battlesuit-systems/${String(entry.name)}: no folder label for category "${String(system.category ?? "")}" — extend BATTLESUIT_SYSTEM_GROUP_LABELS (loud failure)`,
+			);
+		}
+		return label;
+	}
+	// Table 1-7: Tau Battlesuit Weapons Systems (printed p35; the TOC's
+	// "Weapons Systems" section, p37) — one folder for the whole source.
+	if (pack === "tau-weapon-systems") return "Weapons Systems";
 	if (pack === "gametables") {
 		const kind = String((entry.system ?? {}).kind ?? "");
 		const label = GAME_TABLE_GROUPS[kind];
@@ -851,7 +899,13 @@ export function buildPackFolders(
 				`grouping: ${pack}: group "${label}" has no parent folder — add a "${parts.slice(0, -1).join("/")}" group (loud failure)`,
 			);
 		}
-		const doc = toFolderSourceDocument(pack, label, parentKey ?? null, sort, folderType);
+		const doc = toFolderSourceDocument(
+			pack,
+			label,
+			parentKey ?? null,
+			sort,
+			folderType,
+		);
 		byLabel.set(label, String(doc._id));
 		folders.push(doc);
 		sort += 10;
@@ -878,10 +932,7 @@ export const TABLE_PACKS: ReadonlySet<string> = new Set(["rolltables"]);
  * (deleteOrphanDocuments), so every item record must belong to a stored
  * actor.
  */
-export const ACTOR_PACKS: ReadonlySet<string> = new Set([
-	"npcs",
-	"vessels",
-]);
+export const ACTOR_PACKS: ReadonlySet<string> = new Set(["npcs", "vessels"]);
 
 export function actorKey(actorId: string): string {
 	return `!actors!${actorId}`;
@@ -935,45 +986,48 @@ export function resolveLinks(text: string, index: LinkIndex): string {
 	for (const targets of index.values()) {
 		for (const target of targets) packs.add(target.pack);
 	}
-	return text.replace(/\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g, (_m, rawName, label) => {
-		const raw = String(rawName).trim();
-		const colon = raw.indexOf(":");
-		const prefix = colon > 0 ? raw.slice(0, colon).trim() : "";
-		const rest = colon > 0 ? raw.slice(colon + 1).trim() : raw;
-		let name = raw;
-		let targets: LinkTarget[] = [];
-		if (colon > 0 && packs.has(prefix)) {
-			// Pack-qualified: [[pack:Name]].
-			name = rest;
-			targets = (index.get(name) ?? []).filter((t) => t.pack === prefix);
-		} else if (colon > 0) {
-			// Type-qualified: [[trait:Fear]] — needed once several same-name
-			// entries share one merged concept pack (bead 4tj1).
-			const byType = (index.get(rest) ?? []).filter((t) => t.type === prefix);
-			if (byType.length > 0) {
+	return text.replace(
+		/\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g,
+		(_m, rawName, label) => {
+			const raw = String(rawName).trim();
+			const colon = raw.indexOf(":");
+			const prefix = colon > 0 ? raw.slice(0, colon).trim() : "";
+			const rest = colon > 0 ? raw.slice(colon + 1).trim() : raw;
+			let name = raw;
+			let targets: LinkTarget[] = [];
+			if (colon > 0 && packs.has(prefix)) {
+				// Pack-qualified: [[pack:Name]].
 				name = rest;
-				targets = byType;
+				targets = (index.get(name) ?? []).filter((t) => t.pack === prefix);
+			} else if (colon > 0) {
+				// Type-qualified: [[trait:Fear]] — needed once several same-name
+				// entries share one merged concept pack (bead 4tj1).
+				const byType = (index.get(rest) ?? []).filter((t) => t.type === prefix);
+				if (byType.length > 0) {
+					name = rest;
+					targets = byType;
+				} else {
+					targets = index.get(raw) ?? [];
+				}
 			} else {
-				targets = index.get(raw) ?? [];
+				targets = index.get(name) ?? [];
 			}
-		} else {
-			targets = index.get(name) ?? [];
-		}
-		if (targets.length === 0) {
-			console.warn(
-				`compendia: journal link "[[${rawName}]]" matches no compendium document — left as plain text (loud failure, bead rb5g/lore)`,
-			);
-			return label ? `[${name}]` : name;
-		}
-		if (targets.length > 1) {
-			console.warn(
-				`compendia: journal link "[[${name}]]" is ambiguous across packs [${targets.map((t) => t.pack).join(", ")}] — using the first`,
-			);
-		}
-		const t = targets[0];
-		const linkLabel = (label ?? name).trim();
-		return `@UUID[Compendium.rogue-trader.${t.pack}.${t.id}]{${linkLabel}}`;
-	});
+			if (targets.length === 0) {
+				console.warn(
+					`compendia: journal link "[[${rawName}]]" matches no compendium document — left as plain text (loud failure, bead rb5g/lore)`,
+				);
+				return label ? `[${name}]` : name;
+			}
+			if (targets.length > 1) {
+				console.warn(
+					`compendia: journal link "[[${name}]]" is ambiguous across packs [${targets.map((t) => t.pack).join(", ")}] — using the first`,
+				);
+			}
+			const t = targets[0];
+			const linkLabel = (label ?? name).trim();
+			return `@UUID[Compendium.rogue-trader.${t.pack}.${t.id}]{${linkLabel}}`;
+		},
+	);
 }
 
 /** Where one pack's item lives, for compendium-source stamping (et3x). */
@@ -1079,7 +1133,10 @@ export function toTableSourceDocument(entry: Record<string, unknown>) {
 }
 
 /** Shape a YAML entry into a Foundry Item source document. */
-export function toSourceDocument(entry: Record<string, unknown>, folder: string) {
+export function toSourceDocument(
+	entry: Record<string, unknown>,
+	folder: string,
+) {
 	const id = documentId(
 		String(entry.name ?? "unnamed"),
 		entry._id as string | undefined,
@@ -1203,7 +1260,8 @@ export function resolveInheritance(
 			...((entry.flags ?? {}) as object),
 		},
 	};
-	merged.type = declaredReal(entry) || declaredReal(base) || resolveEntryType(base, source);
+	merged.type =
+		declaredReal(entry) || declaredReal(base) || resolveEntryType(base, source);
 	return { entry: merged, folder: source };
 }
 
@@ -1218,8 +1276,9 @@ function auditSourceAttribution(
 ): void {
 	const missing = entries
 		.filter((entry) => {
-			const source = (entry.system as { source?: { book?: string; page?: number } })
-				?.source;
+			const source = (
+				entry.system as { source?: { book?: string; page?: number } }
+			)?.source;
 			return !source?.book || !source.page;
 		})
 		.map((entry) => String(entry.name ?? "unnamed"));
@@ -1256,7 +1315,9 @@ export async function buildItemSourceIndex(
 			continue;
 		}
 		for (const file of files) {
-			const entries = await readYamlEntries(path.join(PACK_SRC, dir.name, file));
+			const entries = await readYamlEntries(
+				path.join(PACK_SRC, dir.name, file),
+			);
 			const key = sourceKey(file.replace(/\.yaml$/, ""));
 			for (const entry of entries) {
 				const name = String(entry.name ?? "");
@@ -1310,7 +1371,9 @@ export async function buildLinkIndex(
 			continue;
 		}
 		for (const file of files) {
-			const entries = await readYamlEntries(path.join(PACK_SRC, dir.name, file));
+			const entries = await readYamlEntries(
+				path.join(PACK_SRC, dir.name, file),
+			);
 			const isItemPack =
 				!TABLE_PACKS.has(dir.name) &&
 				!ACTOR_PACKS.has(dir.name) &&
@@ -1591,12 +1654,12 @@ export function toEmbeddedItemDocument(
 	const doc =
 		resolved && !standalone
 			? // Linked: clone the PACK's real system data (type resolution via
-			  // the SOURCE key's folder rules — the historical pack name, which is
-			  // what FOLDER_TYPE_DEFAULTS is keyed by; the physical pack id is the
-			  // same for single-source packs but NOT for a merged concept pack),
-			  // then apply the authoring entry's name/overrides on top
-			  // (specialisations, ladder, AP).
-			  toSourceDocument(
+				// the SOURCE key's folder rules — the historical pack name, which is
+				// what FOLDER_TYPE_DEFAULTS is keyed by; the physical pack id is the
+				// same for single-source packs but NOT for a merged concept pack),
+				// then apply the authoring entry's name/overrides on top
+				// (specialisations, ladder, AP).
+				toSourceDocument(
 					{
 						...resolved.entry,
 						...(entry.name ? { name: entry.name } : {}),
@@ -1606,7 +1669,7 @@ export function toEmbeddedItemDocument(
 						},
 					},
 					resolved.source ?? resolved.pack,
-			  )
+				)
 			: toSourceDocument(entry, resolved?.pack ?? "npcs");
 	// Duplicate names within one actor would collide on the deterministic id.
 	if (seenIds.has(String(doc._id))) {
@@ -1624,9 +1687,12 @@ export function toEmbeddedItemDocument(
 			},
 		};
 		if (sourceName !== name) {
-			((doc.flags as Record<string, unknown>)[
-				"rogue-trader"
-			] as Record<string, unknown>).sourceName = sourceName;
+			(
+				(doc.flags as Record<string, unknown>)["rogue-trader"] as Record<
+					string,
+					unknown
+				>
+			).sourceName = sourceName;
 		}
 	}
 	return doc;
@@ -1660,11 +1726,18 @@ export function toJournalSourceDocument(
 		const pageOwnership = (pageEntry.ownership as Record<string, unknown>) ??
 			(entry.ownership as Record<string, unknown>) ?? { default: 0 };
 		return {
-			_id: documentId(`${name} — ${pageName}`, pageEntry._id as string | undefined),
+			_id: documentId(
+				`${name} — ${pageName}`,
+				pageEntry._id as string | undefined,
+			),
 			name: pageName,
 			type: "text",
 			title: { show: true, level: 2 },
-			text: { format: 1, content: resolveLinks(text, linkIndex), markdown: undefined },
+			text: {
+				format: 1,
+				content: resolveLinks(text, linkIndex),
+				markdown: undefined,
+			},
 			src: "",
 			image: { caption: "" },
 			video: null,
@@ -1765,7 +1838,10 @@ export function toActorSourceDocument(
 	entry: Record<string, unknown>,
 	index: ItemSourceIndex,
 	folderId: string | null = null,
-): { actor: Record<string, unknown>; embedded: Array<Record<string, unknown>> } {
+): {
+	actor: Record<string, unknown>;
+	embedded: Array<Record<string, unknown>>;
+} {
 	const name = String(entry.name ?? "unnamed");
 	const seenIds = new Set<string>();
 	const actorType =
@@ -1774,7 +1850,9 @@ export function toActorSourceDocument(
 
 	// Authored loadout: the modern top-level `items` array, plus (npc only) the
 	// legacy `system.*` sections. See LEGACY_LOADOUT_SECTIONS.
-	const authored: unknown[] = Array.isArray(entry.items) ? [...entry.items] : [];
+	const authored: unknown[] = Array.isArray(entry.items)
+		? [...entry.items]
+		: [];
 	if (actorType === "npc") {
 		for (const section of LEGACY_LOADOUT_SECTIONS) {
 			const value = system[section];
@@ -1788,7 +1866,9 @@ export function toActorSourceDocument(
 
 	const embedded = authored.map((raw) => {
 		const itemEntry =
-			typeof raw === "string" ? { name: raw } : (raw as Record<string, unknown>);
+			typeof raw === "string"
+				? { name: raw }
+				: (raw as Record<string, unknown>);
 		return toEmbeddedItemDocument(itemEntry, index, seenIds);
 	});
 	if (actorType === "npc") {
@@ -2065,10 +2145,7 @@ async function buildPack(
 				count++;
 				continue;
 			}
-			batch.put(
-				`!items!${String(doc._id)}`,
-				doc as unknown as string,
-			);
+			batch.put(`!items!${String(doc._id)}`, doc as unknown as string);
 			count++;
 		}
 	}
@@ -2091,12 +2168,13 @@ async function buildPack(
 }
 
 /** Path of the privately-held pack-declaration fragment (bead: manifest fragment). */
-export const MANIFEST_PACKS_YAML = "./src/packs/rogue_trader/manifest-packs.yaml";
+export const MANIFEST_PACKS_YAML =
+	"./src/packs/rogue_trader/manifest-packs.yaml";
 
 /** Read the packs array from the fragment; null when absent (no packs clone). */
-export async function readManifestPacks(): Promise<
-	Array<Record<string, unknown>> | null
-> {
+export async function readManifestPacks(): Promise<Array<
+	Record<string, unknown>
+> | null> {
 	if (!existsSync(MANIFEST_PACKS_YAML)) return null;
 	const parsed = yaml.parse(await readFile(MANIFEST_PACKS_YAML, "utf8")) as {
 		packs?: Array<Record<string, unknown>>;
@@ -2119,9 +2197,7 @@ export async function warnUnregisteredPacks(): Promise<void> {
 	const fragment = await readManifestPacks();
 	if (!fragment) return;
 	const registered = new Set(
-		fragment
-			.map((pack) => String(pack.name ?? ""))
-			.filter(Boolean),
+		fragment.map((pack) => String(pack.name ?? "")).filter(Boolean),
 	);
 	const folders = await listPackFolders();
 	const packFolders: string[] = [];
@@ -2165,7 +2241,9 @@ async function main() {
 
 	// Item-name index across every Item pack, so actor-pack embedded items
 	// can be stamped with Compendium.rogue-trader.<pack>.<id> sources (et3x).
-	const itemIndex = await buildItemSourceIndex(folders.map((name) => ({ name })));
+	const itemIndex = await buildItemSourceIndex(
+		folders.map((name) => ({ name })),
+	);
 	// Journal-page [[name]] link index across every pack (rb5g/lore).
 	const linkIndex = await buildLinkIndex(folders.map((name) => ({ name })));
 

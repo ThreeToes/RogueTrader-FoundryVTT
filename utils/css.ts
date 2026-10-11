@@ -9,6 +9,10 @@ const SOURCES = [
 	"css/sheet-gear.css",
 	"css/sheet-character.css",
 	"css/chat-roll.css",
+	// Bead wxut.4: the rules app window (separate file from the sheets because
+	// it is a dialog, not a sheet; last in the bundle so its .rules-app-scoped
+	// rules win over any shared chip/row anatomy they override.
+	"css/rules-app.css",
 ];
 const DEST = "./release/rogue_trader/css/rogue-trader.css";
 

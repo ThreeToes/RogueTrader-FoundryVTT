@@ -116,7 +116,9 @@ describe("i18n key parity (bead qgtz)", () => {
 		expect(staticRefs).toContain("ROLL.LAUNCHER_UNLOADED");
 
 		const missing = [...staticRefs]
-			.filter((key) => !KEY_SHAPE.test(key) || dictionaries.en[key] === undefined)
+			.filter(
+				(key) => !KEY_SHAPE.test(key) || dictionaries.en[key] === undefined,
+			)
 			.sort();
 		expect(
 			missing,
@@ -181,14 +183,58 @@ describe("i18n key parity (bead qgtz)", () => {
 			],
 		},
 		{
-			// EFFECT_KIND_LABEL_KEYS kind → label table.
+			// EffectSpec.labelKey values (bead ypbx: moved from the deleted
+			// EFFECT_KIND_LABEL_KEYS table into the spec registrations).
 			prefix: "EFFECT_KIND.",
-			sites: ["src/roguetrader/sheet/item/effect-actions.ts:53"],
+			sites: ["src/ffg/domain/effects/specs.ts (EffectSpec.labelKey)"],
+		},
+		{
+			// Rule-knob labels + hints: every RULES.* key is COMPOSED in the
+			// registry (labelKeyFor/hintKeyFor) or derived beside it (group,
+			// option and hazard labels) — none of them is a string literal in a
+			// template, so the static scan cannot see them. Bead wxut.4.
+			//
+			// ONE family serves BOTH registries: labelKeyFor() derives a single
+			// flat RULES. namespace, so Dark Heresy 2e's keys (epic w9sa, child
+			// D3) land here too. Three of DH2's keys deliberately REUSE RT's
+			// (test.critOnDouble, damage.primitiveArmourDouble,
+			// damage.righteousFury) — the wording stays true for both systems — and
+			// the rest are DH2's own. The reuse set is pinned by
+			// src/ffg/domain/rule-knobs-dark-heresy.test.ts.
+			prefix: "RULES.",
+			sites: [
+				"src/ffg/domain/rule-knobs.ts (labelKeyFor/hintKeyFor)",
+				"src/ffg/domain/rule-knobs-dark-heresy.ts (DARK_HERESY_RULE_KNOBS)",
+				"src/roguetrader/presentation/rules-view-model.ts (groupLabelKey/optionLabelKey/hazardKeyFor)",
+			],
 		},
 		{
 			// WARRANT_ROW_LABEL_KEYS row → label table.
 			prefix: "WARRANT.ROW_",
 			sites: ["src/roguetrader/rules/warrant.ts:44"],
+		},
+		{
+			// bodyLocationLabelKey(location) → BODY_LOCATION.LEFT_ARM over the
+			// kebab-case location slugs (critical cards + NPC armour panel).
+			prefix: "BODY_LOCATION.",
+			sites: ["src/roguetrader/rules/labels.ts:20 (bodyLocationLabelKey)"],
+		},
+		{
+			// `DAMAGE_TYPE.${value.toUpperCase()}` (and the *_SHORT single-letter
+			// variants) — the damageTypes registry seed + adapter.ts's damage-card
+			// short label (bead seeg).
+			prefix: "DAMAGE_TYPE.",
+			sites: [
+				"src/roguetrader/registry.ts (DAMAGE_TYPES seed)",
+				"src/roguetrader/rules/adapter.ts:306",
+			],
+		},
+		{
+			// weapon qualityLabelKey(quality) → QUALITY.GYRO_STABILISED over the
+			// kebab/camel quality slugs — the funnel emits the KEY, display
+			// seams localize (bead dfdv).
+			prefix: "QUALITY.",
+			sites: ["src/ffg/application/funnel.ts (qualityLabelKey)"],
 		},
 		{
 			// GROUP_ORDER Foundry core item-type labels.
@@ -214,6 +260,26 @@ describe("i18n key parity (bead qgtz)", () => {
 					missing,
 					`${lang}.json is missing ${prefix} family keys (sites: ${sites.join(", ")}): ${missing.join(", ")}`,
 				).toEqual([]);
+			}
+		}
+	});
+
+	/** Untrained i18n strings (bead 1zaa) must never hardcode a profile-data
+	 *  value: the untrained penalty is rule-profile data (currently half the
+	 *  governing Characteristic), so the wording stays model-neutral. */
+	const UNTRAINED_KEYS = [
+		"ROLL.UNTRAINED",
+		"SKILL.UNTRAINED_HINT",
+		"SKILL.UNTRAINED_NOTE",
+	];
+
+	test("untrained i18n strings never hardcode the -10 penalty (bead 1zaa)", () => {
+		for (const lang of LANGS) {
+			for (const key of UNTRAINED_KEYS) {
+				expect(
+					dictionaries[lang][key] ?? "",
+					`${lang}.json ${key} hardcodes "-10" — the untrained penalty is profile data, keep the wording model-neutral`,
+				).not.toMatch(/[-−]\s*10/);
 			}
 		}
 	});

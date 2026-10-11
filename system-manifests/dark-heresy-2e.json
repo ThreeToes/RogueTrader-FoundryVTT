@@ -1,0 +1,27 @@
+{
+	"id": "dark-heresy-2e",
+	"title": "Dark Heresy 2nd Edition",
+	"description": "Unofficial Foundry VTT System for Dark Heresy 2nd Edition, built on the shared 40k rules core.",
+	"version": "0.0.1",
+	"minimumCoreVersion": 13,
+	"compatibility": {
+		"minimum": 13,
+		"verified": 14,
+		"maximum": 14
+	},
+	"templateVersion": 2,
+	"authors": [
+		{
+			"name": "ThreeToes"
+		}
+	],
+	"scripts": [],
+	"esmodules": ["./entry-point.js"],
+	"packs": [],
+	"gridDistance": 1,
+	"gridUnits": "m",
+	"primaryTokenAttribute": null,
+	"secondaryTokenAttribute": null,
+	"url": "https://github.com/ThreeToes/RogueTrader-FoundryVTT",
+	"socket": true
+}

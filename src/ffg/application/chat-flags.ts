@@ -8,8 +8,9 @@
  *
  * PLACEMENT (bead p7jv): this moved out of roguetrader/rules/chat-flags.ts so
  * a sibling 40k system can reuse it. The NAMESPACE is not hardcoded here: it
- * is profile DATA (`SystemProfile.messageFlagNamespace`) and is passed in —
- * the roguetrader shim (rules/chat-flags.ts) resolves it through
+ * is profile DATA (`SystemBranding.messageFlagNamespace`, optional on the
+ * widened config port since bead w9sa.8) and is passed in — the roguetrader
+ * shim (rules/chat-flags.ts) resolves it through
  * `ports.config.profile().messageFlagNamespace`.
  *
  * The module is application-layer and Foundry-free: per the architecture
@@ -91,7 +92,18 @@ export type MessageFlags<N extends string = string> = {
 
 /** The active chat-flag namespace, from the config port's profile. */
 export function messageFlagNamespace(ports: Ports): string {
-	return ports.config.profile().messageFlagNamespace;
+	const namespace = ports.config.profile().messageFlagNamespace;
+	// Bead w9sa.8: the port widens to the kernel profile plus OPTIONAL system
+	// branding, so a system that has not branded yet leaves this undefined. The
+	// flag machinery has no neutral namespace to fall back on — stamping flags
+	// under `undefined` would orphan every card the system writes, which is the
+	// silent bug this repo refuses — so it names the missing profile field.
+	if (typeof namespace !== "string" || namespace === "") {
+		throw new Error(
+			"messageFlagNamespace — the active profile carries no messageFlagNamespace, so chat flags cannot be namespaced; the system must brand its profile (SystemBranding, src/ffg/domain/system-profile.ts)",
+		);
+	}
+	return namespace;
 }
 
 /** Extract a system flag off a chat message (or flag payload). */
@@ -101,7 +113,9 @@ export function readMessageFlag<T extends keyof MessageFlagPayload>(
 	flag: T,
 ): MessageFlagPayload[T] | undefined {
 	const namespace = messageFlagNamespace(ports);
-	return message?.flags?.[namespace]?.[flag] as MessageFlagPayload[T] | undefined;
+	return message?.flags?.[namespace]?.[flag] as
+		| MessageFlagPayload[T]
+		| undefined;
 }
 
 /**

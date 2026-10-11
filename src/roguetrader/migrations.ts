@@ -18,6 +18,31 @@ export const TARGET_CHARACTER_TYPE = "explorer";
 /** Legacy character types that must be migrated onto "explorer". */
 export const LEGACY_CHARACTER_TYPES = ["pc", "acolyte"] as const;
 
+/**
+ * The system this migration belongs to (bead w9sa.7).
+ *
+ * "acolyte" is not a made-up legacy name here — it is the Rogue Trader
+ * system's OLD character type, and it is coincidentally also the name Dark
+ * Heresy 2e uses for ITS character type. A sibling system that boots this
+ * code would find its perfectly healthy acolytes, clone them into RT's
+ * `explorer` type with RT's Character dataModel, and delete the originals.
+ * So the runner is gated on the running system's id, and the gate is a PURE
+ * predicate so it is testable without Foundry.
+ */
+export const LEGACY_MIGRATION_SYSTEM_ID = "rogue-trader";
+
+/**
+ * Whether the legacy-actor migration should run at all.
+ *
+ * True only for the Rogue Trader system itself. A sibling system sharing this
+ * code (a dark_heresy_2e boot, say) gets `false`, so its own actor types are
+ * left alone — and the gate is deliberately a strict equality rather than a
+ * "not blank" check, because the failure it prevents is silent data loss.
+ */
+export function shouldRunLegacyMigration(systemId: unknown): boolean {
+	return systemId === LEGACY_MIGRATION_SYSTEM_ID;
+}
+
 export function needsTypeMigration(type: string): boolean {
 	return (LEGACY_CHARACTER_TYPES as readonly string[]).includes(type);
 }
@@ -104,7 +129,9 @@ export interface ExplorerClonePayload {
  * "explorer", identity fields kept, items embedded so nothing is lost when
  * the old document is deleted.
  */
-export function explorerClonePayload(actor: LegacyActorLike): ExplorerClonePayload {
+export function explorerClonePayload(
+	actor: LegacyActorLike,
+): ExplorerClonePayload {
 	return {
 		type: TARGET_CHARACTER_TYPE,
 		...(actor.name !== undefined ? { name: actor.name } : {}),
@@ -127,8 +154,18 @@ export async function migrateLegacyActors(): Promise<void> {
 	const api = game as unknown as {
 		user?: { isGM: boolean };
 		actors?: { contents: LegacyActorLike[] };
+		system?: { id?: unknown };
 	};
 	if (!api.user?.isGM) return;
+	// Bead w9sa.7: this migration is RT-specific. A sibling system sharing this
+	// code would clone its own "acolyte" actors into RT's `explorer` type and
+	// delete the originals, so bail before touching anything.
+	if (!shouldRunLegacyMigration(api.system?.id)) {
+		console.log(
+			`rogue-trader | legacy migration skipped: not running under "${LEGACY_MIGRATION_SYSTEM_ID}".`,
+		);
+		return;
+	}
 	for (const actor of [...(api.actors?.contents ?? [])]) {
 		if (!needsTypeMigration(actor.type)) continue;
 		console.log(

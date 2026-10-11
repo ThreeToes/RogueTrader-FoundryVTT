@@ -19,6 +19,10 @@
  * -> shared Test machinery) lives in the adapter and the roll pipeline.
  */
 
+import {
+	DEFAULT_SYSTEM_PROFILE,
+	type SystemProfile,
+} from "../../ffg/domain/system-profile";
 import type { Modifier } from "../../rules-engine/index";
 
 /** Book constant: −5 penalty per point of Damage taken from the toxic hit. */
@@ -39,16 +43,26 @@ export function toxicActivates(
 /**
  * (b) The Toughness Test penalty: −5 per point of Damage taken from that
  * hit. Zero or negative damage clamps to no penalty (the caller should have
- * gated it out via toxicActivates anyway).
+ * gated it out via toxicActivates anyway). The penalty per point is profile
+ * DATA (bead wxut.2 reads the effective profile) with the book constant
+ * TOXIC_PENALTY_PER_DAMAGE_POINT as the core value and registry source.
  */
-export function toxicToughnessPenalty(woundsAfterSoak: number): number {
+export function toxicToughnessPenalty(
+	woundsAfterSoak: number,
+	profile: SystemProfile = DEFAULT_SYSTEM_PROFILE,
+): number {
 	if (!Number.isFinite(woundsAfterSoak)) {
 		throw new RangeError("toxic: damage taken must be a finite number");
 	}
 	const clamped = Math.max(0, woundsAfterSoak);
+	// An empty/absent house-rule penalty is not configured — fall back to the
+	// book value rather than computing NaN.
+	const perPoint = Number.isFinite(profile.penaltyPerDamagePoint)
+		? profile.penaltyPerDamagePoint
+		: TOXIC_PENALTY_PER_DAMAGE_POINT;
 	// -0 leaks out of the negation when clamped to zero; normalise it — a
 	// zero penalty must read as 0 everywhere (breakdown, tests, cards).
-	return clamped === 0 ? 0 : -TOXIC_PENALTY_PER_DAMAGE_POINT * clamped;
+	return clamped === 0 ? 0 : -perPoint * clamped;
 }
 
 /**
@@ -60,11 +74,17 @@ export function toxicToughnessPenalty(woundsAfterSoak: number): number {
 export function toxicToughnessModifier(
 	woundsAfterSoak: number,
 	label: string,
+	profile: SystemProfile = DEFAULT_SYSTEM_PROFILE,
 ): Modifier {
 	return {
 		id: "toxic-toughness",
-		source: { type: "effect", label: "toxic" },
+		/**
+		 * The label is an i18n KEY (bead vese): the display seams (TestDialog's
+		 * `{{localize m.sourceLabel}}`) resolve it; free text here would render
+		 * untranslated with a missing-key warning.
+		 */
+		source: { type: "effect", label: "SOURCE.FROM_TOXIC" },
 		label,
-		value: toxicToughnessPenalty(woundsAfterSoak),
+		value: toxicToughnessPenalty(woundsAfterSoak, profile),
 	};
 }

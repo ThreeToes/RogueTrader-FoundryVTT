@@ -1,44 +1,38 @@
 /**
- * The roll orchestrator and the public roll API (epic kof0, phase 4),
+ * The roll API surface and the handler registry (epic kof0, phase 4),
  * extracted from rules/roll-system.ts.
  *
- * Single roll pipeline: prepare -> dialog -> post-dialog rows -> shared test
- * (funnel -> kernel -> card) -> after. Every roll kind goes through here;
- * handlers supply the per-kind deltas. The handler registry is exhaustive
- * over RollKind, so adding a kind is a compile error until its handler
- * exists and performRoll never needs editing.
+ * The request -> handler map lives here; the pipeline itself (ownership gate
+ * -> prepare -> dialog -> post-dialog rows -> shared test -> after) is the
+ * handler-agnostic core in orchestrator.ts (bead 1uai) — performRoll maps the
+ * request kind onto the registry and delegates. Keeping the registry OUT of
+ * the orchestrator is what breaks the old evasion -> perform -> handlers ->
+ * weapon -> evasion cycle: the weapon handler's after-hook calls
+ * resolveEvasion, which now re-enters through orchestrator.ts directly with
+ * the skill handler, never looping back into this module.
+ *
+ * The handler registry is exhaustive over RollKind, so adding a kind is a
+ * compile error until its handler exists and performRoll never needs editing.
  */
 
 import { type Modifier, type TestOutcome } from "../../../rules-engine/index";
-import { systemOf } from "../../data/accessors";
-import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";
-import { postCard } from "../../rules/chat-flags";
-import { carriedConditions, snapOutReady } from "../../rules/conditions";
-import { talentConditions } from "../../registry";
+import { effectiveProfile } from "../../rules/homebrew";
 import { toxicToughnessModifier } from "../../rules/toxic";
-import { collectConditionKeys, collectTestModifiers } from "../../rules/funnel";
 import type {
 	RollHandler,
 	RollKind,
 	RollRequest,
-	TestDialogResultLike,
 } from "../../rules/roll-contract";
 import { shipRepairHandler, shipWeaponHandler } from "./ship";
-import { TestDialog } from "../../rules/test-dialog";
 import { actionHandler } from "./action";
-import {
-	characteristicHandler,
-	skillHandler,
-} from "./characteristic-skill";
+import { characteristicHandler, skillHandler } from "./characteristic-skill";
 import { fearHandler } from "./fear";
 import { navigatorHandler } from "./navigator";
-import { dialogContributors, runTest } from "./pipeline";
 import { psychicHandler } from "./psychic";
+import { snapOutHandler } from "./snap-out";
 import { weaponHandler } from "./weapon";
-
-/** Registry-seam label lookup for the TestDialog's condition toggles (8ycd). */
-const conditionLabel = (key: string): string => talentConditions.get(key) ?? key;
+import { runRoll } from "./orchestrator";
 
 /**
  * The handler registry: exhaustive over RollKind. Adding a kind requires a
@@ -55,6 +49,7 @@ export const rollHandlers: {
 	"ship-weapon": shipWeaponHandler,
 	"ship-repair": shipRepairHandler,
 	fear: fearHandler,
+	"snap-out": snapOutHandler,
 	action: actionHandler,
 };
 
@@ -62,108 +57,15 @@ export const rollHandlers: {
 // Orchestrator
 // ---------------------------------------------------------------------------
 
-export async function performRoll(request: RollRequest): Promise<void> {
-	// OWNERSHIP GATE (bead qiuo). First, before any handler runs, before the
-	// dialog, and before anything is written to chat.
-	//
-	// It lives HERE rather than in a sheet action or the TestDialog because
-	// every roll kind funnels through this function, including the two paths
-	// that bypass the sheet: the chat card's second "Roll Damage" click, which
-	// every user can see and press, and `skipDialog` callers, which never open
-	// a dialog at all. A check anywhere else would miss one of them.
-	//
-	// The refusal is LOUD. A silent return would look like a broken button, and
-	// silent no-ops are bugs in this repo (see the ports work, where swallowed
-	// writes were made to throw).
-	if (!getPorts().permissions.canRoll(request.actor)) {
-		const name = (request.actor as { name?: string } | null | undefined)?.name;
-		getPorts().notify.warn("ROLL.NOT_OWNER", { actor: name ?? "?" });
-		return;
-	}
-
+export async function performRoll(
+	request: RollRequest,
+): Promise<TestOutcome | null> {
 	// The registry is exhaustive over RollKind, so indexing with the union's
 	// discriminant yields a union of handlers; widening to the union-typed
 	// handler keeps the per-kind hooks callable with the union request (their
 	// Extract<RollRequest, { kind: K }> parameter resolves to RollRequest).
 	const handler = rollHandlers[request.kind] as RollHandler<RollKind>;
-	const prepared = await handler.prepare(request);
-	if (!prepared) return;
-	const view = actorView(request.actor);
-
-	let dialog: TestDialogResultLike | null = null;
-	let modifiers = prepared.initialModifiers;
-	if (!request.skipDialog) {
-		// Guarded affliction/talent conditions (bead xu83): offer a pre-roll
-		// toggle for every guard that could apply to this test, and re-collect
-		// the visible rows when one is switched on so the preview matches.
-		const conditionScope = {
-			kind: prepared.testKind,
-			key: prepared.testKey,
-			weapon: prepared.weapon,
-			skillName: prepared.context.skillName,
-		};
-		const conditions = collectConditionKeys(
-			view,
-			conditionScope,
-		).filter(
-			(key) => !(prepared.handledConditionFlags ?? []).includes(key),
-		);
-		const result = await TestDialog.show({
-			title: prepared.title,
-			baseTarget: prepared.baseTarget,
-			contributors: dialogContributors(
-				view,
-				prepared.testKind,
-				prepared.testKey,
-				modifiers,
-				prepared.weapon,
-				prepared.context.skillName,
-			),
-			...handler.dialogConfig?.(request, prepared),
-			...conditions.length > 0
-				? {
-						conditions,
-						conditionLabel,
-						collectForConditions: (flags: Record<string, boolean>) =>
-							collectTestModifiers(
-								view,
-								{ ...conditionScope, flags },
-								modifiers,
-							),
-					}
-				: {},
-		});
-		if (result === null) return;
-		dialog = result;
-		modifiers = result.modifiers;
-	}
-
-	modifiers = [
-		...modifiers,
-		...(handler.postDialogModifiers?.(request, prepared, dialog ?? {
-			modifiers: [],
-		}) ?? []),
-	];
-
-	const baseContext =
-		handler.testContext?.(request, prepared, dialog) ?? prepared.context;
-	// Guarded-condition flags chosen in the dialog join the funnel context for
-	// every roll kind (bead xu83), not only weapon attacks.
-	const context = dialog?.flags
-		? { ...baseContext, flags: { ...baseContext.flags, ...dialog.flags } }
-		: baseContext;
-
-	const { outcome, messageId, target } = await runTest(
-		view,
-		prepared,
-		modifiers,
-		context,
-	);
-	await handler.after?.(request, prepared, outcome, messageId, {
-		target,
-		modifiers,
-		context,
-	});
+	return runRoll(request, handler);
 }
 
 // ---------------------------------------------------------------------------
@@ -195,20 +97,18 @@ export async function rollSkillOutcome(
 	itemId: string,
 	modifiers: Modifier[] = [],
 ): Promise<TestOutcome | null> {
-	const prepared = await skillHandler.prepare({
+	// bead n0tp: routed through performRoll so the ownership gate applies —
+	// this used to hand-roll prepare -> runTest and skipped it, letting a
+	// non-owner roll another character's battlesuit repair. skipDialog keeps
+	// the fast-forward contract: no dialog, but the same funnel-modified test
+	// and the same card the player sees.
+	return await performRoll({
 		kind: "skill",
 		actor,
 		itemId,
 		modifiers,
+		skipDialog: true,
 	});
-	if (!prepared) return null;
-	const { outcome } = await runTest(
-		actorView(actor),
-		prepared,
-		[...prepared.initialModifiers, ...modifiers],
-		{ skillName: prepared.context.skillName },
-	);
-	return outcome;
 }
 
 /** Roll a characteristic test: dialog -> funnel -> kernel -> chat card. */
@@ -227,9 +127,10 @@ export async function rollTest(
 }
 
 /**
- * Untrained attempt of a basic skill: characteristic value with the RAW -10
- * penalty expressed as a funnel modifier (breakdown shows it explicitly).
- * Advanced skills cannot be attempted untrained (enforced by callers).
+ * Untrained attempt of a basic skill: the target comes from the profile's
+ * untrainedSkill model (bead tval) — HALF the governing Characteristic,
+ * round down (Core Rulebook p74). Advanced skills cannot be attempted
+ * untrained (enforced by callers).
  */
 export async function rollSkillUntrained(
 	actor: Actor,
@@ -282,6 +183,7 @@ export async function rollToxicToughnessTest(
 			toxicToughnessModifier(
 				woundsAfterSoak,
 				getPorts().i18n.t("CHAT.TOXIC_MODIFIER"),
+				effectiveProfile(),
 			),
 		],
 	});
@@ -308,7 +210,12 @@ export async function rollPsychicPower(
 	itemId: string,
 	options: RollTestOptions = {},
 ): Promise<void> {
-	await performRoll({ kind: "psychic", actor, itemId, skipDialog: options.skipDialog });
+	await performRoll({
+		kind: "psychic",
+		actor,
+		itemId,
+		skipDialog: options.skipDialog,
+	});
 }
 
 /** Navigator power activation (Core Rulebook Ch. VII book p178). */
@@ -317,7 +224,12 @@ export async function rollNavigatorPower(
 	itemId: string,
 	options: RollTestOptions = {},
 ): Promise<void> {
-	await performRoll({ kind: "navigator", actor, itemId, skipDialog: options.skipDialog });
+	await performRoll({
+		kind: "navigator",
+		actor,
+		itemId,
+		skipDialog: options.skipDialog,
+	});
 }
 
 /**
@@ -347,11 +259,13 @@ export async function rollFearTest(
 	});
 }
 
-/** Ship weapon salvo (bead xfta, Core Rulebook pp220-222). */
+/** Ship weapon salvo (bead xfta, Core Rulebook pp220-222). An
+ * "out-of-range" band is refused by the handler (Core Rulebook pp219-220,
+ * bead 3ba1). */
 export async function rollShipSalvo(
 	actor: Actor,
 	itemId: string,
-	rangeBand: "half" | "normal" | "long" = "normal",
+	rangeBand: "half" | "normal" | "long" | "out-of-range" = "normal",
 	options: RollTestOptions = {},
 ): Promise<void> {
 	await performRoll({
@@ -399,94 +313,21 @@ export async function rollAction(
 }
 
 /**
- * "Snap out of it" (Core Rulebook p296): a Willpower Test at the beginning
- * of the character's Turn; success ends the snap-out-capable condition.
- * Failure keeps the condition (the player may test again next Turn).
+ * "Snap out of it" (bead n0tp, Core Rulebook p296): a Willpower Test at the
+ * beginning of the character's Turn; success ends the snap-out-capable
+ * condition. Failure keeps the condition (the player may test again next
+ * Turn). Routed through performRoll, which owns the dialog, the funnel and
+ * the ownership gate — the hand-rolled prepare/dialog/runTest sequence here
+ * skipped that gate, letting a non-owner roll another character's snap-out.
  */
 export async function rollSnapOut(
 	actor: Actor,
 	options: RollTestOptions = {},
 ): Promise<void> {
-	const ports = getPorts();
-	if (!snapOutReady(actor)) {
-		ports.notify.warn("FEAR.SNAP_OUT_NONE");
-		return;
-	}
-	const characteristic = systemOf(actor).characteristics.wp;
-	if (!characteristic) {
-		ports.notify.warn("ROLL.UNKNOWN_CHARACTERISTIC", { key: "wp" });
-		return;
-	}
-	const view = actorView(actor);
-	const modifiers = [...(options.modifiers ?? [])];
-	const title = `${actor.name} — ${ports.i18n.t("FEAR.SNAP_OUT")}`;
-	let finalModifiers = modifiers;
-	let finalFlags: Record<string, boolean> = { snapOut: true };
-	if (!options.skipDialog) {
-		// Guarded condition toggles (bead xu83): all-test afflictions like
-		// Night Eyes / Irrational Nausea can guard a Willpower test too.
-		const conditionScope = {
-			kind: "characteristic" as const,
-			key: "wp",
-			weapon: null,
-		};
-		const conditions = collectConditionKeys(view, conditionScope);
-		const result = await TestDialog.show({
-			title,
-			baseTarget: characteristic.value,
-			contributors: dialogContributors(
-				view,
-				"characteristic",
-				"wp",
-				modifiers,
-				null,
-			),
-			...conditions.length > 0
-				? {
-						conditions,
-						conditionLabel,
-						collectForConditions: (flags: Record<string, boolean>) =>
-							collectTestModifiers(
-								view,
-								{ ...conditionScope, flags },
-								modifiers,
-							),
-					}
-				: {},
-		});
-		if (result === null) return;
-		finalModifiers = result.modifiers;
-		if (result.flags) finalFlags = { ...finalFlags, ...result.flags };
-	}
-	const { outcome } = await runTest(
-		view,
-		{
-			title,
-			baseTarget: characteristic.value,
-			testKind: "characteristic",
-			testKey: "wp",
-			initialModifiers: finalModifiers,
-			weapon: null,
-			context: { flags: finalFlags },
-			templateVars: {},
-		},
-		finalModifiers,
-		{ flags: finalFlags },
-	);
-	if (!outcome.success) {
-		await postCard(actor, "systems/rogue-trader/template/chat/fear-shock.hbs", {
-			title,
-			shockText: ports.i18n.t("FEAR.SNAP_OUT_FAIL"),
-		});
-		return;
-	}
-	const carried = carriedConditions(actor).filter((c) => c.snapOut);
-	const ids = carried.map((c) => c.id).filter((id) => id !== "");
-	if (ids.length > 0) {
-		await ports.actors.deleteEffects(actor, ids);
-	}
-	await postCard(actor, "systems/rogue-trader/template/chat/fear-shock.hbs", {
-		title,
-		shockText: ports.i18n.t("FEAR.SNAP_OUT_SUCCESS"),
+	await performRoll({
+		kind: "snap-out",
+		actor,
+		modifiers: options.modifiers,
+		skipDialog: options.skipDialog,
 	});
 }

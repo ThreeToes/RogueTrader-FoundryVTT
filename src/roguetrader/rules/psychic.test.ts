@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { rtCore } from "../../ffg/domain/system-profile";
 import {
 	effectivePsyRating,
 	focusPowerAutoFailFloor,
 	phenomenaRollModifier,
 	phenomenaTableName,
-	pushCap,
 	shouldRollPhenomena,
 	psyRatingBonus,
 	STRENGTH_LEVELS,
@@ -23,7 +23,9 @@ describe("psyker mechanics (bead sa6, Core Rulebook Table 6-1 book p157)", () =>
 	});
 
 	test("unfettered is the full Psy Rating", () => {
-		expect(effectivePsyRating({ psyRating: 5, strength: "unfettered" })).toBe(5);
+		expect(effectivePsyRating({ psyRating: 5, strength: "unfettered" })).toBe(
+			5,
+		);
 	});
 
 	test("push adds the chosen levels", () => {
@@ -56,7 +58,11 @@ describe("psyker mechanics (bead sa6, Core Rulebook Table 6-1 book p157)", () =>
 		).toBe(3);
 		// Never below zero.
 		expect(
-			effectivePsyRating({ psyRating: 1, strength: "fettered", sustainedCount: 5 }),
+			effectivePsyRating({
+				psyRating: 1,
+				strength: "fettered",
+				sustainedCount: 5,
+			}),
 		).toBe(0);
 	});
 
@@ -65,18 +71,24 @@ describe("psyker mechanics (bead sa6, Core Rulebook Table 6-1 book p157)", () =>
 		expect(psyRatingBonus(3)).toBe(15);
 	});
 
-	test("push cap is +3 sanctioned, +4 renegade", () => {
-		expect(pushCap(true)).toBe(3);
-		expect(pushCap(false)).toBe(4);
+	// Bead omgv (absorbed into epic wxut bead .2, 2026-10-10): pushCap()'s
+	// literal `sanctioned ? 3 : 4` was a second copy of the Table 6-1 values
+	// the profile already carries, and its only callers were here. The push
+	// cap resolves from the effective profile at the prompt site
+	// (presentation/rolls/psychic.ts), so the literal copy is gone and the
+	// guard that replaced it pins the PROFILE as the single representation.
+	test("push caps come from the profile (Table 6-1, book p157)", () => {
+		expect(rtCore.pushCap.sanctioned).toBe(3);
+		expect(rtCore.pushCap.other).toBe(4);
 	});
 
 	test("phenomena roll modifier: +5 per push level, +10 per sustained power", () => {
 		expect(phenomenaRollModifier({})).toBe(0);
 		expect(phenomenaRollModifier({ pushLevels: 2 })).toBe(10);
 		expect(phenomenaRollModifier({ sustainedCount: 1 })).toBe(10);
-			expect(
-			phenomenaRollModifier({ pushLevels: 3, sustainedCount: 2 }),
-		).toBe(35);
+		expect(phenomenaRollModifier({ pushLevels: 3, sustainedCount: 2 })).toBe(
+			35,
+		);
 	});
 
 	test("phenomena roll modifier: Corruption added first (epic 0hap, EA p86)", () => {

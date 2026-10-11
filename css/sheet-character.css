@@ -158,17 +158,12 @@
 
 .rogue-trader.sheet.character .ladder-option {
 	font-size: var(--rt-fs-xs);
-	padding: 1px 6px;
-	border: 1px solid var(--rt-muted);
-	background: transparent;
+	border-color: var(--rt-muted);
 	border-radius: var(--rt-radius-sm);
-	cursor: pointer;
 }
 
-.rogue-trader.sheet.character .ladder-option.active {
-	background: var(--rt-gold);
-	color: var(--rt-on-gold);
-}
+/* .active gold fill comes from the shared FILL treatment (bead 6zha,
+   sheet-gear.css). */
 
 .rogue-trader.sheet.character .skill-roll {
 	width: 1.5em;
@@ -328,10 +323,7 @@
 }
 
 .rogue-trader.sheet .origin-chip {
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	padding: 2px 8px;
-	cursor: pointer;
+	border-color: var(--rt-border-strong);
 }
 
 .rogue-trader.sheet .origin-chip.selected {
@@ -422,13 +414,10 @@
 	margin-bottom: 6px;
 }
 
+/* Small-caps gold label typography from the shared label rule
+   (sheet-gear.css, bead 1yyd joined this selector to it). */
 .rogue-trader.sheet.dynasty .warrant-row-label {
 	display: block;
-	font-size: var(--rt-fs-sm);
-	font-weight: bold;
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
-	color: var(--rt-gold);
 	margin-bottom: 2px;
 }
 
@@ -464,10 +453,7 @@
 }
 
 .rogue-trader .character-creator .chip {
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	padding: 2px 10px;
-	cursor: pointer;
+	border-color: var(--rt-border-strong);
 }
 
 .rogue-trader .character-creator .chip.active {
@@ -649,9 +635,8 @@
 	gap: 6px;
 }
 
-/* Header stats: pool · spent · rank — small-caps gold labels mirroring the
-   .stats-row .stat > label anatomy (sheet-gear.css); scoped here because the
-   shared rule targets .rogue-trader.sheet. */
+/* Header stats: pool · spent · rank — the label typography comes from the
+   widened shared small-caps gold label rule (sheet-gear.css). */
 .rogue-trader .advancement .advancement-header.stats-row {
 	display: flex;
 	gap: 8px;
@@ -666,20 +651,12 @@
 	gap: 1px;
 }
 
-.rogue-trader .advancement .advancement-header .stat > label {
-	font-size: var(--rt-fs-sm);
-	font-weight: bold;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--rt-gold);
-}
-
 .rogue-trader .advancement .advancement-header .stat .stat-value {
 	font-weight: bold;
 }
 
-/* xp-to-next-rank meter: the shared cb-track/cb-fill anatomy, gold fill —
-   progress (not capacity), so gold instead of the capacity success fill. */
+/* xp-to-next-rank meter (bead 2cgf): the track comes from the shared
+   cb-track family (sheet-gear.css). */
 .rogue-trader .advancement .advancement-meter {
 	display: flex;
 	align-items: center;
@@ -693,15 +670,7 @@
 	color: var(--rt-muted);
 }
 
-.rogue-trader .advancement .advancement-meter .cb-track {
-	flex: 1;
-	height: 10px;
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius-sm);
-	overflow: hidden;
-	background: var(--rt-panel-shadow);
-}
-
+/* Gold fill — progress, not the capacity meter's success green. */
 .rogue-trader .advancement .advancement-meter .cb-fill {
 	display: block;
 	height: 100%;
@@ -715,20 +684,12 @@
 	gap: 4px;
 }
 
-.rogue-trader .advancement .rank-chips .pick-chip,
-.rogue-trader .advancement .advancement-toolbar .pick-chip {
-	border: 1px solid var(--rt-border);
-	border-radius: var(--rt-radius);
-	padding: 1px 8px;
-	font-size: var(--rt-fs-md);
-	cursor: pointer;
+/* The chips are <button> elements: without a background reset Foundry's
+   button chrome leaks through (bead z132 round 2); the chip anatomy comes
+   from the widened shared .pick-chip rule (sheet-gear.css). */
+.rogue-trader .advancement .rank-chips .pick-chip:not(.selected),
+.rogue-trader .advancement .advancement-toolbar .pick-chip:not(.selected) {
 	background: none;
-}
-
-.rogue-trader .advancement .rank-chips .pick-chip.selected,
-.rogue-trader .advancement .advancement-toolbar .pick-chip.selected {
-	background: var(--rt-border);
-	color: var(--color-text-light-highlight, var(--rt-gold-soft));
 }
 
 /* Search + filter toolbar over the shown rank's rows. */
@@ -797,9 +758,7 @@
 
 /* Owned-state chip: purchased/max multiplier (or the plain "owned" chip). */
 .rogue-trader .advancement .adv-multiplier {
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	padding: 0 6px;
+	border-color: var(--rt-border-strong);
 	font-size: var(--rt-fs-sm);
 	color: var(--rt-white-alpha);
 	cursor: help;
@@ -915,17 +874,6 @@
 	white-space: nowrap;
 }
 
-.rogue-trader .psychic .psy-rating {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-}
-
-.rogue-trader .psychic .psy-rating input {
-	width: 3.5em;
-	text-align: center;
-}
-
 .rogue-trader .psychic .psychic-list {
 	list-style: none;
 	margin: 6px 0 0;
@@ -951,10 +899,7 @@
 }
 
 .rogue-trader .psychic .psychic-tags .chip {
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	padding: 1px 8px;
-	font-size: var(--rt-fs-md);
+	border-color: var(--rt-border-strong);
 }
 
 .rogue-trader .psychic .psychic-delete {
@@ -1018,10 +963,7 @@
 }
 
 .rogue-trader .background .origin-mod {
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	padding: 1px 8px;
-	font-size: var(--rt-fs-md);
+	border-color: var(--rt-border-strong);
 }
 
 .rogue-trader .background .background-career {
@@ -1091,14 +1033,45 @@
 	gap: 10px;
 }
 
+/* House-rule indicator (bead wxut.7): the active profile is named where the
+   roll's numbers come from, so a house rule can never be a silent modifier
+   (AGENTS.md). It is a BUTTON rather than a line of text because clicking it
+   opens the rules app that edits the profile. */
+.test-dialog-app .test-dialog .profile-indicator {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	align-self: flex-start;
+	max-width: 100%;
+	padding: 3px 10px;
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius);
+	background: rgba(0, 0, 0, 0.2);
+	color: var(--rt-gold-soft);
+	font-family: inherit;
+	font-size: var(--rt-fs-sm);
+	cursor: pointer;
+}
+
+.test-dialog-app .test-dialog .profile-indicator:hover {
+	border-color: var(--rt-gold-soft);
+	color: var(--rt-gold);
+}
+
+.test-dialog-app .test-dialog .profile-indicator-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 /* Section headings — the group-label treatment (fs-lg, uppercase, muted),
    previously inherited wrongly from a generic dialog h3 rule. */
 .test-dialog-app .test-dialog .dialog-group-label {
-	font-size: var(--rt-fs-lg, 0.9em);
+	font-size: var(--rt-fs-lg);
 	font-weight: bold;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
-	color: var(--rt-muted, #7a6a53);
+	color: var(--rt-muted);
 	margin: 4px 0 0;
 }
 
@@ -1108,7 +1081,7 @@
    dialog-specific bits stay here. */
 /* All three values the same size; Target keeps the gold-soft emphasis. */
 .test-dialog-app .test-dialog .target-strip .stat .preview-value {
-	color: var(--rt-gold-soft, #d9c38a);
+	color: var(--rt-gold-soft);
 }
 
 /* The modifiers expander: collapsed by default, the summary carries the
@@ -1121,14 +1094,17 @@
 	list-style: none;
 }
 
-.test-dialog-app .test-dialog .modifier-expander > summary::-webkit-details-marker {
+.test-dialog-app
+	.test-dialog
+	.modifier-expander
+	> summary::-webkit-details-marker {
 	display: none;
 }
 
 .test-dialog-app .test-dialog .modifier-expander > summary::after {
 	content: "▾";
-	color: var(--rt-muted, #7a6a53);
-	font-size: var(--rt-fs-sm, 0.78em);
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
 }
 
 .test-dialog-app .test-dialog .modifier-expander[open] > summary::after {
@@ -1136,8 +1112,8 @@
 }
 
 .test-dialog-app .test-dialog .modifier-expander > summary .summary-note {
-	font-size: var(--rt-fs-sm, 0.78em);
-	color: var(--rt-muted, #7a6a53);
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-muted);
 }
 
 .test-dialog-app .test-dialog .modifier-expander[open] .ledger {
@@ -1152,8 +1128,8 @@
 	flex-direction: column;
 	gap: 2px;
 	padding: 6px 10px;
-	border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
-	border-radius: var(--rt-radius, 4px);
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius);
 	background: rgba(0, 0, 0, 0.2);
 }
 
@@ -1162,19 +1138,16 @@
 	align-items: center;
 	gap: 8px;
 	padding: 2px 0;
-	border-bottom: 1px solid var(--rt-border-dim, rgba(122, 106, 83, 0.25));
+	border-bottom: 1px solid var(--rt-border-dim);
 }
 
 .test-dialog-app .test-dialog .ledger .modifier-row:last-of-type {
 	border-bottom: none;
 }
 
+/* Label typography from the shared small-caps gold label rule
+   (sheet-gear.css, bead 1yyd joined this selector to it). */
 .test-dialog-app .test-dialog .ledger-field-label {
-	font-size: var(--rt-fs-sm, 0.78em);
-	font-weight: bold;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--rt-gold, #b8860b);
 	flex: none;
 }
 
@@ -1184,8 +1157,8 @@
 }
 
 .test-dialog-app .test-dialog .modifier-source {
-	font-size: var(--rt-fs-md, 0.85em);
-	color: var(--rt-muted, #7a6a53);
+	font-size: var(--rt-fs-md);
+	color: var(--rt-muted);
 	white-space: nowrap;
 }
 
@@ -1195,19 +1168,19 @@
 }
 
 .test-dialog-app .test-dialog .modifier-value.pos {
-	color: var(--rt-success, #7ca860);
+	color: var(--rt-success);
 	font-weight: bold;
 }
 
 .test-dialog-app .test-dialog .modifier-value.neg {
-	color: var(--rt-danger-deep, #c0392b);
+	color: var(--rt-danger-deep);
 	font-weight: bold;
 }
 
 .test-dialog-app .test-dialog .modifier-remove {
 	width: 1.2em;
 	text-align: center;
-	color: var(--rt-danger, #8b5e52);
+	color: var(--rt-danger);
 	cursor: pointer;
 }
 
@@ -1215,17 +1188,17 @@
 	align-self: flex-start;
 	margin-top: 2px;
 	padding: 1px 6px;
-	font-size: var(--rt-fs-sm, 0.78em);
-	color: var(--rt-muted, #7a6a53);
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-muted);
 	background: none;
-	border: 1px dashed var(--rt-border-mid, rgba(122, 106, 83, 0.35));
-	border-radius: var(--rt-radius-sm, 3px);
+	border: 1px dashed var(--rt-border-mid);
+	border-radius: var(--rt-radius-sm);
 	cursor: pointer;
 }
 
 .test-dialog-app .test-dialog .modifier-add:hover {
-	color: var(--rt-gold, #b8860b);
-	border-color: var(--rt-gold, #b8860b);
+	color: var(--rt-gold);
+	border-color: var(--rt-gold);
 }
 
 /* Chip groups: the difficulty ladder is BUTTON chips (no native input to
@@ -1244,18 +1217,14 @@
 }
 
 /* Shared chip anatomy (bead 628o): difficulty (button) and condition
-   (label+hidden input) chips share the chrome; the genuinely different
+   (label+hidden input) chips share the chrome — base chrome now from the
+   shared chip family (sheet-gear.css, bead 6zha); the genuinely different
    bits live in the rules below. */
 .test-dialog-app .test-dialog .difficulty-chip,
 .test-dialog-app .test-dialog .condition-chip {
 	display: inline-flex;
 	align-items: baseline;
 	gap: 5px;
-	padding: 2px 10px;
-	font-size: var(--rt-fs-md, 0.85em);
-	border: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
-	border-radius: var(--rt-radius-sm, 3px);
-	cursor: pointer;
 }
 
 /* Difficulty chips are buttons: Foundry's button reset would leak through
@@ -1266,33 +1235,25 @@
 	background: none;
 }
 
-.test-dialog-app .test-dialog button.difficulty-chip:hover,
-.test-dialog-app .test-dialog .condition-chip:hover {
-	border-color: var(--rt-border-strong, rgba(122, 106, 83, 0.5));
-}
-
 .test-dialog-app .test-dialog .difficulty-chip .chip-value {
-	color: var(--rt-muted, #7a6a53);
+	color: var(--rt-muted);
 }
 
 /* The "no difficulty modifier" chip is the ghost option of the ladder. */
 .test-dialog-app .test-dialog .difficulty-chip.none {
-	color: var(--rt-muted, #7a6a53);
+	color: var(--rt-muted);
 	font-style: italic;
 }
 
-.test-dialog-app .test-dialog button.difficulty-chip.checked {
-	border-color: var(--rt-gold, #b8860b);
-	background: var(--rt-gold-alpha-faint);
-	color: var(--rt-gold, #b8860b);
-}
-
+/* .checked lit state = the shared dim gold TINT treatment (bead 6zha,
+   sheet-gear.css); the overrides below keep the value/note legible on the
+   wash. */
 .test-dialog-app .test-dialog button.difficulty-chip.checked .chip-value {
-	color: var(--rt-gold-soft, #d9c38a);
+	color: var(--rt-gold-soft);
 }
 
 .test-dialog-app .test-dialog button.difficulty-chip.none.checked {
-	color: var(--rt-gold-soft, #d9c38a);
+	color: var(--rt-gold-soft);
 }
 
 .test-dialog-app .test-dialog .condition-chip {
@@ -1307,13 +1268,8 @@
 	pointer-events: none;
 }
 
-.test-dialog-app .test-dialog .condition-chip:has(input:checked) {
-	border-color: var(--rt-gold, #b8860b);
-	background: var(--rt-gold-alpha-faint);
-}
-
 .test-dialog-app .test-dialog .condition-chip input:checked + .chip-name {
-	color: var(--rt-gold, #b8860b);
+	color: var(--rt-gold);
 	font-weight: bold;
 }
 
@@ -1328,7 +1284,7 @@
 .test-dialog-app .test-dialog .dialog-buttons {
 	margin-top: auto;
 	padding-top: 10px;
-	border-top: 1px solid var(--rt-border, rgba(122, 106, 83, 0.4));
+	border-top: 1px solid var(--rt-border);
 	gap: 8px;
 }
 
@@ -1399,28 +1355,11 @@
 	gap: 3px;
 }
 
-/* Unnatural multiplier pips: one block (the pre-2-column 8px variant was
-   superseded and removed, bead xcte). */
+/* Unnatural multiplier pips: pip circle + lit fill come from the shared
+   pip family (sheet-gear.css, bead gmzw); these are clickable buttons
+   (stats tab), so only the cursor is sheet-local. */
 .rogue-trader.sheet.character .unnatural-pips .pip {
-	appearance: none;
-	flex: none;
-	width: 9px;
-	height: 9px;
-	min-width: 9px;
-	max-width: 9px;
-	min-height: 9px;
-	line-height: 1;
-	padding: 0;
-	margin: 0;
-	border: 1px solid var(--rt-gold);
-	border-radius: 50%;
-	background: transparent;
 	cursor: pointer;
-}
-
-.rogue-trader.sheet.character .unnatural-pips .pip.lit {
-	background: var(--rt-gold);
-	box-shadow: 0 0 3px rgba(184, 134, 11, 0.8);
 }
 
 /* Combat tab: armour body layout */

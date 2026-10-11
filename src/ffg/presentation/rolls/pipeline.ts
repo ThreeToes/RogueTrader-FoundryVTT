@@ -33,8 +33,11 @@ import {
 	mergeModifiers,
 	type TestKind,
 } from "../../application/funnel";
-import type { PreparedRoll, RollContext } from "../../application/roll-contract";
-import { getPorts } from "../../infrastructure/foundry/ports";
+import type {
+	PreparedRoll,
+	RollContext,
+} from "../../application/roll-contract";
+import { getPorts, localizeLabel } from "../../infrastructure/foundry/ports";
 
 /**
  * Dialog contributors = caller modifiers + a funnel collection for the test
@@ -87,7 +90,10 @@ export async function runTest<
 		modifiers,
 	);
 	const totalModifier = sumModifiers(collected);
-	const target = Math.min(100, Math.max(1, prepared.baseTarget + totalModifier));
+	const target = Math.min(
+		100,
+		Math.max(1, prepared.baseTarget + totalModifier),
+	);
 
 	const rollResult = (await ports.dice.roll("1d100")).total;
 
@@ -107,21 +113,39 @@ export async function runTest<
 					}
 				: ruleProfile,
 	});
+	// Bead s1lv: one interpolated i18n key per outcome — the literal
+	// "(+N degrees)" scaffolding is data (all four lang files carry
+	// ROLL.SUCCESS_WITH_DEGREES), never English word order baked into code.
 	const outcomeLabel = outcome.success
-		? `${ports.i18n.t("ROLL.SUCCESS")} (+${outcome.degrees} ${ports.i18n.t("ROLL.DEGREES")})`
+		? ports.i18n.t("ROLL.SUCCESS_WITH_DEGREES", { degrees: outcome.degrees })
 		: ports.i18n.t("ROLL.FAILURE");
 
+	// Bead w9sa.8: the card template is system BRANDING and the widened
+	// config port makes branding OPTIONAL, so a system that has not named a
+	// template yet refuses to post rather than rendering an unresolved path.
+	const template = ruleProfile.rollCardTemplate;
+	if (typeof template !== "string" || template === "") {
+		throw new Error(
+			`rollCardTemplate — the active profile (${ruleProfile.id}) carries no rollCardTemplate, so the roll card cannot be rendered; the system must brand its profile (SystemBranding, src/ffg/domain/system-profile.ts)`,
+		);
+	}
 	const message = await postCard(
 		ports,
 		view,
 		// The card template is system branding (bead p7jv): profile DATA, not a
 		// hardcoded RT path — a sibling system points rollCardTemplate at its own.
-		ruleProfile.rollCardTemplate,
+		template,
 		{
 			title: prepared.title,
 			target,
 			totalModifier,
-			analysis: collected,
+			// Bead dfdv: KEY-shaped labels (funnel quality keys, "ROLL.UNTRAINED"
+			// ...) localize here so a non-en client never renders a raw slug/key
+			// on the card; already-localized text passes through.
+			analysis: collected.map((mod) => ({
+				...mod,
+				label: localizeLabel(mod.label),
+			})),
 			roll: rollResult,
 			outcomeLabel,
 			outcomeClass: outcome.success ? "success" : "failure",

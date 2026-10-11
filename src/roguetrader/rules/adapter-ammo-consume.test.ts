@@ -31,7 +31,11 @@ for (const key of ["game", "ui", "foundry"]) {
 	system: { id: "rogue-trader" },
 };
 (globalThis as Record<string, unknown>).ui = {
-	notifications: { warn: () => undefined, error: () => undefined, info: () => undefined },
+	notifications: {
+		warn: () => undefined,
+		error: () => undefined,
+		info: () => undefined,
+	},
 };
 // fromUuidSync is the ONLY Foundry entry the card path takes for uuids (the
 // adapter's documentFromUuid boundary). setDocumentIndex() fills the map per
@@ -59,7 +63,8 @@ import { afterAll, afterEach, describe, expect, test } from "bun:test";
 
 afterAll(() => {
 	for (const [key, value] of Object.entries(originalGlobals)) {
-		if (value === undefined) delete (globalThis as Record<string, unknown>)[key];
+		if (value === undefined)
+			delete (globalThis as Record<string, unknown>)[key];
 		else (globalThis as Record<string, unknown>)[key] = value;
 	}
 });
@@ -154,7 +159,11 @@ const grenade = (quantity: number): QuantityFixtureDoc => {
 const launcherThrough = (
 	attacker: unknown,
 	loadedAmmoId: string,
-	rateOfFire: Record<string, unknown> = { singleShot: true, burst: 0, fullAuto: 0 },
+	rateOfFire: Record<string, unknown> = {
+		singleShot: true,
+		burst: 0,
+		fullAuto: 0,
+	},
 ) => ({
 	id: "la",
 	type: "ranged-weapon",
@@ -193,6 +202,22 @@ const attackerThrough = (
 
 // --- Harness --------------------------------------------------------------
 
+/**
+ * Bead wxut.2 made the stored value a knob-keyed delta, so translate these
+ * scenarios' legacy `{id, ammoAutoConsume}` object into the knob key — the
+ * scenarios keep reading as "toggle ON / OFF / absent" while the seam receives
+ * the shape it now validates.
+ */
+function storedFor(legacy: unknown): unknown {
+	if (legacy && typeof legacy === "object") {
+		const flag = (legacy as { ammoAutoConsume?: boolean }).ammoAutoConsume;
+		return typeof flag === "boolean"
+			? { "ammo.autoConsume": flag }
+			: null;
+	}
+	return null;
+}
+
 function wirePorts(homebrew: unknown): void {
 	setPorts({
 		...foundryPorts,
@@ -203,7 +228,11 @@ function wirePorts(homebrew: unknown): void {
 			},
 		},
 		chat: {
-			async post(_actor: unknown, _template: string, vars: Record<string, unknown>) {
+			async post(
+				_actor: unknown,
+				_template: string,
+				vars: Record<string, unknown>,
+			) {
 				lastCardVars = vars;
 				postedCards.push("card");
 				return { id: "msg-1" };
@@ -227,7 +256,7 @@ function wirePorts(homebrew: unknown): void {
 		},
 		config: {
 			...foundryPorts.config,
-			homebrew: () => homebrew,
+			homebrew: () => storedFor(homebrew),
 		},
 	});
 }
@@ -290,8 +319,7 @@ describe("ammo auto-consume funnel application (bead 65sq)", () => {
 		// profile.fired feeds the chip: it moved with the write, so the card
 		// shows 2 remaining, not the stale pre-shot 3.
 		expect(
-			(lastCardVars as { fired?: { name: string; quantity: number } })
-				?.fired,
+			(lastCardVars as { fired?: { name: string; quantity: number } })?.fired,
 		).toEqual({ name: "Frag Missile", quantity: 2, uuid: "Actor.a.Item.a1" });
 	});
 

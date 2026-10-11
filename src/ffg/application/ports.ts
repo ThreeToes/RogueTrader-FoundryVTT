@@ -14,7 +14,11 @@
  */
 
 import type { ActorView } from "../../ffg/domain/model/actor";
-import type { SystemProfile } from "../../ffg/domain/system-profile";
+import type {
+	SystemBranding,
+	SystemProfile,
+} from "../../ffg/domain/system-profile";
+import type { RuleProfile } from "../../rules-engine/profile";
 
 /** Which content the world has installed (cheap to probe; no doc loading). */
 export interface ContentCapabilities {
@@ -49,15 +53,33 @@ export interface ContentPort {
 	capabilities(): ContentCapabilities;
 	/** Every document in a pack; empty when the pack is absent. */
 	documents(packId: string): Promise<unknown[]>;
+	/**
+	 * Every document in a pack, or NULL when the pack is not installed —
+	 * distinct from an empty pack, so a caller can warn loudly (once) about a
+	 * missing pack instead of degrading silently (bead p7o5: the sheet-side
+	 * pack fetches moved onto this shape).
+	 */
+	documentsOrNull(packId: string): Promise<unknown[] | null>;
 	/** One document by name; null when the pack or document is absent. */
 	find(packId: string, name: string): Promise<ContentTable | null>;
+	/**
+	 * Resolve a document by stamped uuid; null when it is unresolvable.
+	 *
+	 * "Compendium.<pack>.<type>.<id>" resolves DIRECTLY from the pack — not
+	 * via generic uuid resolution — because that silently returns undefined
+	 * in-world for our LevelDB comps even when the document is there (bead
+	 * wwuc). Other uuid shapes go through the adapter's generic resolution.
+	 */
+	document(uuid: string): Promise<unknown | null>;
 }
 
 /** The port used when no content provider has been wired (tests, headless). */
 export const NO_CONTENT_PORT: ContentPort = {
 	capabilities: () => NO_CONTENT,
 	documents: async () => [],
+	documentsOrNull: async () => null,
 	find: async () => null,
+	document: async () => null,
 };
 
 // ---------------------------------------------------------------------------
@@ -164,6 +186,14 @@ export interface Permissions {
 	canRoll(actor: unknown): boolean;
 }
 
+/**
+ * What `ConfigPort.profile()` promises (bead w9sa.8): the whole KERNEL rules
+ * profile every pure resolver reads, plus the two OPTIONAL system-BRANDING
+ * fields. Named so the port declaration and the sibling-profile tests share
+ * one contract instead of restating the intersection.
+ */
+export type ConfigProfile = RuleProfile & Partial<SystemBranding>;
+
 /** World configuration the rules read (homebrew profile, warmed content). */
 export interface ConfigPort {
 	homebrew(): unknown;
@@ -176,18 +206,47 @@ export interface ConfigPort {
 	 */
 	packIds(): { rolltables: string | null };
 	/**
-	 * The active RuleProfile/SystemProfile (bead yojf): the kernel profile for
-	 * crit handling, hit locations and the sibling-system extension points.
-	 * presentation/rolls/pipeline.ts and rules/adapter.ts resolve through this
-	 * instead of importing rtCore, so a sibling module swaps one binding here.
+	 * The active profile: the kernel `RuleProfile` (bead yojf) the pure
+	 * resolvers read — crit handling, hit locations, and the sibling-system
+	 * extension points — plus the OPTIONAL system BRANDING
+	 * (`messageFlagNamespace`, `rollCardTemplate`). presentation/rolls/
+	 * pipeline.ts and rules/adapter.ts resolve through this instead of
+	 * importing rtCore, so a sibling module swaps one binding here.
 	 *
-	 * Returns the SystemProfile (bead p7jv) so system-specific profile DATA
-	 * beyond the kernel rules (e.g. messageFlagNamespace) is reachable through
-	 * the same seam.
+	 * WIDENED OFF RT's `SystemProfile` (bead w9sa.8, audit finding A1): the port
+	 * used to promise RT's own creation/advancement constants
+	 * (`characteristicBase`, `pointBuyBudget`, `fireModeBonus`, `pushCap`),
+	 * which are RT RULES data a sibling supplies under its own shape — so a
+	 * `DarkHeresyProfile` could not be returned through the shared port at all,
+	 * the biggest fork risk the w9sa.5 audit found. Kernel PLUS branding is the
+	 * whole contract every consumer actually needs: the rules resolvers read
+	 * kernel fields only, and the two branding fields are the only "the system"
+	 * data on the profile. RT's own `SystemProfile` still satisfies it (it is
+	 * `RuleProfile & SystemBranding` + RT constants), so RT is byte-identical.
 	 */
-	profile(): SystemProfile;
+	profile(): ConfigProfile;
 }
 
+/**
+ * Compile-time proof of the widening (bead w9sa.8).
+ *
+ * BOTH directions matter and only one is expressible as a type alias, so the
+ * other is pinned at test level (see `ffg/infrastructure/foundry/ports.test.ts`
+ * and `roguetrader/infrastructure/foundry/profile-port.test.ts`, which fuel the
+ * seam with a `dh2Core`-shaped kernel+branding profile):
+ *
+ *  • THIS alias proves the widening did not MOVE anything: RT's `SystemProfile`
+ *    is still assignable to the port's return type, field for field, so every
+ *    RT consumer compiled unchanged. Widen the port back to `SystemProfile` (or
+ *    drop a branding field off `SystemProfile`) and it stops compiling.
+ *  • `*.test.ts` files sit outside BOTH tsconfigs (`exclude: **\/*.test.ts`),
+ *    so a `satisfies` written in a test would be stripped and prove nothing.
+ *    That is why the assertion lives here, in the typechecked application
+ *    layer, where `bun run typecheck` actually reads it.
+ */
+type _RtProfileStillFitsTheWidenedPort = SystemProfile extends ConfigProfile
+	? true
+	: never;
 /**
  * Item document writes the rules perform (bead 65sq): embedded items an actor
  * carries (ordnance consumption, ...). Never a read — reads use ActorView or

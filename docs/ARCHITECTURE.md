@@ -107,6 +107,12 @@ ships zero compendium packs, so:
   owned items and the packs, and table lookups resolve. There are **no settings to
   configure**: packs are auto-detected at call time.
 
+That promise is about CONTENT only. House rules are a SEPARATE, entirely optional
+world configuration seam: a GM may store named rule profiles in world settings and
+the rules engine merges the active one's knob-keyed delta over the base profile
+(`rules/homebrew.ts`#effectiveProfile), so an untouched world plays the Core
+Rulebook as written.
+
 Every content dependency goes through the `ContentPort` (`application/ports.ts`);
 its Foundry implementation (`src/roguetrader/infrastructure/foundry/content.ts`) returns `[]`/`null`
 rather than throwing, and each consumer has a documented fallback:
@@ -126,15 +132,18 @@ roll.**
 ## One effect engine
 
 Effect kinds are registered once with their metadata (channel, key grammar,
-liveness, applicability, and how they become a `Modifier` or a typed payload). One
+liveness, applicability, and how they become a `Modifier` or a typed payload),
+plus the editor label (`labelKey`). One
 `collectEffects(view, query)` walk serves every consumer. Adding an effect kind is a
-single registration — not a new collector.
+single registration — not a new collector, and not a second edit in the sheet
+layer: the effect editor derives its kind dropdown from
+`effectKinds.all()` + the handler-only kinds (bead ypbx).
 
 ## Adding things
 
 | To add… | You touch |
 | --- | --- |
-| an effect kind | one registration in `src/ffg/domain/effects/registry.ts` |
+| an effect kind | one registration in `src/ffg/domain/effects/specs.ts` (the spec carries its `labelKey`; `registry.ts` is only the generic mechanism). Handler-channel kinds also need their `talentEffectHandlers.register` call |
 | a roll kind | one `RollDefinition` (exhaustive map → compile error if missing) |
 | a new FFG system (DH2, BC…) | a `RuleProfile`/`SystemProfile` + registries + a `bootstrap` wiring — the current `RuleProfile` is far too thin to express another system. The system-neutral layers (`domain`, `application`, `infrastructure/foundry/actor-view`) already live in `src/ffg/`; hoisting the rest (`presentation/rolls`, `rules`, `data`, the Foundry content/ports adapters) is tracked under epic `foundryvtt-rogue-trader-hr6r` and its children |
 | an item type | its DataModel + the `ActorView` builder mapping |

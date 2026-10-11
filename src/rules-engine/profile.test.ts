@@ -6,12 +6,21 @@
  */
 import { describe, expect, test } from "bun:test";
 
+import { MAX_CRITICAL_SEVERITY } from "./criticals";
 import { type RuleProfile, rtCore } from "./profile";
 
 describe("RuleProfile extension points", () => {
 	test("rtCore carries the characteristic vocabulary in book order", () => {
 		expect(rtCore.characteristics?.keys).toEqual([
-			"ws", "bs", "s", "t", "ag", "int", "per", "wp", "fel",
+			"ws",
+			"bs",
+			"s",
+			"t",
+			"ag",
+			"int",
+			"per",
+			"wp",
+			"fel",
 		]);
 		expect(rtCore.characteristics?.labelPrefix).toBe("CHARACTERISTIC");
 	});
@@ -46,5 +55,20 @@ describe("RuleProfile extension points", () => {
 		};
 		expect(sibling.advancement).toEqual({ xpModel: "aptitudes" });
 		expect(sibling.startingWounds).toBeUndefined();
+	});
+});
+
+describe("the critical severity cap as data (bead wxut.1)", () => {
+	test("rtCore carries the kernel constant, read not restated", () => {
+		expect(rtCore.criticals?.maxSeverity).toBe(MAX_CRITICAL_SEVERITY);
+		expect(rtCore.criticals?.maxSeverity).toBe(10);
+	});
+
+	test("a sibling profile may omit it (consumers fall back)", () => {
+		const bare: RuleProfile = {
+			...rtCore,
+			criticals: undefined,
+		};
+		expect(bare.criticals).toBeUndefined();
 	});
 });

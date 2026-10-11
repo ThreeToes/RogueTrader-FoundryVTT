@@ -12,20 +12,20 @@ import {
 	documentId,
 	folderId,
 	guardedBatch,
+	type ItemSourceIndex,
+	MANIFEST_PACKS_YAML,
 	mirrorPackAssets,
 	readManifestPacks,
-	MANIFEST_PACKS_YAML,
-	resolveEntryGroup,
 	resolveEntryFolder,
+	resolveEntryGroup,
 	resolveEntryType,
 	resolveLinks,
-	sourceKey,
 	slugKey,
-	toSourceDocument,
-	toTableSourceDocument,
-	type ItemSourceIndex,
+	sourceKey,
 	toActorSourceDocument,
 	toJournalSourceDocument,
+	toSourceDocument,
+	toTableSourceDocument,
 } from "./compendia";
 
 describe("resolveEntryType", () => {
@@ -45,9 +45,7 @@ describe("resolveEntryType", () => {
 		);
 		// Insanity/corruption + mutation content (epic nt8k): typed rows whose
 		// kind/tableKey fields vanish if the folder falls back to gear.
-		expect(resolveEntryType({ type: "Item" }, "madness")).toBe(
-			"madnessentry",
-		);
+		expect(resolveEntryType({ type: "Item" }, "madness")).toBe("madnessentry");
 		expect(resolveEntryType({ type: "Item" }, "mutations")).toBe("mutation");
 		expect(resolveEntryType({ type: "Item" }, "unknown")).toBe("gear");
 	});
@@ -471,12 +469,12 @@ describe("actor packs (bead et3x)", () => {
 			},
 			index,
 		);
-		expect(
-			(embedded[0].system as Record<string, unknown>).equipState,
-		).toBe("carried");
-		expect(
-			(embedded[1].system as Record<string, unknown>).equipState,
-		).toBe("worn");
+		expect((embedded[0].system as Record<string, unknown>).equipState).toBe(
+			"carried",
+		);
+		expect((embedded[1].system as Record<string, unknown>).equipState).toBe(
+			"worn",
+		);
 		// Non-physical items (skills) have no equip state.
 		expect(
 			(embedded[2].system as Record<string, unknown>).equipState,
@@ -492,9 +490,9 @@ describe("actor packs (bead et3x)", () => {
 			},
 			index,
 		);
-		expect(
-			(embedded[0].system as Record<string, unknown>).equipState,
-		).toBe("stowed");
+		expect((embedded[0].system as Record<string, unknown>).equipState).toBe(
+			"stowed",
+		);
 	});
 
 	test("only npc actors get the inventory equipped", () => {
@@ -559,9 +557,9 @@ describe("actor packs (bead et3x)", () => {
 			ladder: 2,
 			key: "common-lore-imperium",
 		});
-		const flags = (embedded[0].flags as Record<string, Record<string, unknown>>)[
-			"rogue-trader"
-		];
+		const flags = (
+			embedded[0].flags as Record<string, Record<string, unknown>>
+		)["rogue-trader"];
 		expect(flags.compendiumSource).toBe(
 			`Compendium.rogue-trader.skills.${documentId("Common Lore")}`,
 		);
@@ -577,9 +575,7 @@ describe("actor packs (bead et3x)", () => {
 			(embedded[0].flags as Record<string, Record<string, string>>)[
 				"rogue-trader"
 			].compendiumSource,
-		).toBe(
-			`Compendium.rogue-trader.armour.${documentId("Flak Armour")}`,
-		);
+		).toBe(`Compendium.rogue-trader.armour.${documentId("Flak Armour")}`);
 	});
 
 	test("throws loudly when fromPack names a source without that item (szgv)", () => {
@@ -593,7 +589,10 @@ describe("actor packs (bead et3x)", () => {
 
 	test("throws loudly for an unlinked embedded item (never silently drop)", () => {
 		expect(() =>
-			toActorSourceDocument({ name: "X", items: [{ name: "Mystery Gubbin" }] }, index),
+			toActorSourceDocument(
+				{ name: "X", items: [{ name: "Mystery Gubbin" }] },
+				index,
+			),
 		).toThrow(/matches no compendium pack/);
 	});
 
@@ -624,10 +623,7 @@ describe("actor packs (bead et3x)", () => {
 		const { actor, embedded } = toActorSourceDocument(
 			{
 				name: "X",
-				items: [
-					{ name: "Lasgun" },
-					{ name: "Lasgun" },
-				],
+				items: [{ name: "Lasgun" }, { name: "Lasgun" }],
 			},
 			index,
 		);
@@ -649,7 +645,10 @@ describe("journal ownership (bead wdeq)", () => {
 			{
 				name: "Rules",
 				ownership: { default: 2 },
-				pages: [{ name: "A", text: "a" }, { name: "B", text: "b" }],
+				pages: [
+					{ name: "A", text: "a" },
+					{ name: "B", text: "b" },
+				],
 			},
 			index,
 		);
@@ -717,6 +716,68 @@ describe("compendium folder groupings (bead nsqt)", () => {
 			).toThrow(/unmapped — extend ARMOUR_GROUPS/);
 		});
 
+		// Bead g4vn: Tau battlesuit/weapon systems grouped by the book's own
+		// section headers (Tau Character Guide printed pp31-35).
+		test("tau battlesuit systems group by category with book section labels", () => {
+			expect(
+				resolveEntryGroup(
+					{ name: "Jet Pack", system: { category: "primary" } },
+					"tau-battlesuit-systems",
+				),
+			).toBe("Primary Systems");
+			expect(
+				resolveEntryGroup(
+					{ name: "Shield Generator", system: { category: "support" } },
+					"tau-battlesuit-systems",
+				),
+			).toBe("Support Systems");
+			expect(
+				resolveEntryGroup(
+					{ name: "Failsafe Detonator", system: { category: "signature" } },
+					"tau-battlesuit-systems",
+				),
+			).toBe("Signature Systems");
+		});
+
+		test("tau battlesuit systems unmapped category fails loudly", () => {
+			expect(() =>
+				resolveEntryGroup(
+					{ name: "Mystery Suit System", system: { category: "heavy" } },
+					"tau-battlesuit-systems",
+				),
+			).toThrow(/no folder label for category "heavy"/);
+		});
+
+		test("tau weapon systems carry the TOC's Weapons Systems label", () => {
+			expect(
+				resolveEntryGroup(
+					{ name: "Ion Cannon", system: { hardPointCost: 1 } },
+					"tau-weapon-systems",
+				),
+			).toBe("Weapons Systems");
+		});
+
+		test("conceptFolderLabel nests the tau system sources under Tau Battlesuits", () => {
+			expect(
+				conceptFolderLabel(
+					"tau-battlesuit-systems",
+					resolveEntryGroup(
+						{ name: "Jet Pack", system: { category: "primary" } },
+						"tau-battlesuit-systems",
+					),
+				),
+			).toBe("Tau Battlesuits/Primary Systems");
+			expect(
+				conceptFolderLabel(
+					"tau-weapon-systems",
+					resolveEntryGroup(
+						{ name: "Ion Cannon", system: { hardPointCost: 1 } },
+						"tau-weapon-systems",
+					),
+				),
+			).toBe("Tau Battlesuits/Weapons Systems");
+		});
+
 		test("gear groups by name suffix before page bands", () => {
 			expect(
 				resolveEntryGroup(
@@ -774,7 +835,10 @@ describe("compendium folder groupings (bead nsqt)", () => {
 		test("tools group wholesale as the book's Tools section", () => {
 			expect(
 				resolveEntryGroup(
-					{ name: "Multikey", system: { source: { book: "rt_core", page: 145 } } },
+					{
+						name: "Multikey",
+						system: { source: { book: "rt_core", page: 145 } },
+					},
 					"tools",
 				),
 			).toBe("Tools");
@@ -850,7 +914,12 @@ describe("compendium folder groupings (bead nsqt)", () => {
 		test("vessels actor pack nests starship factions under a Starships folder (bead imiq)", () => {
 			const entries = [
 				{ name: "Ork Kroozer", type: "starship", group: "Ork", system: {} },
-				{ name: "Eldar Hellebore", type: "starship", group: "Eldar", system: {} },
+				{
+					name: "Eldar Hellebore",
+					type: "starship",
+					group: "Eldar",
+					system: {},
+				},
 				{ name: "The Sirius", type: "starship", group: "Imperium", system: {} },
 				{ name: "Rhino APC", type: "vehicle", system: {} },
 			];
@@ -918,9 +987,9 @@ describe("compendium folder groupings (bead nsqt)", () => {
 					"npcs",
 				),
 			).toBe("Chaos & Daemons");
-			expect(
-				resolveEntryGroup({ name: "Scum", type: "npc" }, "npcs"),
-			).toBe("Criminals & Underworld");
+			expect(resolveEntryGroup({ name: "Scum", type: "npc" }, "npcs")).toBe(
+				"Criminals & Underworld",
+			);
 		});
 
 		test("warrant pack groups by the chart row (bead 3cb1)", () => {

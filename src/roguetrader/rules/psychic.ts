@@ -26,11 +26,6 @@ export const STRENGTH_LEVELS: readonly StrengthLevel[] = [
 	"push",
 ] as const;
 
-/** Push cap: +3 for sanctioned psykers, +4 for renegades/sorcerers (p157). */
-export function pushCap(sanctioned: boolean): number {
-	return sanctioned ? 3 : 4;
-}
-
 export interface EffectivePsyRatingInput {
 	psyRating: number;
 	strength: StrengthLevel;

@@ -1,12 +1,39 @@
 import { describe, expect, test } from "bun:test";
 import {
 	LEGACY_CHARACTER_TYPES,
+	LEGACY_MIGRATION_SYSTEM_ID,
 	TARGET_CHARACTER_TYPE,
 	explorerClonePayload,
 	needsTypeMigration,
 	removeLegacyCharacterTypes,
+	shouldRunLegacyMigration,
 	withoutLegacyCharacterTypes,
 } from "./migrations";
+
+describe("the migration is gated to the Rogue Trader system (bead w9sa.7)", () => {
+	// "acolyte" is Dark Heresy 2e's OWN character type. A sibling system that
+	// boots this code would clone its acolytes into RT's `explorer` type and
+	// delete the originals — silent data loss — so the runner only runs under
+	// the RT system id.
+	test("runs for the Rogue Trader system", () => {
+		expect(shouldRunLegacyMigration("rogue-trader")).toBe(true);
+		expect(shouldRunLegacyMigration(LEGACY_MIGRATION_SYSTEM_ID)).toBe(true);
+	});
+
+	test("does NOT run for a sibling system, even one whose type is acolyte", () => {
+		expect(shouldRunLegacyMigration("dark-heresy-2e")).toBe(false);
+		expect(shouldRunLegacyMigration("only-war")).toBe(false);
+	});
+
+	test("a missing or shaped-odd id is treated as NOT this system", () => {
+		// Fail closed: an absent id, an object, or anything that is not exactly
+		// the RT id must not run a destroy-and-recreate migration.
+		expect(shouldRunLegacyMigration(undefined)).toBe(false);
+		expect(shouldRunLegacyMigration(null)).toBe(false);
+		expect(shouldRunLegacyMigration({ id: "rogue-trader" })).toBe(false);
+		expect(shouldRunLegacyMigration("rogue-trader ")).toBe(false);
+	});
+});
 
 // Bead ow8w: legacy pc/acolyte character types migrate onto "explorer"
 // (owner decision 2026-09-06). Clone-recreate (create new, then delete old).
@@ -37,17 +64,13 @@ describe("legacy character type migration (bead ow8w)", () => {
 			img: "img.png",
 			prototypeToken: { bar1: { attribute: "wounds" } },
 			system: { insanity: 5 },
-			items: [
-				{ toObject: () => ({ name: "Pistol", type: "ranged-weapon" }) },
-			],
+			items: [{ toObject: () => ({ name: "Pistol", type: "ranged-weapon" }) }],
 		}) as Record<string, unknown>;
 		expect(payload.type).toBe("explorer");
 		expect(payload.name).toBe("Old Explorer");
 		expect(payload.img).toBe("img.png");
 		expect(payload.system).toEqual({ insanity: 5 });
-		expect(payload.items).toEqual([
-			{ name: "Pistol", type: "ranged-weapon" },
-		]);
+		expect(payload.items).toEqual([{ name: "Pistol", type: "ranged-weapon" }]);
 	});
 
 	test("clone payload omits absent optional fields", () => {
@@ -65,7 +88,13 @@ describe("legacy character type migration (bead ow8w)", () => {
 describe("legacy types are stripped from the type registry (bead vnz3)", () => {
 	test("the ARRAY shape is game.documentTypes — the one the dialog reads", () => {
 		expect(
-			withoutLegacyCharacterTypes(["explorer", "npc", "pc", "acolyte", "planet"]),
+			withoutLegacyCharacterTypes([
+				"explorer",
+				"npc",
+				"pc",
+				"acolyte",
+				"planet",
+			]),
 		).toEqual(["explorer", "npc", "planet"]);
 	});
 
@@ -122,9 +151,7 @@ describe("legacy types are mutated in place (bead aicd)", () => {
 			Actor: ["pc", "acolyte", "explorer", "npc", "planet"],
 			Item: ["skill", "gear"],
 		} as Record<string, unknown>);
-		expect(() =>
-			removeLegacyCharacterTypes(registry.Actor),
-		).not.toThrow();
+		expect(() => removeLegacyCharacterTypes(registry.Actor)).not.toThrow();
 		const actor = registry.Actor as unknown as string[];
 		expect(actor).toEqual(["explorer", "npc", "planet"]);
 		// Same array identity: the frozen registry now exposes the cleaned list.

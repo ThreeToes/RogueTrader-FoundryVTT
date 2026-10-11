@@ -125,10 +125,7 @@ export function spentOnRank(
  * spent covers its 5,000 threshold once the initial 500 are spent; before
  * that the character is still "rank 1" per the sheet's stored value).
  */
-export function derivedRank(
-	ranks: RankThresholdLike[],
-	spent: number,
-): number {
+export function derivedRank(ranks: RankThresholdLike[], spent: number): number {
 	let rank = 1;
 	for (const threshold of ranks) {
 		if (spent >= threshold.xpLevel && threshold.rank > rank) {
@@ -228,7 +225,9 @@ export function validatePurchase(
 ): PurchaseValidation {
 	const reasons: string[] = [];
 	if (row.rank > context.derivedRank) {
-		reasons.push(`Rank ${row.rank} advance is beyond the character's current rank.`);
+		reasons.push(
+			`Rank ${row.rank} advance is beyond the character's current rank.`,
+		);
 	}
 	const remaining = multiplierRemaining(row, context.ledger);
 	if (remaining <= 0) {
@@ -272,13 +271,20 @@ export const ELITE_ADVANCE_BASE_COST = 500;
 export function eliteLedgerEntry(
 	type: AdvanceType,
 	name: string,
-	cost = ELITE_ADVANCE_BASE_COST,
+	cost?: number,
+	profile: SystemProfile = DEFAULT_SYSTEM_PROFILE,
 ): AdvanceLedgerEntry {
+	// Bead wxut.2: the base cost is profile DATA. An explicit argument always
+	// wins (a caller naming its own cost); otherwise the profile's value, with
+	// the book constant as the core fallback.
+	const baseCost = Number.isFinite(profile.eliteAdvanceBaseCost)
+		? profile.eliteAdvanceBaseCost
+		: ELITE_ADVANCE_BASE_COST;
 	return {
 		type,
 		key: "",
 		name,
-		cost,
+		cost: cost ?? baseCost,
 		rank: 0,
 		elite: true,
 	};
@@ -399,7 +405,10 @@ export function evaluateAlternateRankGate(
 	if (required) {
 		const lower = required.toLowerCase();
 		if (/^any\b/.test(lower)) {
-			if (/\bhuman\b/.test(lower) && normalizeGateName(context.speciesKey) !== "") {
+			if (
+				/\bhuman\b/.test(lower) &&
+				normalizeGateName(context.speciesKey) !== ""
+			) {
 				reasons.push("Requires a human Explorer.");
 			}
 			if (
@@ -462,7 +471,9 @@ export function evaluateAlternateRankGate(
 		// Ladder suffixes ride the requirement name ("Tech-Use +10"); strip them
 		// from BOTH sides so an owned base skill satisfies the row.
 		const requirementText = gate.requirements.replace(/\s*\+\d+\s*/g, " ");
-		const { unmet } = evaluatePrerequisites(parsePrerequisites(requirementText), {
+		const { unmet } = evaluatePrerequisites(
+			parsePrerequisites(requirementText),
+			{
 				characteristics: context.characteristics,
 				talents: [...context.ownedTalents, ...context.ownedSkills].map(
 					stripLadder,

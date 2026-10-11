@@ -17,6 +17,7 @@
 
 import type { Modifier } from "../../rules-engine/modifier";
 import { getPorts } from "../../ffg/infrastructure/foundry/ports";
+import { effectiveProfile } from "./homebrew";
 import { repairBattlesuitCriticals, repairSkillFor } from "./criticals";
 import { rollSkillOutcome } from "./roll-system";
 
@@ -33,20 +34,25 @@ export async function rollBattlesuitRepair(actor: unknown): Promise<{
 		getPorts().notify.warn("CRITICAL.REPAIR_NO_SKILL");
 		return null;
 	}
+	const label = getPorts().i18n.t("CRITICAL.REPAIR_MODIFIER");
+	// Bead wxut.2: the Hard (-20) is profile DATA read from the effective
+	// profile; REPAIR_TEST_MODIFIER stays the core value and registry source.
+	const effective = effectiveProfile();
+	const value = Number.isFinite(effective.repairTestModifier)
+		? effective.repairTestModifier
+		: REPAIR_TEST_MODIFIER;
 	const modifier: Modifier = {
 		id: "battlesuit-repair-hard",
 		source: {
 			type: "macro",
-			label: game.i18n!.localize("CRITICAL.REPAIR_MODIFIER"),
+			label,
 		},
-		label: game.i18n!.localize("CRITICAL.REPAIR_MODIFIER"),
-		value: REPAIR_TEST_MODIFIER,
+		label,
+		value,
 	};
-	const outcome = await rollSkillOutcome(
-		(actor ?? {}) as never,
-		skill.id,
-		[modifier],
-	);
+	const outcome = await rollSkillOutcome((actor ?? {}) as never, skill.id, [
+		modifier,
+	]);
 	if (!outcome) return null;
 	// A failed Test removes nothing; a success removes one plus one per Degree.
 	const degrees = outcome.success ? outcome.degrees : -1;

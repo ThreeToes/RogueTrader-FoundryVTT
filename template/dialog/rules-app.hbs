@@ -1,0 +1,253 @@
+{{!-- Rules app (epic wxut, child B4): the only editor for the named
+     house-rule profiles. Left column = the profile list (the Core
+     pseudo-entry is not editable or deletable) plus, under their own heading,
+     the profiles MODULES registered at init (bead wxut.6) — read-only there,
+     activatable like any other profile; right column = the selected
+     profile's panels (generated knob form, per-profile JSON, core-vs-effective
+     diff) plus the import/export panel (bead wxut.5), which is the one place
+     a pack enters or leaves the world and the one place its refusals are
+     shown. Every control is data-driven from presentation/rules-view-model.ts,
+     which builds the view from the knob registry — the template holds no knob
+     literals and no hardcoded values (a knob's core value is profile data). --}}
+<div class="rules-app" data-active-tab="{{tab}}">
+    <nav class="rules-tabs" aria-label="{{localize "RULES.PROFILES"}}">
+        {{#each tabs as |t|}}
+        <button type="button" class="rules-tab{{#if (eq ../tab t.id)}} active{{/if}}"
+            data-action="tab" data-tab-id="{{t.id}}">{{localize t.labelKey}}</button>
+        {{/each}}
+    </nav>
+
+    <div class="rules-body">
+        <aside class="rules-sidebar">
+            <h2 class="rules-group-label">{{localize "RULES.PROFILES"}}</h2>
+            <ul class="rules-profile-list">
+                {{#each profiles as |p|}}
+                <li class="rules-profile{{#if (eq ../selectedId p.id)}} selected{{/if}}{{#if p.isActive}} active{{/if}}"
+                    data-action="selectProfile" data-profile-id="{{p.id}}">
+                    <span class="rules-profile-name">{{#if p.nameKey}}{{localize p.nameKey}}{{else}}{{p.name}}{{/if}}</span>
+                    {{#if p.isActive}}<span class="rules-profile-active">{{localize "RULES.PROFILE_ACTIVE"}}</span>{{/if}}
+                </li>
+                {{/each}}
+            </ul>
+            {{#if moduleProfiles.length}}
+            {{!-- Profiles a module registered at its own init (bead wxut.6):
+                 their own group because their provenance is not the world's —
+                 read-only here, activatable like any other profile. --}}
+            <h2 class="rules-group-label rules-module-label">{{localize "RULES.MODULE_GROUP"}}</h2>
+            <ul class="rules-profile-list module">
+                {{#each moduleProfiles as |p|}}
+                <li class="rules-profile module{{#if (eq ../selectedId p.id)}} selected{{/if}}{{#if p.isActive}} active{{/if}}"
+                    data-action="selectProfile" data-profile-id="{{p.id}}">
+                    <span class="rules-profile-name">{{p.name}}</span>
+                    {{#if p.isActive}}<span class="rules-profile-active">{{localize "RULES.PROFILE_ACTIVE"}}</span>{{/if}}
+                </li>
+                {{/each}}
+            </ul>
+            <p class="rules-sidebar-hint">{{localize "RULES.MODULE_HINT"}}</p>
+            {{/if}}
+            {{#if skippedProfiles.length}}
+            <ul class="rules-skipped">
+                {{#each skippedProfiles as |s|}}<li>{{s}}</li>{{/each}}
+            </ul>
+            {{/if}}
+            <div class="rules-sidebar-actions">
+                <button type="button" class="rules-button" data-action="createProfile">
+                    <i class="fa-solid fa-plus"></i> {{localize "RULES.PROFILE_CREATE"}}</button>
+            </div>
+            <p class="rules-sidebar-hint">{{localize "RULES.CORE_HINT"}}</p>
+        </aside>
+
+        <section class="rules-main">
+            <header class="rules-header">
+                <div class="rules-header-row">
+                    <label class="rules-field-label" for="rules-profile-name">{{localize "RULES.PROFILE_NAME"}}</label>
+                    <input id="rules-profile-name" type="text" data-profile-name value="{{nameValue}}"
+                        placeholder="{{localize "RULES.PROFILE_NAME_PLACEHOLDER"}}" {{#unless editable}}disabled{{/unless}} />
+                    <span class="rules-header-flag">{{#if selectedIsActive}}{{localize "RULES.PROFILE_ACTIVE"}}{{else}}{{localize "RULES.PROFILE_INACTIVE"}}{{/if}}</span>
+                </div>
+                <div class="rules-header-actions">
+                    <button type="button" class="rules-button" data-action="activateProfile"
+                        data-profile-id="{{selectedId}}" {{#if selectedIsActive}}disabled{{/if}}>
+                        {{localize "RULES.PROFILE_ACTIVATE"}}</button>
+                    <button type="button" class="rules-button" data-action="renameProfile" {{#unless editable}}disabled{{/unless}}>
+                        {{localize "RULES.PROFILE_RENAME"}}</button>
+                    <button type="button" class="rules-button" data-action="duplicateProfile" {{#unless editable}}disabled{{/unless}}>
+                        {{localize "RULES.PROFILE_DUPLICATE"}}</button>
+                    <button type="button" class="rules-button" data-action="deleteProfile"
+                        data-profile-id="{{selectedId}}" {{#unless editable}}disabled{{/unless}}>
+                        {{localize "RULES.PROFILE_DELETE"}}</button>
+                    <button type="button" class="rules-button default" data-action="save" {{#unless editable}}disabled{{/unless}}>
+                        {{localize "RULES.SAVE"}}</button>
+                </div>
+                {{#if tableConflicts.length}}
+                <p class="rules-notice error">{{localize "RULES.TABLE_BAND_CONFLICT"}}</p>
+                {{/if}}
+            </header>
+
+            {{#if notice.kind}}
+            <p class="rules-notice {{notice.kind}}">
+                <strong>{{#if notice.heading}}{{notice.heading}}{{else if (eq notice.kind "error")}}{{localize "RULES.NOT_SAVED"}}{{else}}{{localize "RULES.SAVED"}}{{/if}}</strong>
+                {{#if notice.message}}<span class="rules-notice-message">{{notice.message}}</span>{{/if}}
+                {{#if notice.errors.length}}
+                <ul class="rules-notice-errors">{{#each notice.errors as |e|}}<li>{{e}}</li>{{/each}}</ul>
+                {{/if}}
+            </p>
+            {{/if}}
+
+            {{#if (eq tab "knobs")}}
+            <div class="rules-panel rules-knobs">
+                {{#if editable}}
+                {{#unless selectedIsActive}}
+                <p class="rules-hint">{{localize "RULES.INACTIVE_HINT"}}</p>
+                {{/unless}}
+                {{else}}
+                <p class="rules-hint">{{localize readOnlyKey}}</p>
+                {{/if}}
+                {{#each groups as |g|}}
+                <h3 class="rules-group-label">{{localize g.labelKey}}</h3>
+                <div class="rules-knob-group">
+                    {{#each g.fields as |f|}}
+                    <div class="rule-knob{{#if f.overridden}} overridden{{/if}}" data-knob-key="{{f.knob.key}}">
+                        <div class="rule-knob-head">
+                            <span class="rule-knob-label">{{localize f.labelKey}}</span>
+                            {{#if f.overridden}}<span class="rule-knob-flag">{{localize "RULES.OVERRIDDEN"}}</span>{{/if}}
+                            <span class="rule-knob-hazard" data-tooltip="{{localize f.hintKey}}">{{localize f.hazardKey}}</span>
+                        </div>
+                        <p class="rule-knob-hint">{{localize f.hintKey}}</p>
+                        <div class="rule-knob-control">
+                            {{#if (eq f.control "boolean")}}
+                            <input type="checkbox" data-knob="{{f.knob.key}}" {{#if f.checked}}checked{{/if}} {{#unless editable}}disabled{{/unless}} />
+                            {{else if (eq f.control "select")}}
+                            <select data-knob="{{f.knob.key}}" {{#unless editable}}disabled{{/unless}}>
+                                {{#each f.options as |o|}}
+                                <option value="{{o.value}}" {{#if o.selected}}selected{{/if}}>{{localize o.labelKey}}</option>
+                                {{/each}}
+                            </select>
+                            {{else if (eq f.control "table")}}
+                            <table class="rule-band-table">
+                                <thead>
+                                    <tr>
+                                        <th>{{localize "RULES.TABLE_BAND"}}</th>
+                                        <th>{{localize "RULES.TABLE_LOCATION"}}</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{#each f.bandRows as |r|}}
+                                    <tr data-band-row="{{r.index}}">
+                                        <td><input type="text" data-knob="{{r.knobKey}}" data-band="band"
+                                            data-index="{{r.index}}" value="{{r.band}}" {{#unless r.editable}}disabled{{/unless}} /></td>
+                                        <td><input type="text" data-knob="{{r.knobKey}}" data-band="location"
+                                            data-index="{{r.index}}" value="{{r.location}}" {{#unless r.editable}}disabled{{/unless}} /></td>
+                                        <td><button type="button" class="rule-band-remove" data-action="removeBand"
+                                            data-index="{{r.index}}" {{#unless r.editable}}disabled{{/unless}}
+                                            data-tooltip="{{localize "RULES.TABLE_REMOVE_BAND"}}"><i class="fa-solid fa-xmark"></i></button></td>
+                                    </tr>
+                                    {{/each}}
+                                </tbody>
+                            </table>
+                            <button type="button" class="rules-button" data-action="addBand" data-knob="{{f.knob.key}}"
+                                {{#unless editable}}disabled{{/unless}}>{{localize "RULES.TABLE_ADD_BAND"}}</button>
+                            {{else}}
+                            <input type="number" data-knob="{{f.knob.key}}" value="{{f.inputValue}}" {{#unless editable}}disabled{{/unless}} />
+                            {{/if}}
+                            <span class="rule-knob-core" data-tooltip="{{localize "RULES.CORE_VALUE_HINT"}}">
+                                {{localize "RULES.CORE_VALUE"}}
+                                {{#if f.coreDisplay.none}}<em>{{localize "RULES.VALUE_NONE"}}</em>
+                                {{else if f.coreDisplay.isBoolean}}{{#if f.coreDisplay.yesNo}}{{localize "RULES.VALUE_YES"}}{{else}}{{localize "RULES.VALUE_NO"}}{{/if}}
+                                {{else if f.coreDisplay.bands}}{{f.coreDisplay.bands}} {{localize "RULES.TABLE_BANDS_UNIT"}}
+                                {{else}}{{f.coreDisplay.text}}{{/if}}
+                            </span>
+                        </div>
+                    </div>
+                    {{/each}}
+                </div>
+                {{/each}}
+            </div>
+
+            {{else if (eq tab "json")}}
+            <div class="rules-panel rules-json">
+                <p class="rules-hint">{{localize "RULES.JSON_HINT"}}</p>
+                <textarea class="rules-json-text" data-json rows="12" spellcheck="false" {{#unless editable}}disabled{{/unless}}>{{jsonText}}</textarea>
+                <div class="rules-json-actions">
+                    <button type="button" class="rules-button default" data-action="saveJson" {{#unless editable}}disabled{{/unless}}>
+                        {{localize "RULES.SAVE"}}</button>
+                </div>
+                <p class="rules-hint">{{localize "RULES.JSON_FORM_HINT"}}</p>
+            </div>
+
+            {{else if (eq tab "pack")}}
+            <div class="rules-panel rules-pack">
+                <h3 class="rules-group-label">{{localize "RULES.PACK_EXPORT_TITLE"}}</h3>
+                <p class="rules-hint">{{localize "RULES.PACK_EXPORT_HINT"}}</p>
+                <div class="rules-pack-row">
+                    <label class="rules-field-label" for="rules-pack-scope">{{localize "RULES.PACK_EXPORT_SCOPE"}}</label>
+                    <select id="rules-pack-scope" data-pack-scope>
+                        <option value="active" {{#if (eq packScope "active")}}selected{{/if}}>{{localize "RULES.PACK_SCOPE_ACTIVE"}}</option>
+                        <option value="all" {{#if (eq packScope "all")}}selected{{/if}}>{{localize "RULES.PACK_SCOPE_ALL"}}</option>
+                    </select>
+                </div>
+                {{#if packExportCount}}
+                <textarea class="rules-json-text rules-pack-text" data-pack-out rows="12" spellcheck="false" readonly>{{packTextOut}}</textarea>
+                <div class="rules-json-actions">
+                    <button type="button" class="rules-button" data-action="exportPack">{{localize "RULES.PACK_EXPORT_COPY"}}</button>
+                    <button type="button" class="rules-button" data-action="downloadPack">{{localize "RULES.PACK_EXPORT_DOWNLOAD"}}</button>
+                </div>
+                {{else}}
+                <p class="rules-hint">{{localize "RULES.PACK_EXPORT_EMPTY"}}</p>
+                {{/if}}
+
+                <h3 class="rules-group-label">{{localize "RULES.PACK_IMPORT_TITLE"}}</h3>
+                <p class="rules-hint">{{localize "RULES.PACK_IMPORT_HINT"}}</p>
+                <textarea class="rules-json-text rules-pack-text" data-pack-text rows="12" spellcheck="false"
+                    placeholder="{{localize "RULES.PACK_IMPORT_PLACEHOLDER"}}">{{packTextIn}}</textarea>
+                <div class="rules-json-actions">
+                    <label class="rules-pack-file">
+                        <span class="rules-button">{{localize "RULES.PACK_IMPORT_FILE"}}</span>
+                        <input type="file" data-pack-file accept=".json,application/json" />
+                    </label>
+                    <label class="rules-pack-check">
+                        <input type="checkbox" data-pack-activate {{#if packActivate}}checked{{/if}} />
+                        {{localize "RULES.PACK_IMPORT_ACTIVATE"}}
+                    </label>
+                    <button type="button" class="rules-button default" data-action="importPack">{{localize "RULES.PACK_IMPORT_BUTTON"}}</button>
+                </div>
+                <p class="rules-hint">{{localize "RULES.PACK_IMPORT_ACTIVATE_HINT"}}</p>
+            </div>
+
+            {{else if (eq tab "diff")}}
+            <div class="rules-panel rules-diff">
+                {{#if diffBreakingCount}}
+                <p class="rules-notice error">{{localize "RULES.DIFF_BREAKING"}}</p>
+                {{/if}}
+                {{#unless diffRows.length}}
+                <p class="rules-hint">{{localize "RULES.DIFF_EMPTY"}}</p>
+                {{/unless}}
+                {{#if diffRows.length}}
+                <table class="rules-diff-table">
+                    <thead>
+                        <tr>
+                            <th>{{localize "RULES.DIFF_KNOB"}}</th>
+                            <th>{{localize "RULES.DIFF_CORE"}}</th>
+                            <th>{{localize "RULES.DIFF_EFFECTIVE"}}</th>
+                            <th>{{localize "RULES.DIFF_HAZARD"}}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each diffRows as |d|}}
+                        <tr class="rules-diff-row{{#if d.breaking}} breaking{{else if d.unknown}} unknown{{else if d.overridden}} overridden{{/if}}">
+                            <td class="rules-diff-row-key">{{#if d.labelKey}}{{localize d.labelKey}}{{else}}<code>{{d.key}}</code>{{/if}}</td>
+                            <td>{{#if d.coreDisplay.none}}<em>{{localize "RULES.VALUE_NONE"}}</em>{{else if d.coreDisplay.isBoolean}}{{#if d.coreDisplay.yesNo}}{{localize "RULES.VALUE_YES"}}{{else}}{{localize "RULES.VALUE_NO"}}{{/if}}{{else if d.coreDisplay.bands}}{{d.coreDisplay.bands}} {{localize "RULES.TABLE_BANDS_UNIT"}}{{else}}{{d.coreDisplay.text}}{{/if}}</td>
+                            <td>{{#if d.effectiveDisplay.none}}<em>{{localize "RULES.VALUE_NONE"}}</em>{{else if d.effectiveDisplay.isBoolean}}{{#if d.effectiveDisplay.yesNo}}{{localize "RULES.VALUE_YES"}}{{else}}{{localize "RULES.VALUE_NO"}}{{/if}}{{else if d.effectiveDisplay.bands}}{{d.effectiveDisplay.bands}} {{localize "RULES.TABLE_BANDS_UNIT"}}{{else}}{{d.effectiveDisplay.text}}{{/if}}</td>
+                            <td>{{#if d.hazardKey}}{{localize d.hazardKey}}{{/if}}{{#if d.breaking}} <span class="rules-diff-breaking">{{localize "RULES.DIFF_BREAKING_FLAG"}}</span>{{/if}}{{#if d.unknown}} <span class="rules-diff-unknown">{{localize "RULES.DIFF_UNKNOWN"}}</span>{{/if}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+                {{/if}}
+                <p class="rules-hint">{{localize "RULES.DIFF_HINT"}}</p>
+            </div>
+            {{/if}}
+        </section>
+    </div>
+</div>

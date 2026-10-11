@@ -10,11 +10,26 @@
 
 import { attackProfileOf } from "../../../ffg/domain/model/attack";
 import { messageFlagNamespace } from "../../../ffg/application/chat-flags";
-import { equipStateOf, ownedItemResolver, systemOf } from "../../data/accessors";
+import {
+	equipStateOf,
+	ownedItemResolver,
+	systemOf,
+} from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollHandler } from "../../rules/roll-contract";
 import { chatCardTitleDoc } from "../chat-doc-links";
 import { resolveEvasion } from "./evasion";
+import {
+	effectiveProfile,
+} from "../../rules/homebrew";
+
+/**
+ * Aim action bonuses (bead 4hwl seam): the single source for the +10 half /
+ * +20 full split — the dialog aims-select renders them through
+ * attackContext.aimHalf/aimFull (no duplicated literals in the template) and
+ * the post-dialog Aim row reads the same constants.
+ */
+export const AIM_BONUS = { half: 10, full: 20 } as const;
 
 /** Weapon attack to-hit test (rollWeaponAttack). */
 export const weaponHandler: RollHandler<"weapon"> = {
@@ -75,10 +90,20 @@ export const weaponHandler: RollHandler<"weapon"> = {
 	},
 	dialogConfig(_request, prepared) {
 		// Bead hyv: attack-context selectors (fire mode, aim, charge).
+		// Bead 4hwl: the option bonus labels are resolved DATA — the fire-mode
+		// numbers come from the EFFECTIVE profile (core p237 +10/+20, or the
+		// world's house rules — bead wxut.2 replaced resolveFireModeBonus), and
+		// the aim numbers from AIM_BONUS; the template binds them instead of
+		// carrying its own hardcoded literals.
+		const profile = effectiveProfile();
 		return {
 			attackContext: {
 				ranged: prepared.weapon?.type === "ranged-weapon",
 				melee: prepared.weapon?.type === "melee-weapon",
+				burstBonus: profile.fireModeBonus.burst,
+				fullBonus: profile.fireModeBonus.full,
+				aimHalf: AIM_BONUS.half,
+				aimFull: AIM_BONUS.full,
 			},
 		};
 	},
@@ -90,13 +115,16 @@ export const weaponHandler: RollHandler<"weapon"> = {
 		// aimed shot with an Inaccurate weapon shows an explicit 0-value row
 		// so the cancellation is visible, not silent.
 		if (!dialog.attack?.aimed) return [];
+		const ports = getPorts();
 		const special = prepared.weapon?.special ?? [];
 		if (special.includes("inaccurate")) {
 			return [
 				{
 					id: "attack:aim-inaccurate",
 					source: { type: "dialog", label: "WEAPON.SPECIAL" },
-					label: "Inaccurate (no Aim bonus)",
+					// Bead dfdv: labels resolve through the i18n port — a non-en
+					// client gets its translation, not the en literal.
+					label: ports.i18n.t("ROLL.AIM_INACCURATE"),
 					value: 0,
 				},
 			];
@@ -105,8 +133,12 @@ export const weaponHandler: RollHandler<"weapon"> = {
 			{
 				id: "attack:aim",
 				source: { type: "dialog", label: "ROLL.AIM" },
-				label: dialog.attack.aimFull ? "Aim (Full)" : "Aim (Half)",
-				value: dialog.attack.aimFull ? 20 : 10,
+				label: ports.i18n.t(
+					dialog.attack.aimFull ? "ROLL.AIM_FULL" : "ROLL.AIM_HALF",
+				),
+				// Bead 4hwl: same AIM_BONUS constants the dialog option labels
+				// render — one seam, no duplicated 10/20 literals.
+				value: dialog.attack.aimFull ? AIM_BONUS.full : AIM_BONUS.half,
 			},
 		];
 	},
@@ -154,7 +186,7 @@ export const weaponHandler: RollHandler<"weapon"> = {
 			try {
 				await resolveEvasion(target, request);
 			} catch (error) {
-				console.error("rogue-trader: evasion roll failed", error);
+				console.error("rogue-trader | evasion roll failed", error);
 			}
 		}
 	},

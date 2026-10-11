@@ -16,7 +16,7 @@
             {{selectOptions masteryChoices selected=document.system.mastery localize=true}}
         </select>
         {{else}}
-        <span>{{localize (concat "NAVIGATOR_POWER." document.system.mastery)}}</span>
+        <span>{{masteryLabel}}</span>
         {{/if}}
         <span class="chip">+{{masteryBonus}}</span>
     </div>

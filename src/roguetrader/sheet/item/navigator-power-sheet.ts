@@ -39,9 +39,19 @@ export class NavigatorPowerSheet extends HandlebarsApplicationMixin(
 				`NAVIGATOR_POWER.${m.toUpperCase()}`,
 			]),
 		);
-		// Read-only display label for the characteristic select.
+		// Read-only display labels for the characteristic and mastery selects.
+		// BOTH are RESOLVED HERE, not keyed in the template: the schema stores
+		// lowercase choices ("perception", "novice"), and the lang keys are
+		// upper-snake — the old `{{localize (concat "NAVIGATOR_POWER."
+		// document.system.mastery)}}` built the lowercase key, so this row
+		// rendered the literal "NAVIGATOR_POWER.novice" on every sheet. Every
+		// other composition site already upper-cases (see the characteristicLabel
+		// line below and creator-context.ts); these two are the same seam.
 		context.characteristicLabel = game.i18n.localize(
 			`CHARACTERISTIC.${(this.document.system.characteristic ?? "per").toUpperCase()}`,
+		);
+		context.masteryLabel = game.i18n.localize(
+			`NAVIGATOR_POWER.${(this.document.system.mastery ?? "novice").toUpperCase()}`,
 		);
 		context.masteryBonus = (
 			this.document.system as unknown as NavigatorPower

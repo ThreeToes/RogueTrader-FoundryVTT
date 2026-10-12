@@ -68,30 +68,106 @@ const dice: Dice = {
 			// properties of the damage TERM, not of the whole formula.
 			rolledTerms.push({ class: term.class, faces, results });
 		}
-		return { total: roll.total ?? 0, dice: kept, terms: rolledTerms, formula };
+		// Bead wvkd: the evaluated Roll is handed on as well — Dice So Nice!
+		// only animates a chat message that carries rolls (core's
+		// ChatMessage#isRoll is `this.rolls.length > 0`), and discarding it here
+		// left every card invisible to the module. Core's own Roll#toMessage
+		// takes exactly this shape (client/dice/roll.mjs:943:
+		// `messageData.rolls = [this]`), and the ChatMessage schema JSONField
+		// serializes the instance through Roll#toJSON.
+		return {
+			total: roll.total ?? 0,
+			dice: kept,
+			terms: rolledTerms,
+			formula,
+			rolls: [roll],
+		};
 	},
 };
 
+/**
+ * What a chat speaker can be built from (bead 0fl6): the roll pipeline's
+ * ActorView, or a real Actor document when the caller already holds one.
+ */
+type SpeakerActor = { uuid?: string; name?: string; documentName?: string };
+
+/** The in-world actor uuid shape ("Actor.<id>"); tokens and compendium docs differ. */
+const WORLD_ACTOR_UUID = /^Actor\.[^.]+$/;
+
+/**
+ * A Foundry document, STRUCTURALLY (bead 0fl6): `documentName` is core's own
+ * discriminator and every real document carries it, including the stubs
+ * headless tests build. `instanceof foundry.documents.Actor` cannot be used
+ * here — that class only exists once Foundry boots, and the chat port has to
+ * answer in tests too.
+ */
+function asDocument(value: unknown): { documentName: string } | null {
+	const documentName = (value as { documentName?: unknown } | null | undefined)
+		?.documentName;
+	return typeof documentName === "string" && documentName.endsWith("Actor")
+		? (value as { documentName: string })
+		: null;
+}
+
+/**
+ * Resolve the actor a card speaks AS to a real document, or hand back what we
+ * were given (bead 0fl6).
+ *
+ * `ChatMessage.getSpeaker` only honours an actor that IS a document (core
+ * client/documents/chat-message.mjs:237, CASE 2): it then labels the card with
+ * the character's name and links it to the actor. Hand it the roll pipeline's
+ * ActorView instead and it falls through to CASE 5/6, stamping the card with
+ * the PLAYER's name and no actor link — which is why every roll, damage and
+ * critical card came out labelled with the user's name.
+ *
+ * A uuid that does not resolve, a stub that only knows `fromUuidSync`, or a
+ * headless run with no `foundry` global at all: degrade to passing the view
+ * through (today's behaviour) rather than losing the card.
+ */
+async function speakerFor(actor: SpeakerActor): Promise<unknown> {
+	// A caller that already holds the document passes it straight through.
+	if (asDocument(actor)) return actor;
+	// Narrowed to a string here so the resolver below cannot be handed undefined.
+	const uuid = actor.uuid;
+	if (typeof uuid !== "string" || !WORLD_ACTOR_UUID.test(uuid)) return actor;
+	try {
+		// The LevelDB-safe resolver (bead wwuc): content.ts takes the pack
+		// shapes directly and everything else through fromUuid.
+		const doc = await foundryContent.document(uuid);
+		if (doc && asDocument(doc)) return doc;
+	} catch {
+		// A document we cannot resolve is not a reason to drop the card.
+	}
+	return actor;
+}
+
 const chat: Chat = {
-	async post(actor, template, vars, flags) {
+	async post(actor, template, vars, flags, rolls) {
 		const content = await foundry.applications.handlebars.renderTemplate(
 			template,
 			vars,
 		);
 		return (await foundry.documents.ChatMessage.create({
 			speaker: foundry.documents.ChatMessage.getSpeaker({
-				actor: actor as never,
+				actor: (await speakerFor(actor)) as never,
 			}),
 			content,
 			...(flags ? { flags } : {}),
+			// Bead wvkd: attach the evaluated rolls so the message is roll-type and
+			// Dice So Nice! animates it. The ONLY cast to core's Roll type in the
+			// codebase lives here — above this line `rolls` is an opaque list, so
+			// the application layer never names a Foundry type.
+			...(rolls?.length ? { rolls: rolls as foundry.dice.Roll[] } : {}),
 		})) as { id?: string } | undefined;
 	},
-	async postHtml(actor, content) {
+	async postHtml(actor, content, rolls) {
 		return (await foundry.documents.ChatMessage.create({
 			speaker: foundry.documents.ChatMessage.getSpeaker({
-				actor: actor as never,
+				actor: (await speakerFor(actor)) as never,
 			}),
 			content,
+			// Bead wvkd: the same animation contract as post (above).
+			...(rolls?.length ? { rolls: rolls as foundry.dice.Roll[] } : {}),
 		})) as { id?: string } | undefined;
 	},
 	async update(messageId, data) {

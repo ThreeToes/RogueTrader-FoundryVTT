@@ -195,9 +195,14 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		const through = Math.max(0, hits - absorbed);
 		// Damage (book p220-221): roll once per hit, total combined; lance
 		// hits ignore Armour entirely.
+		// Bead wvkd: every die the salvo resolution rolls is carried to the
+		// card so Dice So Nice! animates it.
+		const damageRolls: unknown[] = [];
 		let damageTotal = 0;
 		if (through > 0) {
-			damageTotal = (await ports.dice.roll(`${through}${damage}`)).total;
+			const damageRoll = await ports.dice.roll(`${through}${damage}`);
+			damageTotal = damageRoll.total;
+			damageRolls.push(...(damageRoll.rolls ?? []));
 		}
 		const salvo = resolveSalvoDamage({
 			damageTotal,
@@ -222,7 +227,9 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		// automatic point (p220).
 		let criticalEntry = null;
 		if (isCritical(outcome.degrees, critRating)) {
-			criticalEntry = shipCritical((await ports.dice.roll("1d5")).total || 1);
+			const criticalRoll = await ports.dice.roll("1d5");
+			criticalEntry = shipCritical(criticalRoll.total || 1);
+			damageRolls.push(...(criticalRoll.rolls ?? []));
 			if (salvo.hullDamage === 0) {
 				const hi = Math.max(0, targetSystem.hullIntegrity?.value ?? 0);
 				await ports.actors.update(target, {
@@ -252,6 +259,8 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 			critical: criticalEntry,
 			targetName: target.name ?? "",
 			crippled: crippledEffects(nextHI).crippled,
+			// Bead wvkd: the damage dice (plus the critical chart die).
+			rolls: damageRolls,
 		});
 		// Critical component selection (book p221-222): the attacker picks
 		// among components he "knows of" (v1: all installed components are
@@ -281,22 +290,31 @@ async function postShipSalvoCard(
 		critical: { name: string } | null;
 		targetName: string;
 		crippled: boolean;
+		/** Evaluated salvo dice to attach to the card (bead wvkd). */
+		rolls: unknown[];
 	},
 ): Promise<void> {
-	await postCard(request.actor, `${TEMPLATE_ROOT}chat/ship-salvo.hbs`, {
-		title: prepared.title,
-		targetName: result.targetName,
-		hits: result.hits,
-		absorbed: result.absorbed,
-		through: result.through,
-		damageTotal: result.damageTotal,
-		armourAbsorbed: result.salvo.armourAbsorbed,
-		hullDamage: result.salvo.hullDamage,
-		crewPopulationLoss: result.crewLoss.population,
-		crewMoraleLoss: result.crewLoss.morale,
-		criticalName: result.critical?.name ?? "",
-		crippled: result.crippled,
-	});
+	await postCard(
+		request.actor,
+		`${TEMPLATE_ROOT}chat/ship-salvo.hbs`,
+		{
+			title: prepared.title,
+			targetName: result.targetName,
+			hits: result.hits,
+			absorbed: result.absorbed,
+			through: result.through,
+			damageTotal: result.damageTotal,
+			armourAbsorbed: result.salvo.armourAbsorbed,
+			hullDamage: result.salvo.hullDamage,
+			crewPopulationLoss: result.crewLoss.population,
+			crewMoraleLoss: result.crewLoss.morale,
+			criticalName: result.critical?.name ?? "",
+			crippled: result.crippled,
+		},
+		undefined,
+		// Bead wvkd: Dice So Nice! animates the salvo dice.
+		result.rolls,
+	);
 }
 
 /**
@@ -357,15 +375,22 @@ export const shipRepairHandler: RollHandler<"ship-repair"> = {
 			prepared.kindData?.componentId ?? "",
 		);
 		if (!component) return;
-		const d5 = (await ports.dice.roll("1d5")).total;
-		const { turns } = emergencyRepairsOutcome(outcome.degrees, d5);
+		// Bead wvkd: the repair-time die rides the card so it animates.
+		const d5 = await ports.dice.roll("1d5");
+		const { turns } = emergencyRepairsOutcome(outcome.degrees, d5.total);
 		await ports.actors.update(component, {
 			system: { state: "intact", depressurised: false },
 		});
-		await postCard(request.actor, `${TEMPLATE_ROOT}chat/ship-repair.hbs`, {
-			title: prepared.title,
-			component: component.name ?? "",
-			turns,
-		});
+		await postCard(
+			request.actor,
+			`${TEMPLATE_ROOT}chat/ship-repair.hbs`,
+			{
+				title: prepared.title,
+				component: component.name ?? "",
+				turns,
+			},
+			undefined,
+			d5.rolls,
+		);
 	},
 };

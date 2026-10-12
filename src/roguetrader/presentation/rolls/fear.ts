@@ -15,6 +15,7 @@
 
 import { systemOf } from "../../data/accessors";
 import { adjustTrack } from "../../../ffg/application/tracks";
+import type { DiceResult } from "../../../ffg/application/ports";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { postCard } from "../../rules/chat-flags";
@@ -57,10 +58,27 @@ function conditionLabel(statusId: string): string {
 	return status ? getPorts().i18n.t(status.labelKey) : statusId;
 }
 
+/**
+ * A rolled formula the card reports.
+ *
+ * Bead wvkd: the evaluated Roll rides the chat message so Dice So Nice!
+ * animates the die — the total alone is enough for the rules, not for a table
+ * that wants to SEE it roll.
+ */
+type CardRoll = DiceResult;
+
+/** No Insanity gain: no die was rolled, so there is nothing to animate. */
+const NO_INSANITY_GAIN: CardRoll = {
+	total: 0,
+	dice: [],
+	terms: [],
+	formula: "",
+};
+
 /** Roll an insanity-gain formula ("0" / "1" / "1d5" / "1d5+1" / ...). */
-async function rollInsanityGain(formula: string): Promise<number> {
-	if (!formula || formula === "0") return 0;
-	return (await getPorts().dice.roll(formula)).total;
+async function rollInsanityGain(formula: string): Promise<CardRoll> {
+	if (!formula || formula === "0") return NO_INSANITY_GAIN;
+	return await getPorts().dice.roll(formula);
 }
 
 /**
@@ -108,7 +126,7 @@ export async function applyCondition(
 		preRolledInsanity !== undefined
 			? preRolledInsanity
 			: condition.insanity && condition.insanity !== "0"
-				? await rollInsanityGain(condition.insanity)
+				? (await rollInsanityGain(condition.insanity)).total
 				: 0;
 	if (gain > 0) {
 		await adjustTrack(ports.actors, actor, "insanity", gain);
@@ -198,36 +216,62 @@ export const fearHandler: RollHandler<"fear"> = {
 			// or more also gains +1d5 Insanity Points.
 			const failedBy = degreesOfFailure(finalTarget, outcome.roll);
 			const condition = unnervedCondition();
-			const insanityGain = failedBy >= 4 ? await rollInsanityGain("1d5") : 0;
-			await applyCondition(request.actor, condition, outcome.roll, insanityGain);
-			await postCard(request.actor, `${TEMPLATE_ROOT}chat/fear-shock.hbs`, {
-				title: prepared.title,
-				shockText: ports.i18n.t("FEAR.NONCOMBAT_FAILURE"),
-				conditionName: conditionLabel(condition.statusId),
-				insanityNote:
-					failedBy >= 4
-						? `${ports.i18n.t("FEAR.NONCOMBAT_INSANITY")}${insanityGain ? ` (${insanityGain})` : ""}`
-						: "",
-			});
+			const insanityGain =
+				failedBy >= 4 ? await rollInsanityGain("1d5") : NO_INSANITY_GAIN;
+			await applyCondition(
+				request.actor,
+				condition,
+				outcome.roll,
+				insanityGain.total,
+			);
+			await postCard(
+				request.actor,
+				`${TEMPLATE_ROOT}chat/fear-shock.hbs`,
+				{
+					title: prepared.title,
+					shockText: ports.i18n.t("FEAR.NONCOMBAT_FAILURE"),
+					conditionName: conditionLabel(condition.statusId),
+					insanityNote:
+						failedBy >= 4
+							? `${ports.i18n.t("FEAR.NONCOMBAT_INSANITY")}${insanityGain.total ? ` (${insanityGain.total})` : ""}`
+							: "",
+				},
+				undefined,
+				// Bead wvkd: the +1d5 Insanity die animates.
+				insanityGain.rolls,
+			);
 			return;
 		}
 		// Combat failure (p295): Shock Table, d100 + 10 per degree of failure.
+		// Bead wvkd: the evaluated roll is kept so the Shock die animates.
+		const shock = await ports.dice.roll("1d100");
 		const shockTotal =
-			(await ports.dice.roll("1d100")).total +
-			10 * degreesOfFailure(finalTarget, outcome.roll);
+			shock.total + 10 * degreesOfFailure(finalTarget, outcome.roll);
 		const row = shockOutcome(shockTotal);
 		// Apply the row's condition + Insanity gain (bead q1ql): statuses are
 		// the Foundry-native carrier; the card shows what landed. The SAME dice
 		// result is displayed and applied (bead 3u1p) via the pre-rolled gain.
 		const condition = shockCondition(shockTotal);
 		const insanityGain = await rollInsanityGain(condition.insanity);
-		await applyCondition(request.actor, condition, shockTotal, insanityGain);
-		await postCard(request.actor, `${TEMPLATE_ROOT}chat/fear-shock.hbs`, {
-			title: prepared.title,
-			shockRoll: shockTotal,
-			shockText: ports.i18n.t(row.textKey),
-			conditionName: conditionLabel(condition.statusId),
-			insanityGain,
-		});
+		await applyCondition(
+			request.actor,
+			condition,
+			shockTotal,
+			insanityGain.total,
+		);
+		await postCard(
+			request.actor,
+			`${TEMPLATE_ROOT}chat/fear-shock.hbs`,
+			{
+				title: prepared.title,
+				shockRoll: shockTotal,
+				shockText: ports.i18n.t(row.textKey),
+				conditionName: conditionLabel(condition.statusId),
+				insanityGain: insanityGain.total,
+			},
+			undefined,
+			// Bead wvkd: the Shock die animates.
+			shock.rolls,
+		);
 	},
 };

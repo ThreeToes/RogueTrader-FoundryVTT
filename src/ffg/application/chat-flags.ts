@@ -121,6 +121,10 @@ export function readMessageFlag<T extends keyof MessageFlagPayload>(
 /**
  * Post a roll card: render the template and create the chat message with
  * speaker + flags. The single shared tail of every roll pipeline.
+ *
+ * `rolls` (bead wvkd) is the evaluated dice the card reports, carried through
+ * to `ports.chat.post` so the message becomes roll-type and Dice So Nice!
+ * animates it. Optional: a card with no dice to animate still posts.
  */
 export async function postCard(
 	ports: Ports,
@@ -128,6 +132,7 @@ export async function postCard(
 	template: string,
 	vars: Record<string, unknown>,
 	flags?: MessageFlags,
+	rolls?: readonly unknown[],
 ): Promise<{ id?: string } | undefined> {
-	return ports.chat.post(actor, template, vars, flags);
+	return ports.chat.post(actor, template, vars, flags, rolls);
 }

@@ -37,10 +37,10 @@ for (const key of ["game", "ui", "foundry"]) {
 };
 (globalThis as Record<string, unknown>).foundry = {};
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { locationForHit, resolveTest } from "../../../rules-engine/index";
-import { messageFlagNamespace } from "../../application/chat-flags";
-import type { ConfigProfile } from "../../application/ports";
+import { messageFlagNamespace, postCard } from "../../application/chat-flags";
+import type { ConfigProfile, DiceResult, Ports } from "../../application/ports";
 import { dh2Core } from "../../domain/system-profile-dark-heresy";
 import { DEFAULT_SYSTEM_PROFILE } from "../../domain/system-profile";
 
@@ -189,5 +189,573 @@ describe("the neutral config port's profile() (bead w9sa.8)", () => {
 		} finally {
 			setConfigOverrides({ profile: undefined });
 		}
+	});
+});
+
+// --- The chat port's speaker (bead 0fl6) ---------------------------------
+//
+// The bug: core's ChatMessage.getSpeaker only honours an actor that IS a
+// document, so handing it the roll pipeline's ActorView fell through to the
+// user's impersonated character — every roll card came out labelled with the
+// PLAYER's name and no actor link, so the card's name could not be clicked
+// through to the character either.
+
+/** The globals the chat stub swaps in, restored after each test. */
+const stubbedGame = (globalThis as Record<string, unknown>).game;
+const stubbedFoundry = (globalThis as Record<string, unknown>).foundry;
+
+/** The character being rolled FOR — deliberately NOT the user's own actor. */
+const rollingCharacter = {
+	id: "actor-lachlan",
+	name: "Lachlan",
+	uuid: "Actor.actor-lachlan",
+	documentName: "Actor",
+	getActiveTokens: () => [
+		{
+			controlled: false,
+			// Core's CASE 2 reads the TokenDocument off the PlaceableObject.
+			document: {
+				id: "tok-lachlan",
+				parent: { id: "scene-1" },
+				actor: { id: "actor-lachlan" },
+			},
+		},
+	],
+};
+
+/** The player's own character: what the pre-fix card was labelled with. */
+const impersonatedCharacter = {
+	id: "actor-campbell",
+	name: "Campbell",
+	uuid: "Actor.actor-campbell",
+	documentName: "Actor",
+	getActiveTokens: () => [],
+};
+
+/** The view the roll pipeline builds and hands to the chat port. */
+const rollingView = {
+	id: "actor-lachlan",
+	uuid: "Actor.actor-lachlan",
+	name: "Lachlan",
+	type: "pc",
+};
+
+/** Every ChatMessage.create call the port made, so the speaker can be read. */
+const created: Array<{
+	speaker: Record<string, unknown>;
+	content: string;
+	flags?: unknown;
+}> = [];
+
+/** Whatever the port handed getSpeaker as the speaking actor. */
+let speakerActor: unknown;
+
+/**
+ * A stub of core's own decision tree (client/documents/chat-message.mjs:
+ * 231-272), close enough to tell the fix from the bug: a DOCUMENT names the
+ * card and links it to the actor (CASE 2), while anything else falls through
+ * to the impersonated character (CASE 5) and then the user's own name
+ * (CASE 6). `documentName` stands in for core's `instanceof Actor`.
+ */
+function coreGetSpeaker({
+	actor,
+}: {
+	actor?: unknown;
+} = {}): Record<string, unknown> {
+	speakerActor = actor;
+	const documentName = (actor as { documentName?: unknown } | null | undefined)
+		?.documentName;
+	if (typeof documentName === "string" && documentName.endsWith("Actor")) {
+		const doc = actor as {
+			id?: string;
+			name?: string;
+			getActiveTokens?: () => Array<{
+				document?: {
+					id?: string;
+					parent?: { id?: string };
+					actor?: { id?: string };
+				};
+				id?: string;
+				parent?: { id?: string };
+				actor?: { id?: string };
+			}>;
+		};
+		const alias = doc.name;
+		const token = (doc.getActiveTokens?.() ?? []).shift();
+		if (token) {
+			const tokenDocument = token.document ?? token;
+			return {
+				scene: tokenDocument.parent?.id ?? null,
+				actor: tokenDocument.actor?.id ?? null,
+				token: tokenDocument.id ?? null,
+				alias,
+			};
+		}
+		return { scene: "scene-1", actor: doc.id ?? null, token: null, alias };
+	}
+	// CASE 5/6: the user's impersonated character, then the user's own name.
+	const user = (
+		globalThis as {
+			game?: {
+				user?: { name: string; character: { id: string; name: string } | null };
+			};
+		}
+	).game?.user;
+	if (user?.character) {
+		return {
+			scene: "scene-1",
+			actor: user.character.id,
+			token: null,
+			alias: user.character.name,
+		};
+	}
+	return {
+		scene: "scene-1",
+		actor: null,
+		token: null,
+		alias: user?.name ?? null,
+	};
+}
+
+/** Install the chat stub: a different `game.user.character` and a `fromUuid`. */
+function stubChatGlobals(fromUuid: (uuid: string) => unknown): void {
+	(globalThis as Record<string, unknown>).game = {
+		i18n: {
+			localize: (key: string) => key,
+			format: (key: string) => key,
+		},
+		system: { id: "rogue-trader" },
+		user: { name: "Stephen", character: impersonatedCharacter },
+	};
+	(globalThis as Record<string, unknown>).foundry = {
+		applications: {
+			handlebars: { renderTemplate: async () => "<div>card</div>" },
+		},
+		documents: {
+			ChatMessage: {
+				create: async (data: {
+					speaker: Record<string, unknown>;
+					content: string;
+					flags?: unknown;
+				}) => {
+					created.push(data);
+					return { id: `msg-${created.length}` };
+				},
+				getSpeaker: coreGetSpeaker,
+			},
+		},
+		utils: { fromUuid },
+	};
+}
+
+describe("the chat port's speaker (bead 0fl6)", () => {
+	afterEach(() => {
+		(globalThis as Record<string, unknown>).game = stubbedGame;
+		(globalThis as Record<string, unknown>).foundry = stubbedFoundry;
+		created.length = 0;
+		speakerActor = undefined;
+	});
+
+	test("post labels the card with the CHARACTER, not the player", async () => {
+		stubChatGlobals(async () => rollingCharacter);
+		const { foundryPorts } = await import("./ports");
+		const message = await foundryPorts.chat.post(
+			rollingView,
+			"systems/rogue-trader/template/chat/roll.hbs",
+			{ title: "Awareness" },
+			{ "rogue-trader": { roll: true } },
+		);
+		expect(message).toEqual({ id: "msg-1" });
+		expect(created).toHaveLength(1);
+		// The document, not the view, reached getSpeaker — CASE 2.
+		expect(speakerActor).toBe(rollingCharacter);
+		expect(created[0].speaker).toEqual({
+			scene: "scene-1",
+			actor: "actor-lachlan",
+			token: "tok-lachlan",
+			alias: "Lachlan",
+		});
+		// The rest of the message is untouched.
+		expect(created[0].content).toBe("<div>card</div>");
+		expect(created[0].flags).toEqual({ "rogue-trader": { roll: true } });
+	});
+
+	test("postHtml resolves the same speaker and passes content through", async () => {
+		stubChatGlobals(async () => rollingCharacter);
+		const { foundryPorts } = await import("./ports");
+		await foundryPorts.chat.postHtml(rollingView, "<p>7 damage</p>");
+		expect(created).toHaveLength(1);
+		expect(created[0].content).toBe("<p>7 damage</p>");
+		expect(created[0].speaker).toEqual({
+			scene: "scene-1",
+			actor: "actor-lachlan",
+			token: "tok-lachlan",
+			alias: "Lachlan",
+		});
+	});
+
+	test("a caller that already holds the document passes it straight through", async () => {
+		// Nothing may be resolved: the actor IS the document already.
+		stubChatGlobals(() => {
+			throw new Error("speakerFor resolved a document that was given");
+		});
+		const { foundryPorts } = await import("./ports");
+		await foundryPorts.chat.post(rollingCharacter, "tmpl.hbs", {});
+		expect(speakerActor).toBe(rollingCharacter);
+		expect(created[0].speaker).toEqual({
+			scene: "scene-1",
+			actor: "actor-lachlan",
+			token: "tok-lachlan",
+			alias: "Lachlan",
+		});
+	});
+
+	test("an unresolvable uuid degrades to today's behaviour instead of throwing", async () => {
+		stubChatGlobals(async () => null);
+		const { foundryPorts } = await import("./ports");
+		const message = await foundryPorts.chat.post(rollingView, "tmpl.hbs", {});
+		// The card is still posted; only the labelling falls back.
+		expect(message).toEqual({ id: "msg-1" });
+		expect(created).toHaveLength(1);
+		// The view was handed through unchanged, so core's CASE 5/6 stamped the
+		// player's own character — the pre-fix behaviour, deliberately kept for
+		// an actor that cannot be resolved (a deleted character, a LevelDB comp
+		// actor, a stub that only knows fromUuidSync).
+		expect(speakerActor).toBe(rollingView);
+		expect(created[0].speaker).toEqual({
+			scene: "scene-1",
+			actor: "actor-campbell",
+			token: null,
+			alias: "Campbell",
+		});
+		expect((created[0].speaker as { actor: unknown }).actor).not.toBe(
+			"actor-lachlan",
+		);
+	});
+});
+
+// --- Attaching rolls to the chat message (bead wvkd) ---------------------
+//
+// The bug: the dice port threw the evaluated Roll away and kept only
+// primitives, and the chat port posted a message with no `rolls` — so every
+// card (skill, characteristic, damage, psychic, fear, ship) was invisible to
+// Dice So Nice!. DSN hooks `createChatMessage` and asks
+// `shouldInterceptMessage(msg)`, which needs `msg.isRoll` (core:
+// `ChatMessage#isRoll` is `this.rolls.length > 0`) AND at least one roll with
+// dice in it. Nothing else about the card matters to the module.
+//
+// The stub below models the one slice of core that matters for the decision
+// this bead had to make (step 4): core renders its OWN roll table into the
+// message only when the content holds no element children
+// (client/documents/chat-message.mjs:483-486), and it stamps the dice sound
+// for a roll message (_preCreate, :538-540). Everything else is DSN's gate.
+
+/** The globals the roll stub swaps in, restored after each test. */
+const rollStubGame = (globalThis as Record<string, unknown>).game;
+const rollStubFoundry = (globalThis as Record<string, unknown>).foundry;
+
+/** Every ChatMessage.create call the roll stub saw, in core's terms. */
+const rollMessages: Array<{
+	speaker: Record<string, unknown>;
+	content: string;
+	flags?: unknown;
+	rolls?: unknown[];
+	isRoll: boolean;
+	sound?: string;
+	contentCoreReplaced: boolean;
+}> = [];
+
+/** Core's `CONFIG.sounds.dice`, stamped on a roll message by _preCreate. */
+const CORE_DICE_SOUND = "sounds/dice.wav";
+
+/**
+ * A DSN-like `ChatMessage.create` stub: it records what REALLY reaches core
+ * on create (speaker, content, flags, rolls) plus the two derived facts the
+ * message would then carry — `isRoll` (core) and whether core replaced our
+ * content with its own roll table.
+ */
+function coreCreateChatMessage(data: {
+	speaker: Record<string, unknown>;
+	content: string;
+	flags?: unknown;
+	rolls?: unknown[];
+}) {
+	const rolls = data.rolls ?? [];
+	const isRoll = rolls.length > 0;
+	// Core client/documents/chat-message.mjs:483-486 — "Ensure the content does
+	// not already contain custom HTML". Our card templates render elements, so
+	// core leaves them alone; a content-less message gets core's roll table.
+	const contentCoreReplaced = isRoll && !/<[a-z]/i.test(data.content);
+	const message = {
+		speaker: data.speaker,
+		content: contentCoreReplaced
+			? `<div class="dice-roll">core's own roll table</div>`
+			: data.content,
+		flags: data.flags,
+		...(isRoll ? { rolls } : {}),
+		...(isRoll ? { sound: CORE_DICE_SOUND } : {}),
+		isRoll,
+		contentCoreReplaced,
+	};
+	rollMessages.push(message);
+	return { id: `msg-${rollMessages.length}` };
+}
+
+/**
+ * Install the roll-message stub. `render` stands in for Handlebars: it returns
+ * a REALISTIC card fragment (elements, plus our own `{{roll}}` value) so the
+ * core-content rule can be observed rather than assumed.
+ */
+function stubRollMessageGlobals(
+	render: (template: string, vars: Record<string, unknown>) => Promise<string>,
+): void {
+	(globalThis as Record<string, unknown>).game = {
+		i18n: {
+			localize: (key: string) => key,
+			format: (key: string) => key,
+		},
+		system: { id: "rogue-trader" },
+		user: { name: "Stephen", character: null },
+	};
+	(globalThis as Record<string, unknown>).foundry = {
+		applications: {
+			handlebars: { renderTemplate: render },
+		},
+		documents: {
+			ChatMessage: {
+				create: coreCreateChatMessage,
+				getSpeaker: coreGetSpeaker,
+			},
+		},
+		utils: { fromUuid: async () => null },
+	};
+}
+
+afterEach(() => {
+	(globalThis as Record<string, unknown>).game = rollStubGame;
+	(globalThis as Record<string, unknown>).foundry = rollStubFoundry;
+	rollMessages.length = 0;
+});
+
+/** A DiceResult in the shape the Foundry dice port now returns (bead wvkd). */
+function diceResultWithRoll(roll: unknown, total: number): DiceResult {
+	return {
+		total,
+		dice: [{ result: total, faces: 100 }],
+		terms: [{ class: "Die", faces: 100, results: [total] }],
+		formula: "1d100",
+		rolls: [roll],
+	};
+}
+
+/** A DiceResult in the shape every HEADLESS fake still returns: numbers only. */
+function diceResultWithoutRolls(total: number): DiceResult {
+	return {
+		total,
+		dice: [{ result: total, faces: 100 }],
+		terms: [{ class: "Die", faces: 100, results: [total] }],
+		formula: "1d100",
+	};
+}
+
+/**
+ * Dice So Nice!'s OWN gate (dice-so-nice main.js, shouldInterceptMessage):
+ * the message must be a roll AND carry at least one roll with dice in it.
+ * Everything DSN animates is decided by this one predicate.
+ */
+function diceSoNiceWouldAnimate(
+	message: (typeof rollMessages)[number],
+): boolean {
+	return (
+		message.isRoll &&
+		(message.rolls ?? []).some(
+			(roll) => Number((roll as { dice?: unknown[] }).dice?.length ?? 0) > 0,
+		)
+	);
+}
+
+describe("the dice port keeps the evaluated Roll (bead wvkd)", () => {
+	test("dice.roll hands the Roll itself on, next to the primitives", async () => {
+		class FakeRoll {
+			total = 42;
+			terms = [
+				{
+					class: "Die",
+					faces: 100,
+					results: [{ result: 42, discarded: false }],
+				},
+			];
+			async evaluate(): Promise<this> {
+				return this;
+			}
+		}
+		(globalThis as Record<string, unknown>).foundry = {
+			dice: { Roll: FakeRoll },
+		};
+		try {
+			const { foundryPorts } = await import("./ports");
+			const result = await foundryPorts.dice.roll("1d100");
+			// The primitives the card reads are unchanged (bead k98i: term-level
+			// Tearing/Righteous Fury properties stay).
+			expect(result.total).toBe(42);
+			expect(result.terms).toEqual([
+				{ class: "Die", faces: 100, results: [42] },
+			]);
+			// ...and the Roll survives so the message it rides can be roll-type.
+			// Core's own Roll#toMessage attaches the instance exactly like this
+			// (client/dice/roll.mjs:943: `messageData.rolls = [this]`).
+			expect(result.rolls).toHaveLength(1);
+			expect(result.rolls?.[0]).toBeInstanceOf(FakeRoll);
+		} finally {
+			(globalThis as Record<string, unknown>).foundry = rollStubFoundry;
+		}
+	});
+});
+
+describe("the chat port attaches rolls to the message (bead wvkd)", () => {
+	test("a card whose dice port returned a Roll becomes a roll-type message", async () => {
+		const evaluatedRoll = { formula: "1d100", dice: [{ faces: 100 }] };
+		stubRollMessageGlobals(
+			async (_template, vars) =>
+				`<div class="rogue-trader chat roll"><span class="value">${String(vars.roll)}</span></div>`,
+		);
+		const { foundryPorts } = await import("./ports");
+		const ports: Ports = {
+			...foundryPorts,
+			dice: { roll: async () => diceResultWithRoll(evaluatedRoll, 42) },
+		};
+		const rolled = await ports.dice.roll("1d100");
+		const message = await postCard(
+			ports,
+			rollingView,
+			"systems/rogue-trader/template/chat/roll.hbs",
+			{ title: "Awareness", roll: rolled.total },
+			{ "rogue-trader": { damageRoll: { hitRoll: 42 } } },
+			rolled.rolls,
+		);
+
+		expect(message).toEqual({ id: "msg-1" });
+		expect(rollMessages).toHaveLength(1);
+		const posted = rollMessages[0];
+		// The Roll is attached, so core's isRoll is true and DSN's gate
+		// opens — this is the whole bug, and this assert is the whole fix.
+		expect(posted.isRoll).toBe(true);
+		expect(diceSoNiceWouldAnimate(posted)).toBe(true);
+		expect(posted.rolls).toEqual([evaluatedRoll]);
+		expect(posted.flags).toEqual({
+			"rogue-trader": { damageRoll: { hitRoll: 42 } },
+		});
+		// Core stamps the dice sound for a roll message (_preCreate, :538-540).
+		expect(posted.sound).toBe(CORE_DICE_SOUND);
+	});
+
+	test("our card keeps its own look — core does not add a second dice display", async () => {
+		const evaluatedRoll = { formula: "1d100", dice: [{ faces: 100 }] };
+		stubRollMessageGlobals(
+			async (_template, vars) =>
+				`<div class="rogue-trader chat roll"><span class="value">${String(vars.roll)}</span></div>`,
+		);
+		const { foundryPorts } = await import("./ports");
+		const ports: Ports = {
+			...foundryPorts,
+			dice: { roll: async () => diceResultWithRoll(evaluatedRoll, 42) },
+		};
+		const rolled = await ports.dice.roll("1d100");
+		await postCard(
+			ports,
+			rollingView,
+			"systems/rogue-trader/template/chat/roll.hbs",
+			{ title: "Awareness", roll: rolled.total },
+			undefined,
+			rolled.rolls,
+		);
+
+		const posted = rollMessages[0];
+		// Step 4's decision: the card KEEPS its own display of the roll. Every
+		// RT card template renders element children, and core only renders its
+		// roll table into the message when the content has none
+		// (client/documents/chat-message.mjs:483-486) — so the number our
+		// template prints with {{roll}} is not duplicated beside core's table.
+		expect(posted.contentCoreReplaced).toBe(false);
+		expect(posted.content).toBe(
+			`<div class="rogue-trader chat roll"><span class="value">42</span></div>`,
+		);
+	});
+
+	test("the contrast: content with no elements WOULD take core's roll table", async () => {
+		const evaluatedRoll = { formula: "1d100", dice: [{ faces: 100 }] };
+		// The same stub with a content-less card (the shape core's own
+		// Roll#toMessage produces: `content: String(this.total)`).
+		stubRollMessageGlobals(async (_template, vars) => String(vars.roll));
+		const { foundryPorts } = await import("./ports");
+		const ports: Ports = {
+			...foundryPorts,
+			dice: { roll: async () => diceResultWithRoll(evaluatedRoll, 42) },
+		};
+		const rolled = await ports.dice.roll("1d100");
+		await postCard(
+			ports,
+			rollingView,
+			"tmpl.hbs",
+			{ roll: rolled.total },
+			undefined,
+			rolled.rolls,
+		);
+
+		// This is WHY our cards keep their own look: every RT chat template
+		// renders element children (verified against template/chat/*.hbs), so
+		// core's roll table is never added — the rule only bites a bare number.
+		const posted = rollMessages[0];
+		expect(posted.contentCoreReplaced).toBe(true);
+		expect(posted.content).toBe(
+			`<div class="dice-roll">core's own roll table</div>`,
+		);
+	});
+
+	test("a card whose dice port returned no Roll still posts, roll-less", async () => {
+		stubRollMessageGlobals(async () => "<div>card</div>");
+		const { foundryPorts } = await import("./ports");
+		// The shape every headless suite injects: no `rolls` at all.
+		const ports: Ports = {
+			...foundryPorts,
+			dice: { roll: async () => diceResultWithoutRolls(42) },
+		};
+		const rolled = await ports.dice.roll("1d100");
+		expect(rolled.rolls).toBeUndefined();
+
+		const message = await postCard(
+			ports,
+			rollingView,
+			"systems/rogue-trader/template/chat/roll.hbs",
+			{ title: "Awareness", roll: rolled.total },
+			undefined,
+			rolled.rolls,
+		);
+
+		// pf2e's with/without property: no throw, no `rolls` on the message, no
+		// dice sound — exactly the pre-wvkd behaviour.
+		expect(message).toEqual({ id: "msg-1" });
+		expect(rollMessages).toHaveLength(1);
+		const posted = rollMessages[0];
+		expect("rolls" in posted).toBe(false);
+		expect(posted.isRoll).toBe(false);
+		expect(diceSoNiceWouldAnimate(posted)).toBe(false);
+		expect(posted.sound).toBeUndefined();
+		expect(posted.content).toBe("<div>card</div>");
+	});
+
+	test("an explicitly EMPTY roll list is treated the same way", async () => {
+		stubRollMessageGlobals(async () => "<div>card</div>");
+		const { foundryPorts } = await import("./ports");
+		const parts = await foundryPorts.chat.post(
+			rollingView,
+			"tmpl.hbs",
+			{},
+			undefined,
+			[],
+		);
+		expect(parts).toEqual({ id: "msg-1" });
+		expect("rolls" in rollMessages[0]).toBe(false);
+		expect(rollMessages[0].isRoll).toBe(false);
 	});
 });

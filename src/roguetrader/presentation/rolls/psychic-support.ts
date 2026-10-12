@@ -34,8 +34,11 @@ export async function rollPhenomena(
 ): Promise<void> {
 	const ports = getPorts();
 	const modifier = phenomenaRollModifier(source);
-	const raw = (await ports.dice.roll("1d100")).total;
-	const total = Math.min(100, raw + modifier);
+	// Bead wvkd: the whole result is kept — the evaluated Roll rides the card so
+	// Dice So Nice! animates the phenomena die (the total still drives the
+	// table lookup).
+	const phenomena = await ports.dice.roll("1d100");
+	const total = Math.min(100, phenomena.total + modifier);
 	const tableName = phenomenaTableName(total);
 
 	// Content-optional: the roll and its total are ALWAYS posted; the table text
@@ -55,11 +58,18 @@ export async function rollPhenomena(
 	// Bead oy8z: posted through the shared postCard template path (the
 	// chat-flags idiom) instead of hand-built HTML — the pack's table prose
 	// reaches the card as escaped template data, never live HTML.
-	await postCard(actor, `${TEMPLATE_ROOT}chat/psychic-phenomena.hbs`, {
-		label,
-		total,
-		text,
-	});
+	await postCard(
+		actor,
+		`${TEMPLATE_ROOT}chat/psychic-phenomena.hbs`,
+		{
+			label,
+			total,
+			text,
+		},
+		undefined,
+		// Bead wvkd: the rolled d100, for Dice So Nice!.
+		phenomena.rolls,
+	);
 }
 
 /**
@@ -73,15 +83,23 @@ export async function postPowerDamage(
 	damage: string,
 ): Promise<void> {
 	const ports = getPorts();
-	const total = (await ports.dice.roll(damage)).total;
+	// Bead wvkd: the evaluated roll rides the card so the psychic damage die
+	// animates.
+	const rolled = await ports.dice.roll(damage);
 	const label = ports.i18n.t("PSYCHIC_POWER.DAMAGE_ROLL", { power: powerName });
 	// Bead oy8z: template path (escape: the expression and the total are
 	// data, not markup).
-	await postCard(actor, `${TEMPLATE_ROOT}chat/psychic-damage.hbs`, {
-		label,
-		damage,
-		total,
-	});
+	await postCard(
+		actor,
+		`${TEMPLATE_ROOT}chat/psychic-damage.hbs`,
+		{
+			label,
+			damage,
+			total: rolled.total,
+		},
+		undefined,
+		rolled.rolls,
+	);
 }
 
 /**
@@ -100,8 +118,13 @@ export async function applyPowerCorruption(
 	const expressions = corruptionExpressions(effects);
 	if (expressions.length === 0) return;
 	let gained = 0;
+	// Bead wvkd: every corruption die rolled here is carried to the card so
+	// Dice So Nice! animates it.
+	const corruptionRolls: unknown[] = [];
 	for (const expression of expressions) {
-		gained += (await ports.dice.roll(expression)).total;
+		const rolled = await ports.dice.roll(expression);
+		gained += rolled.total;
+		corruptionRolls.push(...(rolled.rolls ?? []));
 	}
 	if (gained === 0) return;
 	await adjustTrack(ports.actors, actor, "corruption", gained);
@@ -109,10 +132,17 @@ export async function applyPowerCorruption(
 		power: item.name ?? "",
 	});
 	// Bead oy8z: template path; {power} (the item's name) is escaped.
-	await postCard(actor, `${TEMPLATE_ROOT}chat/psychic-corruption.hbs`, {
-		label,
-		gained,
-	});
+	await postCard(
+		actor,
+		`${TEMPLATE_ROOT}chat/psychic-corruption.hbs`,
+		{
+			label,
+			gained,
+		},
+		undefined,
+		// Bead wvkd: the corruption dice animate.
+		corruptionRolls,
+	);
 }
 
 /**

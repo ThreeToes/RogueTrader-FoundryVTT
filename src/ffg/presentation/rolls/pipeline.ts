@@ -95,7 +95,11 @@ export async function runTest<
 		Math.max(1, prepared.baseTarget + totalModifier),
 	);
 
-	const rollResult = (await ports.dice.roll("1d100")).total;
+	// Bead wvkd: the whole DiceResult is kept, not just its total — the
+	// evaluated Roll rides the card so the message is roll-type and Dice So Nice!
+	// animates the die (the primitives still drive the card's numbers).
+	const rolled = await ports.dice.roll("1d100");
+	const rollResult = rolled.total;
 
 	const outcome = resolveTest({
 		target,
@@ -154,6 +158,7 @@ export async function runTest<
 			...prepared.templateVars,
 		},
 		prepared.flags,
+		rolled.rolls,
 	);
 	return { outcome, messageId: message?.id ?? null, target };
 }

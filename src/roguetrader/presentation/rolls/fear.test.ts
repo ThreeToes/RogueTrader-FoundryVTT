@@ -72,6 +72,8 @@ afterAll(() => {
 interface PostedCard {
 	template: string;
 	vars: Record<string, unknown>;
+	/** The rolls threaded to the chat port (bead wvkd); absent before that. */
+	rolls?: readonly unknown[];
 }
 
 /**
@@ -120,11 +122,16 @@ function fakeDice(
 				const idx = counters[formula] ?? 0;
 				counters[formula] = idx + 1;
 				const pick = answered ? (answered[idx] ?? 0) : 0;
+				// Bead wvkd: the port also hands the evaluated Roll on, so a fake that
+				// carries one proves the handler threads it to the card. The opaque
+				// stand-in is deliberately a plain object — only the port's plumbing
+				// is under test here, not core's Roll.
 				return {
 					total: pick,
 					dice: [{ result: pick, faces: pick }],
 					terms: [{ class: "Die", faces: pick, results: [pick] }],
 					formula,
+					rolls: [{ formula, total: pick }],
 				};
 			},
 		},
@@ -143,8 +150,14 @@ function setup(answers: Record<string, number[]>) {
 		i18n: { t: (key: string) => key } as unknown as Ports["i18n"],
 		chat: {
 			...foundryPorts.chat,
-			post: async (_a: unknown, template: string, vars: Record<string, unknown>) => {
-				posted.push({ template, vars });
+			post: async (
+				_a: unknown,
+				template: string,
+				vars: Record<string, unknown>,
+				_flags?: unknown,
+				rolls?: readonly unknown[],
+			) => {
+				posted.push({ template, vars, rolls });
 				return { id: "msg-1" };
 			},
 		} as unknown as Ports["chat"],
@@ -181,6 +194,31 @@ function failedOutcome(roll: number) {
 }
 
 describe("fearHandler.after Insanity threading (bead 3u1p: combat)", () => {
+	test("the Shock die rides the card so Dice So Nice! animates it (bead wvkd)", async () => {
+		// 1d100 face 30, failed by 1 degree => shock total 40 (21-40 bucket,
+		// no Insanity gain) — the shock card is the one the d100 must animate.
+		const { actor, posted } = setup({ "1d100": [30] });
+		await fearHandler.after!(
+			{
+				kind: "fear",
+				actor: actor as unknown as FearRequest["actor"],
+				rating: 2,
+				situation: "combat",
+			},
+			preparedFor("combat"),
+			failedOutcome(51) as FearOutcome,
+			"msg-1",
+		);
+		const card = posted[0]!;
+		expect(card.template).toBe(`${TEMPLATE_ROOT}chat/fear-shock.hbs`);
+		// The card's own numbers are untouched (bead 3u1p: the SAME total is
+		// displayed and applied)...
+		expect(card.vars.shockRoll).toBe(40);
+		// ...and the evaluated d100 is threaded out to the chat port, which is
+		// what turns the message into a roll-type message at all.
+		expect(card.rolls).toEqual([{ formula: "1d100", total: 30 }]);
+	});
+
 	test("card insanityGain EQUALS the delta applied to system.insanity", async () => {
 		// Willpower 50, roll 91 = 5 degrees (failed by 41). Shock Table:
 		// 1d100 face 30 + 10x5 = 80 -> the "1d5 Insanity" bucket (61-80).

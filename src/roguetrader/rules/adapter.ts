@@ -335,18 +335,23 @@ async function applyRollQualityMechanics(
 	damageRoll: DiceResult,
 	mechanics: RollMechanics,
 	profile: AttackProfile,
-): Promise<{ damageTotal: number; qualityNotes: string[] }> {
+): Promise<{ damageTotal: number; qualityNotes: string[]; rolls: unknown[] }> {
 	let damageTotal = damageRoll.total;
 	const qualityNotes: string[] = [];
+	// Bead wvkd: every die the step rolls is carried out for the card to
+	// attach — the damage roll itself plus Tearing's extra die, so the
+	// animation shows the dice the breakdown talks about.
+	const rolls: unknown[] = [...(damageRoll.rolls ?? [])];
 	if (mechanics.tearing) {
 		// The DAMAGE die's results only (bead k98i): a mixed formula's other
 		// terms are not damage dice, so Tearing must not discard one of them.
 		const { faces, results: baseResults } = damageDice.tearingBase(damageRoll);
-		const extra = (await ports.dice.roll(`1d${faces}`)).total;
-		const tearing = applyTearing(baseResults, extra, faces);
+		const extra = await ports.dice.roll(`1d${faces}`);
+		const tearing = applyTearing(baseResults, extra.total, faces);
 		if (tearing.added > 0) {
 			damageTotal += tearing.added;
 		}
+		rolls.push(...(extra.rolls ?? []));
 		qualityNotes.push(
 			ports.i18n.t("CHAT.QUALITY_TEARING", {
 				discarded: tearing.discarded,
@@ -365,7 +370,7 @@ async function applyRollQualityMechanics(
 	if (profile.action === "full") {
 		qualityNotes.push(ports.i18n.t("CHAT.ATTACK_FULL_ACTION"));
 	}
-	return { damageTotal, qualityNotes };
+	return { damageTotal, qualityNotes, rolls };
 }
 
 /**
@@ -471,6 +476,8 @@ async function postDamageCard(
 		};
 		damageContributors: Modifier[];
 		qualityNotes: string[];
+		/** Evaluated damage dice to attach to the card (bead wvkd). */
+		rolls: unknown[];
 		toxicActivated: boolean;
 		isCritical: boolean;
 	},
@@ -537,6 +544,9 @@ async function postDamageCard(
 				},
 			},
 		},
+		// Bead wvkd: the evaluated damage dice (plus Tearing's extra die) ride
+		// the message so the card is roll-type and Dice So Nice! animates it.
+		card.rolls,
 	);
 }
 
@@ -611,7 +621,7 @@ async function postWeaponDamage(
 	// Step d3yc-2: quality mechanics on the roll — Tearing bumps the total
 	// and Blast/unparryable/full-action become card notes (see
 	// applyRollQualityMechanics).
-	const { damageTotal, qualityNotes } = await applyRollQualityMechanics(
+	const { damageTotal, qualityNotes, rolls } = await applyRollQualityMechanics(
 		ports,
 		damageRoll,
 		mechanics,
@@ -677,6 +687,9 @@ async function postWeaponDamage(
 		notation,
 		damageContributors,
 		qualityNotes,
+		// Bead wvkd: the dice behind the card's numbers, so Dice So Nice! can
+		// animate them.
+		rolls,
 		toxicActivated,
 		isCritical,
 	});
@@ -786,7 +799,9 @@ export async function rollInitiativeAction(actor: Actor): Promise<unknown> {
 	// counts — the same dedupe rule the shared test step uses. The MERGED set
 	// is both the arithmetic and the card's breakdown (never silent rows).
 	const merged = mergeModifiers(dialog.modifiers, rows);
-	const total = (await ports.dice.roll("1d10")).total + sumModifiers(merged);
+	// Bead wvkd: the evaluated d10 rides the card so Dice So Nice! animates it.
+	const rolled = await ports.dice.roll("1d10");
+	const total = rolled.total + sumModifiers(merged);
 	// Combat integration: assign to EVERY combatant of this actor on the
 	// active tracker (a multi-token actor keeps its tokens in step — the old
 	// core path rolled all of them; review finding 3).
@@ -800,11 +815,17 @@ export async function rollInitiativeAction(actor: Actor): Promise<unknown> {
 		await combatant.update({ initiative: total } as never);
 	}
 	const assigned = mine.length > 0;
-	await postCard(actor, `${TEMPLATE_ROOT}chat/initiative.hbs`, {
-		title: actor.name ?? "",
-		value: total,
-		analysis: breakdown(merged),
-		assigned,
-	});
+	await postCard(
+		actor,
+		`${TEMPLATE_ROOT}chat/initiative.hbs`,
+		{
+			title: actor.name ?? "",
+			value: total,
+			analysis: breakdown(merged),
+			assigned,
+		},
+		undefined,
+		rolled.rolls,
+	);
 	return total;
 }

@@ -117,6 +117,19 @@ export interface DiceResult {
 	terms: DiceTerm[];
 	/** The formula that was rolled (echoed for cards/tests). */
 	formula: string;
+	/**
+	 * The evaluated Roll itself, opaque (bead wvkd). Dice So Nice! only animates
+	 * a chat message that carries rolls — core's `ChatMessage#isRoll` is
+	 * `this.rolls.length > 0` — and this port used to throw the Roll away, so
+	 * every card the system posted was invisible to it. The primitives above
+	 * still drive the card; the Roll is for the ANIMATION only.
+	 *
+	 * Opaque on purpose: the cast to `foundry.dice.Roll` belongs to the
+	 * infrastructure dice port, never to this layer. Optional (additive)
+	 * because every headless suite injects a fake Dice port and a fake that
+	 * knows only the numbers must keep working.
+	 */
+	rolls?: readonly unknown[];
 }
 
 /** Roll dice. The only place `foundry.dice.Roll` is allowed to be called. */
@@ -126,17 +139,31 @@ export interface Dice {
 
 /** Post and amend chat cards. */
 export interface Chat {
-	/** Render a template and post it as the actor's card. */
+	/**
+	 * Render a template and post it as the actor's card.
+	 *
+	 * `rolls` (bead wvkd): evaluated rolls to ATTACH to the message, which is
+	 * what makes Dice So Nice! animate it. Opaque here — the cast to
+	 * `foundry.dice.Roll` lives in the infrastructure chat port. Absent or
+	 * empty leaves the message roll-less, which is exactly the pre-wvkd
+	 * behaviour: the card still posts, the dice just do not animate.
+	 */
 	post(
 		actor: { uuid?: string },
 		template: string,
 		vars: Record<string, unknown>,
 		flags?: unknown,
+		rolls?: readonly unknown[],
 	): Promise<{ id?: string } | undefined>;
-	/** Post raw HTML content. */
+	/**
+	 * Post raw HTML content.
+	 *
+	 * `rolls` carries the same animation contract as `post` (bead wvkd).
+	 */
 	postHtml(
 		actor: { uuid?: string },
 		content: string,
+		rolls?: readonly unknown[],
 	): Promise<{ id?: string } | undefined>;
 	/** Amend an existing message (e.g. attach a damage-roll flag). */
 	update(messageId: string, data: Record<string, unknown>): Promise<void>;

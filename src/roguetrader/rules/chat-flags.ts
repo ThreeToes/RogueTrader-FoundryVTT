@@ -58,12 +58,17 @@ export function rtFlagPath(flag: string): string {
 /**
  * Post a roll card: render the template and create the chat message with
  * speaker + flags. The single shared tail of every roll pipeline.
+ *
+ * `rolls` (bead wvkd): the evaluated dice the card reports, passed to the
+ * generic postCard and on to `ports.chat.post` so the message is roll-type and
+ * Dice So Nice! animates it.
  */
 export async function postCard(
 	actor: { uuid?: string },
 	template: string,
 	vars: Record<string, unknown>,
 	flags?: MessageFlags,
+	rolls?: readonly unknown[],
 ): Promise<{ id?: string } | undefined> {
-	return postGenericCard(getPorts(), actor, template, vars, flags);
+	return postGenericCard(getPorts(), actor, template, vars, flags, rolls);
 }

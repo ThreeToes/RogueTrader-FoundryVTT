@@ -7,14 +7,45 @@
  *
  * Sizing: the app is RESIZABLE (AGENTS.md), and ApplicationV2 clamps a resize
  * to the app element's computed min-width/min-height, so the clamps live here
- * as well as in DEFAULT_OPTIONS.window. The two columns reflow under them. */
+ * as well as in DEFAULT_OPTIONS.window — the pair is deliberately duplicated
+ * and the two numbers are kept in step (640/480, pinned by
+ * rules-app-window-scroll.test.ts). The two columns reflow under them, and
+ * every panel scrolls inside them (see the Scrolling section). */
 
 .rogue-trader.rules-app {
-	min-width: 620px;
-	min-height: 460px;
+	min-width: 640px;
+	min-height: 480px;
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
+}
+
+/* --- Scrolling -----------------------------------------------------------
+ *
+ * An ApplicationV2 window never scrolls by itself: without a scroll container
+ * the knob form, the JSON tab, the pack panel and the diff table were simply
+ * clipped at the window height (bead yt8r). One rule cannot do it, because the
+ * app root is a flex column: the window content scrolls, the template root
+ * fills it, the columns keep its height instead of the content's, and the panel
+ * and the sidebar each scroll inside their own box. */
+
+.rogue-trader.rules-app .window-content {
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+}
+
+.rogue-trader.rules-app .window-content .rules-app {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.rules-app .rules-panel {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
 }
 
 /* --- Tab strip ----------------------------------------------------------- */
@@ -56,7 +87,9 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
-	align-items: flex-start;
+	align-items: stretch;
+	flex: 1 1 auto;
+	min-height: 0;
 }
 
 .rules-app .rules-sidebar {
@@ -65,6 +98,8 @@
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
+	min-height: 0;
+	overflow-y: auto;
 }
 
 .rules-app .rules-main {
@@ -73,6 +108,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
+	min-height: 0;
 }
 
 /* --- Profile list ------------------------------------------------------- */

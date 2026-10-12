@@ -374,9 +374,11 @@ export class RulesApp extends HandlebarsApplicationMixin(ApplicationV2) {
 		},
 	};
 
-	// No `scrollable` descriptor: the window scrolls as a whole, and a part
-	// root that is not a scroll container would only promise a preservation
-	// ApplicationV2 cannot deliver.
+	// No `scrollable` descriptor: the app's scroll containers all live in
+	// css/rules-app.css (its Scrolling section) and none of them is the part
+	// root — the window content scrolls, and the panel and the sidebar scroll
+	// inside the columns. The root this part renders is a plain flex column, so a
+	// `scrollable` selector here would name an element that never scrolls.
 	static PARTS = {
 		form: {
 			template: `${TEMPLATE_ROOT}dialog/rules-app.hbs`,

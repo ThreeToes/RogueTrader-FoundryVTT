@@ -63,7 +63,7 @@ export function resolveTest(request: TestRequest): TestOutcome {
 	if (profile.autoPassRoll !== null && roll <= profile.autoPassRoll) {
 		success = true;
 	}
-	if (profile.autoFailRoll !== null && roll > profile.autoFailRoll) {
+	if (profile.autoFailRoll !== null && roll >= profile.autoFailRoll) {
 		success = false;
 	}
 

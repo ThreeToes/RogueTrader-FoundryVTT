@@ -62,7 +62,7 @@ export class NavigatorPower extends foundry.abstract.TypeDataModel<
 			/** Characteristic tested on activation (e.g. "willpower"). */
 			characteristic: new foundry.data.fields.StringField({
 				choices: NavigatorPower.characteristicChoices,
-				initial: "perception",
+				initial: "per",
 				required: true,
 				nullable: false,
 			}),

@@ -182,6 +182,7 @@ describe("matchOriginSkills", () => {
 			corruption: 0,
 			corruptionDice: [],
 			corruptionOrInsanityDice: [],
+			corruptionOrInsanityRows: [],
 			initiativeBonus: 0,
 			profitFactor: 0,
 			notes: [],

@@ -132,13 +132,13 @@ function run(command: string, args: string[]): string {
 }
 
 /** Page count + basic metadata via pdfinfo. */
-function pdfInfo(pdfPath: string): { pageCount: number; title?: string } {
+export function pdfInfo(pdfPath: string): { pageCount: number; title?: string } {
 	const out = run("pdfinfo", [pdfPath]);
 	const pageCount = Number(out.match(/^Pages:\s+(\d+)$/m)?.[1]);
 	if (!Number.isInteger(pageCount) || pageCount < 1) {
 		throw new Error(`could not read page count from pdfinfo for ${pdfPath}`);
 	}
-	const title = out.match(/^Title:\s+(.*)$/m)?.[1]?.trim() || undefined;
+	const title = out.match(/^Title:[ \t]*(.*)$/m)?.[1]?.trim() || undefined;
 	return { pageCount, title };
 }
 

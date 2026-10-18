@@ -1792,5 +1792,16 @@
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ONE": "Koszt rozwoju cechy: ekspercki (jedna zdolność)",
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ONE_HINT": "Koszt w punktach doświadczenia rozwoju cechy eksperckiej, gdy bohater dzieli z nim jedną zdolność (Tabela 2-2, Podręcznik główny DH2e, strona 80: 1 500). Zakłada rejestr: istniejące rejestry były budowane na wartości podstawowej.",
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO": "Koszt rozwoju cechy: ekspercki (żadna zdolność)",
-	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO_HINT": "Koszt w punktach doświadczenia rozwoju cechy eksperckiej, gdy bohater nie dzieli z nim żadnej zdolności (Tabela 2-2, Podręcznik główny DH2e, strona 80: 2 500). Zakłada rejestr: istniejące rejestry były budowane na wartości podstawowej."
+	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO_HINT": "Koszt w punktach doświadczenia rozwoju cechy eksperckiej, gdy bohater nie dzieli z nim żadnej zdolności (Tabela 2-2, Podręcznik główny DH2e, strona 80: 2 500). Zakłada rejestr: istniejące rejestry były budowane na wartości podstawowej.",
+	"SHIP_CRITICALS.holed": "Holed",
+	"SHIP_CRITICALS.internal-damage": "Internal Damage",
+	"SHIP_CRITICALS.sensors-damaged": "Sensors damaged",
+	"SHIP_CRITICALS.thrusters-damaged": "Thrusters damaged",
+	"SHIP_CRITICALS.fire": "Fire!",
+	"SHIP_CRITICALS.engines-crippled": "Engines Crippled",
+	"SHIP_CRITICALS.surly-techsprites": "Surly Techsprites",
+	"SHIP_CRITICALS.decapitation": "Decapitation",
+	"SHIP_CRITICALS.hull-breach": "Hull Breach",
+	"SHIP_CRITICALS.catastrophic-damage": "Catastrophic Damage",
+	"SHIP_CRITICALS.catastrophic-overload": "Catastrophic Overload"
 }

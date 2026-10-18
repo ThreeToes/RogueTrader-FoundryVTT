@@ -681,7 +681,7 @@
 	"QUALITY.CORROSIVE": "Corrosive",
 	"QUALITY.FLAME": "Flamme",
 	"QUALITY.OVERHEATS": "Surchauffe",
-	"QUALITY.OVERCHARGE": "Surc\u00e9charge",
+	"QUALITY.OVERCHARGE": "Surcécharge",
 	"QUALITY.POWERFUL": "Puissante",
 	"QUALITY.RELIABLE": "Fiable",
 	"QUALITY.SCATTER": "Dispersion",
@@ -1792,5 +1792,16 @@
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ONE": "Coût d'avancement Expert (une aptitude)",
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ONE_HINT": "Le coût en xp d'un avancement de caractéristique Expert quand le personnage partage une aptitude avec lui (Table 2-2, Livre de base DH2e page 80 : 1 500). Suppose le registre : les registres existants ont été construits avec la valeur de base.",
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO": "Coût d'avancement Expert (aucune aptitude)",
-	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO_HINT": "Le coût en xp d'un avancement de caractéristique Expert quand le personnage ne partage aucune aptitude avec lui (Table 2-2, Livre de base DH2e page 80 : 2 500). Suppose le registre : les registres existants ont été construits avec la valeur de base."
+	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO_HINT": "Le coût en xp d'un avancement de caractéristique Expert quand le personnage ne partage aucune aptitude avec lui (Table 2-2, Livre de base DH2e page 80 : 2 500). Suppose le registre : les registres existants ont été construits avec la valeur de base.",
+	"SHIP_CRITICALS.holed": "Holed",
+	"SHIP_CRITICALS.internal-damage": "Internal Damage",
+	"SHIP_CRITICALS.sensors-damaged": "Sensors damaged",
+	"SHIP_CRITICALS.thrusters-damaged": "Thrusters damaged",
+	"SHIP_CRITICALS.fire": "Fire!",
+	"SHIP_CRITICALS.engines-crippled": "Engines Crippled",
+	"SHIP_CRITICALS.surly-techsprites": "Surly Techsprites",
+	"SHIP_CRITICALS.decapitation": "Decapitation",
+	"SHIP_CRITICALS.hull-breach": "Hull Breach",
+	"SHIP_CRITICALS.catastrophic-damage": "Catastrophic Damage",
+	"SHIP_CRITICALS.catastrophic-overload": "Catastrophic Overload"
 }

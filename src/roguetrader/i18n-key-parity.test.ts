@@ -240,6 +240,12 @@ describe("i18n key parity (bead qgtz)", () => {
 			sites: ["src/roguetrader/rules/warrant.ts:44"],
 		},
 		{
+			// shipCritical(criticalRoll) → SHIP_CRITICALS.<key> for the salvo
+			// chat card (bead 26jm).
+			prefix: "SHIP_CRITICALS.",
+			sites: ["src/roguetrader/presentation/rolls/ship.ts (postShipSalvoCard)"],
+		},
+		{
 			// bodyLocationLabelKey(location) → BODY_LOCATION.LEFT_ARM over the
 			// kebab-case location slugs (critical cards + NPC armour panel).
 			prefix: "BODY_LOCATION.",

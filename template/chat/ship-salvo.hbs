@@ -12,8 +12,8 @@
             <li>{{localize "STARSHIP.CREW_POPULATION"}}: -{{crewPopulationLoss}}</li>
             <li>{{localize "STARSHIP.CREW_MORALE"}}: -{{crewMoraleLoss}}</li>
         </ul>
-        {{#if criticalName}}
-        <p class="critical">⚠ {{localize "SHIP_COMBAT.CRITICAL"}}: <strong>{{criticalName}}</strong></p>
+        {{#if criticalKey}}
+        <p class="critical">⚠ {{localize "SHIP_COMBAT.CRITICAL"}}: <strong>{{localize (concat "SHIP_CRITICALS." criticalKey)}}</strong></p>
         {{/if}}
         {{#if crippled}}
         <p class="method-hint warn">⚠ {{localize "SHIP_COMBAT.CRIPPLED_NOW"}}</p>

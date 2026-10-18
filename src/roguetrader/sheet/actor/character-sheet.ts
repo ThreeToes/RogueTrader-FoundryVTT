@@ -69,7 +69,9 @@ import { equipToggleState } from "../equip";
 import { armourLocations, weaponRows } from "./view-models";
 import {
 	buildCharacteristicViews,
+	findOwnedSkillForRow,
 	mergeOwnedAndCatalogRows,
+	skillNameKey,
 	type OwnedSkillLike,
 } from "../skills-domain";
 import {
@@ -95,6 +97,14 @@ interface CareerDocRow {
 		ranks?: Array<{ rank: number; xpLevel: number }>;
 	};
 }
+
+/**
+ * In-flight own-skill creations, keyed by actor + skill name (bead bwwg):
+ * guards against duplicate Item creation when the button is clicked more
+ * than once before the first createEmbeddedDocuments resolves (the sheet
+ * does not re-render synchronously).
+ */
+const owningSkillKeys = new Set<string>();
 
 export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
@@ -538,9 +548,48 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Template attribute is data-value on ladder buttons (see skills.hbs).
 		const ladder = Number(target.dataset.value);
 		if (!name || !characteristic || Number.isNaN(ladder)) return;
-		await this.actor.createEmbeddedDocuments("Item", [
-			{ name, type: "skill", system: { characteristic, ladder } },
-		]);
+
+		// Idempotency guard (bead bwwg): a double click (or a stale row)
+		// must not create a second skill Item. Disable the button up front so
+		// the browser won't fire a second action before the first resolves,
+		// and look up any already-owned skill with the same name before
+		// creating.
+		const btn = target as HTMLButtonElement;
+		if (btn.disabled) return;
+		btn.disabled = true;
+		// Also lock every ladder button on this row so a click on a sibling
+		// ladder step cannot race the in-flight creation.
+		const row = target.closest?.("li");
+		const siblings = row?.querySelectorAll?.(
+			'button[data-action="ownSkill"]',
+		) as NodeListOf<HTMLButtonElement> | undefined;
+		siblings?.forEach((btn) => {
+			btn.disabled = true;
+		});
+
+		const lockKey = `${this.actor.id ?? this.actor.uuid ?? "actor"}::${skillNameKey(name)}`;
+		let locked = false;
+		try {
+			if (owningSkillKeys.has(lockKey)) return;
+
+			const ownedSkills = (this.actor.items ?? []).filter(
+				(item: { type?: string }) => item.type === "skill",
+			) as unknown as Array<{ key?: string | null; name?: string | null }>;
+			const existing = findOwnedSkillForRow(ownedSkills, { name }, name);
+			if (existing) return;
+
+			owningSkillKeys.add(lockKey);
+			locked = true;
+			await this.actor.createEmbeddedDocuments("Item", [
+				{ name, type: "skill", system: { characteristic, ladder } },
+			]);
+		} finally {
+			if (locked) owningSkillKeys.delete(lockKey);
+			btn.disabled = false;
+			siblings?.forEach((btn) => {
+				btn.disabled = false;
+			});
+		}
 	}
 
 	static async #onAddSkill(this: {

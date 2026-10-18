@@ -1792,5 +1792,16 @@
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ONE": "Expert advance cost (one aptitude)",
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ONE_HINT": "The xp cost of an Expert characteristic advance when the character shares one aptitude with it (Table 2-2, DH2 Core Rulebook, printed p80: 1,500). Ledger assuming: every existing character's spent-xp ledger was built under the core value.",
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO": "Expert advance cost (no aptitudes)",
-	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO_HINT": "The xp cost of an Expert characteristic advance when the character shares no aptitudes with it (Table 2-2, DH2 Core Rulebook, printed p80: 2,500). Ledger assuming: every existing character's spent-xp ledger was built under the core value."
+	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO_HINT": "The xp cost of an Expert characteristic advance when the character shares no aptitudes with it (Table 2-2, DH2 Core Rulebook, printed p80: 2,500). Ledger assuming: every existing character's spent-xp ledger was built under the core value.",
+	"SHIP_CRITICALS.holed": "Holed",
+	"SHIP_CRITICALS.internal-damage": "Internal Damage",
+	"SHIP_CRITICALS.sensors-damaged": "Sensors damaged",
+	"SHIP_CRITICALS.thrusters-damaged": "Thrusters damaged",
+	"SHIP_CRITICALS.fire": "Fire!",
+	"SHIP_CRITICALS.engines-crippled": "Engines Crippled",
+	"SHIP_CRITICALS.surly-techsprites": "Surly Techsprites",
+	"SHIP_CRITICALS.decapitation": "Decapitation",
+	"SHIP_CRITICALS.hull-breach": "Hull Breach",
+	"SHIP_CRITICALS.catastrophic-damage": "Catastrophic Damage",
+	"SHIP_CRITICALS.catastrophic-overload": "Catastrophic Overload"
 }

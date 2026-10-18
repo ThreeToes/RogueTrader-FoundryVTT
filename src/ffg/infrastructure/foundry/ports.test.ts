@@ -134,10 +134,9 @@ describe("the neutral config port's profile() (bead w9sa.8)", () => {
 			// DH2's verified auto-pass band (printed p22: a roll of 1 auto-succeeds)
 			// is read THROUGH the kernel, not from an RT default.
 			expect(resolveTest({ target: 1, roll: 1, profile }).success).toBe(true);
-			// The auto-FAIL band is deliberately NOT asserted here: the kernel's
-			// comparison is `roll > autoFailRoll`, so with DH2's verified 100 the
-			// band never fires on a d100. That off-by-one is open bead vhfh, not
-			// this one's business — asserting it here would pin the bug.
+			// With DH2's verified autoFailRoll of 100, a roll of exactly 100 now
+			// auto-fails (inclusive `roll >= autoFailRoll`); this no longer pins
+			// the old off-by-one bug (bead vhfh).
 
 			// --- branding consumers ------------------------------------------
 			// The two "the system" fields are the only non-kernel data the

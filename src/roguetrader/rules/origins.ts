@@ -597,6 +597,8 @@ export interface ResolvedOrigin {
 	corruptionDice: string[];
 	/** Player chose which track takes these dice (tracked separately at apply time). */
 	corruptionOrInsanityDice: string[];
+	/** Parallel to corruptionOrInsanityDice: the OriginRow each notation came from. */
+	corruptionOrInsanityRows: OriginRow[];
 	initiativeBonus: number;
 	profitFactor: number;
 	/** Experience-point cost deducted from starting xp (bead b03f). */
@@ -622,6 +624,7 @@ export function resolveOrigins(
 		corruption: 0,
 		corruptionDice: [],
 		corruptionOrInsanityDice: [],
+		corruptionOrInsanityRows: [],
 		initiativeBonus: 0,
 		profitFactor: 0,
 		xpCost: 0,
@@ -634,7 +637,7 @@ export function resolveOrigins(
 				(resolved.characteristics[mod.key] ?? 0) + mod.value;
 		}
 	};
-	const absorb = (label: string, m: OriginMechanics) => {
+	const absorb = (label: string, m: OriginMechanics, row?: OriginRow) => {
 		addChars(m.characteristics ?? []);
 		resolved.skills.push(...(m.skills ?? []));
 		resolved.talents.push(...(m.talents ?? []));
@@ -646,8 +649,10 @@ export function resolveOrigins(
 		if (m.insanityDice) resolved.insanityDice.push(m.insanityDice);
 		resolved.corruption += m.corruption ?? 0;
 		if (m.corruptionDice) resolved.corruptionDice.push(m.corruptionDice);
-		if (m.corruptionOrInsanityDice)
+		if (m.corruptionOrInsanityDice) {
 			resolved.corruptionOrInsanityDice.push(m.corruptionOrInsanityDice);
+			resolved.corruptionOrInsanityRows.push(row as OriginRow);
+		}
 		resolved.initiativeBonus += m.initiativeBonus ?? 0;
 		resolved.profitFactor += m.profitFactor ?? 0;
 		resolved.xpCost += m.xpCost ?? 0;
@@ -665,7 +670,7 @@ export function resolveOrigins(
 		if (!entry || entry.row !== row) continue;
 		const label = entry.name;
 		const mechanics = effectiveMechanics(entry, pick.variantKey);
-		absorb(label, mechanics);
+		absorb(label, mechanics, row);
 		// Alternate choice replaces/extends with one whole blob.
 		if (
 			mechanics.alternateChoice &&
@@ -673,7 +678,7 @@ export function resolveOrigins(
 			mechanics.alternateChoice[pick.alternate]
 		) {
 			const alt = mechanics.alternateChoice[pick.alternate];
-			absorb(`${label}: ${alt.label}`, alt.mechanics);
+			absorb(`${label}: ${alt.label}`, alt.mechanics, row);
 		}
 		// Characteristic choice: exactly one group.
 		if (mechanics.characteristicChoice && pick.charChoice) {

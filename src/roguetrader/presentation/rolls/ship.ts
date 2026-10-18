@@ -287,7 +287,7 @@ async function postShipSalvoCard(
 		damageTotal: number;
 		salvo: { hullDamage: number; armourAbsorbed: number };
 		crewLoss: { population: number; morale: number };
-		critical: { name: string } | null;
+		critical: { key: string; name: string } | null;
 		targetName: string;
 		crippled: boolean;
 		/** Evaluated salvo dice to attach to the card (bead wvkd). */
@@ -308,7 +308,7 @@ async function postShipSalvoCard(
 			hullDamage: result.salvo.hullDamage,
 			crewPopulationLoss: result.crewLoss.population,
 			crewMoraleLoss: result.crewLoss.morale,
-			criticalName: result.critical?.name ?? "",
+			criticalKey: result.critical?.key ?? "",
 			crippled: result.crippled,
 		},
 		undefined,

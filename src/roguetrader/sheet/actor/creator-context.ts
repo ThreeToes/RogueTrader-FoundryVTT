@@ -300,22 +300,25 @@ export function resolveCreatorVitals(
 	fateBreakdown: string;
 } {
 	const vitals = vitalsForCharacter(state, chars, resolved);
-	const corrInsTotal = state.rolledDice.corrOrInsanity.reduce(
-		(a, b) => a + b,
-		0,
-	);
+	// Per-row attribution (bead 02zy): each rolled corruption-or-insanity die
+	// rides only the track its row chose — never the shared total on both.
+	const rows = resolved.corruptionOrInsanityRows ?? [];
+	let corrInsInsanity = 0;
+	let corrInsCorruption = 0;
+	state.rolledDice.corrOrInsanity.forEach((roll, i) => {
+		const row = rows[i];
+		const track = row ? state.corrOrInsTrack[row] : undefined;
+		if (track === "insanity") corrInsInsanity += roll;
+		else if (track === "corruption") corrInsCorruption += roll;
+	});
 	const insanity =
 		resolved.insanity +
 		state.rolledDice.insanity.reduce((a, b) => a + b, 0) +
-		(Object.values(state.corrOrInsTrack).includes("insanity")
-			? corrInsTotal
-			: 0);
+		corrInsInsanity;
 	const corruption =
 		resolved.corruption +
 		state.rolledDice.corruption.reduce((a, b) => a + b, 0) +
-		(Object.values(state.corrOrInsTrack).includes("corruption")
-			? corrInsTotal
-			: 0);
+		corrInsCorruption;
 	return { ...vitals, insanity, corruption };
 }
 

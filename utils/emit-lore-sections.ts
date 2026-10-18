@@ -61,7 +61,7 @@ function sidebarsHtml(sidebars: string[] | undefined): string {
 
 /**
  * Pages that merge into an existing page instead of becoming new ones.
- * Scope note: EA Ch IV "Famous Rogue Traders" extends the rt_core roster on
+ * Scope note: EA Ch IV "Famous Rogue Traders" extends the Core Rulebook roster on
  * "Rogue Traders Known Within the Expanse" (link, don't duplicate).
  */
 const MERGE_INTO: Record<

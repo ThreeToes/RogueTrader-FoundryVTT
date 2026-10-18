@@ -228,10 +228,10 @@ export function resolveEntryFolder(
  *   in the comments below). "Thrown Weapons" is the one authoring label —
  *   the family spans the book's "Grenades and Missiles" (p125) AND thrown
  *   weapons (Bolas, Knife, Spear-thrower), so no single book header fits.
- * - armour: hand-mapped per entry (rt_core Table 5-7 sections p137-139;
+ * - armour: hand-mapped per entry (Core Rulebook Table 5-7 sections p137-139;
  *   FC Table 3-8, p93 — "artificer armour is highly modified power
  *   armour", FC p95). "Exotic Armour" is an authoring label for the FC
- *   armours that match no rt_core section.
+ *   armours that match no Core Rulebook section.
  * - gear: by source page bands (book TOC: Weapon Upgrades 133, Ammunition
  *   135, Unusual Ammo 136, Gear 139) + the name suffixes the pack already
  *   carries; FC gear (its "Gear" section starts p94).
@@ -272,42 +272,42 @@ const BATTLESUIT_SYSTEM_GROUP_LABELS: Readonly<Record<string, string>> = {
 	signature: "Signature Systems",
 };
 
-/** Armour name → folder label (rt_core pp137-139 sections; FC p93). */
+/** Armour name → folder label (Core Rulebook pp137-139 sections; FC p93). */
 const ARMOUR_GROUPS: Record<string, string> = {
-	// rt_core Table 5-7: Primitive Armour (p137).
+	// Core Rulebook Table 5-7: Primitive Armour (p137).
 	"Heavy Leathers/Furs": "Primitive Armour",
 	"Grox Hide/Chainmail": "Primitive Armour",
 	"Feudal World Plate": "Primitive Armour",
 	"Burnscour Beast Hide": "Primitive Armour",
-	// rt_core Table 5-7: Flak Armour (p137).
+	// Core Rulebook Table 5-7: Flak Armour (p137).
 	"Flak Helmet": "Flak Armour",
 	"Flak Cloak": "Flak Armour",
 	"Flak Coat": "Flak Armour",
 	"Guard Flak Armour": "Flak Armour",
-	// rt_core Table 5-7: Mesh Armour (p138).
+	// Core Rulebook Table 5-7: Mesh Armour (p138).
 	"Mesh Cowl": "Mesh Armour",
 	"Xeno Mesh": "Mesh Armour",
 	"Mesh Combat Cloak": "Mesh Armour",
 	"Mesh Vest": "Mesh Armour",
-	// rt_core Table 5-7: Carapace Armour (p138).
+	// Core Rulebook Table 5-7: Carapace Armour (p138).
 	"Carapace Helm": "Carapace Armour",
 	"Enforcer Light Carapace": "Carapace Armour",
 	"Carapace Chestplate": "Carapace Armour",
 	"Storm Trooper Carapace": "Carapace Armour",
-	// rt_core Table 5-7: Power Armour (p139).
+	// Core Rulebook Table 5-7: Power Armour (p139).
 	"Advanced Helmet Systems": "Power Armour",
 	"Armoured Bodyglove": "Power Armour",
 	"Light Power Armour": "Power Armour",
 	"Power Armour": "Power Armour",
 	// FC Table 3-8 (p93): artificer armour is modified power armour (p95);
-	// the rest match no rt_core section (authoring label).
+	// the rest match no Core Rulebook section (authoring label).
 	"Artificer Armour": "Power Armour",
 	"Artificer Armour (Consecrated)": "Power Armour",
 	"Vaporian Mirror Armour": "Exotic Armour",
 	"Engine Armour": "Exotic Armour",
 	"Sabbat-pattern Helm": "Exotic Armour",
 	// Hostile Acquisitions Table 2-16 (bead dfb8, printed pp61-62). The
-	// Footfall voidsuit is a voidsuit, not a rt_core section match.
+	// Footfall voidsuit is a voidsuit, not a Core Rulebook section match.
 	"Augmetic Engine-Plate": "Exotic Armour",
 	"Mesh-Weave Clothing": "Exotic Armour",
 	"Pressure Carapace": "Exotic Armour",
@@ -647,9 +647,9 @@ const NPC_GROUPS: Readonly<Record<string, string>> = {
 	"Venomous Terror (SOI bestial archetype)": "Creatures & Beasts",
 	// Named NPCs — grouped by the adventure/faction they appear in
 	// (the lore/intothemaw journals [[link]] these by name).
-	"Hadarak Fel": "Named NPCs/Into the Maw (rt_core Ch XV)",
-	"Lady Ash": "Named NPCs/Into the Maw (rt_core Ch XV)",
-	Pyrexia: "Named NPCs/Into the Maw (rt_core Ch XV)",
+	"Hadarak Fel": "Named NPCs/Into the Maw (Core Rulebook Ch XV)",
+	"Lady Ash": "Named NPCs/Into the Maw (Core Rulebook Ch XV)",
+	Pyrexia: "Named NPCs/Into the Maw (Core Rulebook Ch XV)",
 	"Magos-Commodore Gnothis Trannarch":
 		"Named NPCs/Explorator Fleet KX-557.V (SOI)",
 	"Tech-Priest Ulmir Arvein": "Named NPCs/Explorator Fleet KX-557.V (SOI)",

@@ -208,18 +208,73 @@ describe("resolveCreatorVitals / buildReview (bead a87x)", () => {
 	});
 
 	test("the corruption-or-insanity track rides the CHOSEN track only", () => {
-		const s = {
-			...state({ "home-world": { key: "hive-world" } }),
-			rolledDice: { ...emptyState().rolledDice, corrOrInsanity: [4] },
-			corrOrInsTrack: { "home-world": "insanity" as const },
+		const tainted = {
+			key: "has-track",
+			row: "home-world" as OriginRow,
+			col: 0,
+			name: "Tracky",
+			description: "",
+			mechanics: { corruptionOrInsanityDice: "1d5" },
 		};
-		const vitals = resolveCreatorVitals(
-			s,
-			resolved(s.picks),
-			baseCharacteristics(s),
-		);
-		expect(vitals.insanity).toBe(4);
-		expect(vitals.corruption).toBe(0);
+		setOriginEntries([...ORIGIN_FIXTURES, tainted]);
+		try {
+			const s = {
+				...state({ "home-world": { key: "has-track" } }),
+				rolledDice: { ...emptyState().rolledDice, corrOrInsanity: [4] },
+				corrOrInsTrack: { "home-world": "insanity" as const },
+			};
+			const vitals = resolveCreatorVitals(
+				s,
+				resolved(s.picks),
+				baseCharacteristics(s),
+			);
+			expect(vitals.insanity).toBe(4);
+			expect(vitals.corruption).toBe(0);
+		} finally {
+			setOriginEntries(ORIGIN_FIXTURES);
+		}
+	});
+
+	test("two rows choosing different tracks split the dice (bead 02zy)", () => {
+		const a = {
+			key: "track-a",
+			row: "home-world" as OriginRow,
+			col: 0,
+			name: "A",
+			description: "",
+			mechanics: { corruptionOrInsanityDice: "1d5" },
+		};
+		const b = {
+			key: "track-b",
+			row: "birthright" as OriginRow,
+			col: 0,
+			name: "B",
+			description: "",
+			mechanics: { corruptionOrInsanityDice: "1d5" },
+		};
+		setOriginEntries([...ORIGIN_FIXTURES, a, b]);
+		try {
+			const s = {
+				...state({
+					"home-world": { key: "track-a" },
+					birthright: { key: "track-b" },
+				}),
+				rolledDice: { ...emptyState().rolledDice, corrOrInsanity: [4, 7] },
+				corrOrInsTrack: {
+					"home-world": "insanity" as const,
+					birthright: "corruption" as const,
+				},
+			};
+			const vitals = resolveCreatorVitals(
+				s,
+				resolved(s.picks),
+				baseCharacteristics(s),
+			);
+			expect(vitals.insanity).toBe(4);
+			expect(vitals.corruption).toBe(7);
+		} finally {
+			setOriginEntries(ORIGIN_FIXTURES);
+		}
 	});
 });
 

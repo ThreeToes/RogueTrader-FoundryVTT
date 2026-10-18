@@ -1792,5 +1792,16 @@
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ONE": "Coste de avance Experto (una aptitud)",
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ONE_HINT": "El coste en xp de un avance de característica Experto cuando el personaje comparte una aptitud con él (Tabla 2-2, Manual principal de DH2e, página 80: 1.500). Asume el libro de xp: el libro de xp gastados de cada personaje existente se construyó con el valor base.",
 	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO": "Coste de avance Experto (ninguna aptitud)",
-	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO_HINT": "El coste en xp de un avance de característica Experto cuando el personaje no comparte ninguna aptitud con él (Tabla 2-2, Manual principal de DH2e, página 80: 2.500). Asume el libro de xp: el libro de xp gastados de cada personaje existente se construyó con el valor base."
+	"RULES.ADVANCEMENT_CHARACTERISTIC_COST_EXPERT_ZERO_HINT": "El coste en xp de un avance de característica Experto cuando el personaje no comparte ninguna aptitud con él (Tabla 2-2, Manual principal de DH2e, página 80: 2.500). Asume el libro de xp: el libro de xp gastados de cada personaje existente se construyó con el valor base.",
+	"SHIP_CRITICALS.holed": "Holed",
+	"SHIP_CRITICALS.internal-damage": "Internal Damage",
+	"SHIP_CRITICALS.sensors-damaged": "Sensors damaged",
+	"SHIP_CRITICALS.thrusters-damaged": "Thrusters damaged",
+	"SHIP_CRITICALS.fire": "Fire!",
+	"SHIP_CRITICALS.engines-crippled": "Engines Crippled",
+	"SHIP_CRITICALS.surly-techsprites": "Surly Techsprites",
+	"SHIP_CRITICALS.decapitation": "Decapitation",
+	"SHIP_CRITICALS.hull-breach": "Hull Breach",
+	"SHIP_CRITICALS.catastrophic-damage": "Catastrophic Damage",
+	"SHIP_CRITICALS.catastrophic-overload": "Catastrophic Overload"
 }

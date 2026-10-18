@@ -63,6 +63,16 @@ describe("resolveTest (rt-core)", () => {
 			37,
 		);
 	});
+
+	test("auto-fail threshold is inclusive (bead vhfh)", () => {
+		const profile = { ...rtCore, autoFailRoll: 91 };
+		expect(
+			resolveTest({ target: 99, roll: 91, profile }).success,
+		).toBe(false);
+		expect(
+			resolveTest({ target: 99, roll: 90, profile }).success,
+		).toBe(true);
+	});
 });
 
 describe("sumModifiers", () => {

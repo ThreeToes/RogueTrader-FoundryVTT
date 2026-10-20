@@ -46,6 +46,11 @@ afterAll(() => {
 });
 
 import { afterAll, describe, expect, it } from "bun:test";
+import {
+	getPorts,
+	resetPorts,
+	setPorts,
+} from "../../../ffg/infrastructure/foundry/ports";
 import { boardingRowHandlers, boardingRowKey } from "./ship-boarding";
 
 describe("boarding row dispatch vocabulary (bead w98s)", () => {
@@ -86,5 +91,109 @@ describe("boarding row dispatch vocabulary (bead w98s)", () => {
 		expect(
 			boardingRowHandlers[boardingRowKey("Ram the Barge!")],
 		).toBeUndefined();
+	});
+});
+
+describe("the rout flow's cancelled prompts (bead wu2l nit 18)", () => {
+	/** The file stub's DialogV2 (restored in runRout's finally). */
+	const foundryGlobal = () =>
+		(globalThis as Record<string, unknown>).foundry as {
+			applications: { api: { DialogV2: unknown } };
+		};
+
+	/** Run rout.after() with the given prompt sequence scripted; captures
+	 * the posted cards and the actor writes; restores stubs + ports. */
+	const runRout = async (dialog: {
+		wait: (opts?: unknown) => Promise<unknown>;
+		input: (opts?: unknown) => Promise<unknown>;
+	}) => {
+		const original = foundryGlobal().applications.api.DialogV2;
+		foundryGlobal().applications.api.DialogV2 = dialog;
+		const posted: string[] = [];
+		const updates: Array<Record<string, unknown>> = [];
+		setPorts({
+			...getPorts(),
+			actors: {
+				...getPorts().actors,
+				update: async (_doc: unknown, data: Record<string, unknown>) => {
+					updates.push(data);
+				},
+			},
+			targets: {
+				...getPorts().targets,
+				actor: () => ({ name: "Enemy", system: {} }),
+			},
+			chat: {
+				...getPorts().chat,
+				postHtml: async (_actor: unknown, html: string) => {
+					posted.push(html);
+					return { id: "m1" };
+				},
+			},
+		} as never);
+		try {
+			const after = boardingRowHandlers.rout.after;
+			if (!after) throw new Error("the rout row lost its after-hook");
+			await after(
+				{
+					kind: "ship-action",
+					actor: {
+						name: "Righteous Fury",
+						uuid: "Actor.s1",
+						system: { boardedWith: { uuid: "Actor.s2" } },
+					},
+					itemId: "i1",
+				} as never,
+				// The prepare-only rout row's prepared shape (title + kindData).
+				{
+					title: "Righteous Fury — SHIP_BOARDING.ROUT_TITLE",
+					kindData: { name: "Rout" },
+				} as never,
+				{} as never,
+				"",
+			);
+			return { posted, updates };
+		} finally {
+			foundryGlobal().applications.api.DialogV2 = original;
+			resetPorts();
+		}
+	};
+
+	it("the cancelled winner prompt posts the cancelled-state note card (never silent)", async () => {
+		const { posted, updates } = await runRout({
+			wait: async () => null,
+			input: async () => null,
+		});
+		expect(posted).toHaveLength(1);
+		expect(posted[0]).toContain("SHIP_BOARDING.FLOW_CANCELLED");
+		// No actor write — nothing resolved.
+		expect(updates).toEqual([]);
+	});
+
+	it("a cancelled degrees prompt posts the note card, writes nothing", async () => {
+		const { posted, updates } = await runRout({
+			// The winner prompt confirms; the degrees prompt cancels.
+			wait: async () => "ship",
+			input: async () => null,
+		});
+		expect(posted).toHaveLength(1);
+		expect(posted[0]).toContain("SHIP_BOARDING.FLOW_CANCELLED");
+		expect(updates).toEqual([]);
+	});
+
+	it("a cancelled per-degree pick posts the note card, writes nothing", async () => {
+		const calls: string[] = [];
+		const { posted, updates } = await runRout({
+			// The winner prompt confirms "ship"; the per-degree PICK prompt
+			// (wait again) cancels.
+			wait: async () => {
+				calls.push("wait");
+				return calls.length === 1 ? "ship" : null;
+			},
+			input: async () => ({ degrees: "1" }),
+		});
+		expect(posted).toHaveLength(1);
+		expect(posted[0]).toContain("SHIP_BOARDING.FLOW_CANCELLED");
+		expect(updates).toEqual([]);
 	});
 });

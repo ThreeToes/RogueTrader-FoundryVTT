@@ -607,6 +607,26 @@ describe("the ship-actions view model (bead 7gcm)", () => {
 		expect(chip("Break Free-ish", "machinery")).toBe(false);
 	});
 
+	test("the note-only machinery rows label as manual machinery, not a raw key (bead wu2l nit 16)", () => {
+		const rout = shipActionChipRow(
+			{
+				name: "Rout",
+				uuid: "u-rout",
+				system: { roll: { test: "rout", difficulty: "" } },
+			},
+			"machinery",
+			localizeStub,
+		);
+		expect(rout.testLabel).toBe("SHIP_COMBAT.TEST_NOTE_ONLY");
+		// An UNMAPPED test key still falls through VISIBLY (never blank).
+		const unknown = shipActionChipRow(
+			{ name: "X", uuid: "u-x", system: { roll: { test: "mystery-key" } } },
+			"extended",
+			localizeStub,
+		);
+		expect(unknown.testLabel).toBe("mystery-key");
+	});
+
 	test("the ships-pack BFK ordnance rows group under their own label (bead brex blocker 1)", () => {
 		const context = shipActionGroupsContext(
 			[
@@ -793,6 +813,28 @@ describe("the ship-actions view model (bead 7gcm)", () => {
 		expect(chips[1].tooltip).toContain("SHIP_COMBAT.TURN_FLAG_PERSISTENT");
 		// The named-component flag names its component (Lock on Target).
 		expect(chips[2].tooltip).toContain("Sunsear Lance");
+	});
+
+	test("an aid-machine-spirit stat-token flag labels its stat, never a dangling separator (bead wu2l nit 15)", () => {
+		const chips = turnFlagChips(
+			[
+				{
+					id: "aid-machine-spirit:manoeuvrability",
+					key: "aid-machine-spirit",
+					value: 5,
+					target: "manoeuvrability",
+					expiresAtTurn: null,
+					persistent: false,
+				},
+			],
+			() => "", // the stat token resolves NO component item
+			localizeStub,
+		);
+		// The stat label rides the SHIP_COMBAT vocabulary.
+		expect(chips[0].tooltip).toContain("SHIP_COMBAT.STAT_MANOEUVRABILITY");
+		// No empty tail: the tooltip never ends with a dangling separator.
+		expect(chips[0].tooltip.endsWith("— ")).toBe(false);
+		expect(chips[0].tooltip.endsWith("—")).toBe(false);
 	});
 });
 

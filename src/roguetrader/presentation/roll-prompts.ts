@@ -128,7 +128,13 @@ export async function promptShieldAbsorption(
  */
 export async function promptTargetComponent(
 	target: unknown,
-	opts?: { revealGated?: boolean },
+	opts?: {
+		revealGated?: boolean;
+		/** Chart results that name a component FAMILY (Core Rulebook p222,
+		 * e.g. 6 — Engines Crippled → plasma drives): only those installed
+		 * components are offered. Unset = every fixable component. */
+		componentTypes?: readonly string[];
+	},
 ): Promise<unknown | null> {
 	const ports = getPorts();
 	let items = ((
@@ -138,8 +144,12 @@ export async function promptTargetComponent(
 	}) ?? []) as Array<{
 		id?: string;
 		name?: string;
-		system?: { state?: string };
+		system?: { state?: string; componentType?: string };
 	}>;
+	if (opts?.componentTypes) {
+		const wanted = new Set(opts.componentTypes);
+		items = items.filter((i) => wanted.has(i.system?.componentType ?? ""));
+	}
 	if (opts?.revealGated) {
 		const revealed = new Set(
 			(

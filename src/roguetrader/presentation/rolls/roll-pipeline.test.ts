@@ -3420,27 +3420,19 @@ describe("extended rows: Flank Speed + Lock on Target (bead z697, printed p217-2
 			wait?: (opts: Record<string, unknown>) => Promise<unknown>;
 			input?: (opts: Record<string, unknown>) => Promise<unknown>;
 		},
+		extraItems: unknown[] = [],
 	) => {
-		const ship = extendedShip([row]);
+		const ship = extendedShip([row, ...extraItems]);
 		const prepared = await shipActionHandler.prepare({
 			kind: "ship-action",
 			actor: ship,
 			itemId: "sa9",
 		} as never);
-		const { posts, ports, rolled } = captureEffectPorts();
+		const { posts, ports, rolled, updates } = captureEffectPorts();
+		const inputs: Array<Record<string, unknown>> = [];
 		setPorts(ports);
 		try {
-			if (dialogs) {
-				await withDialogStubs(dialogs, async () => {
-					await shipActionHandler.after?.(
-						{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
-						prepared as never,
-						outcome as never,
-						"",
-						{ target: 50, modifiers: [] },
-					);
-				});
-			} else {
+			const run = async () => {
 				await shipActionHandler.after?.(
 					{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
 					prepared as never,
@@ -3448,11 +3440,42 @@ describe("extended rows: Flank Speed + Lock on Target (bead z697, printed p217-2
 					"",
 					{ target: 50, modifiers: [] },
 				);
+			};
+			if (dialogs) {
+				await withDialogStubs(
+					{
+						wait: dialogs.wait,
+						input: async (opts: Record<string, unknown>) => {
+							inputs.push(opts);
+							return dialogs.input
+								? dialogs.input(opts)
+								: (null as never);
+						},
+					},
+					run,
+				);
+			} else {
+				await run();
 			}
 		} finally {
 			resetPorts();
 		}
-		return { posts, rolled };
+		return { posts, rolled, updates, inputs };
+	};
+
+	/** A plasma drive + a non-drive weapon, the drive family scoping's
+	 * fixtures (bead rwq0: the Engines Crippled pick is scoped to drives). */
+	const drive = {
+		id: "drive-1",
+		type: "ship-component",
+		name: "Jovian Pattern Class 3 Drive",
+		system: { componentType: "plasma-drive", state: "intact" },
+	};
+	const lance = {
+		id: "w9",
+		type: "ship-weapon-component",
+		name: "Prow Sunstorm Lance",
+		system: { componentType: "lance", state: "intact" },
 	};
 
 	it("Flank Speed success notes the +1 VU per degree movement", async () => {
@@ -3465,15 +3488,48 @@ describe("extended rows: Flank Speed + Lock on Target (bead z697, printed p217-2
 		expect(posts.join(" ")).toContain("SHIP_ACTION.FLANK_SPEED_NOTE");
 	});
 
-	it("Flank Speed hard-fail (2+ degrees of failure) posts the Engines Crippled (6) critical", async () => {
+	it("Flank Speed hard-fail (2+ degrees of failure) applies Engines Crippled to the PLASMA DRIVE", async () => {
 		resetSpies();
-		const { posts } = await runRowAfter(
+		const { posts, updates, inputs } = await runRowAfter(
 			flank,
 			// roll 85 vs target 50 → floor(35/10)+1 = 4 degrees of failure.
 			{ success: false, degrees: 0, roll: 85 },
+			{ input: async () => ({ component: "drive-1" }) },
+			[drive, lance],
 		);
 		const html = posts.join(" ");
 		expect(html).toContain("SHIP_ACTION.FLANK_SPEED_CRIPPLED");
+		// The critical properly LANDS: the picked drive is damaged.
+		expect(updates).toEqual([{ system: { state: "damaged" } }]);
+		// The pick is scoped to the drive family: the lance is not offered.
+		const content = String(inputs[0]?.content ?? "");
+		expect(content).toContain("Jovian Pattern Class 3 Drive");
+		expect(content).not.toContain("Prow Sunstorm Lance");
+	});
+
+	it("Flank Speed hard-fail with the pick SKIPPED applies nothing and posts no cripple claim", async () => {
+		resetSpies();
+		const { posts, updates } = await runRowAfter(
+			flank,
+			{ success: false, degrees: 0, roll: 85 },
+			{ input: async () => ({ component: "" }) },
+			[drive, lance],
+		);
+		expect(updates).toEqual([]);
+		expect(posts.join(" ")).not.toContain("FLANK_SPEED_CRIPPLED");
+	});
+
+	it("Flank Speed hard-fail with no intact drive: nothing offered, nothing applied, no cripple claim", async () => {
+		resetSpies();
+		const { posts, updates, inputs } = await runRowAfter(
+			flank,
+			{ success: false, degrees: 0, roll: 85 },
+			{},
+			[lance],
+		);
+		expect(updates).toEqual([]);
+		expect(inputs).toEqual([]);
+		expect(posts).toEqual([]);
 	});
 
 	it("Flank Speed failing by 1 degree: no cripple, no note", async () => {

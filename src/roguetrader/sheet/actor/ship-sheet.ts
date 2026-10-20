@@ -390,6 +390,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				state?: string;
 				depressurised?: boolean;
 				componentType?: string;
+				special?: string;
 			};
 			// Crippled ships halve weapon Strength (round up, book p221).
 			const rawStrength = s.strength ?? 0;
@@ -417,7 +418,9 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				salvo:
 					salvoWeaponKind(
 						s.componentType ?? "",
-						`${item?.name ?? ""} ${s.damage ?? ""}`,
+						// Nit 13: same legacy-name heuristic inputs as the salvo path
+						// (presentation/rolls/ship.ts): name + special.
+						`${item?.name ?? ""} ${s.special ?? ""}`,
 					) !== null,
 			});
 		}

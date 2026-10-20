@@ -467,6 +467,33 @@ function crewTrackWrite(
 	};
 }
 
+/** Nit 18: a cancelled prompt mid-flow (winner / degrees / per-degree pick)
+ * never silently drops the board turn — a minimal cancelled-state note card
+ * posts instead (the postHtml note idiom, the ship-manoeuvre precedent). The
+ * note states the turn stayed unresolved so no one reads the silent stop as
+ * a resolved rout. */
+async function postCancelledNote(
+	request: ShipActionRollRequest,
+	prepared: PreparedRoll<"ship-action">,
+): Promise<void> {
+	const ports = getPorts();
+	const ship = request.actor as { name?: string; uuid?: string };
+	const html =
+		`<div class="rogue-trader chat action"><div class="background border">` +
+		`<h1>${escapeDocumentData(prepared.title)}</h1>` +
+		`<p class="note">${escapeDocumentData(
+			ports.i18n.t("SHIP_BOARDING.FLOW_CANCELLED"),
+		)}</p></div></div>`;
+	try {
+		await ports.chat.postHtml(ship, html);
+	} catch (error) {
+		console.error(
+			"rogue-trader | boarding flow cancelled note card failed",
+			error,
+		);
+	}
+}
+
 // ------------------------------------------------------------------ ramming
 
 /** RAMMING (Core Rulebook p215): gives up Shooting; within 1 VU; Hard (−20). */
@@ -838,7 +865,12 @@ const routRow: ShipRow = {
 				},
 			],
 		})) as string | null;
-		if (winner === null) return;
+		if (winner === null) {
+			// Nit 18: a cancelled winner prompt never silently drops the board
+			// turn — the cancelled-state note card posts.
+			await postCancelledNote(request, prepared);
+			return;
+		}
 		const loserName =
 			winner === "ship" ? (target.name ?? "") : (ship.name ?? "");
 
@@ -852,7 +884,11 @@ const routRow: ShipRow = {
 			})}</p><div class="form-group"><input type="number" name="degrees" value="1" min="1" max="10" step="1"></div>`,
 			ok: { label: ports.i18n.t("SHIP_BOARDING.DEGREES_CONFIRM") },
 		})) as { degrees?: string } | null;
-		if (degreeInput === null) return;
+		if (degreeInput === null) {
+			// Nit 18: the cancelled note, not a silent stop.
+			await postCancelledNote(request, prepared);
+			return;
+		}
 		const degrees = Math.max(
 			1,
 			Math.min(10, Math.floor(Number(degreeInput.degrees) || 1)),
@@ -865,7 +901,11 @@ const routRow: ShipRow = {
 		if (winner === "ship") {
 			// This ship (request.actor) won: the DAMAGE lands on the target.
 			const applied = await applyWinnerPick(ports, degrees);
-			if (!applied) return;
+			if (!applied) {
+				// Nit 18: the cancelled per-degree pick note, not a silent stop.
+				await postCancelledNote(request, prepared);
+				return;
+			}
 			hullDamage = applied.hullDamage;
 			crewLosses.population = applied.loss.population;
 			crewLosses.morale = applied.loss.morale;
@@ -876,7 +916,11 @@ const routRow: ShipRow = {
 		} else {
 			// The target won: the damage lands on THIS ship.
 			const applied = await applyWinnerPick(ports, degrees);
-			if (!applied) return;
+			if (!applied) {
+				// Nit 18: the cancelled per-degree pick note, not a silent stop.
+				await postCancelledNote(request, prepared);
+				return;
+			}
 			hullDamage = applied.hullDamage;
 			crewLosses.population = applied.loss.population;
 			crewLosses.morale = applied.loss.morale;

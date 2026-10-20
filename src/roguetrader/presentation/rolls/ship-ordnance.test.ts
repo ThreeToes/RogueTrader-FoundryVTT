@@ -143,6 +143,16 @@ const plasmaSalvo = {
 	tubeId: "tube-1",
 };
 
+/** The printed Table 1-1 Melta row as a launched salvo (BFK printed p8). */
+const meltaSalvo = {
+	...plasmaSalvo,
+	warhead: "melta",
+	name: "Melta Torpedo",
+	damage: "2d10+15",
+	critRating: 9,
+	terminalPenetration: 4,
+};
+
 /** Dialog prompt queue: sequential wait/input responses. */
 function cueDialog(
 	waitResponses: unknown[],
@@ -728,5 +738,104 @@ describe("Torpedo Run attack maths (bead brex, Battlefleet Koronus printed p7)",
 		expect(post.hits).toBe(3);
 		expect(post.hullDamage).toBe(9);
 		expect(post.spent).toBe(true);
+	});
+
+	it("a MELTA hit that deals damage stacks the automatic Fire! critical (printed p9)", async () => {
+		// One Melta torpedo hits: dice 5+6 = 11 + 15 bonus = 26 raw vs Armour
+		// 20 → 6 Hull. The dice MISS the Crit Rating 9 (no chart roll fires),
+		// but the warhead rule stacks the AUTOMATIC Fire! Critical on any
+		// damage-dealing hit, in addition to any other Crits (BFK printed p9).
+		const target = shipFixture([], {
+			armour: 20,
+			turretRating: 0,
+			hullIntegrity: { value: 40, max: 40 },
+			crewPopulation: 100,
+			crewMorale: 100,
+		});
+		const ship = shipFixture([], {
+			torpedoSalvos: [{ ...meltaSalvo, travelled: 0 }],
+			turnFlags: [flagFor(3)],
+		});
+		cueDialog([], [{ distance: "10" }, { distance: "0" }]);
+		const { posts, rolled } = capturePorts(
+			(formula) =>
+				formula === "1d100"
+					? { total: 1 }
+					: { total: 11, dice: [{ result: 5 }, { result: 6 }] },
+			target,
+		);
+		await ordnanceRowHandlers["torpedo-run"]!.after?.(
+			{ kind: "ship-action", actor: ship as never, itemId: "act-1" } as never,
+			{
+				title: "Test Ship — Torpedo Run",
+				kindData: runKindData,
+				baseTarget: 0,
+			} as never,
+			{ success: true, degrees: 0 } as never,
+			"",
+		);
+		// No chart roll fired (the dice miss Crit Rating 9) — Fire! rides the
+		// per-hit row alone, off the warhead rule. THREE torpedoes hit (the
+		// attack degree roll capped by the salvo of 3).
+		expect(rolled).toEqual(["1d100", "2d10", "2d10", "2d10"]);
+		const post = posts[0] as {
+			critNote?: string;
+			attackRows?: Array<{ id: string; label?: string; display?: string }>;
+			hullDamage?: number;
+		};
+		expect(post.hullDamage).toBe(18);
+		expect(post.critNote).toContain("SHIP_CRITICALS.fire");
+		const fireRow = post.attackRows?.find(
+			(row) => row.id === "ord:melta-fire",
+		);
+		expect(fireRow?.display).toContain("SHIP_CRITICALS.fire");
+	});
+
+	it("a Melta hit that deals NO damage causes no Fire! critical (printed p9)", async () => {
+		// The Melta hit absorbs into the target's Armour (raw 26 ≤ Armour 30):
+		// no damage dealt, so the automatic Fire! Critical never fires.
+		const target = shipFixture([], {
+			armour: 30,
+			turretRating: 0,
+			hullIntegrity: { value: 40, max: 40 },
+			crewPopulation: 100,
+			crewMorale: 100,
+		});
+		const ship = shipFixture([], {
+			torpedoSalvos: [{ ...meltaSalvo, travelled: 0 }],
+			turnFlags: [flagFor(3)],
+		});
+		cueDialog([], [{ distance: "10" }, { distance: "0" }]);
+		const { posts, rolled } = capturePorts(
+			(formula) =>
+				formula === "1d100"
+					? { total: 1 }
+					: { total: 11, dice: [{ result: 5 }, { result: 6 }] },
+			target,
+		);
+		await ordnanceRowHandlers["torpedo-run"]!.after?.(
+			{ kind: "ship-action", actor: ship as never, itemId: "act-1" } as never,
+			{
+				title: "Test Ship — Torpedo Run",
+				kindData: runKindData,
+				baseTarget: 0,
+			} as never,
+			{ success: true, degrees: 0 } as never,
+			"",
+		);
+		// The Melta hits absorb into the target's Armour (raw 26 ≤ Armour 30):
+		// no damage dealt on ANY hit, so the automatic Fire! Critical never
+		// fires — the salvo still rolls its THREE 2d10 damage rolls.
+		expect(rolled).toEqual(["1d100", "2d10", "2d10", "2d10"]);
+		const post = posts[0] as {
+			critNote?: string;
+			attackRows?: Array<{ id: string }>;
+			hullDamage?: number;
+		};
+		expect(post.hullDamage).toBe(0);
+		expect(post.critNote).toBe("");
+		expect(
+			post.attackRows?.some((row) => row.id === "ord:melta-fire"),
+		).toBe(false);
 	});
 });

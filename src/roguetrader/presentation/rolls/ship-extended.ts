@@ -627,10 +627,16 @@ const flankSpeedAfter: RowAfter = async (request, prepared, outcome, info) => {
 	if (failureDegrees < 2) return;
 	// The acting ship's OWN components are all known — decision 11's reveal
 	// gating is for ENEMY critical picks (ship.ts), not the crew's own hull.
-	const component = await promptTargetComponent(request.actor);
-	if (component) {
-		await ports.actors.update(component, { system: { state: "damaged" } });
-	}
+	// Table 8-12 (6) Engines Crippled (Core Rulebook p217 + p222) rides the
+	// ship's ENGINES: the pick is scoped to the plasma drives (the drive
+	// component family, Core Rulebook pp200-202) — not every fixable
+	// component. Skipping / no intact drive applies NOTHING, and the
+	// cripple claim posts only when the critical actually lands.
+	const component = await promptTargetComponent(request.actor, {
+		componentTypes: ["plasma-drive"],
+	});
+	if (!component) return;
+	await ports.actors.update(component, { system: { state: "damaged" } });
 	await postRowCard(request, item, [
 		ports.i18n.t("SHIP_ACTION.FLANK_SPEED_CRIPPLED", {
 			degrees: failureDegrees,

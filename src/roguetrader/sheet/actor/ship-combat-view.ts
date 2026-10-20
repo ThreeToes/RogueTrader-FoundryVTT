@@ -40,7 +40,10 @@ import {
 	commandBonusRows,
 	type StarshipSystem,
 } from "../../presentation/rolls/ship-boarding";
-import { parseShipActionTestKey } from "../../presentation/rolls/ship-action";
+import {
+	SHIP_ACTION_SHIP_STATS,
+	parseShipActionTestKey,
+} from "../../presentation/rolls/ship-action";
 import {
 	ORDNANCE_PROMPT_ONLY_ROWS,
 	ordnanceRowHandlers,
@@ -118,13 +121,29 @@ export function shipActionGroupFor(name: string): ShipActionGroupKey {
 }
 
 /** The machine test key as the printed-test label (authored skill names
- * verbatim, characteristics/interaction through their label keys). */
+ * verbatim, characteristics/interaction through their label keys). The
+ * NOTE-ONLY machinery rows (nit 16: their `roll.test` is a machine token,
+ * never a printed test) label as the manual machinery they are instead of
+ * flashing the raw key; any other unmapped key keeps the raw input — a
+ * new row falls through VISIBLY, never blank. */
+export const SHIP_ACTION_NOTE_ONLY_TEST_LABELS: Readonly<
+	Record<string, string>
+> = {
+	// Rout: prepare-only boarding machinery (the opposed Command is
+	// GM-resolved, the d100-vs-Morale runs in the row's own prompts) —
+	// Core Rulebook p215.
+	rout: "SHIP_COMBAT.TEST_NOTE_ONLY",
+};
+
 export function shipActionTestLabel(
 	test: string,
 	localize: (key: string) => string,
 ): string {
 	const parsed = parseShipActionTestKey(test);
-	if (!parsed) return test;
+	if (!parsed) {
+		const noteOnly = SHIP_ACTION_NOTE_ONLY_TEST_LABELS[test];
+		return noteOnly ? localize(noteOnly) : test;
+	}
 	const route = parsed.skillRoute;
 	const parts: string[] = [];
 	if (route.skill) parts.push(route.skill);
@@ -264,6 +283,20 @@ export function helmsmanOptions(
 
 // ------------------------------------------------------------ turn-flag chips
 
+/** The stat-token fallback for the aid-machine-spirit targets (nit 15):
+ * those flags target a stat token ("manoeuvrability"/"detection"), not a
+ * component item — the item lookup misses and the tooltip would dangle a
+ * bare " — ". The SHIP_ACTION_SHIP_STATS vocabulary's label renders
+ * instead; an unknown token stays "" (the chip DROPS the " — " tail, it
+ * never renders an empty name). */
+function statTargetLabel(
+	target: string,
+	localize: (key: string) => string,
+): string {
+	const stat = SHIP_ACTION_SHIP_STATS[target];
+	return stat ? localize(stat.label) : "";
+}
+
 /** One active turn-flag chip: label + signed value + the expiry note. */
 export interface ShipFlagChip {
 	id: string;
@@ -279,7 +312,8 @@ export interface ShipFlagChip {
 
 /** The S2 turn flags as chips (read-only surface): the expiry note is
  * "next own turn" (decision 3) except the PERSISTENT Repel Boarders row
- * (Core Rulebook p218). A named-component flag names its component. */
+ * (Core Rulebook p218). A named-component flag names its component; an
+ * aid-machine-spirit flag names its stat (nit 15's vocabulary fallback). */
 export function turnFlagChips(
 	flags: readonly ShipTurnFlag[],
 	targetNameFor: (itemId: string) => string,
@@ -293,10 +327,11 @@ export function turnFlagChips(
 		const expiry = flag.persistent
 			? localize("SHIP_COMBAT.TURN_FLAG_PERSISTENT")
 			: localize("SHIP_COMBAT.TURN_FLAG_EXPIRY");
-		const target =
+		const targetName =
 			flag.target === SHIP_TURN_FLAG_TARGET_ALL
 				? ""
-				: ` — ${targetNameFor(flag.target)}`;
+				: targetNameFor(flag.target) || statTargetLabel(flag.target, localize);
+		const target = targetName ? ` — ${targetName}` : "";
 		return {
 			id: flag.id,
 			key: flag.key,

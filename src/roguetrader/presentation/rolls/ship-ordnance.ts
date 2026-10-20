@@ -678,6 +678,10 @@ const torpedoRunRow: ShipRow = {
 		let remaining = salvo.remaining;
 		let hullDamage = 0;
 		let critText = "";
+		/** Melta warheads: hits that dealt damage carry the AUTOMATIC Fire!
+		 * critical (Battlefleet Koronus printed p9), stacking with the chart
+		 * roll's own critical where that fired too. */
+		let meltaFireHits = 0;
 		let hits = 0;
 		let turretText = "";
 		/** The per-hit Hull damage, ACCUMULATED (the values are in scope) —
@@ -818,6 +822,18 @@ const torpedoRunRow: ShipRow = {
 						// Rulebook printed p218) stays the surface; the card notes.
 						critText = critText || ports.i18n.t("SHIP_ORDNANCE.BOARDING_HIT");
 					}
+					if (salvo.warhead === "melta" && hitDamage.raw > armour) {
+						// A Melta torpedo hit that DEALS DAMAGE automatically causes
+						// a Fire! Critical result, IN ADDITION to any other Crits —
+						// the chart roll above still runs and both names ride the
+						// card (Battlefleet Koronus printed p9).
+						meltaFireHits += 1;
+						rows.push({
+							id: "ord:melta-fire",
+							label: ports.i18n.t("SHIP_ORDNANCE.MELTA_FIRE"),
+							display: ports.i18n.t("SHIP_CRITICALS.fire"),
+						});
+					}
 				}
 				// Boarding torpedoes never wound the hull (printed p8); the rest of
 				// the Hull + crew writes book the ACCUMULATED per-hit totals (the
@@ -877,7 +893,14 @@ const torpedoRunRow: ShipRow = {
 				attempted,
 				hits,
 				hullDamage,
-				critNote: critText,
+				// Melta Fire! criticals stack with the chart roll's (BFK printed
+				// p9): both names ride the card's crit note.
+				critNote:
+					meltaFireHits > 0
+						? critText
+							? `${critText} + ${ports.i18n.t("SHIP_CRITICALS.fire")}`
+							: ports.i18n.t("SHIP_CRITICALS.fire")
+						: critText,
 				turretNote: turretText,
 				boardingNote:
 					salvo.warhead === "boarding"

@@ -13,6 +13,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "bun:test";
 import { parse } from "yaml";
+import { MINIMAL_FOUNDRY } from "../../test-helpers/foundry-schema-stub";
 import { resolveEntryType } from "../../../utils/compendia";
 import {
 	CRAFT_RATINGS,
@@ -41,9 +42,14 @@ for (const [key, value] of Object.entries({
 })) {
 	globalThisRecord[key] = value;
 }
-// Merge the presentation stubs ONTO the schema stub's foundry global (the
-// ship-boarding.test.ts stub keys, without clobbering data.fields).
-const foundryStub = globalThisRecord.foundry as Record<string, unknown>;
+// Merge the presentation stubs ONTO the schema stub's foundry global
+// (the ship-boarding.test.ts stub keys, without clobbering data.fields).
+// Guarantee the floor FIRST: this file's helper import may already be cached
+// (its side effect does not re-run) and an earlier suite's afterAll may have
+// restored the global to nothing (the packless-CI crash class).
+const foundryStub = (globalThisRecord.foundry =
+	(globalThisRecord.foundry as Record<string, unknown> | undefined) ??
+	MINIMAL_FOUNDRY) as Record<string, unknown>;
 foundryStub.applications ??= {
 	api: { DialogV2: { wait: async () => null, input: async () => null } },
 };
@@ -103,9 +109,13 @@ type SystemShape = {
 };
 
 describe.skipIf(!HAS_PACKS)("battlefleet koronus ordnance pack (bead a413)", () => {
-	const orntorpedoes = LOAD("shiptorpedoes");
-	const attackCraft = LOAD("shipattackcraft");
-	const actions = LOAD("shipordnance-actions");
+	// bun still evaluates the describe body when skipIf fires (collection),
+	// so the LOADs must not throw when the packs clone is absent (packless
+	// CI / fresh clones). The empty arrays make the skipped tests inert and
+	// the count-guards inside them non-vacuous when the pack IS present.
+	const orntorpedoes = HAS_PACKS ? LOAD("shiptorpedoes") : [];
+	const attackCraft = HAS_PACKS ? LOAD("shipattackcraft") : [];
+	const actions = HAS_PACKS ? LOAD("shipordnance-actions") : [];
 	const allEntries = [...orntorpedoes, ...attackCraft, ...actions];
 	const systemOf = (entry: Record<string, unknown>): SystemShape =>
 		(entry.system ?? {}) as SystemShape;

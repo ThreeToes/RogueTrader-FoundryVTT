@@ -41,7 +41,13 @@ function types(fields: Record<string, unknown>): Record<string, unknown> {
 }
 
 const globalRef = globalThis as Record<string, unknown>;
-globalRef.foundry ??= {
+
+/** The minimal schema-stub foundry global, exported so suites that REPLACE
+ * the global during their own tests can restore THIS guaranteed-valid floor
+ * instead of deleting foundry: a deleted global poisons every later suite in
+ * the same process whose module-level stub import is already cached (the
+ * packless-CI failure class, 2026-10-20). */
+export const MINIMAL_FOUNDRY = {
 	abstract: { TypeDataModel: class {} },
 	data: {
 		fields: {
@@ -54,4 +60,24 @@ globalRef.foundry ??= {
 			HTMLField: StubHtmlField,
 		},
 	},
+	// The floor carries applications too: presentation modules (test-dialog.ts
+	// and friends) read foundry.applications.api at MODULE SCOPE, and a suite
+	// that imports them before a rich stub is installed needs at least a
+	// non-crashing floor in the shared cache (the packless-CI class).
+	applications: {
+		api: {
+			ApplicationV2: class {},
+			HandlebarsApplicationMixin: (base: unknown) => base,
+		},
+		sheets: { ActorSheetV2: class {}, ItemSheetV2: class {} },
+	},
 };
+
+/** Install the minimal stub when (and only when) the global is absent —
+ * re-callable, so a suite whose afterAll restored nothing (another suite
+ * deleted the global) can still guarantee a valid foundry before imports. */
+export function ensureFoundrySchemaStub(): void {
+	globalRef.foundry ??= MINIMAL_FOUNDRY;
+}
+
+ensureFoundrySchemaStub();

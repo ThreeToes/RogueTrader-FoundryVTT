@@ -33,13 +33,15 @@ const { dialogContributors, runTest } = await import(
 );
 
 import { afterAll, describe, expect, test } from "bun:test";
+import { MINIMAL_FOUNDRY } from "../../test-helpers/foundry-schema-stub";
 
 afterAll(() => {
-	if (originalFoundry === undefined) {
-		delete (globalThis as Record<string, unknown>).foundry;
-	} else {
-		(globalThis as Record<string, unknown>).foundry = originalFoundry;
-	}
+	// Never leave the foundry global DELETED — a deleted global poisons every
+	// later suite in this bun process whose module-level stub import is cached
+	// (the packless-CI failure class, 2026-10-20). Restore the minimal floor
+	// when nothing was installed before this suite ran.
+	(globalThis as Record<string, unknown>).foundry =
+		originalFoundry ?? MINIMAL_FOUNDRY;
 });
 
 /** Everything rules/adapter.ts re-exports for the sheets + game.rogueTrader.*. */

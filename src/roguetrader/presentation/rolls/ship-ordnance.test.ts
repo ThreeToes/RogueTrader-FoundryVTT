@@ -10,28 +10,27 @@
  * ship-ordnance.test.ts.
  */
 
-// Module-load stubs first (the ship-boarding.test.ts pattern): the
-// presentation chain touches test-dialog and the ports at load.
+// Module-load stubs — MERGE over the shared schema-stub floor, never
+// clobber it: this suite REPLACED the global with opts-less field classes
+// and left them on globalThis, poisoning every later schema suite in the
+// same bun process (the packless-CI failure class, 2026-10-20). The shared
+// StubField classes carry opts; applications/utils/game/ui ride on top;
+// afterAll restores what was installed before this suite ran — the stale
+// stub classes are no longer left on the global (the CI-poison fix).
+/* eslint-disable */
+import {
+	MINIMAL_FOUNDRY,
+} from "../../../test-helpers/foundry-schema-stub";
+
 const globalThisRecord = globalThis as Record<string, unknown>;
 const foundryGlobal = (globalThisRecord.foundry = {
-	abstract: { TypeDataModel: class {} },
-	data: {
-		fields: {
-			SchemaField: class {
-				fields: Record<string, unknown>;
-				constructor(fields: object) {
-					this.fields = fields as never;
-				}
-			},
-			ArrayField: class {},
-			NumberField: class {},
-			StringField: class {},
-			BooleanField: class {},
-			HTMLField: class {},
-		},
-	},
+	...MINIMAL_FOUNDRY,
 	applications: {
-		api: { DialogV2: { wait: async () => null, input: async () => null } },
+		...(MINIMAL_FOUNDRY.applications as object),
+		api: {
+			...((MINIMAL_FOUNDRY.applications as Record<string, unknown>).api as object),
+			DialogV2: { wait: async () => null, input: async () => null },
+		},
 	},
 	utils: { fromUuidSync: () => null },
 }) as Record<string, unknown>;
@@ -46,8 +45,21 @@ globalThisRecord.ui = {
 		info: () => undefined,
 	},
 };
+import { afterAll, afterEach, describe, expect, it } from "bun:test";
 
-import { afterEach, describe, expect, it } from "bun:test";
+// Restore the process-global stubs this suite replaced: the foundry floor
+// stays valid (never deleted), the game/ui stubs go back to whatever ran
+// before (the deleted-global poison class, 2026-10-20).
+const priorFoundry = globalThisRecord.foundry as Record<string, unknown>;
+const priorGame = globalThisRecord.game;
+const priorUi = globalThisRecord.ui;
+afterAll(() => {
+	globalThisRecord.foundry = priorFoundry ?? MINIMAL_FOUNDRY;
+	if (priorGame === undefined) delete globalThisRecord.game;
+	else globalThisRecord.game = priorGame;
+	if (priorUi === undefined) delete globalThisRecord.ui;
+	else globalThisRecord.ui = priorUi;
+});
 import {
 	getPorts,
 	resetPorts,

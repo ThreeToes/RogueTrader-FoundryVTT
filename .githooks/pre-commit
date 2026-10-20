@@ -1,12 +1,16 @@
 #!/bin/sh
-# Pre-commit hook mirroring the verification steps of .forgejo/workflows/ci.yaml
-# (bead qdmc). Install once per clone with: bun run hooks:install
+# Pre-commit hook mirroring the FULL verification sequence of
+# .forgejo/workflows/ci.yaml (bead qdmc; full-parity extension 2026-10-20
+# after packless-CI failures leaked through the pre-build hook gap).
+# Install once per clone with: bun run hooks:install
 #
-# Checks: typecheck (pure + scoped), lint, bun test, verify:templates.
+# Checks: typecheck (pure + scoped), lint, bun test, verify:templates, build.
 #
-# The full `bun run build` step CI also runs is OMITTED here so a commit stays
-# fast (build:packs is slow and src/packs is machine-local anyway); CI remains
-# the gate for the build. Bypass this hook with: git commit --no-verify.
+# The hook deliberately runs the SAME steps in the SAME order as CI so a
+# green hook means green CI (modulo the packless environment — CI has no
+# src/packs, so the pack-dependent suites here are the strict superset: when
+# this hook passes, CI's narrower set passes too). Bypass with:
+# git commit --no-verify.
 set -eu
 
 cd "$(git rev-parse --show-toplevel)"
@@ -24,6 +28,9 @@ if bun test; then echo "    bun test OK"; else echo "    bun test FAILED"; fail=
 
 echo "==> bun run verify:templates"
 if bun run verify:templates; then echo "    verify:templates OK"; else echo "    verify:templates FAILED"; fail=1; fi
+
+echo "==> bun run build"
+if bun run build; then echo "    build OK"; else echo "    build FAILED"; fail=1; fi
 
 if [ "$fail" -ne 0 ]; then
     echo ""

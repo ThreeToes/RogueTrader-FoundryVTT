@@ -13,44 +13,17 @@
  */
 
 import { readFileSync } from "node:fs";
-import { afterAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
+// The shared schema stub suffices for the SHEET_REGISTRY import — NOT the
+// Proxy-field stub that used to live here: it built every model's schema
+// against field-classes with no opts, and the cached models then poisoned
+// every later suite's instanceof/opts assertions in the process (the
+// packless-CI failure class, 2026-10-20).
+import "../test-helpers/foundry-schema-stub";
 
 // SHEET_REGISTRY pulls in every DataModel class, and those `extends
 // foundry.abstract.TypeDataModel` at module load. Stub before importing it.
-const originalFoundry = (globalThis as Record<string, unknown>).foundry;
-(globalThis as Record<string, unknown>).foundry = {
-	abstract: {
-		TypeDataModel: class {},
-	},
-	data: {
-		fields: new Proxy(
-			{},
-			{
-				get: () =>
-					class {
-						static readonly initial = undefined;
-					},
-			},
-		),
-	},
-	applications: {
-		api: {
-			ApplicationV2: class {},
-			HandlebarsApplicationMixin: (b: unknown) => b,
-		},
-		sheets: { ActorSheetV2: class {}, ItemSheetV2: class {} },
-	},
-};
-
 const { SHEET_REGISTRY } = await import("./bootstrap/sheet-registry");
-
-afterAll(() => {
-	if (originalFoundry === undefined) {
-		delete (globalThis as Record<string, unknown>).foundry;
-	} else {
-		(globalThis as Record<string, unknown>).foundry = originalFoundry;
-	}
-});
 
 const DECLARATION = "src/roguetrader/foundry.d.ts";
 

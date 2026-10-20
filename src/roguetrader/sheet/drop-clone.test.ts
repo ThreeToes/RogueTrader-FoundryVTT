@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { MINIMAL_FOUNDRY } from "../../test-helpers/foundry-schema-stub";
 import { cloneItemIntoActor, npcEquipDefault } from "./drop-clone";
 
 // Bead meb2: shared drop-to-clone helper. The NPC equip-default rule
@@ -99,11 +100,9 @@ describe("cloneItemIntoActor pack-_id strip (bead 27eu)", () => {
 			);
 			expect(second?.name).toBe("Chain Sword");
 		} finally {
-			if (originalFoundry === undefined) {
-				delete (globalThis as Record<string, unknown>).foundry;
-			} else {
-				(globalThis as Record<string, unknown>).foundry = originalFoundry;
-			}
+			// Restore to the minimal floor, never delete — a deleted global
+			// poisons the later suites in this bun process (packless-CI class).
+			(globalThis as Record<string, unknown>).foundry = originalFoundry ?? MINIMAL_FOUNDRY;
 		}
 		// BOTH creations ran, and NEITHER payload carries the pack _id —
 		// previously the second clone would have arrived with `_id: pack-item-1`.

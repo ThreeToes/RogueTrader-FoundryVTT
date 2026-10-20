@@ -127,8 +127,10 @@ export function boardingRowKey(name: string): string {
 
 // ------------------------------------------------------------ gates + prompts
 
-/** Starship statline the rows read (schema-first, bead vph0). */
-interface StarshipSystem {
+/** Starship statline the rows read (schema-first, bead vph0). Exported for
+ * the ship-combat-view banner (bead 7gcm) — the sheet passes its actor's
+ * system through structurally. */
+export interface StarshipSystem {
 	hullClass?: string;
 	armour?: number;
 	hullIntegrity?: { value?: number; max?: number };
@@ -367,7 +369,7 @@ function docAnchor(kindData: PreparedRoll["kindData"]): PackDocAnchor | null {
 }
 
 /** The opposed-Command bonus rows rendered visibly (p215: never silent). */
-interface BonusCardRow {
+export interface BonusCardRow {
 	id: string;
 	label: string;
 	/** The pre-rendered signed value ("+20" / "−10") — no template helpers. */
@@ -385,8 +387,10 @@ function bonusDisplay(
 		: ports.i18n.t("SHIP_BOARDING.COMMAND_ROW_MINUS", { bonus: magnitude });
 }
 
-/** The five signed rows one side of a boarding turn reads. */
-function commandBonusRows(bonus: BoardingCommandBonus): BonusCardRow[] {
+/** The five signed rows one side of a boarding turn reads. Exported for the
+ * ship-sheet's boarded banner (bead 7gcm) — the banner's rows come from HERE,
+ * the boarding cards' own helper, never re-derived. */
+export function commandBonusRows(bonus: BoardingCommandBonus): BonusCardRow[] {
 	const ports = getPorts();
 	return [
 		{
@@ -417,8 +421,10 @@ function commandBonusRows(bonus: BoardingCommandBonus): BonusCardRow[] {
 	];
 }
 
-/** One side's opposed-Command input off its live statline (p215/p220). */
-function boardingSide(system: StarshipSystem): BoardingTurnSide {
+/** One side's opposed-Command input off its live statline (p215/p220).
+ * Exported for the ship-sheet's boarded banner (bead 7gcm): the banner shows
+ * the SAME computed rows the boarding turn reads — no second maths. */
+export function boardingSide(system: StarshipSystem): BoardingTurnSide {
 	return {
 		crewPopulation: Math.max(0, system.crewPopulation ?? 100),
 		hullIntegrity: Math.max(0, system.hullIntegrity?.value ?? 0),

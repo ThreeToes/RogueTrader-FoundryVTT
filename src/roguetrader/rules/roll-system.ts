@@ -35,6 +35,7 @@ export {
 	rollInitiativeAction,
 	rollNavigatorPower,
 	rollPsychicPower,
+	rollShipAction,
 	rollShipRepair,
 	rollShipSalvo,
 	rollSkill,

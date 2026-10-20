@@ -196,8 +196,26 @@ describe("i18n key parity (bead qgtz)", () => {
 			prefix: "SHIP_COMBAT.",
 			sites: [
 				"src/roguetrader/sheet/actor/ship-sheet.ts:36",
+				// bead 7gcm: `SHIP_COMBAT.STAT_${stat.toUpperCase()}` (the
+				// ship-action test labels) and
+				// `SHIP_COMBAT.TURN_FLAG_${key.toUpperCase()}_CHIP` (the
+				// combat-tab flag chips).
+				"src/roguetrader/sheet/actor/ship-sheet.ts:667,742",
 				"src/roguetrader/presentation/rolls/ship.ts:87",
 			],
+		},
+		{
+			// `SHIP_ORDNANCE.PICK_${what.toUpperCase()}` (the
+			// tube/torpedo/salvo pick dialogs) and
+			// `SHIP_ORDNANCE.GUIDANCE_${name.toUpperCase().replaceAll("-", "_")}`
+			// (the guidance buttons, rules-engine/ship-ordnance.ts's
+			// TORPEDO_GUIDANCES keys) — bead a413.
+			prefix: "SHIP_ORDNANCE.PICK_",
+			sites: ["src/roguetrader/presentation/rolls/ship-ordnance.ts (promptPick)"]
+		},
+		{
+			prefix: "SHIP_ORDNANCE.GUIDANCE_",
+			sites: ["src/roguetrader/presentation/rolls/ship-ordnance.ts (guidance buttons)"]
 		},
 		{
 			// `STARSHIP.CREW_${key.toUpperCase()}` /

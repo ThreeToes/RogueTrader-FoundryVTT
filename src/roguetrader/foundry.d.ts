@@ -61,6 +61,7 @@ import type {
 } from "./data/item/ship-component";
 import type { ShipComplication, Starship } from "./data/item/starship";
 import type { ShipAction } from "./data/item/ship-action";
+import type { ShipOrdnance } from "./data/item/ship-ordnance";
 import type { Skill } from "./data/item/skill";
 import type { Talent } from "./data/item/talent";
 import type { Trait } from "./data/item/trait";
@@ -92,6 +93,7 @@ declare module "fvtt-types/configuration" {
 			"ship-component": typeof ShipComponent;
 			"ship-weapon-component": typeof ShipWeaponComponent;
 			"ship-action": typeof ShipAction;
+			"ship-ordnance": typeof ShipOrdnance;
 			"game-table": typeof GameTable;
 			gearset: typeof GearsetModel;
 			psychicpower: typeof PsychicPower;

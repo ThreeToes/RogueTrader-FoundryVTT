@@ -172,6 +172,13 @@ const SOURCE_TOP_LABELS: Readonly<Record<string, string | null>> = {
 	// ship tables get their own folder.
 	ships: "Hulls & Components",
 	shiptables: "Ship Tables",
+	// Ship ordnance (epic necp child S9, bead a413): Battlefleet Koronus
+	// torpedo warheads / guidance systems / attack-craft types nest in the
+	// ships pack family under their own folder; the machinery ship-action
+	// rows sit at the ships-pack family root.
+	shiptorpedoes: "Torpedoes",
+	shipattackcraft: "Attack Craft",
+	"shipordnance-actions": null,
 	// RollTable concept pack (bead j9pg).
 	criticals: "Critical Hits",
 	creationtables: "Creation Tables",

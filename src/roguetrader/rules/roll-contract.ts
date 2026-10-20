@@ -135,7 +135,12 @@ export interface ShipRepairRollRequest extends RollBase {
  */
 export interface ShipActionRollRequest extends RollBase {
 	kind: "ship-action";
-	/** The ship-action item id on the starship. */
+	/**
+	 * The ship-action item id on the starship, OR the PACK DOC's uuid when the
+	 * row ships only as a compendium entry (epic necp bead 7gcm: the Ship
+	 * Combat tab's starship-actions chips reference the pack directly; the
+	 * handler resolves through the ContentPort).
+	 */
 	itemId: string;
 	/**
 	 * The optional performer character (the helmsman / gunnery officer). When

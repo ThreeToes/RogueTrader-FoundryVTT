@@ -22,6 +22,7 @@ import {
 import type {
 	ShipBoardingState,
 	ShipCrewLosses,
+	ShipTorpedoSalvo,
 	ShipTurnFlag,
 } from "../../../rules-engine/index";
 
@@ -73,6 +74,13 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 	 */
 	declare turnFlags: ShipTurnFlag[];
 	declare boardedWith: ShipBoardingState;
+	/**
+	 * Active torpedo salvos (epic necp child S9, bead a413; Battlefleet
+	 * Koronus printed pp6-7): one record per live salvo, the matching
+	 * "torpedo-run" turn flag (same id) carries the S2 expiry countdown;
+	 * rules-engine/ship-ordnance.ts owns the maths.
+	 */
+	declare torpedoSalvos: ShipTorpedoSalvo[];
 	declare revealedComponents: string[];
 	declare silentRunning: boolean;
 	declare lastTurnLosses: ShipCrewLosses;
@@ -244,6 +252,67 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 			}),
 			/** Silent Running (bead vph0, decision 8, book p218): broken by firing. */
 			silentRunning: new foundry.data.fields.BooleanField({ initial: false }),
+			/**
+			 * Active torpedo salvos (bead a413; Battlefleet Koronus printed
+			 * pp6-7): ship-side ordnance sequence state written by the
+			 * Launch Torpedoes / Torpedo Run machinery rows; each entry pairs
+			 * with a "torpedo-run" turn flag of the same id.
+			 */
+			torpedoSalvos: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.SchemaField({
+					id: new foundry.data.fields.StringField({
+						required: true,
+						initial: "",
+					}),
+					warhead: textField(),
+					name: textField(),
+					guidance: textField(),
+					damage: textField(),
+					critRating: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					terminalPenetration: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					torRating: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					speed: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					range: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					remaining: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					travelled: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					launchTurn: new foundry.data.fields.NumberField({
+						min: 0,
+						integer: true,
+						initial: 0,
+					}),
+					wide: new foundry.data.fields.BooleanField({ initial: false }),
+					tubeId: textField(),
+				}),
+				{ initial: () => [] },
+			),
 			/**
 			 * One-turn memory of the PREVIOUS turn's crew losses (bead vph0, book
 			 * pp217-218), rewritten at the start of the ship's Strategic Turn;

@@ -35,7 +35,12 @@ export type ShipTurnFlagKey =
 	// +5 aid to a chosen Ballistic Skill (one weapon component) / Emergency
 	// Repairs / fire-fighting action this turn; `target` carries the weapon
 	// item id or the "emergency-repairs" / "firefighting" token.
-	| "backs-into-it";
+	| "backs-into-it"
+	// Active torpedo run (epic child S9, bead a413; Battlefleet Koronus
+	// printed p7): one flag per live salvo, same id as the starship's
+	// ShipTorpedoSalvo record; the value carries the salvo size and
+	// expiresAtTurn the printed Range/Speed countdown.
+	| "torpedo-run";
 
 export const SHIP_TURN_FLAG_KEYS: readonly ShipTurnFlagKey[] = [
 	"evasive",
@@ -44,6 +49,7 @@ export const SHIP_TURN_FLAG_KEYS: readonly ShipTurnFlagKey[] = [
 	"repel-boarders",
 	"come-to-new-heading-bs-penalty",
 	"backs-into-it",
+	"torpedo-run",
 ];
 
 /** The `"all"` target marker: the flag applies to every weapon/side. */

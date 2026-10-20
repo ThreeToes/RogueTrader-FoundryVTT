@@ -38,6 +38,103 @@
         <button type="button" class="rt-button sc-initiative" data-action="rollInitiative"
             data-tooltip="{{localize "COMBAT.ROLL_INITIATIVE_HINT_SHIP"}}">{{localize "COMBAT.ROLL_INITIATIVE"}}</button>
 
+        {{!-- Boarding banner (epic necp bead 7gcm, Core Rulebook p215): the
+             locked pair, failed-break-free penalty, the Break Free button
+             (the S7 machinery row via the ship-action kind, skipDialog — the
+             row owns its own dialog) and the opposed-Command manual reminder
+             with the S7 kernel's computed bonus rows (no second maths). --}}
+        {{#if combat.boarding.locked}}
+        <div class="sc-state-banner alarm sc-boarded">
+            <span class="boarded-label">⚓ {{combat.boarding.bannerLabel}}
+                {{#if combat.boarding.penalty}}<span class="boarded-penalty">{{combat.boarding.penaltyLabel}}</span>{{/if}}
+            </span>
+            {{#if combat.boarding.breakFreeRowUuid}}
+            <button type="button" class="rt-button sc-break-free" data-action="shipActionChip"
+                data-item-id="{{combat.boarding.breakFreeRowUuid}}" data-skip-dialog="true"
+                data-tooltip="{{localize "SHIP_BOARDING.BREAK_FREE_HINT"}}">{{localize "SHIP_COMBAT.BREAK_FREE"}}</button>
+            {{/if}}
+        </div>
+        <div class="sc-command-reminder" data-tooltip="{{combat.boarding.reminderLabel}}">
+            <span class="sc-note">{{combat.boarding.reminderLabel}}</span>
+            <div class="sc-command-rows">
+                <div class="sc-command-side">
+                    <h4>{{combat.boarding.rowsLabel}}</h4>
+                    {{#each combat.boarding.rows as |r|}}
+                    <span class="sc-bonus-row"><span class="value">{{r.display}}</span> {{r.label}}</span>
+                    {{/each}}
+                </div>
+                <div class="sc-command-side">
+                    <h4>{{combat.boarding.enemyRowsLabel}}</h4>
+                    {{#each combat.boarding.enemyRows as |r|}}
+                    <span class="sc-bonus-row"><span class="value">{{r.display}}</span> {{r.label}}</span>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+        {{/if}}
+
+        {{!-- Helmsman picker (epic necp bead 7gcm, owner decision 1): the
+             performer of the combined test — ship rolls enter with the picked
+             Explorer; unset falls through to the crew-quality skill (Table
+             8-9). The STATE lives on the sheet, not the actor (setHelmsman
+             writes the sheet field). The empty option IS the fallback row. --}}
+        <div class="traits-row sc-helmsman">
+            <span class="origin-label">{{localize "SHIP_COMBAT.HELMSMAN"}}:</span>
+            <select data-action="setHelmsman" data-tooltip="{{localize "SHIP_COMBAT.HELMSMAN_HINT"}}">
+                <option value=""{{#unless combat.helmsman.uuid}} selected{{/unless}}>{{localize "SHIP_COMBAT.HELMSMAN_NONE"}}</option>
+                {{#each combat.helmsman.options as |o|}}
+                <option value="{{o.uuid}}"{{#if o.selected}} selected{{/if}}>{{o.label}}</option>
+                {{/each}}
+            </select>
+        </div>
+
+        {{!-- Turn-state flags (bead vph0/S2 surface) as bonus/penalty chips --}}
+        {{#unless combat.turnFlagsEmpty}}
+        <div class="sc-turn-flags" data-tooltip="{{localize "SHIP_COMBAT.TURN_FLAGS"}}">
+            {{#each combat.turnFlags as |f|}}
+            <span class="sc-flag-chip {{f.kind}}{{#if f.persistent}} persistent{{/if}}"
+                data-tooltip="{{f.tooltip}}">{{f.label}} <span class="value">{{f.display}}</span></span>
+            {{/each}}
+        </div>
+        {{/unless}}
+
+        {{!-- Silent Running toggle (owner decision 8, Core Rulebook p218) --}}
+        <div class="traits-row sc-silent-running">
+            <button type="button" class="rt-button sc-silent-toggle{{#if combat.silentRunning}} engaged{{/if}}"
+                data-action="toggleSilentRunning" aria-pressed="{{#if combat.silentRunning}}true{{else}}false{{/if}}"
+                data-tooltip="{{localize "SHIP_COMBAT.SILENT_RUNNING_HINT"}}">{{localize "SHIP_ACTION.SILENT_RUNNING"}}</button>
+        </div>
+
+        {{!-- SHIP ACTIONS (bead 7gcm): the starship-actions pack rows, --}}
+        {{!-- grouped through the S5/S7 dispatch tables; every chip enters --}}
+        {{!-- the S1 ship-action roll kind, with the helmsman as performer. --}}
+        <div class="inv-group-header">
+            <h2 class="inv-group-label">{{localize "SHIP_COMBAT.SHIP_ACTIONS"}}</h2>
+            <span class="actions-header-actions">
+                <button type="button" class="rt-button sc-default-manoeuvre" data-action="defaultManoeuvre"
+                    data-tooltip="{{localize "SHIP_ACTION.DEFAULT_MANOEUVRE_TITLE"}}">{{localize "SHIP_ACTION.DEFAULT_MANOEUVRE_TITLE"}}</button>
+            </span>
+        </div>
+        {{#unless combat.shipActionGroupsEmpty}}
+        {{#each combat.shipActionGroups as |group|}}
+        <h3 class="inv-group-label">{{localize group.labelKey}}</h3>
+        <ol class="sc-action-list">
+            {{#each group.rows as |row|}}
+            <li class="action-row">
+                <a class="action-chip" data-action="shipActionChip" data-item-id="{{row.uuid}}"{{#if row.skipDialog}} data-skip-dialog="true"{{/if}}
+                    data-tooltip="{{row.tooltip}}">
+                    <i class="fa-solid fa-dice-d10 action-roll-hint"></i>
+                    <span class="action-name">{{row.name}}</span>
+                    <span class="sc-action-test">{{row.testLabel}}{{#if row.difficulty}} · {{row.difficulty}}{{/if}}</span>
+                </a>
+            </li>
+            {{/each}}
+        </ol>
+        {{/each}}
+        {{else}}
+        <p class="method-hint">{{localize "SHIP_COMBAT.NO_SHIP_ACTIONS"}}</p>
+        {{/unless}}
+
         {{!-- Weapons: fire action per installed ship-weapon-component --}}
         <div class="inv-group-header">
             <h2 class="inv-group-label">{{localize "SHIP_COMBAT.WEAPONS"}}</h2>

@@ -13,10 +13,16 @@ import {
 import {
 	crippledEffects,
 	emergencyRepairsCanFix,
+	shipIsBoarded,
 	salvoWeaponKind,
 	SHIP_COMPONENT_STATES,
 } from "../../../rules-engine/index";
-import { performRoll, rollInitiativeAction, rollShipSalvo } from "../../rules/adapter";
+import {
+	performRoll,
+	rollInitiativeAction,
+	rollShipAction,
+	rollShipSalvo,
+} from "../../rules/adapter";
 import { cloneItemFromDrop } from "../drop-clone";
 import {
 	formatShipWeaponRange,
@@ -26,6 +32,26 @@ import type { ShipWeaponRange } from "../../data/item/ship-weapon-range";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { enrichText } from "../rich-text";
+
+// Ship Combat tab (epic necp S8, bead 7gcm): the chip groups / picker /
+// flag chips / boarding banner are PURE in ship-combat-view.ts (the
+// actions-view.ts separation) — they reuse the S5/S7 dispatch tables and
+// the S7 kernel (no second maths); the sheet carries only the document
+// reads. defaultManoeuvreChip is S5's FREE informational chip.
+import {
+	boardingBanner,
+	helmsmanOptions,
+	shipActionGroupsContext,
+	turnFlagChips,
+	STARSHIP_ACTIONS_PACK,
+	type HelmsmanCandidate,
+	type HelmsmanOption,
+	type ShipActionDoc,
+	type ShipCombatState,
+} from "./ship-combat-view";
+import { defaultManoeuvreChip } from "../../presentation/rolls/ship-manoeuvre";
+import { escapeDocumentData } from "../../presentation/roll-prompts";
+import { systemOf } from "../../data/accessors";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -45,8 +71,31 @@ const COMPONENT_CATEGORIES: Array<{ key: string; labelKey: string }> = [
 	{ key: "xenotech", labelKey: "STARSHIP.COMPONENTS_XENOTECH" },
 ];
 
-/**
- * Starship sheet (bead kwd): hull snapshot fields, crew quality (with its
+// --------------------------------------------------------------- roster
+
+/** One row of the owned-components roster (#combatContext's param type and
+ * the ship-actions builder's input). */
+interface ShipRosterComponent {
+	id: string;
+	name: string;
+	type: string;
+	power: string;
+	space: number;
+	sp: string;
+	category: string;
+	slot: string;
+	special: string;
+	state: string;
+	stateLabel: string;
+	slotChips?: Array<{
+		key: string;
+		label: string;
+		disabled: boolean;
+		reason: string;
+	}>;
+}
+
+/** Starship sheet (bead kwd): hull snapshot fields, crew quality (with its
  * SP delta), the two Complications (rolled from the ships pack with
  * 1d10), Ship Points and Space trackers, and notes. Fully resizable.
  */
@@ -70,6 +119,10 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			rollInitiative: ShipSheet.#onRollInitiative,
 			repairComponent: ShipSheet.#onRepairComponent,
 			setComponentState: ShipSheet.#onSetComponentState,
+			defaultManoeuvre: ShipSheet.#onDefaultManoeuvre,
+			shipActionChip: ShipSheet.#onShipActionChip,
+			setHelmsman: ShipSheet.#onSetHelmsman,
+			toggleSilentRunning: ShipSheet.#onToggleSilentRunning,
 		},
 	};
 
@@ -290,7 +343,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Combat tab (bead xfta): weapons with fire buttons, hull + crew
 		// status, crippled-state effects (book p221), component conditions
 		// (book p223) and the repairs column.
-		context.combat = this.#combatContext(components);
+		context.combat = await this.#combatTabContext(components);
 		return context;
 	}
 
@@ -412,6 +465,111 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				]),
 			),
 		};
+	}
+
+	// -------------------------------- the bead-7gcm combat-tab state surfaces
+
+	/** The starship system record (schema-first; the combat-tab fields). */
+	#starship(): ShipCombatState {
+		return systemOf(this.document) as unknown as ShipCombatState;
+	}
+
+	/**
+	 * The FULL combat tab (epic necp bead 7gcm): the salvo/status sections
+	 * (#combatContext) plus the SHIP ACTIONS chip groups (Table 8-10/8-11 +
+	 * the p215 machinery rows), the helmsman picker, the turn-flag chips,
+	 * the Silent Running state and the boarding banner.
+	 */
+	async #combatTabContext(
+		components: ShipRosterComponent[],
+	): Promise<Record<string, unknown>> {
+		// The pure pieces (the actions-view separation): the sheet carries only
+		// the document reads — pack fetch, explorers listing, uuid resolution.
+		const docs = (await getPackDocuments(
+			STARSHIP_ACTIONS_PACK,
+		)) as unknown as ShipActionDoc[];
+		const actions = shipActionGroupsContext(docs, (key: string) =>
+			game.i18n.localize(key),
+		);
+		const turnFlags = turnFlagChips(
+			this.#starship().turnFlags ?? [],
+			(itemId: string) => this.#targetNameFor(itemId),
+			(key: string) => game.i18n.localize(key),
+		);
+		// The boarding banner: partner resolved by the pair uuid (null when it
+		// is gone — the banner degrades, never blanks the sheet).
+		const state = this.#starship().boardedWith;
+		const partner = this.#resolveShipByUuid(
+			shipIsBoarded(state) ? state!.uuid : "",
+		) as { name?: string; system?: Partial<ShipCombatState> } | null;
+		const ports = getPorts();
+		return {
+			...(this.#combatContext(components) as Record<string, unknown>),
+			shipActionGroups: actions.groups,
+			shipActionGroupsEmpty: actions.groups.length === 0,
+			helmsman: {
+				uuid: this.#helmsmanUuid,
+				options: this.#helmsmanOptions(),
+			},
+			turnFlags,
+			turnFlagsEmpty: turnFlags.length === 0,
+			boarding: boardingBanner(
+				this.#starship(),
+				partner as never,
+				(key: string) => game.i18n.localize(key),
+				(key: string, vars?: Record<string, unknown>) =>
+					ports.i18n.t(key, vars),
+				actions.breakFreeRowUuid,
+			),
+			silentRunning: this.#starship().silentRunning === true,
+		};
+	}
+
+	/** HELMSMAN PICKER state on the SHEET (never on the actor — re-opening
+	 * the ship starts unassigned; unset rolls fall through to the crew-quality
+	 * skill, Core Rulebook Table 8-9, owner decision 1). */
+	#helmsmanUuid = "";
+
+	/** The picker context (the view-model mapping over the world's explorers;
+	 * the picked uuid is sheet state, the options render with their
+	 * decision-10 Pilot annotations). */
+	#helmsmanOptions(): HelmsmanOption[] {
+		const explorers =
+			(
+				(game.actors ?? {}) as unknown as {
+					contents?: HelmsmanCandidate[];
+				}
+			).contents ?? [];
+		return helmsmanOptions(explorers, this.#helmsmanUuid, (key) =>
+			game.i18n.localize(key),
+		);
+	}
+
+	/** The picked performer (undefined = unset → the crew fallback). */
+	#helmsmanActor(): Actor | undefined {
+		if (!this.#helmsmanUuid) return undefined;
+		if (typeof foundry === "undefined") return undefined;
+		return (
+			(foundry.utils.fromUuidSync(
+				this.#helmsmanUuid as never,
+			) as unknown as Actor | null) ?? undefined
+		);
+	}
+
+	/** The owned component a named-target flag points at. */
+	#targetNameFor(itemId: string): string {
+		return this.document.items.get(itemId)?.name ?? "";
+	}
+
+	/** One uuid resolution for sheet context (the ship-boarding idiom); null
+	 * when nothing resolves (the banner degrades, never blanks the sheet). */
+	#resolveShipByUuid(uuid: string): Actor | null {
+		if (!uuid) return null;
+		if (typeof foundry === "undefined") return null;
+		return (
+			(foundry.utils.fromUuidSync(uuid as never) as unknown as Actor | null) ??
+			null
+		);
 	}
 
 	/** Owned component items on this ship (bead f5xu). */
@@ -649,6 +807,79 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	 */
 	static async #onRollInitiative(this: ShipSheet): Promise<void> {
 		await rollInitiativeAction(this.document);
+	}
+
+	/** The default Manoeuvre (Core Rulebook p213, bead g53f/S5): FREE — no
+	 * test, no dialog; the chip posts its informational card (facing + the
+	 * Silent Running Ordinary (+10) reminder, p218). */
+	static async #onDefaultManoeuvre(this: ShipSheet): Promise<void> {
+		await defaultManoeuvreChip(this.document);
+	}
+
+	/** One ship-action chip (bead 7gcm): EVERY row enters the S1 ship-action
+	 * roll kind — the pack row's uuid as the itemId (the handler resolves
+	 * pack docs; ship-action.ts) — with the sheet's helmsman as the performer
+	 * (unset = the crew fallback) and skipDialog only where the S7 machinery
+	 * owns its own prompts (Break Free / Rout). */
+	static async #onShipActionChip(
+		this: ShipSheet,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		const itemId = target.dataset.itemId;
+		if (!itemId) return;
+		await rollShipAction(this.document, itemId, {
+			performer: this.#helmsmanActor(),
+			skipDialog: target.dataset.skipDialog === "true",
+		});
+	}
+
+	/** HELMSMAN PICKER change (epic necp bead 7gcm, decision 1): the picker
+	 * state persists on the SHEET (never on the actor) — no write, no
+	 * re-render needed; the rolls read it at click time. */
+	static async #onSetHelmsman(
+		this: ShipSheet,
+		_event: unknown,
+		target: HTMLElement,
+	): Promise<void> {
+		this.#helmsmanUuid = (target as HTMLSelectElement).value;
+	}
+
+	/**
+	 * Silent Running toggle (epic necp decision 8, Core Rulebook p218): the
+	 * flag write + the state note card. FIRING breaks the flag and warns —
+	 * that clear + reveal is S2's salvo machinery (ship.ts), never
+	 * re-implemented here.
+	 */
+	static async #onToggleSilentRunning(this: ShipSheet): Promise<void> {
+		const system = systemOf(this.document) as unknown as {
+			silentRunning?: boolean;
+		};
+		const next = system.silentRunning !== true;
+		await this.document.update({ system: { silentRunning: next } } as never);
+		await this.#postStateNote(
+			next ? "SHIP_COMBAT.SILENT_RUNNING_ON" : "SHIP_COMBAT.SILENT_RUNNING_OFF",
+		);
+	}
+
+	/** One-note state card in the postManoeuvreNotes idiom (ship-manoeuvre). */
+	static async #postStateNote(this: ShipSheet, noteKey: string): Promise<void> {
+		const ports = getPorts();
+		try {
+			await ports.chat.postHtml(
+				this.document,
+				`<div class="rogue-trader chat action">` +
+					`<div class="background border"><h1>${escapeDocumentData(
+						this.document.name ?? "",
+					)} — ${escapeDocumentData(
+						ports.i18n.t("SHIP_ACTION.SILENT_RUNNING"),
+					)}</h1><p class="note">${escapeDocumentData(
+						ports.i18n.t(noteKey),
+					)}</p></div></div>`,
+			);
+		} catch (error) {
+			console.error("rogue-trader | silent running note failed", error);
+		}
 	}
 
 	/** Emergency Repairs on an installed component (book p216-218). */

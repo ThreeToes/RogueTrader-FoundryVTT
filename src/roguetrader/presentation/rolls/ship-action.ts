@@ -55,6 +55,9 @@ import {
 	boardingRowKey,
 	type ShipRow,
 } from "./ship-boarding";
+// Ordnance rows (epic necp child S9, bead a413): the BFK torpedo/attack-
+// craft machinery rows merge into the SAME dispatch point.
+import { ordnanceRowHandlers } from "./ship-ordnance";
 import {
 	resolveSpecialisedSkillItem,
 	type SpecialisedSkillResolution,
@@ -130,15 +133,16 @@ export const SHIP_ACTION_SHIP_STATS: Readonly<
  * character skill and at most ONE ship ability (Core Rulebook p212), and the
  * combined machinery has no book definition for more.
  */
-export function parseShipActionTestKey(
-	test: string,
-):
-	| {
-			skillRoute: { skill: string; bare?: string };
-			routeKey: string;
-			shipStat?: string;
-	  }
-	| null {
+export function parseShipActionTestKey(test: string): {
+	skillRoute: {
+		skill: string;
+		bare?: string;
+		characteristic?: string;
+		interaction?: boolean;
+	};
+	routeKey: string;
+	shipStat?: string;
+} | null {
 	const routeKeys: string[] = [];
 	const shipStats: string[] = [];
 	for (const part of test.split("+")) {
@@ -249,13 +253,49 @@ export async function resolvePerformerSide(
 
 // ------------------------------------------------------------- the handler
 
+/** The minimal ship-action item shape the handler reads (a Foundry Item or a
+ * compendium pack doc — both pass structurally; the ShipCombatTab chip
+ * surface, bead 7gcm, resolves pack rows directly). */
+interface ShipActionDocLike {
+	type?: string;
+	name?: string | null;
+	uuid?: string | null;
+	system?: unknown;
+}
+
+/**
+ * The ship-action item lookup (epic necp bead 7gcm): an OWNED item on the
+ * starship wins; when the id carries no result there, a UUID-shaped id
+ * resolves through the ContentPort — the Ship Combat tab's chips reference
+ * the starship-actions pack docs DIRECTLY by uuid and this is the same roll
+ * kind, same handler, no parallel UI path (owner decision 2). A non-uuid id
+ * that misses the ship's items is a broken caller — null, and prepare's
+ * UNKNOWN_ITEM warning fires.
+ */
+export async function resolveShipActionItem(
+	ship: Actor,
+	itemId: string,
+): Promise<ShipActionDocLike | null> {
+	const owned = ship.items.get(itemId) as unknown as ShipActionDocLike | null;
+	if (owned) {
+		return (owned.type as string) === "ship-action" ? owned : null;
+	}
+	// The sheet chips carry the pack doc uuid ("Compendium.…"); anything
+	// without a uuid dot separator cannot be a pack row — skip the resolve.
+	if (!itemId.includes(".")) return null;
+	const doc = (await getPorts().content.document(
+		itemId,
+	)) as unknown as ShipActionDocLike | null;
+	return doc && (doc.type as string) === "ship-action" ? doc : null;
+}
+
 /** Ship-action roll (rollShipAction, epic necp bead oumh, pp213-218). */
 export const shipActionHandler: RollHandler<"ship-action"> = {
 	async prepare(request) {
 		const ports = getPorts();
 		const ship = request.actor;
-		const item = ship.items.get(request.itemId);
-		if (!item || (item.type as string) !== "ship-action") {
+		const item = await resolveShipActionItem(ship, request.itemId);
+		if (!item) {
 			ports.notify.warn("ROLL.UNKNOWN_ITEM");
 			return null;
 		}
@@ -265,7 +305,9 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 		// roll path); each row owns its whole preparation and its outcome
 		// machinery. Any OTHER row ships into the standard combined-test path
 		// below unchanged (sibling row maps merge the same way).
-		const machineryRow = boardingRowHandlers[boardingRowKey(item.name ?? "")];
+		const machineryRow =
+			boardingRowHandlers[boardingRowKey(item.name ?? "")] ??
+			ordnanceRowHandlers[boardingRowKey(item.name ?? "")];
 		if (machineryRow) return machineryRow.prepare(request, item);
 		const data = item.system as unknown as {
 			actionCost?: string;
@@ -409,9 +451,9 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 		// posts its own card. Keyed off the same canonical row vocabulary as
 		// the prepare dispatch (the item name does not reach prepare's map
 		// lookup here because rows may prepare-only).
-		const machineryRow: ShipRow | undefined = boardingRowHandlers[
-			boardingRowKey(data.name ?? "")
-		];
+		const machineryRow: ShipRow | undefined =
+			boardingRowHandlers[boardingRowKey(data.name ?? "")] ??
+			ordnanceRowHandlers[boardingRowKey(data.name ?? "")];
 		if (machineryRow?.after) {
 			return machineryRow.after(request, prepared, outcome, _messageId, info);
 		}

@@ -67,6 +67,12 @@ export const ITEM_MODELS: Record<string, ModelEntry> = {
 		spec: "../roguetrader/data/item/ship-action",
 		className: "ShipAction",
 	},
+	// Ship ordnance (epic necp child S9, bead a413): Battlefleet Koronus
+	// torpedo warheads / guidance / attack-craft types.
+	"ship-ordnance": {
+		spec: "../roguetrader/data/item/ship-ordnance",
+		className: "ShipOrdnance",
+	},
 	"game-table": {
 		spec: "../roguetrader/data/item/game-table",
 		className: "GameTable",

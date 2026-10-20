@@ -41,6 +41,7 @@ import {
 } from "../data/item/ship-component";
 import { ShipComplication, Starship } from "../data/item/starship";
 import { ShipAction } from "../data/item/ship-action";
+import { ShipOrdnance } from "../data/item/ship-ordnance";
 import { Skill } from "../data/item/skill";
 import { Talent } from "../data/item/talent";
 import { Trait } from "../data/item/trait";
@@ -166,6 +167,11 @@ export const SHEET_REGISTRY: Record<
 			model: ShipWeaponComponent,
 			sheet: ShipComponentSheet,
 			label: "TYPES.Item.ship-weapon-component",
+		},
+		"ship-ordnance": {
+			model: ShipOrdnance,
+			sheet: GearSheet,
+			label: "TYPES.Item.ship-ordnance",
 		},
 		// Ship actions (epic necp bead oumh): Table 8-10 Manoeuvre + Table 8-11
 		// Extended Action rows; rolled on the starship through the ship-action

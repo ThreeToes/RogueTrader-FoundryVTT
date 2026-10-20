@@ -1,0 +1,108 @@
+{{!-- The ship-ordnance card (epic necp child S9, bead a413; Battlefleet
+     Koronus ch. I printed pp6-16). One template, five modes keyed by
+     `mode`: launch / run / bombers / assault-boats / fighters. Torpedoes
+     and attack craft IGNORE void shields (printed pp7/13) — no shield
+     prompt on this card ever. --}}
+<div class="rogue-trader chat roll">
+    <div class="background border">
+        <h1>
+            {{title}}
+{{#if titleDoc.link}}
+            <a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}" data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{titleDoc.link.name}}</a>
+{{/if}}
+        </h1>
+{{#if (eq mode "reload")}}
+        <div class="roll-summary">
+            <div class="roll-result {{#if success}}success{{else}}failure{{/if}}">
+                <span class="label">{{outcomeLabel}}</span>
+            </div>
+            <div class="roll-target">
+                <span class="label">{{localize "ROLL.TARGET"}}</span>
+                <span class="value">{{roll}}</span>
+            </div>
+        </div>
+        <p class="action-note">{{note}}</p>
+{{else}}
+{{#if (eq mode "launch")}}
+        <ul class="salvo-list">
+            <li>{{localize "SHIP_ORDNANCE.TUBE"}}: {{tubeName}}</li>
+            <li>{{localize "SHIP_ORDNANCE.TORPEDO"}}: {{torpedoName}}</li>
+            <li>{{localize "SHIP_ORDNANCE.SALVO_SIZE"}}: {{salvoSize}}{{#if wide}} — {{localize "SHIP_ORDNANCE.WIDE_LABEL"}}{{/if}}</li>
+            <li>{{localize "SHIP_ORDNANCE.TORPEDO_RATING"}}: +{{torRating}}</li>
+            <li>{{localize "SHIP_ORDNANCE.SPEED_RANGENOTE"}}: {{localize "SHIP_ORDNANCE.SPEED_ROW"}} {{speed}} — {{localize "SHIP_ORDNANCE.RANGE_ROW"}} {{range}}</li>
+        </ul>
+        <p class="action-note">{{storesNote}}</p>
+        <p class="action-note">{{runNote}}</p>
+{{else}}
+{{#if (eq mode "run")}}
+        <h3>{{localize "SHIP_ORDNANCE.RUN_TARGET"}}: {{targetName}} — {{salvoName}} (×{{remainingNote}})</h3>
+        <p class="action-note">{{shieldsNote}}</p>
+{{#if attempted}}
+{{#if turretNote}}
+        <p class="critical">{{turretNote}}</p>
+{{/if}}
+{{#if attackRows.length}}
+        <ul class="salvo-list">
+{{#each attackRows}}
+            <li>{{label}}: <strong>{{display}}</strong></li>
+{{/each}}
+        </ul>
+{{/if}}
+{{#if hullDamage}}
+        <p class="critical">{{localize "STARSHIP.HULL_INTEGRITY"}}: {{hullDamage}}</p>
+{{/if}}
+{{#if critNote}}
+        <p class="critical">⚠ {{critNote}}</p>
+{{/if}}
+{{#if boardingNote}}
+        <p class="action-note">{{boardingNote}}</p>
+{{/if}}
+{{else}}
+        <p class="action-note">{{localize "SHIP_ORDNANCE.NO_ATTACK_TURN"}}</p>
+{{/if}}
+        <p class="action-note">{{localize "SHIP_ORDNANCE.TRAVELLED_ROW"}}: {{travelled}} / {{range}} VU{{#if spent}} — {{localize "SHIP_ORDNANCE.RUN_SPENT"}}{{/if}}</p>
+{{else}}
+{{#if (eq mode "bombers")}}
+{{#if failed}}
+        <p class="critical">{{outcomeLabel}}</p>
+{{else}}
+        <h3>{{localize "SHIP_ORDNANCE.RUN_TARGET"}}: {{targetName}}</h3>
+        <ul class="salvo-list">
+            <li>{{localize "SHIP_ORDNANCE.HITS_ROW"}}: {{hits}}</li>
+            <li>{{localize "SHIP_ORDNANCE.DAMAGE_ROW"}}: {{damageTotal}} — {{localize "STARSHIP.ARMOUR"}}: {{armour}} → {{localize "STARSHIP.HULL_INTEGRITY"}}: <strong>{{hullDamage}}</strong></li>
+            <li>{{localize "STARSHIP.CREW_POPULATION"}}: -{{populationLoss}}</li>
+            <li>{{localize "STARSHIP.CREW_MORALE"}}: -{{moraleLoss}}</li>
+        </ul>
+{{#if critNote}}
+        <p class="critical">⚠ {{critNote}}</p>
+{{/if}}
+        <p class="action-note">{{shieldsNote}}</p>
+{{/if}}
+        <p class="action-note">{{strikeNote}}</p>
+{{else}}
+{{#if (eq mode "assault-boats")}}
+{{#if failed}}
+        <p class="critical">{{outcomeLabel}}</p>
+{{else}}
+        <h3>{{localize "SHIP_ORDNANCE.RUN_TARGET"}}: {{targetName}}</h3>
+        <p>{{landingNote}}</p>
+{{/if}}
+        <p class="action-note">{{strikeNote}}</p>
+        <p class="action-note">{{localize "SHIP_ORDNANCE.ESCORT_NOTE"}}</p>
+{{else}}
+        <p><strong>{{localize "SHIP_ORDNANCE.FIGHTERS_WINNER"}}</strong>: {{winnerName}} — {{localize "SHIP_BOARDING.ROUT_DEGREES"}}: {{degrees}}</p>
+{{#if salvoRows.length}}
+        <ul class="salvo-list">
+{{#each salvoRows}}
+            <li>{{name}}: <strong>{{display}}</strong></li>
+{{/each}}
+        </ul>
+{{/if}}
+        <p class="action-note">{{squadronNote}}</p>
+{{/if}}
+{{/if}}
+{{/if}}
+{{/if}}
+{{/if}}
+    </div>
+</div>

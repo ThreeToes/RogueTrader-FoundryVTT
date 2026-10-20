@@ -164,8 +164,9 @@ describe("salvo turn-flag rows (bead vph0, pp215-217)", () => {
 		expect(activeTurnFlag([named], "lock-on-target", "other")).toBeNull();
 		const all = evasive({ target: "all" });
 		expect(activeTurnFlag([all], "evasive", weaponId)).toBe(all);
-		// bead z697 added the backs-into-it key (Table 8-11 row).
-		expect(SHIP_TURN_FLAG_KEYS.length).toBe(6);
+		// bead z697 added the backs-into-it key (Table 8-11 row); bead a413
+		// added the torpedo-run key (Battlefleet Koronus printed p7, child S9).
+		expect(SHIP_TURN_FLAG_KEYS.length).toBe(7);
 	});
 });
 

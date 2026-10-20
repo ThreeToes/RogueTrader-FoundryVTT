@@ -87,6 +87,7 @@
 			"ranged-weapon",
 			"ship",
 			"ship-action",
+			"ship-ordnance",
 			"ship-complication",
 			"ship-component",
 			"ship-weapon-component",

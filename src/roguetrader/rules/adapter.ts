@@ -59,6 +59,7 @@ export {
 	rollFearTest,
 	rollSnapOut,
 	rollShipSalvo,
+	rollShipAction,
 	rollShipRepair,
 	rollToxicToughnessTest,
 	rollAction,

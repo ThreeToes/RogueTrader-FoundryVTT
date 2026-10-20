@@ -199,6 +199,11 @@
 					"description"
 				]
 			},
+			"ship-ordnance": {
+				"htmlFields": [
+					"description"
+				]
+			},
 			"ship": {
 				"htmlFields": [
 					"description",

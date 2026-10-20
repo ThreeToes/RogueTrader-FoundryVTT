@@ -101,6 +101,13 @@ export async function rollWeaponDamage(
 ): Promise<void> {
 	const ports = getPorts();
 	const item = actor.items.get(weaponId);
+	// Bead 6l68: the item gate comes FIRST — attackProfileOf tolerates
+	// null/undefined only as an incidental detail of its signature, and we
+	// do not rely on it. The profile is resolved from a verified item.
+	if (!item) {
+		ports.notify.warn("ROLL.UNKNOWN_ITEM");
+		return;
+	}
 	// Bead kam1: a MUTATION with a printed attack block (Corrosive Bile) is an
 	// attack too, so it resolves through the same profile as a weapon. Bead
 	// 4obp: the launcher's fire profile derives from its LOADED ordnance —
@@ -112,7 +119,7 @@ export async function rollWeaponDamage(
 		ownedItemResolver(actor),
 		ownedItemResolver(actor) as never,
 	);
-	if (!item || !profile) {
+	if (!profile) {
 		ports.notify.warn("ROLL.UNKNOWN_ITEM");
 		return;
 	}
@@ -149,13 +156,17 @@ export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
 	// ordnance resolved at all).
 	const owner = (weapon as { actor?: foundry.documents.Actor | null } | null)
 		?.actor;
+	// Bead 6l68: the document gates come FIRST — a missing resolvee returns
+	// outright instead of calling attackProfileOf on a null/undefined weapon
+	// and reading its tolerance as the contract.
+	if (!attacker || !weapon) return;
 	// Bead huaf/ujtg: the owner resolver doubles as the mod resolver.
 	const profile = attackProfileOf(
 		weapon as never,
 		owner ? ownedItemResolver(owner) : undefined,
 		owner ? (ownedItemResolver(owner) as never) : undefined,
 	);
-	if (!attacker || !profile) return;
+	if (!profile) return;
 	const ports = getPorts();
 	if (profile.unusable) {
 		ports.notify.warn("ROLL.LAUNCHER_UNLOADED", { weapon: profile.name });

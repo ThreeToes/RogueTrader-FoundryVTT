@@ -94,6 +94,18 @@ export class NavigatorPower extends foundry.abstract.TypeDataModel<
 
 	/** The mastery test bonus for this power's current level (book p178). */
 	get masteryBonusValue(): number {
-		return NavigatorPower.masteryBonus[this.mastery] ?? 0;
+		// Mirror the availability.ts normaliser (loud-failure convention): the
+		// lookup is case/whitespace-insensitive and an UNKNOWN value — a typo'd
+		// mastery in pack data — warns loudly instead of silently reading as +0
+		// behind a correctly rendered label.
+		const key = String(this.mastery ?? "").trim().toLowerCase();
+		const bonus = NavigatorPower.masteryBonus[key];
+		if (bonus === undefined) {
+			console.warn(
+				`rogue-trader | unknown navigator mastery "${String(this.mastery)}" — reading mastery as +0.`,
+			);
+			return 0;
+		}
+		return bonus;
 	}
 }

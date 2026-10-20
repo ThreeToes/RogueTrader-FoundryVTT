@@ -15,6 +15,7 @@ import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollBase } from "../../rules/roll-contract";
 import { skillHandler } from "./characteristic-skill";
 import { runRoll } from "./orchestrator";
+import { findOwnedSkillItem, untrainedCharacteristicFor } from "./skill-lookup";
 
 export async function resolveEvasion(
 	defender: Actor,
@@ -27,10 +28,9 @@ export async function resolveEvasion(
 
 	const isMelee = attackType === "melee-weapon";
 	const skillName = isMelee ? "Parry" : "Dodge";
-	const owned = defender.items.find(
-		(i: { type?: string; name?: string }) =>
-			i.type === "skill" && i.name === skillName,
-	);
+	// Bead bw9x: the owned-skill lookup and the untrained fallback both read
+	// the shared skill-lookup rule now.
+	const owned = findOwnedSkillItem(defender, skillName);
 
 	const evasionLabel = ports.i18n.t("DIALOG.EVASION");
 	const skillLabel = owned
@@ -69,7 +69,7 @@ export async function resolveEvasion(
 			...(owned
 				? { itemId: owned.id ?? "" }
 				: {
-						characteristicKey: skillName === "Parry" ? "ws" : "ag",
+						characteristicKey: untrainedCharacteristicFor(skillName),
 						label: skillName,
 					}),
 		},

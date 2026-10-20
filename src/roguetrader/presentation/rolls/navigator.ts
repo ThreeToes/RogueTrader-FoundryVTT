@@ -37,9 +37,18 @@ export const navigatorHandler: RollHandler<"navigator"> = {
 		// Focus Power Test, NO Psy Rating, NEVER Psychic Phenomena/Perils
 		// (book p178).
 		const mastery = power.mastery ?? "novice";
-		const bonus =
-			(item.system as unknown as { masteryBonusValue?: number })
-				.masteryBonusValue ?? 0;
+		// Bead 6l68: the NavigatorPower getter warns on an unknown mastery
+		// slug; the only silent-read left in this path is the non-model
+		// `?? 0` fallback — warn on it too, never silent.
+		const bonusValue = (
+			item.system as unknown as { masteryBonusValue?: number }
+		).masteryBonusValue;
+		if (bonusValue === undefined) {
+			console.warn(
+				`rogue-trader | navigator power "${item.name}" has no masteryBonusValue — reading mastery as +0.`,
+			);
+		}
+		const bonus = bonusValue ?? 0;
 		const masteryLabel = ports.i18n.t(
 			`NAVIGATOR_POWER.${mastery.toUpperCase()}`,
 		);

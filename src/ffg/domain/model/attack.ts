@@ -423,6 +423,10 @@ export function launcherProfile(
  * A mutation resolves ONLY from an authored `attack` block — a mutation
  * without one is not an attack, however combat-flavoured its prose.
  * Anything else returns null.
+ *
+ * Explicit contract (bead 6l68, tested in attack.test.ts): a null/undefined
+ * item yields null — the tolerance exists so callers can gate the document
+ * lookup separately and MUST NOT lean on it for their own null checks.
  */
 export function attackProfileOf(
 	item: AttackSource | null | undefined,

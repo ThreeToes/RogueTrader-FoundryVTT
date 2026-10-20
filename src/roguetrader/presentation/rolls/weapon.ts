@@ -37,6 +37,13 @@ export const weaponHandler: RollHandler<"weapon"> = {
 		const ports = getPorts();
 		const actor = request.actor;
 		const item = actor.items.get(request.itemId);
+		// Bead 6l68: the item gate comes FIRST — attackProfileOf tolerates
+		// null/undefined only as an incidental detail of its signature, and we
+		// do not rely on it. The profile is resolved from a verified item.
+		if (!item) {
+			ports.notify.warn("ROLL.UNKNOWN_ITEM");
+			return null;
+		}
 		// Bead kam1: a mutation carrying a printed attack block (Corrosive Bile,
 		// Core p369) attacks exactly like a weapon, from the same profile.
 		// Bead 4obp: launchers derive their fire profile from the LOADED ordnance
@@ -49,7 +56,7 @@ export const weaponHandler: RollHandler<"weapon"> = {
 			ownedItemResolver(actor),
 			ownedItemResolver(actor) as never,
 		);
-		if (!item || !profile) {
+		if (!profile) {
 			ports.notify.warn("ROLL.UNKNOWN_ITEM");
 			return null;
 		}

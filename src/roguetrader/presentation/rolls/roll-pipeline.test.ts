@@ -1227,6 +1227,101 @@ describe("ship-weapon handler (bead xfta)", () => {
 	});
 });
 
+/** A target ship snapshot for salvo-resolution after() runs (armour 18 absorbs everything). */
+const salvoTarget = {
+	name: "Dauntless",
+	system: {
+		armour: 18,
+		voidShields: 1,
+		hullIntegrity: { value: 33, max: 33 },
+		crewPopulation: 100,
+		crewMorale: 100,
+		crewQuality: "competent",
+	},
+};
+
+describe("ship-weapon salvo actor write (bead 6l68: one payload, not two)", () => {
+	/** Run after() for a successful salvo with a controlled dice fake; returns the actor updates. */
+	const runSalvo = async (outcome: { degrees: number }) => {
+		resetSpies();
+		const updates: Array<Record<string, unknown>> = [];
+		const prepared = await shipWeaponHandler.prepare({
+			kind: "ship-weapon",
+			actor: shipFixture([lasBattery]),
+			itemId: "sw1",
+			rangeBand: "normal",
+		} as never);
+		setPorts({
+			...getPorts(),
+			// The damage formula is `${through}${damage}`: total 2 keeps the
+			// salvo at 2 points of damage, fully absorbed by 18 armour (macro).
+			dice: {
+				roll: async (formula: string) => ({
+					total: formula === "1d5" ? 3 : 2,
+					dice: [],
+					terms: [],
+					rolls: [],
+					formula,
+				}),
+			},
+			actors: {
+				...getPorts().actors,
+				update: async (_doc: unknown, data: Record<string, unknown>) => {
+					updates.push(data);
+				},
+			},
+			targets: {
+				...getPorts().targets,
+				actor: () => salvoTarget,
+			},
+			chat: {
+				...getPorts().chat,
+				post: async () => ({ id: "msg-1" }),
+			},
+		} as never);
+		try {
+			await shipWeaponHandler.after?.(
+				{ kind: "ship-weapon", actor: shipFixture([]), itemId: "sw1" } as never,
+				prepared as never,
+				{ success: true, degrees: outcome.degrees, roll: 10 } as never,
+				"",
+			);
+		} finally {
+			resetPorts();
+		}
+		return updates;
+	};
+
+	it("folds the critical auto-loss into ONE update on a critical with no Hull damage (p220)", async () => {
+		// 4 degrees vs Crit Rating 4 = critical (p221 example); the shield
+		// eats 1 hit, 18 armour eats the 2 damage: hull damage 0, but the
+		// critical still takes 1 HI automatically.
+		const updates = await runSalvo({ degrees: 4 });
+		expect(updates).toHaveLength(1);
+		expect(updates[0]).toEqual({
+			system: {
+				hullIntegrity: { value: 32 }, // 33 — 1 automatic critical point
+				crewPopulation: 100,
+				crewMorale: 100,
+			},
+		});
+	});
+
+	it("writes one payload on an ordinary salvo without the critical fold", async () => {
+		// 1 degree vs Crit Rating 4: no critical, 2 damage fully absorbed by
+		// 18 armour — HI stands, still exactly ONE write.
+		const updates = await runSalvo({ degrees: 1 });
+		expect(updates).toHaveLength(1);
+		expect(updates[0]).toEqual({
+			system: {
+				hullIntegrity: { value: 33 }, // 2 damage, fully absorbed by 18 armour
+				crewPopulation: 100,
+				crewMorale: 100,
+			},
+		});
+	});
+});
+
 describe("ship-repair handler (bead xfta)", () => {
 	it("prepares the Difficult (-10) crew test (book p218)", async () => {
 		resetSpies();

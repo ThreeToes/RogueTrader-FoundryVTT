@@ -11,6 +11,29 @@
 import { getPorts } from "../infrastructure/foundry/ports";
 
 /**
+ * Escape document data (user/pack-authored names) before it is interpolated
+ * into hand-built dialog HTML (bead 3z02): `Handlebars.escapeExpression` is
+ * the Foundry stdlib for this. Everything else in the roll surface escapes
+ * through Handlebars templates; these DialogV2 prompts are hand-built.
+ */
+function escapeDocumentData(value: unknown): string {
+	// The Foundry runtime always provides the global Handlebars; test fakes may
+	// not, so fall back to the identical entity substitution instead of
+	// throwing a ReferenceError mid-prompt.
+	if (typeof globalThis.Handlebars !== "undefined") {
+		return globalThis.Handlebars.escapeExpression(String(value ?? ""));
+	}
+	return String(value ?? "")
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#x27;")
+		.replace(/`/g, "&#x60;")
+		.replace(/=/g, "&#x3D;");
+}
+
+/**
  * Strength prompt (Table 6-1, book p157): Fettered / Unfettered / Push
  * +1..+cap. Push levels are separate buttons; each callback encodes the level
  * in the returned value ("push:2").
@@ -66,7 +89,7 @@ export async function promptShieldAbsorption(
 		content: `<p>${ports.i18n.t("SHIP_COMBAT.VOID_SHIELD_PROMPT", {
 			hits,
 			shields,
-			target: target.name ?? "",
+			target: target.name ? escapeDocumentData(target.name) : "",
 		})}</p>`,
 		buttons: [
 			{
@@ -110,7 +133,9 @@ export async function promptTargetComponent(
 	const content = `<p>${ports.i18n.t("SHIP_COMBAT.CRITICAL_SELECT")}</p>${fixable
 		.map(
 			(i) =>
-				`<div class="form-group"><label><input type="radio" name="component" value="${i.id}" > ${i.name}</label></div>`,
+				`<div class="form-group"><label><input type="radio" name="component" value="${escapeDocumentData(
+					i.id,
+				)}" > ${escapeDocumentData(i.name)}</label></div>`,
 		)
 		.join(
 			"",

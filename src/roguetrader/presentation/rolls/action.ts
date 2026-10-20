@@ -41,6 +41,7 @@ import { postCard } from "../../rules/chat-flags";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { outcomeLabel } from "../../../ffg/presentation/rolls/pipeline";
 import { characteristicHandler, skillHandler } from "./characteristic-skill";
+import { findOwnedSkillItem, untrainedCharacteristicFor } from "./skill-lookup";
 
 // ------------------------------------------------------------- the test vocabulary
 
@@ -64,16 +65,19 @@ const ROLL_ROUTES: Record<string, RollRoute> = {
 
 /**
  * The dodge route: the trained skill item when owned (the evasion
- * reaction's name match), the untrained Agility fallback otherwise. Dodge
- * is resolved at prepare time so skill-keyed effects ride the trained
- * path's skillName context.
+ * reaction's name match, via the shared lookup — bead bw9x), the untrained
+ * fallback characteristic otherwise (skill-lookup.ts's table, which carries
+ * the evasion precedent: HALF Agility round down via the profile's
+ * untrainedSkill model, Core Rulebook p74). Dodge is resolved at prepare
+ * time so skill-keyed effects ride the trained path's skillName context.
  */
-function dodgeSkillRoute(actor: Actor): { itemId?: string } {
-	const skill = actor.items.find(
-		(item: { type?: string; name?: string | null }) =>
-			item.type === "skill" && item.name === "Dodge",
-	) as { id?: string } | undefined;
-	return { itemId: skill?.id };
+function dodgeSkillRoute(actor: Actor): {
+	itemId?: string;
+	characteristicKey?: string;
+} {
+	const skill = findOwnedSkillItem(actor, "Dodge");
+	if (skill?.id) return { itemId: skill.id };
+	return { characteristicKey: untrainedCharacteristicFor("Dodge") };
 }
 
 // ------------------------------------------------------------- difficulty row
@@ -127,16 +131,17 @@ export const actionHandler: RollHandler<"action"> = {
 				key: route.key,
 			});
 		} else {
-			const { itemId } = dodgeSkillRoute(actor);
+			const dodge = dodgeSkillRoute(actor);
 			underlying = await skillHandler.prepare(
-				itemId !== undefined
-					? { kind: "skill", actor, itemId }
-					: // Untrained fallback (the evasion precedent): HALF the Agility
-						// characteristic (SystemProfile.untrainedSkill, Core Rulebook p74).
+				dodge.itemId !== undefined
+					? { kind: "skill", actor, itemId: dodge.itemId }
+					: // Untrained fallback (the evasion precedent): HALF the
+						// governing characteristic from the skill-lookup table
+						// (SystemProfile.untrainedSkill, Core Rulebook p74).
 						{
 							kind: "skill",
 							actor,
-							characteristicKey: "ag",
+							characteristicKey: dodge.characteristicKey,
 							label: "Dodge",
 						},
 			);

@@ -212,7 +212,21 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		// Hull Integrity + Crew Population/Morale losses (book p221).
 		const crewLoss = crewLossFromHullDamage(salvo.hullDamage);
 		const currentHI = Math.max(0, targetSystem.hullIntegrity?.value ?? 0);
-		const nextHI = Math.max(0, currentHI - salvo.hullDamage);
+		// Critical hit (book p220-221): degrees >= Crit Rating; roll 1d5 on
+		// the chart. A critical that deals no Hull damage still does 1
+		// automatic point (p220) — folded into the SAME actor write as the
+		// salvo HI/crew losses (bead 6l68: one payload, not a second update
+		// recomputed off the same stale pre-write targetSystem snapshot).
+		let criticalEntry = null;
+		if (isCritical(outcome.degrees, critRating)) {
+			const criticalRoll = await ports.dice.roll("1d5");
+			criticalEntry = shipCritical(criticalRoll.total || 1);
+			damageRolls.push(...(criticalRoll.rolls ?? []));
+		}
+		const nextHI = Math.max(
+			0,
+			currentHI - salvo.hullDamage - (criticalEntry && salvo.hullDamage === 0 ? 1 : 0),
+		);
 		const currentPop = Math.max(0, targetSystem.crewPopulation ?? 100);
 		const currentMorale = Math.max(0, targetSystem.crewMorale ?? 100);
 		await ports.actors.update(target, {
@@ -222,21 +236,6 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 				crewMorale: Math.max(0, currentMorale - crewLoss.morale),
 			},
 		});
-		// Critical hit (book p220-221): degrees >= Crit Rating; roll 1d5 on
-		// the chart. A critical that deals no Hull damage still does 1
-		// automatic point (p220).
-		let criticalEntry = null;
-		if (isCritical(outcome.degrees, critRating)) {
-			const criticalRoll = await ports.dice.roll("1d5");
-			criticalEntry = shipCritical(criticalRoll.total || 1);
-			damageRolls.push(...(criticalRoll.rolls ?? []));
-			if (salvo.hullDamage === 0) {
-				const hi = Math.max(0, targetSystem.hullIntegrity?.value ?? 0);
-				await ports.actors.update(target, {
-					system: { hullIntegrity: { value: Math.max(0, hi - 1) } },
-				});
-			}
-		}
 		// Crippled-ship criticals (book p221): damage past armour on a 0-HI
 		// ship reads as the chart value directly.
 		if (

@@ -1451,6 +1451,7 @@
 	"SHIP_COMBAT.TURN_FLAG_REPEL_BOARDERS_CHIP": "Repousser l'abordage !",
 	"SHIP_COMBAT.TURN_FLAG_COME_TO_NEW_HEADING_BS_PENALTY_CHIP": "Nouveau cap",
 	"SHIP_COMBAT.TURN_FLAG_BACKS_INTO_IT_CHIP": "Donnez-vous à fond !",
+	"SHIP_COMBAT.TURN_FLAG_TORPEDO_RUN_CHIP": "Course de torpilles (torpilles encore en vol)",
 	"SHIP_COMBAT.SILENT_RUNNING_HINT": "Basculer le Silence Radiophonique (Core Rulebook p218) : Vitesse réduite de moitié, tests liés un cran plus difficiles — TIRER révèle immédiatement le vaisseau.",
 	"SHIP_COMBAT.SILENT_RUNNING_ON": "Silence Radiophonique activé : Vitesse réduite de moitié, tous les tests liés un cran plus difficiles ; tirer révèle immédiatement le vaisseau (Core Rulebook p218).",
 	"SHIP_COMBAT.SILENT_RUNNING_OFF": "Silence Radiophonique désactivé (Core Rulebook p218).",

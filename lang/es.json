@@ -1451,6 +1451,7 @@
 	"SHIP_COMBAT.TURN_FLAG_REPEL_BOARDERS_CHIP": "¡Preparados para repeler abordajes!",
 	"SHIP_COMBAT.TURN_FLAG_COME_TO_NEW_HEADING_BS_PENALTY_CHIP": "Nuevo rumbo",
 	"SHIP_COMBAT.TURN_FLAG_BACKS_INTO_IT_CHIP": "¡Aporrear!",
+	"SHIP_COMBAT.TURN_FLAG_TORPEDO_RUN_CHIP": "Corrida de torpedos (torpedos siguen en vuelo)",
 	"SHIP_COMBAT.SILENT_RUNNING_HINT": "Alternar Navegación Silenciosa (Core Rulebook p218): Velocidad reducida a la mitad, pruebas relacionadas un paso más difíciles — DISPARAR revela la nave inmediatamente.",
 	"SHIP_COMBAT.SILENT_RUNNING_ON": "Navegación Silenciosa activada: Velocidad reducida a la mitad, todas las pruebas relacionadas un paso más difíciles; disparar revela la nave inmediatamente (Core Rulebook p218).",
 	"SHIP_COMBAT.SILENT_RUNNING_OFF": "Navegación Silenciosa desactivada (Core Rulebook p218).",

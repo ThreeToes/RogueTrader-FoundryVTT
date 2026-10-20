@@ -24,6 +24,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+// The turn-flag vocabulary the runtime composes i18n keys from (bead c7jo:
+// the torpedo-run chip gap this test pins).
+import { SHIP_TURN_FLAG_KEYS } from "../rules-engine/ship-turn-state";
 
 const LANGS = ["en", "es", "fr", "pl"] as const;
 type Dict = Record<string, string>;
@@ -199,9 +202,14 @@ describe("i18n key parity (bead qgtz)", () => {
 				// bead 7gcm: `SHIP_COMBAT.STAT_${stat.toUpperCase()}` (the
 				// ship-action test labels) and
 				// `SHIP_COMBAT.TURN_FLAG_${key.toUpperCase()}_CHIP` (the
-				// combat-tab flag chips).
+				// combat-tab flag chips; bead c7jo adds the torpedo-run chip,
+				// composed the same way for the live BFK salvo (ship-sheet.ts:493).
 				"src/roguetrader/sheet/actor/ship-sheet.ts:667,742",
+				// bead 7gcm/c7jo: the salvo turn-flag rows compose
+				// `SHIP_COMBAT.TURN_FLAG_${key.toUpperCase()}_OWN` / `_TARGET`
+				// (and the torpedo-run live-salvo flag surfaces as a chip).
 				"src/roguetrader/presentation/rolls/ship.ts:87",
+				"src/roguetrader/presentation/rolls/ship.ts:158,161",
 			],
 		},
 		{
@@ -322,6 +330,43 @@ describe("i18n key parity (bead qgtz)", () => {
 		"SKILL.UNTRAINED_HINT",
 		"SKILL.UNTRAINED_NOTE",
 	];
+
+	/** The turn-flag surfaces S8/S9 compose at runtime (bead c7jo): the
+	 *  Combat tab renders a CHIP for EVERY ShipTurnFlagKey (the BFK
+	 *  torpedo-run flag included — it lives in plain turnFlags), and the
+	 *  salvo kernel's salvoTurnFlagRows emits _OWN/_TARGET rows for the
+	 *  firing-side flags (evasive, lock-on-target named to the weapon,
+	 *  come-to-new-heading) plus the target's evasive. These keys are
+	 *  invisible to the static literal scan, so each is pinned here. */
+	const TURN_FLAG_ROW_SUFFIXES = ["EVASIVE", "LOCK_ON_TARGET", "COME_TO_NEW_HEADING_BS_PENALTY"];
+
+	test("every turn-flag chip and salvo flag row is translated in all four language files (bead c7jo)", () => {
+		for (const key of SHIP_TURN_FLAG_KEYS) {
+			// The chip composes with hyphens normalised to underscores (bead
+			// c7jo: ship.ts's OWN/TARGET rows already do this on the salvo side).
+			const upper = key.replaceAll("-", "_").toUpperCase();
+			for (const lang of LANGS) {
+				expect(
+					dictionaries[lang][`SHIP_COMBAT.TURN_FLAG_${upper}_CHIP`] ?? "",
+					`${lang}.json missing SHIP_COMBAT.TURN_FLAG_${upper}_CHIP`,
+				).not.toBe("");
+			}
+		}
+		for (const key of TURN_FLAG_ROW_SUFFIXES) {
+			for (const lang of LANGS) {
+				expect(
+					dictionaries[lang][`SHIP_COMBAT.TURN_FLAG_${key}_OWN`] ?? "",
+					`${lang}.json missing SHIP_COMBAT.TURN_FLAG_${key}_OWN`,
+				).not.toBe("");
+			}
+		}
+		for (const lang of LANGS) {
+			expect(
+				dictionaries[lang]["SHIP_COMBAT.TURN_FLAG_EVASIVE_TARGET"] ?? "",
+				`${lang}.json missing SHIP_COMBAT.TURN_FLAG_EVASIVE_TARGET`,
+			).not.toBe("");
+		}
+	});
 
 	test("untrained i18n strings never hardcode the -10 penalty (bead 1zaa)", () => {
 		for (const lang of LANGS) {

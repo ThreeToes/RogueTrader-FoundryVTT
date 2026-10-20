@@ -1489,6 +1489,7 @@
 	"SHIP_COMBAT.TURN_FLAG_REPEL_BOARDERS_CHIP": "Prepare to Repel Boarders!",
 	"SHIP_COMBAT.TURN_FLAG_COME_TO_NEW_HEADING_BS_PENALTY_CHIP": "Come to New Heading",
 	"SHIP_COMBAT.TURN_FLAG_BACKS_INTO_IT_CHIP": "Put Your Backs Into It!",
+	"SHIP_COMBAT.TURN_FLAG_TORPEDO_RUN_CHIP": "Torpedo run (torpedoes still travelling)",
 	"SHIP_COMBAT.SILENT_RUNNING_HINT": "Toggle Silent Running (Core Rulebook p218): Speed halved, related tests one step harder — FIRING immediately reveals the ship.",
 	"SHIP_COMBAT.SILENT_RUNNING_ON": "Silent Running engaged: Speed halved, all related tests one step harder; firing immediately reveals the ship (Core Rulebook p218).",
 	"SHIP_COMBAT.SILENT_RUNNING_OFF": "Silent Running disengaged (Core Rulebook p218).",

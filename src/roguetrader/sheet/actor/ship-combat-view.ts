@@ -262,7 +262,7 @@ export function turnFlagChips(
 ): ShipFlagChip[] {
 	return flags.map((flag) => {
 		const label = localize(
-			`SHIP_COMBAT.TURN_FLAG_${flag.key.toUpperCase()}_CHIP`,
+			`SHIP_COMBAT.TURN_FLAG_${flag.key.replaceAll("-", "_").toUpperCase()}_CHIP`,
 		);
 		const display = flag.value >= 0 ? `+${flag.value}` : `${flag.value}`;
 		const expiry = flag.persistent

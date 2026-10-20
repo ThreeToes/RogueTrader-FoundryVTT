@@ -1451,6 +1451,7 @@
 	"SHIP_COMBAT.TURN_FLAG_REPEL_BOARDERS_CHIP": "Odpieraj abordaż!",
 	"SHIP_COMBAT.TURN_FLAG_COME_TO_NEW_HEADING_BS_PENALTY_CHIP": "Nowy kurs",
 	"SHIP_COMBAT.TURN_FLAG_BACKS_INTO_IT_CHIP": "Do dłuż!",
+	"SHIP_COMBAT.TURN_FLAG_TORPEDO_RUN_CHIP": "Bieg torpedy (torpeda wciąż leci)",
 	"SHIP_COMBAT.SILENT_RUNNING_HINT": "Przełącz Cichy Rejs (Core Rulebook p218): Prędkość zmniejszona o połowę, powiązane testy o jeden stopień trudniejsze — ODDANIE STRZAŁU natychmiast ujawnia statek.",
 	"SHIP_COMBAT.SILENT_RUNNING_ON": "Cichy Rejs włączony: Prędkość zmniejszona o połowę, wszystkie powiązane testy o jeden stopień trudniejsze; oddanie strzału natychmiast ujawnia statek (Core Rulebook p218).",
 	"SHIP_COMBAT.SILENT_RUNNING_OFF": "Cichy Rejs wyłączony (Core Rulebook p218).",

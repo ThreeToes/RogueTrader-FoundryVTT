@@ -822,11 +822,15 @@ const torpedoRunRow: ShipRow = {
 						// Rulebook printed p218) stays the surface; the card notes.
 						critText = critText || ports.i18n.t("SHIP_ORDNANCE.BOARDING_HIT");
 					}
-					if (salvo.warhead === "melta" && hitDamage.raw > armour) {
+					if (salvo.warhead === "melta" && hitDamage.hullDamage > 0) {
 						// A Melta torpedo hit that DEALS DAMAGE automatically causes
 						// a Fire! Critical result, IN ADDITION to any other Crits —
 						// the chart roll above still runs and both names ride the
-						// card (Battlefleet Koronus printed p9).
+						// card (Battlefleet Koronus printed p9). The gate is Hull
+						// damage, not raw-vs-armour: a criticaling hit the Armour
+						// absorbed still deals the kernel's floor of 1 point
+						// (torpedoHitDamage, BFK printed p8) — that hit damages the
+						// Hull, so it stacks the Fire! too.
 						meltaFireHits += 1;
 						rows.push({
 							id: "ord:melta-fire",

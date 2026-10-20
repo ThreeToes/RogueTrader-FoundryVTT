@@ -336,9 +336,17 @@ describe("i18n key parity (bead qgtz)", () => {
 	 *  torpedo-run flag included — it lives in plain turnFlags), and the
 	 *  salvo kernel's salvoTurnFlagRows emits _OWN/_TARGET rows for the
 	 *  firing-side flags (evasive, lock-on-target named to the weapon,
-	 *  come-to-new-heading) plus the target's evasive. These keys are
-	 *  invisible to the static literal scan, so each is pinned here. */
-	const TURN_FLAG_ROW_SUFFIXES = ["EVASIVE", "LOCK_ON_TARGET", "COME_TO_NEW_HEADING_BS_PENALTY"];
+	 *  come-to-new-heading) plus the target's evasive. BACKS_INTO_IT rides
+	 *  the same key family through the ship-repair path and the BS salvo
+	 *  pipeline (bead wp6o: the firefighting pick deliberately renders a
+	 *  manual note instead of this flag). These keys are invisible to the
+	 *  static literal scan, so each is pinned here. */
+	const TURN_FLAG_ROW_SUFFIXES = [
+		"EVASIVE",
+		"LOCK_ON_TARGET",
+		"COME_TO_NEW_HEADING_BS_PENALTY",
+		"BACKS_INTO_IT",
+	];
 
 	test("every turn-flag chip and salvo flag row is translated in all four language files (bead c7jo)", () => {
 		for (const key of SHIP_TURN_FLAG_KEYS) {

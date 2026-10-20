@@ -341,6 +341,18 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 			 * Turn-start crew snapshot (bead 6ddz): feeds shipTurnStart's
 			 * sustainedCrewLosses rotation — nullable until the ship's first observed
 			 * turn start seeds it.
+			 *
+			 * Runtime verified (round-3 review, foundry.mjs v14.366): a plain
+			 * SchemaField's getInitialValue has no explicit initial, so the
+			 * required-fallback runs _cleanType({}) recursively and resolves
+			 * the nullable children to a TRUTHY {population: null, morale:
+			 * null} object — the kernel's !state.turnStartCrew seeding branch
+			 * never fired and a hand-seeded memory was zeroed at the first
+			 * boundary. With the whole field nullable + initial null,
+			 * SchemaField#getInitialValue returns this.initial (null) before
+			 * the required fallback, SchemaField#initialize short-circuits on
+			 * !value, and nullable-null passes _validateSpecial first — so a
+			 * fresh document really starts at null.
 			 */
 			turnStartCrew: new foundry.data.fields.SchemaField({
 				population: new foundry.data.fields.NumberField({
@@ -355,7 +367,7 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 					nullable: true,
 					initial: null,
 				}),
-			}),
+			}, { nullable: true, initial: null }),
 		};
 	}
 

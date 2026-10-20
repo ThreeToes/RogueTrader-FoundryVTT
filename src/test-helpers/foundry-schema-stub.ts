@@ -12,8 +12,11 @@ export class StubField {
 }
 export class StubSchemaField extends StubField {
 	readonly fields: Record<string, unknown>;
-	constructor(fields: Record<string, unknown>) {
-		super();
+	constructor(
+		fields: Record<string, unknown>,
+	opts?: Record<string, unknown>,
+	) {
+		super(opts);
 		this.fields = types(fields);
 	}
 }

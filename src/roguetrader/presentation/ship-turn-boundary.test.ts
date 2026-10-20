@@ -204,6 +204,30 @@ describe("the Strategic Turn boundary maintenance (bead 6ddz)", () => {
 		}
 	});
 
+	// Bead wp6o: worlds that ran the pre-fix schema stored the truthy legacy
+	// default {population: null, morale: null} — it must count as NO snapshot
+	// (seeding, memory untouched), never rotate the memory against 0/0.
+	it("a legacy nullish-children snapshot counts as none and seeds", async () => {
+		const spy = spyPorts();
+		try {
+			await applyShipTurnStart(
+				shipStub({
+					crewPopulation: 97,
+					crewMorale: 88,
+					turnFlags: [],
+					lastTurnLosses: { population: 4, morale: 1 },
+					turnStartCrew: { population: null, morale: null },
+				}),
+				2,
+			);
+			const system = spy.updates[0]?.system as Record<string, unknown>;
+			expect(system.lastTurnLosses).toEqual({ population: 4, morale: 1 });
+			expect(system.turnStartCrew).toEqual({ population: 97, morale: 88 });
+		} finally {
+			resetPorts();
+		}
+	});
+
 	it("the updateCombat hook drives the ACTIVE starship combatant's turn", async () => {
 		registerShipTurnBoundaryHook();
 		expect(hookHandlers.updateCombat).toHaveLength(1);
@@ -321,15 +345,26 @@ describe("Triage + Hold Fast! read the rotated memory (bead 6ddz, p218)", () => 
 
 	it("Put Your Backs Into It! applies fire-fighting as a MANUAL note, no flag", async () => {
 		const spy = spyPorts();
+		// The firefighting pick is ACTUALLY taken (round-3 review): the BACKS
+		// choice dialog answers "firefighting" on the first pick (degrees
+		// 3 → pickCount 2; the second pick cancels). The card must carry the
+		// manual-only note and NO turn-flag write may happen at all.
+		const foundryGlobal = (globalThis as Record<string, unknown>).foundry as {
+			applications: { api: { DialogV2: unknown } };
+		};
+		const original = foundryGlobal.applications.api.DialogV2 as {
+			input: unknown;
+		};
+		let inputIndex = 0;
+		foundryGlobal.applications.api.DialogV2 = {
+			...original,
+			input: (async () =>
+				inputIndex++ === 0 ? { choice: "firefighting" } : null) as never,
+		} as typeof original;
 		try {
-			// The Dialog stubs return null → the pick loop breaks immediately;
-			// this path is exercised through a pre-seeded choice only in play —
-			// here we pin that a firefighting-only write leaves NO turn flag.
 			const ship = shipStub({
 				turnFlags: [],
 			});
-			// Drive the after hook with the dialog refusing: no targets picked,
-			// no write, no flag — the loop's guard.
 			const handler = extendedRowHandlers["Put Your Backs Into It!"];
 			expect(handler?.after).toBeDefined();
 			await handler!.after?.(
@@ -337,9 +372,18 @@ describe("Triage + Hold Fast! read the rotated memory (bead 6ddz, p218)", () => 
 				{ kindData: { name: "Put Your Backs Into It!" } } as never,
 				successful(3),
 				{ target: 40, modifiers: [] },
-			);
+				);
+			// The firefighting pick upserts NO flag — the actor write never
+			// happens.
 			expect(spy.updates).toEqual([]);
+			// The LOUD manual-only note rides the card instead.
+			expect(spy.cards).toHaveLength(1);
+			expect(spy.cards[0]).toContain("SHIP_ACTION.BACKS_FIRE_MANUAL");
+			// and the manual-only note stands alone — no flag-backing
+			// "this turn" note claims automation for it.
+			expect(spy.cards[0]).not.toContain("SHIP_ACTION.BACKS_NOTE");
 		} finally {
+			foundryGlobal.applications.api.DialogV2 = original;
 			resetPorts();
 		}
 	});

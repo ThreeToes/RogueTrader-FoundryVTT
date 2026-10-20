@@ -42,4 +42,21 @@ describe("starship schema round 2 (bead om4j)", () => {
 			expect(f.opts.integer).toBe(true);
 		}
 	});
+
+	// Bead wp6o (round-3 review): SchemaField#getInitialValue on the v14.366
+	// runtime resolves an uninitialsed recursive schema through the
+	// required-fallback's _cleanType({}) into a truthy
+	// {population: null, morale: null} — the kernel's !turnStartCrew seeding
+	// branch never fired on a live document. The whole field must declare
+	// nullable + initial null so a fresh document really starts at null.
+	it("turnStartCrew is whole-field nullable with initial null (no truthy child default object)", () => {
+		const f = schema.turnStartCrew as any;
+		expect(f.opts.nullable).toBe(true);
+		expect(f.opts.initial).toBe(null);
+		for (const child of ["population", "morale"]) {
+			const c = f.fields[child] as any;
+			expect(c.opts.nullable).toBe(true);
+			expect(c.opts.initial).toBe(null);
+		}
+	});
 });

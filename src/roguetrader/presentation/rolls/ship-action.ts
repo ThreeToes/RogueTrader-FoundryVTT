@@ -380,6 +380,9 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 								SHIP_ACTION_SHIP_STATS[parsed.shipStat]?.label ??
 									"",
 							),
+							// The lang strings carry +{value} — an unmatched token
+							// would render literally in play (round-3 review).
+							value: aid.value,
 						},
 					),
 					value: aid.value,

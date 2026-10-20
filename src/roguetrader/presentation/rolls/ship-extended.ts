@@ -925,9 +925,14 @@ const putYourBacksIntoItAfter: RowAfter = async (
 		},
 		{ value: "firefighting", label: ports.i18n.t("SHIP_ACTION.BACKS_FIRE") },
 	];
+	// Fire-fighting has NO automatic roll in this surface: the pick renders
+	// the LOUD manual-only note (Core Rulebook p218) instead of a flag — a
+	// backs-into-it:firefighting flag is read by nothing (round-3 review:
+	// the write-only-flag class).
 	// p218: one aided action, plus one more per three degrees of success.
 	const pickCount = 1 + Math.floor(outcome.degrees / 3);
 	const targets: string[] = [];
+	const manualNotes: string[] = [];
 	for (let pick = 0; pick < pickCount; pick += 1) {
 		const action = await promptChoice(
 			BACKS_ACTIONS,
@@ -958,14 +963,16 @@ const putYourBacksIntoItAfter: RowAfter = async (
 				}),
 			);
 		} else {
+			if (action === "firefighting") {
+				// Manual note only — no flag is upserted (the continue skips
+				// the write below).
+				manualNotes.push(
+					ports.i18n.t("SHIP_ACTION.BACKS_FIRE_MANUAL"),
+				);
+				continue;
+			}
 			target = action;
-			targets.push(
-				ports.i18n.t(
-					action === "emergency-repairs"
-						? "SHIP_ACTION.BACKS_REPAIRS"
-						: "SHIP_ACTION.BACKS_FIRE",
-				),
-			);
+			targets.push(ports.i18n.t("SHIP_ACTION.BACKS_REPAIRS"));
 		}
 		nextFlags = upsertTurnFlag(nextFlags, {
 			id: `backs-into-it:${target}`,
@@ -976,13 +983,20 @@ const putYourBacksIntoItAfter: RowAfter = async (
 			persistent: false,
 		});
 	}
-	if (targets.length === 0) return;
-	await ports.actors.update(ship, { system: { turnFlags: nextFlags } });
+	if (targets.length === 0 && manualNotes.length === 0) return;
+	if (targets.length > 0) {
+		await ports.actors.update(ship, { system: { turnFlags: nextFlags } });
+	}
 	await postRowCard(request, { name: prepared.kindData?.name ?? "" }, [
-		ports.i18n.t("SHIP_ACTION.BACKS_NOTE", {
-			count: targets.length,
-			targets: targets.join(", "),
-		}),
+		...(targets.length > 0
+			? [
+					ports.i18n.t("SHIP_ACTION.BACKS_NOTE", {
+						count: targets.length,
+						targets: targets.join(", "),
+					}),
+				]
+			: []),
+		...manualNotes,
 	]);
 };
 

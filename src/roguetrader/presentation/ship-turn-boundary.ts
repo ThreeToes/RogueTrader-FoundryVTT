@@ -34,9 +34,42 @@ import { getPorts } from "../infrastructure/foundry/ports";
 interface ShipTurnSystem {
 	turnFlags?: ShipTurnFlag[];
 	lastTurnLosses?: ShipCrewLosses;
-	turnStartCrew?: ShipCrewLosses | null;
+	turnStartCrew?:
+		| ShipCrewLosses
+		| { population?: number | null; morale?: number | null }
+		| null;
 	crewPopulation?: number;
 	crewMorale?: number;
+}
+
+/**
+ * Normalise the turn-start snapshot to pure kernel shape (round-3 review,
+ * bead wp6o): worlds that ran the pre-wp6o schema hold the truthy legacy
+ * default object {population: null, morale: null} in their database — a
+ * nullish-children object is NO snapshot (the kernel's !state.turnStartCrew
+ * seeding branch would be skipped and a hand-seeded memory zeroed), so it
+ * collapses to null the same as a missing key. The v14 runtime verified
+ * (foundry.mjs): a nullable+initial-null SchemaField yields null on init,
+ * but legacy stored objects persist and are normalised HERE; Math.floor of
+ * a null child would otherwise read the snapshot as 0/0.
+ */
+function snapshotOrNull(
+	snapshot: ShipTurnSystem["turnStartCrew"],
+): ShipCrewLosses | null {
+	if (!snapshot) return null;
+	const { population, morale } = snapshot as {
+		population?: number | null;
+		morale?: number | null;
+	};
+	if (
+		population === null ||
+		population === undefined ||
+		morale === null ||
+		morale === undefined
+	) {
+		return null;
+	}
+	return { population, morale };
 }
 
 /** The current crew tracks (percentage points, clamped at zero). */
@@ -63,7 +96,7 @@ export async function applyShipTurnStart(
 		{
 			turnFlags: system.turnFlags ?? [],
 			lastTurnLosses: system.lastTurnLosses ?? { population: 0, morale: 0 },
-			turnStartCrew: system.turnStartCrew ?? null,
+			turnStartCrew: snapshotOrNull(system.turnStartCrew),
 		},
 		currentCrew(system),
 		turnIndex,
@@ -84,6 +117,13 @@ export async function applyShipTurnStart(
  * (rules-engine/ship-ordnance.ts's torpedoRunExpiry keyed the launch off
  * ports.clock.round()). A non-starship active combatant (an explorer, a
  * vehicle) carries no turn flags — skipped.
+ *
+ * KNOWN SEAM (round-3 review nit, recorded not fixed): the turnIndex/round
+ * passed on is read from the combat DOCUMENT THE HOOK RECEIVED, while the
+ * torpedo-run flags' launchTurn was stamped from ports.clock.round() — the
+ * VIEWED combat. With more than one combat open the two can be different
+ * trackers, so flag expiry would count against the wrong round. v1 assumes
+ * one live combat; revisit when multi-combat space play actually happens.
  */
 export async function maintainActiveCombatant(combat: unknown): Promise<void> {
 	const active = (combat as { combatant?: { actor?: unknown } | null } | null)

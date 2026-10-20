@@ -791,6 +791,71 @@ describe("Torpedo Run attack maths (bead brex, Battlefleet Koronus printed p7)",
 		expect(fireRow?.display).toContain("SHIP_CRITICALS.fire");
 	});
 
+	it("a criticaling-but-absorbed MELTA hit deals the 1-point floor and still stacks Fire! (printed pp8-9)", async () => {
+		// One die (10) MEETS the Crit Rating 9 → the hit CRITICALS, but raw
+		// 27 ≤ Armour 30 → the Armour absorbs it all. The kernel still grants
+		// a criticaling hit a FLOOR of 1 Hull point (printed p8), so the hit
+		// DOES deal Hull damage — the automatic Fire! stacks with the chart
+		// roll's own critical (BFK printed p9).
+		const target = shipFixture([], {
+			armour: 30,
+			turretRating: 0,
+			hullIntegrity: { value: 40, max: 40 },
+			crewPopulation: 100,
+			crewMorale: 100,
+		});
+		const ship = shipFixture([], {
+			torpedoSalvos: [{ ...meltaSalvo, travelled: 0 }],
+			turnFlags: [flagFor(3)],
+		});
+		cueDialog([], [{ distance: "10" }, { distance: "0" }]);
+		const { posts, rolled } = capturePorts(
+			(formula) =>
+				formula === "1d100"
+					? { total: 1 }
+					: { total: 12, dice: [{ result: 2 }, { result: 10 }] },
+			target,
+		);
+		await ordnanceRowHandlers["torpedo-run"]!.after?.(
+			{ kind: "ship-action", actor: ship as never, itemId: "act-1" } as never,
+			{
+				title: "Test Ship — Torpedo Run",
+				kindData: runKindData,
+				baseTarget: 0,
+			} as never,
+			{ success: true, degrees: 0 } as never,
+			"",
+		);
+		// All THREE hits critical, absorb into the Armour and land the 1-point
+		// floor — each rolls its Terminal-Penetration re-roll (the 2 die is ≤
+		// TP 4), takes its 1d5 chart roll, and stacks the Fire!.
+		expect(rolled).toEqual([
+			"1d100",
+			"2d10",
+			"1d10",
+			"1d5",
+			"2d10",
+			"1d10",
+			"1d5",
+			"2d10",
+			"1d10",
+			"1d5",
+		]);
+		const post = posts[0] as {
+			critNote?: string;
+			attackRows?: Array<{ id: string; display?: string }>;
+			hullDamage?: number;
+		};
+		expect(post.hullDamage).toBe(3);
+		const fireRows = (post.attackRows ?? []).filter(
+			(row) => row.id === "ord:melta-fire",
+		);
+		expect(fireRows).toHaveLength(3);
+		expect(fireRows[0]?.display).toContain("SHIP_CRITICALS.fire");
+		// The chart crit and the warhead Fire! ride the crit note TOGETHER.
+		expect(post.critNote).toContain("SHIP_CRITICALS.fire");
+	});
+
 	it("a Melta hit that deals NO damage causes no Fire! critical (printed p9)", async () => {
 		// The Melta hit absorbs into the target's Armour (raw 26 ≤ Armour 30):
 		// no damage dealt, so the automatic Fire! Critical never fires.

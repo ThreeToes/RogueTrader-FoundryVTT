@@ -1311,6 +1311,7 @@
 	"SHIP_COMBAT.FIRE_TITLE": "Tir — bande de portée",
 	"SHIP_COMBAT.FIRE_PROMPT": "Choisissez la bande de portée par rapport à la cible (Core Rulebook p220) :",
 	"SHIP_COMBAT.FIRE_TOOLTIP": "Test BS du canonnier → touches → boucliers du vide → dégâts → critiques",
+	"SHIP_COMBAT.NOT_A_SALVO_WEAPON": "Arme incompatible avec la salve : seules les macrobatteries et les lances tirent en salve — les tubes lance-torpilles, le canon nova et les baies d'assaut exigent une action prolongée (Core Rulebook p218).",
 	"SHIP_COMBAT.STAT_MANOEUVRABILITY": "Manœuvrabilité",
 	"SHIP_COMBAT.STAT_DETECTION": "Détection",
 	"SHIP_COMBAT.SHIP_ABILITY": "Caractéristique du vaisseau",

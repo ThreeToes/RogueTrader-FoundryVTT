@@ -66,10 +66,7 @@ function registryInForce(): readonly RuleKnob[] {
 	return ruleKnobs();
 }
 import type { Modifier } from "../../rules-engine/modifier";
-import {
-	type TestContributor,
-	testContributors,
-} from "../../ffg/application/funnel";
+import type { TestContributor } from "../../ffg/application/funnel";
 import { getPorts } from "../infrastructure/foundry/ports";
 
 /**
@@ -521,14 +518,6 @@ export const attackContextContributor: TestContributor = (_view, context) => {
 	}
 	return mods;
 };
-
-/** Registration is explicit (bead i4b0) — see the heading above. The
- * contributor lives in a module-level const so rules/funnel-registration.ts
- * can identity-check the exact handle (bead 4tx6): a foreign module
- * registering the "attack-context" type must not satisfy the RT guard. */
-export function registerAttackContextContributor(): void {
-	testContributors.register("attack-context", attackContextContributor);
-}
 
 /**
  * Settings keys (bead wxut.3).

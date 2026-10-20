@@ -1311,6 +1311,7 @@
 	"SHIP_COMBAT.FIRE_TITLE": "Strzał — pas zasięgu",
 	"SHIP_COMBAT.FIRE_PROMPT": "Wybierz pas zasięgu względem celu (Core Rulebook p220):",
 	"SHIP_COMBAT.FIRE_TOOLTIP": "Test BS działonowego → trafienia → tarcze próżni → obrażenia → krytyki",
+	"SHIP_COMBAT.NOT_A_SALVO_WEAPON": "Bron bez salwy: tylko makrobateryje i lance strzelają salwą — wyrzutnie torped, działo nova i pokłady desantowe wymagają akcji przedłużonej (Core Rulebook s. 218).",
 	"SHIP_COMBAT.STAT_MANOEUVRABILITY": "Zwrotność",
 	"SHIP_COMBAT.STAT_DETECTION": "Detekcja",
 	"SHIP_COMBAT.SHIP_ABILITY": "Zdolność statku",

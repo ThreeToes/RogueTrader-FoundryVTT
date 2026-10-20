@@ -14,6 +14,7 @@ import {
 	isCritical,
 	rangeModifier,
 	resolveSalvoDamage,
+	salvoWeaponKind,
 	SHIP_CRITICALS,
 	shipCritical,
 	VENT_FIRE_CREW_DAMAGE,
@@ -271,6 +272,29 @@ describe("salvo damage formula composition (bead rhij)", () => {
 		expect(() => composeSalvoDamageFormula(-1, "1d10+2")).toThrow(
 			/hits must be a positive integer/,
 		);
+	});
+});
+
+// Bead kxbz: the salvo gate — only macrobatteries and lances fire a
+// salvo; the ordnance types are Extended Actions (bead a413/S9).
+describe("salvo weapon kind (bead kxbz)", () => {
+	test("accepts the two salvo componentTypes", () => {
+		expect(salvoWeaponKind("macrobattery", "anything")).toBe("macrobattery");
+		expect(salvoWeaponKind("lance", "anything")).toBe("lance");
+	});
+
+	test("refuses the ordnance componentTypes loudly (no guess)", () => {
+		for (const type of ["torpedo-tube", "nova-cannon", "landing-bay"]) {
+			expect(salvoWeaponKind(type, "name anything")).toBeNull();
+		}
+		// A torpedo tube named with a lance-looking name still refuses:
+		// componentType is authoritative once set.
+		expect(salvoWeaponKind("torpedo-tube", "Prow Torpedo Lance")).toBeNull();
+	});
+
+	test("blank componentType keeps the legacy name heuristic", () => {
+		expect(salvoWeaponKind("", "Sunsear Laser Battery")).toBe("macrobattery");
+		expect(salvoWeaponKind("", "Titanforge Lance")).toBe("lance");
 	});
 });
 

@@ -33,6 +33,30 @@ import { parseDamageFormula } from "./damage";
 export type ShipWeaponKind = "macrobattery" | "lance";
 
 /**
+ * The componentTypes that fire as a salvo (bead kxbz): only Table 8-4's
+ * macrobatteries and lances resolve through the salvo path (pp220-221).
+ * Torpedo tubes, nova cannon and landing bays are Extended Actions /
+ * BFK-ordnance territory — their mechanics are a separate bead — so any
+ * other componentType must not reach the salvo kernel at all.
+ *
+ * A blank componentType keeps the legacy name heuristic so docs authored
+ * before the ordnance types existed keep firing (pre-kxbz behaviour);
+ * anything else is a loud refusal, never a guess.
+ */
+export function salvoWeaponKind(
+	componentType: string,
+	nameOrSpecial: string,
+): ShipWeaponKind | null {
+	if (componentType === "macrobattery" || componentType === "lance") {
+		return componentType;
+	}
+	if (componentType === "") {
+		return /lance/i.test(nameOrSpecial) ? "lance" : "macrobattery";
+	}
+	return null;
+}
+
+/**
  * BS modifier for firing at a given distance (Core Rulebook pp219-220):
  * within half range +10, beyond range (up to 2x) -10, otherwise 0. Twice
  * the weapon's range is the hard maximum — beyond it the outcome reason is

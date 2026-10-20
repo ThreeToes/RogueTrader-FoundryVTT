@@ -38,6 +38,7 @@ export {
 	criticalFromCrippledDamage,
 	hitsScored,
 	isCritical,
+	salvoWeaponKind,
 	type SalvoOutcome,
 	type SalvoRequest,
 	resolveSalvoDamage,

@@ -1226,6 +1226,73 @@ describe("ship-weapon handler (bead xfta)", () => {
 		expect(prepared?.kindData?.weaponKind).toBe("macrobattery");
 		expect(prepared?.kindData?.strength).toBeGreaterThanOrEqual(1);
 	});
+
+	// Bead kxbz: torpedo tubes / nova cannon / landing bays are Extended
+	// Actions (Core Rulebook p218, bead a413/S9), not salvoes — their shipped
+	// damage cells are the book's "—" ("0"), which cannot compose a salvo
+	// formula at all. The refusal must happen in prepare(), BEFORE the roll:
+	// after() writes state (the silent-running reveal) even on the way to a
+	// crash, so refusing late would leave partial writes behind.
+	it("refuses a torpedo tube LOUDLY before any roll or write (bead kxbz)", async () => {
+		resetSpies();
+		const updates: Array<Record<string, unknown>> = [];
+		setPorts({
+			...getPorts(),
+			actors: {
+				...getPorts().actors,
+				update: async (_doc: unknown, data: Record<string, unknown>) => {
+					updates.push(data);
+				},
+			},
+		} as never);
+		try {
+			const tube = {
+				...lasBattery,
+				id: "sw4",
+				name: "Prow Torpedo Tubes",
+				system: {
+					...lasBattery.system,
+					componentType: "torpedo-tube",
+					damage: "0", // the book's "—" cell
+				},
+			};
+			const prepared = await shipWeaponHandler.prepare({
+				kind: "ship-weapon",
+				actor: shipFixture([tube]),
+				itemId: "sw4",
+				rangeBand: "normal",
+			} as never);
+			expect(prepared).toBeNull();
+			expect(
+				warnings.some((w) =>
+					w.includes("SHIP_COMBAT.NOT_A_SALVO_WEAPON"),
+				),
+			).toBe(true);
+			// No dice rolled and NO state write — the silent-running reveal
+			// in after() is unreachable from here.
+			expect(rollCalls).toEqual([]);
+			expect(updates).toEqual([]);
+		} finally {
+			resetPorts();
+		}
+	});
+
+	it("still classifies component-typed salvo weapons", async () => {
+		resetSpies();
+		const lance = {
+			...lasBattery,
+			id: "sw5",
+			name: "Prow Sunstorm Lance",
+			system: { ...lasBattery.system, componentType: "lance" },
+		};
+		const prepared = await shipWeaponHandler.prepare({
+			kind: "ship-weapon",
+			actor: shipFixture([lance]),
+			itemId: "sw5",
+			rangeBand: "normal",
+		} as never);
+		expect(prepared?.kindData?.weaponKind).toBe("lance");
+	});
 });
 
 /** A target ship snapshot for salvo-resolution after() runs (armour 18 absorbs everything). */

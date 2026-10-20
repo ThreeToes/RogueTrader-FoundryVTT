@@ -1311,6 +1311,7 @@
 	"SHIP_COMBAT.FIRE_TITLE": "Disparar — banda de alcance",
 	"SHIP_COMBAT.FIRE_PROMPT": "Elige la banda de alcance frente al objetivo (Core Rulebook p220):",
 	"SHIP_COMBAT.FIRE_TOOLTIP": "Prueba de BS del artillero → impactos → escudos de vacío → daño → críticos",
+	"SHIP_COMBAT.NOT_A_SALVO_WEAPON": "Arma sin salva: solo las macrobaterías y las lanzas disparan en salva — los tubos lanzatorpedos, el cañón nova y las bahías de desembarco requieren una acción extendida (Core Rulebook p218).",
 	"SHIP_COMBAT.STAT_MANOEUVRABILITY": "Maniobrabilidad",
 	"SHIP_COMBAT.STAT_DETECTION": "Detección",
 	"SHIP_COMBAT.SHIP_ABILITY": "Capacidad de la nave",

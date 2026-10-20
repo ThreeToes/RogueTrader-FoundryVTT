@@ -70,8 +70,11 @@
                     <span class="stat"><label>{{localize "SHIP_COMBAT.RANGE"}}</label><span class="value">{{w.rangeLabel}}</span></span>
                 </div>
                 <button type="button" class="sc-fire" data-action="fireWeapon" data-item-id="{{w.id}}"
-                    {{#if (ne w.state "intact")}}disabled{{/if}}
-                    data-tooltip="{{localize "SHIP_COMBAT.FIRE_TOOLTIP"}}">
+                    {{#if w.salvo}}{{#if (ne w.state "intact")}}disabled{{/if}}
+                    data-tooltip="{{localize "SHIP_COMBAT.FIRE_TOOLTIP"}}"
+                    {{else}}disabled
+                    data-tooltip="{{localize "SHIP_COMBAT.NOT_A_SALVO_WEAPON"}}"
+                    {{/if}}>
                     {{localize "SHIP_COMBAT.FIRE"}}
                 </button>
             </div>

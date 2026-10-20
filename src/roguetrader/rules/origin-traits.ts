@@ -13,10 +13,7 @@
  */
 
 import { storedOriginPicks, type StoredOrigins } from "./origins";
-import {
-	type TestContributor,
-	testContributors,
-} from "../../ffg/application/funnel";
+import type { TestContributor } from "../../ffg/application/funnel";
 import { isCharacterView } from "../../ffg/domain/model/actor";
 import { getPorts } from "../infrastructure/foundry/ports";
 
@@ -135,10 +132,4 @@ export const originTraitsContributor: TestContributor = (view, context) => {
 		}));
 };
 
-/** Registration is explicit (bead i4b0) — see the heading above. The
- * contributor lives in a module-level const so rules/funnel-registration.ts
- * can identity-check the exact handle (bead 4tx6): a foreign module
- * registering the "origin-traits" type must not satisfy the RT guard. */
-export function registerOriginTraitsContributor(): void {
-	testContributors.register("origin-traits", originTraitsContributor);
-}
+

@@ -1349,6 +1349,7 @@
 	"SHIP_COMBAT.FIRE_TITLE": "Fire — range band",
 	"SHIP_COMBAT.FIRE_PROMPT": "Choose the range band vs the target (Core Rulebook p220):",
 	"SHIP_COMBAT.FIRE_TOOLTIP": "Gunner BS test → hits → void shields → damage → criticals",
+	"SHIP_COMBAT.NOT_A_SALVO_WEAPON": "Not a salvo weapon: only macrobatteries and lances fire in a salvo — torpedo tubes, nova cannon and landing bays need an Extended Action (Core Rulebook p218).",
 	"SHIP_COMBAT.STAT_MANOEUVRABILITY": "Manoeuvrability",
 	"SHIP_COMBAT.STAT_DETECTION": "Detection",
 	"SHIP_COMBAT.SHIP_ABILITY": "Ship ability",

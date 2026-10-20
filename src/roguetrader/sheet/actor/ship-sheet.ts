@@ -13,6 +13,7 @@ import {
 import {
 	crippledEffects,
 	emergencyRepairsCanFix,
+	salvoWeaponKind,
 	SHIP_COMPONENT_STATES,
 } from "../../../rules-engine/index";
 import { performRoll, rollInitiativeAction, rollShipSalvo } from "../../rules/adapter";
@@ -331,6 +332,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				range?: ShipWeaponRange | number; // legacy single-number docs
 				state?: string;
 				depressurised?: boolean;
+				componentType?: string;
 			};
 			// Crippled ships halve weapon Strength (round up, book p221).
 			const rawStrength = s.strength ?? 0;
@@ -351,6 +353,15 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				strength: crippled.weaponStrengthHalved
 					? Math.ceil(rawStrength / 2)
 					: rawStrength,
+				// Salvo gate (bead kxbz): only macrobatteries and lances fire a
+				// salvo — the Fire button renders disabled (with a tooltip, never
+				// a silent no-op) for torpedo tubes / nova cannon / landing bays,
+				// which are Extended Actions (Core Rulebook p218, bead a413/S9).
+				salvo:
+					salvoWeaponKind(
+						s.componentType ?? "",
+						`${item?.name ?? ""} ${s.damage ?? ""}`,
+					) !== null,
 			});
 		}
 		const repairable = components.filter((c) => {

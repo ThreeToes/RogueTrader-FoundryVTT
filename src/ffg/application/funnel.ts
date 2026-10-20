@@ -155,7 +155,7 @@ function normalizeContributorResult(
 			out.push(mod as Modifier);
 		} else {
 			console.warn(
-				`[${REGISTRY_NAME}] "${type}" contributor emitted a malformed modifier — expected {id, label, value}. ` +
+				`[${REGISTRY_NAME}] "${type}" contributor emitted a malformed modifier — expected {id, label, value, source: {type, label}}. ` +
 					`Got: ${describeValue(mod)}; dropped (${context.kind} test "${context.key}").`,
 			);
 		}

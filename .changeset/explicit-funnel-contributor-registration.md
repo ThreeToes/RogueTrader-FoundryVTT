@@ -2,4 +2,4 @@
 "rogue-trader": patch
 ---
 
-- RT roll entry points register the fire-mode and origin-trait funnel contributors through an explicit, idempotent registration function instead of import side effects, so no caller can silently lose those modifier rows through import order.
+- RT roll entry points register the fire-mode and origin-trait funnel contributors through an explicit, idempotent, identity-guarded registrar (`registerRtFunnelContributors`, bead 4tx6), so a repeat call or a foreign same-key registration can never silently drop or substitute the RT modifier rows.

@@ -19,6 +19,7 @@ import {
 	type Modifier,
 	rangeModifier,
 	resolveSalvoDamage,
+	salvoWeaponKind,
 	shipCritical,
 	salvoTurnFlagRows,
 	shipLockGate,
@@ -82,10 +83,28 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 			slot?: string;
 			special?: string;
 			state?: string;
+			componentType?: string;
 		};
 		if (weapon.state && weapon.state !== "intact") {
 			// Damaged/destroyed components are non-functional (book p223).
 			ports.notify.warn("SHIP_COMBAT.COMPONENT_NONFUNCTIONAL", {
+				weapon: item.name ?? "",
+			});
+			return null;
+		}
+		// Salvo gate (bead kxbz): only macrobatteries and lances resolve through
+		// the salvo path — torpedo tubes / nova cannon / landing bays are
+		// Extended Actions and BFK-ordnance territory (bead a413/S9 owns their
+		// mechanics), and their damage cells (the book's "—") cannot compose a
+		// salvo formula at all. Refusing HERE — before the roll — is what keeps
+		// the after() side effects (the silent-running reveal, the target
+		// write) from ever partially applying: no prepare, no roll, no after().
+		const kind = salvoWeaponKind(
+			weapon.componentType ?? "",
+			`${item.name ?? ""} ${weapon.special ?? ""}`,
+		);
+		if (!kind) {
+			ports.notify.warn("SHIP_COMBAT.NOT_A_SALVO_WEAPON", {
 				weapon: item.name ?? "",
 			});
 			return null;
@@ -99,9 +118,6 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		// Gunner BS: the ship's crew skill (Core Rulebook p193 crew quality;
 		// p220 example, gunner BS 48).
 		const crew = crewQualityEffects(system.crewQuality ?? "competent");
-		const kind = /lance/i.test(`${item.name ?? ""} ${weapon.special ?? ""}`)
-			? ("lance" as const)
-			: ("macrobattery" as const);
 		// Variable Strength (ork Dorsal Gunz, book p209): roll 1d5 before
 		// firing each turn — the roll happens at prepare so the dialog shows
 		// the rolled strength like any other contributor.

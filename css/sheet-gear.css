@@ -1408,6 +1408,8 @@
 .rogue-trader.sheet.starship .battery-card .card-name {
 	font-weight: bold;
 	cursor: pointer;
+	flex: 1;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;

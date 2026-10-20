@@ -513,9 +513,26 @@ describe("the ship-combat tab template render", () => {
 					roster: [],
 					weaponRoster: [],
 					helmsman: { uuid: "", options: [] },
-					turnFlags: [],
-					turnFlagsEmpty: true,
-					boarding: { locked: false },
+					turnFlags: [
+						{
+							label: "Evasive",
+							display: "−10",
+							kind: "penalty",
+							persistent: false,
+							tooltip: "t",
+						},
+					],
+					turnFlagsEmpty: false,
+					boarding: {
+						locked: true,
+						bannerLabel: "⚓ locked",
+						penaltyLabel: "",
+						penalty: false,
+						breakFreeRowUuid: "",
+						reminderLabel: "manual",
+						rows: [],
+						enemyRows: [],
+					},
 					silentRunning: false,
 				}),
 			),
@@ -540,6 +557,12 @@ describe("the ship-combat tab template render", () => {
 		const headSlice = html.slice(headOpen, bodyOpen);
 		expect(headSlice).toContain("sc-vitals-strip");
 		expect(headSlice).toContain("sc-combat-toolbar");
+		// The boarding banner + command reminder and the turn-flag chips are
+		// also full-width head region — they must NOT drift into a column
+		// (bead 9oxq review finding 2).
+		expect(headSlice).toContain("sc-boarded");
+		expect(headSlice).toContain("sc-command-reminder");
+		expect(headSlice).toContain("sc-turn-flags");
 		// Sections land in the right column: SHIP ACTIONS (header + groups) in
 		// primary; SHIP WEAPONS + COMPONENT CONDITIONS in secondary.
 		const actions = html.indexOf("SHIP_COMBAT.SHIP_ACTIONS");

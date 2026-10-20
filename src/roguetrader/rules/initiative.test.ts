@@ -45,7 +45,7 @@ for (const key of ["game", "ui", "foundry"]) {
 
 const { rollInitiativeAction } = await import("./adapter");
 const { INITIATIVE_FORMULA } = await import("./derived");
-const { foundryPorts, setPorts } = await import(
+const { foundryPorts, resetPorts, setPorts } = await import(
 	"../../ffg/infrastructure/foundry/ports"
 );
 const { TestDialog } = await import("./test-dialog");
@@ -53,7 +53,18 @@ const { TestDialog } = await import("./test-dialog");
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
+/**
+ * Restore EVERYTHING this file replaces, so nothing leaks into whichever suite
+ * bun schedules next (all suites run in ONE process).
+ *
+ * Bead vtce: the ports set by wirePorts() are process-global setPorts()
+ * overrides — without resetPorts() the initiative dice/chat/notify spies keep
+ * receiving roll-pipeline.test.ts's calls, emptying that suite's roll,
+ * warning and card-render assertions (13 failures in the pair; either suite
+ * alone is green).
+ */
 afterAll(() => {
+	resetPorts();
 	for (const [key, value] of Object.entries(originalGlobals)) {
 		if (value === undefined)
 			delete (globalThis as Record<string, unknown>)[key];
@@ -110,7 +121,8 @@ function wirePorts(d10Total = 4): void {
 	});
 }
 
-/** Patch the test dialog: record the request, answer with `dialogResult`. */
+/** Patch the test dialog: record the request, answer with `dialogResult`.
+ * (Ports set here are torn down in afterAll — vtce ordering dependency.) */
 function wireDialog(): () => void {
 	dialogRequests = [];
 	const original = TestDialog.show;

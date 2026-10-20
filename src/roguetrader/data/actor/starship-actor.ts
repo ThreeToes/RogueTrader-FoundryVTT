@@ -84,6 +84,13 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 	declare revealedComponents: string[];
 	declare silentRunning: boolean;
 	declare lastTurnLosses: ShipCrewLosses;
+	/**
+	 * The crew tracks as they stood at the start of the turn now closing (bead
+	 * 6ddz): the snapshot rules-engine/ship-turn-state.ts's shipTurnStart reads
+	 * to compute the losses that rotate into lastTurnLosses at the ship's own
+	 * Strategic Turn end. null = no snapshot observed yet.
+	 */
+	declare turnStartCrew: ShipCrewLosses | null;
 
 	static override defineSchema() {
 		return {
@@ -328,6 +335,25 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 					min: 0,
 					integer: true,
 					initial: 0,
+				}),
+			}),
+			/**
+			 * Turn-start crew snapshot (bead 6ddz): feeds shipTurnStart's
+			 * sustainedCrewLosses rotation — nullable until the ship's first observed
+			 * turn start seeds it.
+			 */
+			turnStartCrew: new foundry.data.fields.SchemaField({
+				population: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					nullable: true,
+					initial: null,
+				}),
+				morale: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					nullable: true,
+					initial: null,
 				}),
 			}),
 		};

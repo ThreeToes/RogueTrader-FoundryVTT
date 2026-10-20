@@ -7,10 +7,11 @@
  * game.actors listing and the uuid resolutions — and delegates to these.
  *
  * - `shipActionGroupsContext` — the starship-actions pack rows grouped
- *   Manoeuvre (Table 8-10) / Machinery (the p215 prose rows) / Extended
+ *   Manoeuvre (Table 8-10) / Machinery (the p215 prose rows) / Ordnance (the
+ *   ships-pack Battlefleet Koronus rows, bead brex blocker 1) / Extended
  *   (Table 8-11), keyed through the row dispatch TABLES themselves
- *   (manoeuvreRow / boardingRowHandlers — no hardcoded name lists; the
- *   groups follow the data wherever the pack carries a row).
+ *   (manoeuvreRow / boardingRowHandlers / ordnanceRowHandlers — no hardcoded
+ *   name lists; the groups follow the data wherever the pack carries a row).
  * - `shipActionChipRow` — one roll chip (printed test + difficulty label +
  *   composed tooltip); Break Free / Rout ride skipDialog (S7's rows own
  *   their own prompts).
@@ -40,6 +41,10 @@ import {
 	type StarshipSystem,
 } from "../../presentation/rolls/ship-boarding";
 import { parseShipActionTestKey } from "../../presentation/rolls/ship-action";
+import {
+	ORDNANCE_PROMPT_ONLY_ROWS,
+	ordnanceRowHandlers,
+} from "../../presentation/rolls/ship-ordnance";
 import { SHIP_TURN_FLAG_TARGET_ALL } from "../../../rules-engine/index";
 
 /** The starship-actions concept pack (bead ca3x/S4) — the chip source. */
@@ -75,13 +80,16 @@ export interface ShipActionChipRow {
 export const SHIP_ACTION_GROUP_KEYS: Record<ShipActionGroupKey, string> = {
 	manoeuvre: "SHIP_COMBAT.ACTION_GROUP_MANOEUVRE",
 	machinery: "SHIP_COMBAT.ACTION_GROUP_MACHINERY",
+	ordnance: "SHIP_COMBAT.ACTION_GROUP_ORDNANCE",
 	extended: "SHIP_COMBAT.ACTION_GROUP_EXTENDED",
 };
 
-/** Group order: Table 8-10 first, then the p215 machinery rows, then 8-11. */
+/** Group order: Table 8-10, then the p215 machinery rows, then the ships
+ * pack's BFK ordnance rows, then 8-11. */
 export const SHIP_ACTION_GROUP_ORDER = [
 	"manoeuvre",
 	"machinery",
+	"ordnance",
 	"extended",
 ] as const;
 
@@ -98,13 +106,15 @@ export interface ShipActionsContext {
 }
 
 /** The row's dispatch class (S5's manoeuvre map → S7's machinery map → the
- * Table 8-11 extended default). */
+ * S9 ordnance map → the Table 8-11 extended default). */
 export function shipActionGroupFor(name: string): ShipActionGroupKey {
 	return manoeuvreRow(name)
 		? "manoeuvre"
 		: boardingRowHandlers[boardingRowKey(name)]
 			? "machinery"
-			: "extended";
+			: ordnanceRowHandlers[boardingRowKey(name)]
+				? "ordnance"
+				: "extended";
 }
 
 /** The machine test key as the printed-test label (authored skill names
@@ -156,6 +166,19 @@ export function shipActionGroupsContext(
 	return { groups, breakFreeRowUuid };
 }
 
+/**
+ * The item types the ship refit drop accepts (bead brex blocker 2): the two
+ * component families install as refit; `ship-ordnance` items install as
+ * STORES — the BFK run rows read them as the ship's torpedo/attack-craft
+ * stock, so deleting them (the old behaviour) left the launch rows
+ * permanently unreachable.
+ */
+export const SHIP_REFIT_TYPES: readonly string[] = [
+	"ship-component",
+	"ship-weapon-component",
+	"ship-ordnance",
+];
+
 /** One chip row: printed test + difficulty label + composed tooltip
  * (the actions-tab tooltip anatomy: cost — terse line — difficulty). */
 export function shipActionChipRow(
@@ -167,13 +190,15 @@ export function shipActionChipRow(
 	const data = doc.system ?? {};
 	const difficulty = (data.roll?.difficulty ?? "").trim();
 	const cost = data.actionCost ?? "";
-	// The machinery rows with their OWN prompts (bead w98s/S7): Break Free
-	// is the turn-start break; Rout is prepare-only (d100 vs Morale + the
-	// winner prompts). skipDialog keeps both fast — the modify dialog adds
-	// nothing to them.
+	// Own-prompt rows skip the dialog: the machinery rows with their OWN
+	// prompts (bead w98s/S7 — Break Free is the turn-start break; Rout is
+	// prepare-only d100 vs Morale + the winner prompts) and the prepare-only
+	// ordnance rows (launch/run/fighter own their prompts, so a dialog over a
+	// target-less test adds nothing — the S9 row modules own the dice).
 	const rowKey = boardingRowKey(name);
 	const skipDialog =
-		group === "machinery" && (rowKey === "break-free" || rowKey === "rout");
+		(group === "machinery" && (rowKey === "break-free" || rowKey === "rout")) ||
+		(group === "ordnance" && ORDNANCE_PROMPT_ONLY_ROWS.has(rowKey));
 	return {
 		name,
 		uuid: doc.uuid ?? "",

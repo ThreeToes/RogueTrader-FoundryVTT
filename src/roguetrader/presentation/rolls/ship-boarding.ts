@@ -77,6 +77,7 @@ import type {
 import type { PackDocAnchor } from "../../sheet/pack-doc-links";
 import { OPEN_PACK_DOC_ACTION } from "../../sheet/pack-doc-links";
 import { escapeDocumentData } from "../roll-prompts";
+import { silentRunningRow } from "./ship-manoeuvre";
 import {
 	parseShipActionTestKey,
 	resolvePerformerSide,
@@ -297,6 +298,11 @@ async function prepareCombinedTest(
 			value: side.specPenalty,
 		});
 	}
+	// The p218 Silent Running step as a VISIBLE row — the ram/boarding/
+	// break-free combined tests are "related Skill Tests" too (nit 17, bead
+	// tueu): the SAME shared row shape the manoeuvre overlay adds.
+	const silentRow = silentRunningRow(ship);
+	if (silentRow) modifiers.push(silentRow);
 	// The printed difficulty through the shared ladder (see ship-action.ts):
 	// numeric tokens contribute a visible row; an UNMAPPED one is a broken
 	// row — the same loud refusal the standard path gives.

@@ -15,6 +15,7 @@ import {
 } from "../presentation/chat-actions";
 import { registerCombatEncounterEndHook } from "../presentation/combat-end";
 import { registerCreatorMenus } from "../presentation/creator-menus";
+import { registerShipTurnBoundaryHook } from "../presentation/ship-turn-boundary";
 import { registerTokenContextMenus } from "../presentation/token-menus";
 import { missingSkillGrants } from "../rules/default-skills";
 import { vehicleTokenFootprint } from "../rules/vehicle-tokens";
@@ -175,6 +176,10 @@ export function registerRuntimeHooks(): void {
 	// Encounter-end status cleanup (bead cneb): deleteCombat removes
 	// encounter-length conditions from every combatant (presentation/combat-end).
 	registerCombatEncounterEndHook();
+	// Ship Strategic Turn boundary (bead 6ddz): updateCombat's turn change
+	// runs the acting starship's flag expiry + lastTurnLosses rotation
+	// (presentation/ship-turn-boundary).
+	registerShipTurnBoundaryHook();
 	// Character/ship/planet/warrant creators (epic kof0, phase 5): the
 	// directory context-menu entries live in presentation/creator-menus.ts.
 	registerCreatorMenus();

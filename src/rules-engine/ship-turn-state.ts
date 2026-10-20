@@ -235,6 +235,8 @@ export interface ShipTurnFlagRow {
  *   turn (p214);
  * - firing ship's Lock on Target: +5, only when the flag names THE weapon
  *   component being fired (p217);
+ * - firing ship's Put Your Backs Into It!: +5, only when the flag names THE
+ *   weapon component being fired (p218, bead 6ddz read path);
  * - target ship's Evasive Manoeuvres: -10 to land the shot (p215).
  *
  * The values come from the flags themselves, so house-rule overrides stay
@@ -272,6 +274,16 @@ export function salvoTurnFlagRows(params: {
 			key: "lock-on-target",
 			value: lock.value,
 		});
+	}
+	// Put Your Backs Into It! (p218, bead 6ddz): the +5 reads at the BS salvo
+	// path when the flag names THE weapon component being fired.
+	const backs = activeTurnFlag(
+		params.firingFlags,
+		"backs-into-it",
+		params.weaponId,
+	);
+	if (backs) {
+		rows.push({ side: "firing", key: "backs-into-it", value: backs.value });
 	}
 	const targetEvasive = activeTurnFlag(params.targetFlags, "evasive");
 	if (targetEvasive) {
@@ -394,6 +406,65 @@ export function rotateLastTurnLosses(
 	return {
 		population: Math.max(0, Math.floor(latest.population)),
 		morale: Math.max(0, Math.floor(latest.morale)),
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Strategic Turn START maintenance (bead 6ddz, Core Rulebook pp214-218)
+// ---------------------------------------------------------------------------
+
+/** The full turn-state triple the ship's schema holds and this rotation moves. */
+export interface ShipTurnStartState {
+	/** The ship's live turn-flag array; EXPIRED ENTRIES REMOVED on return. */
+	turnFlags: readonly ShipTurnFlag[];
+	/** The one-turn crew-loss memory Triage/Hold Fast! consume. */
+	lastTurnLosses: ShipCrewLosses;
+	/**
+	 * The crew tracks as they stood at the start of the turn now closing —
+	 * the snapshot sustainedCrewLosses reads. null = no snapshot yet (the
+	 * ship's first observed turn start): the losses of the turn just ended
+	 * cannot be attributed, so the memory is PRESERVED and this call seeds
+		 the snapshot for the next rotation.
+	 */
+	turnStartCrew: ShipCrewLosses | null;
+}
+
+/**
+ * The ship's own Strategic Turn START maintenance (bead 6ddz): the single
+ * pure step driving BOTH kernel contracts of the turn boundary —
+ *
+ * 1. turn-flag EXPIRY (decision 3): expireTurnFlags over the ship's flags at
+ *    its own turn;
+ * 2. lastTurnLosses ROTATION (pp217-218): the losses sustained over the turn
+ *    now closing (sustainedCrewLosses: the turn-start snapshot vs the current
+ *    tracks) become the memory Triage (population) and Hold Fast! (morale)
+ *    consume during THIS turn; the snapshot replants at the current values.
+ *
+ * The adapter (presentation/ship-turn-boundary.ts) drives this at the combat
+ * tracker's turn change, for the ship whose turn is starting.
+ */
+export function shipTurnStart(
+	state: ShipTurnStartState,
+	current: ShipCrewLosses,
+	turnIndex: number,
+): ShipTurnStartState {
+	if (!state.turnStartCrew) {
+		// No snapshot yet: the just-ended turn's losses are unattributable —
+		// keep the memory untouched and seed the snapshot for the rotation.
+		return {
+			turnFlags: expireTurnFlags(state.turnFlags, turnIndex),
+			lastTurnLosses: {
+				population: Math.max(0, Math.floor(state.lastTurnLosses.population)),
+				morale: Math.max(0, Math.floor(state.lastTurnLosses.morale)),
+			},
+			turnStartCrew: current,
+		};
+	}
+	const latest = sustainedCrewLosses(state.turnStartCrew, current);
+	return {
+		turnFlags: expireTurnFlags(state.turnFlags, turnIndex),
+		lastTurnLosses: rotateLastTurnLosses(state.lastTurnLosses, latest),
+		turnStartCrew: current,
 	};
 }
 

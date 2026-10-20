@@ -3214,6 +3214,29 @@ describe("extended rows: the prompt-routed skill rows (bead z697)", () => {
 		);
 	});
 
+	it("an untrained Intimidate resolves to STRENGTH, not Fellowship (bead tueu)", async () => {
+		resetSpies();
+		await withDialogStubs(
+			{ input: async () => ({ choice: "Intimidate" }) },
+			async () => {
+				const prepared = await shipActionHandler.prepare({
+					kind: "ship-action",
+					actor: extendedShip([hail]),
+					itemId: "sa9",
+					performer: characterWithStrength([]) as never,
+				} as never);
+				// Intimidate's printed characteristic is Strength (Table 3-1,
+				// Core Rulebook p81): s 40 untrained → 20 (half), testKey
+				// `untrained:s` — NOT the fel 15 the old fallback gave.
+				expect(prepared).toMatchObject({
+					baseTarget: 20,
+					testKey: "untrained:s",
+				});
+				expect(warnings).toEqual([]);
+			},
+		);
+	});
+
 	it("Disinformation: the printed 'or Blather' alternative routes by prompt", async () => {
 		resetSpies();
 		await withDialogStubs(
@@ -4021,6 +4044,28 @@ describe("boarding rows: ramming (bead w98s, Core Rulebook p215)", () => {
 				itemId: "ram1",
 			} as never);
 			expect(prepared).toBeNull();
+		});
+	});
+
+	// Nit 17 (bead tueu, Core Rulebook p218): the −10 Silent Running step is
+	// "all related Skill Tests" — the ram/boarding/break-free combined tests
+	// carry the SAME visible row the manoeuvre overlay adds.
+	it("the ram's combined test carries the visible Silent Running −10 row", async () => {
+		await withDialogs([{ distance: "1" }], [], async () => {
+			await withTarget(async () => {
+				const prepared = await shipActionHandler.prepare({
+					kind: "ship-action",
+					actor: boardedShipFixture([rammingItem], { silentRunning: true }),
+					itemId: "ram1",
+				} as never);
+				const rows = (prepared?.initialModifiers ?? []) as Array<{
+					id?: string;
+					value?: number;
+				}>;
+				expect(rows).toContainEqual(
+					expect.objectContaining({ id: "ship:silent-running", value: -10 }),
+				);
+			});
 		});
 	});
 

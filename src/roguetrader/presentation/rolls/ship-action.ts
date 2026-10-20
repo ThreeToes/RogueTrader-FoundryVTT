@@ -22,7 +22,11 @@
 
 import type { TestKind } from "../../../ffg/domain/model/test";
 import type { Modifier } from "../../../rules-engine/index";
-import { combinedTarget } from "../../../rules-engine/index";
+import {
+	activeTurnFlag,
+	combinedTarget,
+	type ShipTurnFlag,
+} from "../../../rules-engine/index";
 import {
 	actionDifficulty,
 	ACTION_ROLL_TEMPLATE,
@@ -353,6 +357,34 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 			>;
 			shipMod = starship[parsed.shipStat] ?? 0;
 			modifiers.push(shipAbilityRow(parsed.shipStat, shipMod));
+			// Aid the Machine Spirit (bead 6ddz, printed p216): the "Aid” flag
+			// is READ at this same combined-test point as a VISIBLE row — +{value}
+			// to the ship ability it was applied to (Manoeuvrability/Detection);
+			// a write-only flag was the capable-review finding 5.
+			const turnFlags = (
+				starship as unknown as { turnFlags?: ShipTurnFlag[] }
+			).turnFlags;
+			const aid = activeTurnFlag(
+				turnFlags ?? [],
+				"aid-machine-spirit",
+				parsed.shipStat,
+			);
+			if (aid && aid.value !== 0) {
+				modifiers.push({
+					id: `ship:aid-machine-spirit:${parsed.shipStat}`,
+					source: { type: "item", label: "SHIP_COMBAT.TURN_FLAGS" },
+					label: ports.i18n.t(
+						"SHIP_COMBAT.TURN_FLAG_AID_MACHINE_SPIRIT_OWN",
+						{
+							stat: ports.i18n.t(
+								SHIP_ACTION_SHIP_STATS[parsed.shipStat]?.label ??
+									"",
+							),
+						},
+					),
+					value: aid.value,
+				});
+			}
 		}
 
 		// The bare-Pilot fallback (Core Rulebook p75): the trained bare parent

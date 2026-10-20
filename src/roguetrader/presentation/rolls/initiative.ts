@@ -41,7 +41,12 @@ import { systemOf } from "../../data/accessors";
 import { collectInitiativeRows } from "../../rules/initiative-rows";
 import { postCard } from "../../rules/chat-flags";
 import type { RollHandler } from "../../rules/roll-contract";
-import { sumModifiers, type Modifier } from "../../../rules-engine/index";
+import {
+	type Modifier,
+	shipIsBoarded,
+	sumModifiers,
+	type ShipBoardingState,
+} from "../../../rules-engine/index";
 import { getPorts } from "../../infrastructure/foundry/ports";
 
 /** One combatant document on the active tracker (combat-end.ts precedent). */
@@ -60,16 +65,18 @@ export function shipDetectionBonus(detection: number): number {
 
 /**
  * Is the ship currently boarded (bead qkq1; the boarding pair is S2's
- * `boardedWith` uuid-or-null on the ship actor)? Read DEFENSIVELY — the
- * parallel bead may not have merged into this worktree yet, so a missing
- * field reads as unset (the schema-first field lands with S2; note on the
- * bead). Never a loud failure: boarding is a state, not corrupt data.
+ * `boardedWith` object { uuid, breakFreeFailedThisTurn } on the ship actor)?
+ * Read DEFENSIVELY — a missing field reads as unset. Never a loud failure:
+ * boarding is a state, not corrupt data. The kernel's shipIsBoarded
+ * predicate (rules-engine, Core Rulebook p215) is the ONE read — no second
+ * copy of the rule here (bead tueu: this predicate used to expect the
+ * pre-S2 uuid STRING shape and never fired on live documents).
  */
 export function shipBoarded(system: unknown): boolean {
-	const boardedWith = (system as { boardedWith?: unknown } | null | undefined)
-		?.boardedWith;
-	// uuid-or-null: only a non-empty uuid counts as locked.
-	return typeof boardedWith === "string" && boardedWith.length > 0;
+	const state = (
+		system as { boardedWith?: Partial<ShipBoardingState> } | null | undefined
+	)?.boardedWith;
+	return shipIsBoarded(state);
 }
 
 /**

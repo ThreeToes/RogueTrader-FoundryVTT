@@ -44,6 +44,7 @@ import {
 	shipActionGroupsContext,
 	turnFlagChips,
 	STARSHIP_ACTIONS_PACK,
+	SHIP_REFIT_TYPES,
 	type HelmsmanCandidate,
 	type HelmsmanOption,
 	type ShipActionDoc,
@@ -343,7 +344,10 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// Combat tab (bead xfta): weapons with fire buttons, hull + crew
 		// status, crippled-state effects (book p221), component conditions
 		// (book p223) and the repairs column.
-		context.combat = await this.#combatTabContext(components);
+		context.combat = await this.#combatTabContext(
+			components,
+			shipsDocs as unknown as ShipActionDoc[],
+		);
 		return context;
 	}
 
@@ -477,19 +481,29 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	/**
 	 * The FULL combat tab (epic necp bead 7gcm): the salvo/status sections
 	 * (#combatContext) plus the SHIP ACTIONS chip groups (Table 8-10/8-11 +
-	 * the p215 machinery rows), the helmsman picker, the turn-flag chips,
-	 * the Silent Running state and the boarding banner.
+	 * the p215 machinery rows + the ships-pack BFK ordnance rows — bead brex
+	 * blocker 1: the ships-pack ship-action rows join the chip docs, keyed
+	 * through the ordnance row dispatch), the helmsman picker, the turn-flag
+	 * chips, the Silent Running state and the boarding banner.
 	 */
 	async #combatTabContext(
 		components: ShipRosterComponent[],
+		shipsDocs: ShipActionDoc[],
 	): Promise<Record<string, unknown>> {
 		// The pure pieces (the actions-view separation): the sheet carries only
 		// the document reads — pack fetch, explorers listing, uuid resolution.
+		// The ships pack's own ship-action rows (complications ride a separate
+		// type, so the filter is not needed for them) merge in so the six BFK
+		// ordnance rows render as chips too.
 		const docs = (await getPackDocuments(
 			STARSHIP_ACTIONS_PACK,
 		)) as unknown as ShipActionDoc[];
-		const actions = shipActionGroupsContext(docs, (key: string) =>
-			game.i18n.localize(key),
+		const actions = shipActionGroupsContext(
+			[
+				...docs,
+				...shipsDocs.filter((doc) => (doc.type ?? "") === "ship-action"),
+			],
+			(key: string) => game.i18n.localize(key),
 		);
 		const turnFlags = turnFlagChips(
 			this.#starship().turnFlags ?? [],
@@ -674,9 +688,12 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	/**
 	 * Drop an Item from a compendium onto the ship: install it (bead pyi3).
-	 * Only ship-component / ship-weapon-component items are accepted — a
-	 * loud warning for anything else. Duplicates are allowed (refit may
-	 * install the same component twice), so skipOwned is off.
+	 * The component families install as refit and ship-ordnance items install
+	 * as their ORDNANCE STORES (bead brex blocker 2 — the torpedo-run rows
+	 * read the owned ship-ordnance items as the ship's stock, so the old
+	 * delete-anything-else branch made the BFK rows unreachable) — a loud
+	 * warning for anything else. Duplicates are allowed (refit may install
+	 * the same component twice), so skipOwned is off.
 	 */
 	protected async _onDrop(event: DragEvent): Promise<unknown> {
 		const created = await cloneItemFromDrop(this.document, event, {
@@ -684,7 +701,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		});
 		if (!created) return;
 		const type = (created.type as string) ?? "";
-		if (type !== "ship-component" && type !== "ship-weapon-component") {
+		if (!SHIP_REFIT_TYPES.includes(type)) {
 			console.warn(
 				`rogue-trader | ship refit: "${created.name}" (${type}) is not a ship component; not installed`,
 			);

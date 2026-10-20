@@ -75,6 +75,8 @@ export {
 	salvoTurnFlagRows,
 	shipIsBoarded,
 	shipLockGate,
+	shipTurnStart,
+	type ShipTurnStartState,
 	sustainedCrewLosses,
 } from "./ship-turn-state";
 export {

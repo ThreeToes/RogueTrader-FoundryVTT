@@ -55,6 +55,7 @@ import {
 	torpedoRating,
 	torpedoRunFlag,
 	torpedoRunSpent,
+	torpedoRunTravelled,
 	torpedoSalvoHits,
 	torpedoSpeedRange,
 	turretShootDownHits,
@@ -76,10 +77,7 @@ import { OPEN_PACK_DOC_ACTION } from "../../sheet/pack-doc-links";
 import { escapeDocumentData } from "../roll-prompts";
 import { characteristicHandler } from "./characteristic-skill";
 import { type ShipRow } from "./ship-boarding";
-import {
-	parseShipActionTestKey,
-	resolvePerformerSide,
-} from "./ship-action";
+import { parseShipActionTestKey, resolvePerformerSide } from "./ship-action";
 import type { RollHandler } from "../../rules/roll-contract";
 
 // ------------------------------------------------------------- shapes + gates
@@ -130,15 +128,13 @@ const readShipSystem = (ship: unknown): StarshipSystem =>
 	systemOf(ship as { system: unknown }) as StarshipSystem;
 
 /** The ship's items of one type (structural: fixtures and documents alike). */
-function itemsOfType(
-	ship: unknown,
-	type: string,
-): OrdnanceItemLike[] {
+function itemsOfType(ship: unknown, type: string): OrdnanceItemLike[] {
 	const items = ship as
 		| { items?: { filter(fn: (item: unknown) => boolean): unknown[] } }
 		| undefined;
-	return (items?.items?.filter((item) => (item as OrdnanceItemLike).type === type) ??
-		[]) as OrdnanceItemLike[];
+	return (items?.items?.filter(
+		(item) => (item as OrdnanceItemLike).type === type,
+	) ?? []) as OrdnanceItemLike[];
 }
 
 /** Torpedo tubes installed on the ship, intact (the launch gate's inputs). */
@@ -164,10 +160,7 @@ function torpedoStoresOf(
 		.filter((item) => (item.system?.kind ?? "") === "torpedo")
 		.map((item) => ({
 			...item,
-			quantity: Math.max(
-				0,
-				Math.floor(Number(item.system?.quantity ?? 0)),
-			),
+			quantity: Math.max(0, Math.floor(Number(item.system?.quantity ?? 0))),
 		}));
 }
 
@@ -270,7 +263,12 @@ function crewTrackWrite(
 /** A d100 test against `target` through the SAME kernel resolveTest. */
 async function rollTest(
 	target: number,
-): Promise<{ success: boolean; degrees: number; roll: number; rolls: unknown[] }> {
+): Promise<{
+	success: boolean;
+	degrees: number;
+	roll: number;
+	rolls: unknown[];
+}> {
 	const ports = getPorts();
 	const outcome = await ports.dice.roll("1d100");
 	const resolved = resolveTest({
@@ -287,9 +285,11 @@ async function rollTest(
 }
 
 /** The printed per-hit damage terms: "2d10+14" → {dice:2, faces:10, bonus:14}. */
-function damageTermsOf(
-	damage: string,
-): { dice: number; faces: number; bonus: number } {
+function damageTermsOf(damage: string): {
+	dice: number;
+	faces: number;
+	bonus: number;
+} {
 	const body = parseDamageFormula(damage ?? "").formula;
 	const match =
 		/^(?:(?<count>\d+)\s*)?d(?<faces>\d+)(?:\s*(?<sign>[+-])\s*(?<bonus>\d+))?$/.exec(
@@ -299,7 +299,8 @@ function damageTermsOf(
 	return {
 		dice: Number(match.groups.count ?? 2),
 		faces: Number(match.groups.faces ?? 10),
-		bonus: (match.groups.sign === "-" ? -1 : 1) * Number(match.groups.bonus ?? 0),
+		bonus:
+			(match.groups.sign === "-" ? -1 : 1) * Number(match.groups.bonus ?? 0),
 	};
 }
 
@@ -367,7 +368,10 @@ const launchTorpedoesRow: ShipRow = {
 
 		// -- the torpedo choice comes from the ship's OWN stores -------------
 		const loaded = torpedoStoresOf(ship).filter((store) => store.quantity > 0);
-		const store = loaded.length === 1 ? loaded[0] : await promptPick(ports, loaded, "torpedo");
+		const store =
+			loaded.length === 1
+				? loaded[0]
+				: await promptPick(ports, loaded, "torpedo");
 		if (!store) return;
 
 		// -- salvo size (≤ the tube's Strength and the stores) ---------------
@@ -375,9 +379,10 @@ const launchTorpedoesRow: ShipRow = {
 		// printed p35); a blank/zero Strength defaults the PROMPT to 2 — the
 		// user sees and can correct it, nothing is silently forced.
 		const printedStrength = Math.floor(Number(tube.system?.strength ?? 2));
-		const tubeStrength = Number.isFinite(printedStrength) && printedStrength > 0
-			? printedStrength
-			: 2;
+		const tubeStrength =
+			Number.isFinite(printedStrength) && printedStrength > 0
+				? printedStrength
+				: 2;
 		const maxSalvo = Math.min(tubeStrength, store.system?.quantity ?? 0);
 		const sizeInput = (await foundry.applications.api.DialogV2.input({
 			window: { title: ports.i18n.t("SHIP_ORDNANCE.SALVO_TITLE") },
@@ -462,8 +467,10 @@ const launchTorpedoesRow: ShipRow = {
 			guidanceKey,
 		);
 		const launchTurn =
-			Number((kindData.extra as { launchTurn?: number } | undefined)?.launchTurn ??
-				0) || 0;
+			Number(
+				(kindData.extra as { launchTurn?: number } | undefined)?.launchTurn ??
+					0,
+			) || 0;
 		const salvo: ShipTorpedoSalvo = {
 			id: `torpedo-${Date.now().toString(36)}-${Math.floor(
 				Math.random() * 1_000_00,
@@ -474,12 +481,18 @@ const launchTorpedoesRow: ShipRow = {
 			damage: store.system?.damage || profile?.damage || "",
 			critRating: Math.max(
 				0,
-				Math.floor(Number(store.system?.critRating ?? profile?.critRating ?? 0)),
+				Math.floor(
+					Number(store.system?.critRating ?? profile?.critRating ?? 0),
+				),
 			),
 			terminalPenetration: Math.max(
 				0,
 				Math.floor(
-					Number(store.system?.terminalPenetration ?? profile?.terminalPenetration ?? 0),
+					Number(
+						store.system?.terminalPenetration ??
+							profile?.terminalPenetration ??
+							0,
+					),
 				),
 			),
 			// The Torpedo Rating (printed p9): the guidance choice governs, except
@@ -494,8 +507,14 @@ const launchTorpedoesRow: ShipRow = {
 					? stored
 					: torpedoRating(warheadKey, guidanceKey);
 			})(),
-			speed: Number(store.system?.speed) > 0 ? Number(store.system?.speed) : speedRange.speed,
-			range: Number(store.system?.range) > 0 ? Number(store.system?.range) : speedRange.range,
+			speed:
+				Number(store.system?.speed) > 0
+					? Number(store.system?.speed)
+					: speedRange.speed,
+			range:
+				Number(store.system?.range) > 0
+					? Number(store.system?.range)
+					: speedRange.range,
 			remaining: salvoSize,
 			travelled: 0,
 			launchTurn,
@@ -595,6 +614,23 @@ const torpedoRunRow: ShipRow = {
 		const target = ports.targets.actor() as Actor | undefined;
 
 		// -- movement: one Strategic Turn's travel (printed p7) ---------------
+		// The input is capped by BOTH the remaining range and the kernel's
+		// travelled clock (Speed VU per subsequent Strategic Turn, printed p7 —
+		// capped by the current turn; torpedoRunTravelled): a prompt above that
+		// ceiling can only over-travel the salvo, never catch it up.
+		const nowTurn = Math.max(0, Math.floor(Number(ports.clock.round()) || 0));
+		const travelCeiling = Math.max(
+			0,
+			Math.min(
+				Math.max(0, salvo.range - salvo.travelled),
+				torpedoRunTravelled(
+					salvo.launchTurn,
+					nowTurn,
+					salvo.speed,
+					salvo.range,
+				) - salvo.travelled,
+			),
+		);
 		const travelInput = (await foundry.applications.api.DialogV2.input({
 			window: { title: ports.i18n.t("SHIP_ORDNANCE.TRAVEL_TITLE") },
 			content: `<p>${ports.i18n.t("SHIP_ORDNANCE.TRAVEL_PROMPT", {
@@ -603,26 +639,29 @@ const torpedoRunRow: ShipRow = {
 				remaining: String(Math.max(0, salvo.range - salvo.travelled)),
 			})}</p><div class="form-group"><input type="number" name="distance" value="${Math.min(
 				salvo.speed,
-				Math.max(0, salvo.range - salvo.travelled),
-			)}" min="0" step="1"></div><p>${ports.i18n.t("SHIP_ORDNANCE.TRAVEL_COVER", {
-				cover: salvo.wide ? "2" : "1",
-			})}</p>`,
+				travelCeiling,
+			)}" min="0" step="1"></div><p>${ports.i18n.t(
+				"SHIP_ORDNANCE.TRAVEL_COVER",
+				{
+					cover: salvo.wide ? "2" : "1",
+				},
+			)}</p>`,
 			ok: { label: ports.i18n.t("SHIP_ORDNANCE.TRAVEL_CONFIRM") },
 		})) as { distance?: string } | null;
 		if (travelInput === null) return;
-		const travelled = salvo.travelled + Math.max(
-			0,
-			Math.min(
-				Math.max(0, salvo.range - salvo.travelled),
-				Math.floor(Number(travelInput.distance) || 0),
-			),
-		);
+		const travelled =
+			salvo.travelled +
+			Math.max(
+				0,
+				Math.min(travelCeiling, Math.floor(Number(travelInput.distance) || 0)),
+			);
 		// -- an attack happens only when the salvo closed within its cover —
 		const distanceInput = (await foundry.applications.api.DialogV2.input({
 			window: { title: ports.i18n.t("SHIP_ORDNANCE.DISTANCE_TITLE") },
 			content: `<p>${ports.i18n.t("SHIP_ORDNANCE.DISTANCE_PROMPT", {
 				target: escapeDocumentData(
-					((target ?? null) as { name?: string } | null | undefined)?.name ?? "",
+					((target ?? null) as { name?: string } | null | undefined)?.name ??
+						"",
 				),
 			})}</p><div class="form-group"><input type="number" name="distance" value="0" min="0" step="1"></div>`,
 			ok: { label: ports.i18n.t("SHIP_ORDNANCE.DISTANCE_CONFIRM") },
@@ -641,6 +680,9 @@ const torpedoRunRow: ShipRow = {
 		let critText = "";
 		let hits = 0;
 		let turretText = "";
+		/** The per-hit Hull damage, ACCUMULATED (the values are in scope) —
+		 * never re-parsed off the display strings (nit 14). */
+		let sunkHullDamage = 0;
 		const attempted = closing <= cover && remaining > 0;
 
 		if (attempted) {
@@ -652,7 +694,9 @@ const torpedoRunRow: ShipRow = {
 			// -- turret shoot-down FIRST (printed p13 + Core Rulebook p220) ----
 			const bonus = turretTestBonus(targetSystem.turretRating ?? 0);
 			if (bonus > 0) {
-				const crew = crewQualityEffects(targetSystem.crewQuality ?? "competent");
+				const crew = crewQualityEffects(
+					targetSystem.crewQuality ?? "competent",
+				);
 				const turretTarget = Math.min(100, crew.skill + bonus);
 				const turret = await rollTest(turretTarget);
 				rolls.push(...turret.rolls);
@@ -685,7 +729,12 @@ const torpedoRunRow: ShipRow = {
 						display: "-20",
 					});
 				}
-				hits = torpedoSalvoHits(attack.success ? attack.degrees : 0, remaining, salvo.wide);
+				// A FAILED attack scores NOTHING (printed p7: "On a successful test,
+				// one torpedo strikes ..."): torpedoSalvoHits(0, …) still returns 1,
+				// so the failure guard rides HERE, in the handler.
+				hits = attack.success
+					? torpedoSalvoHits(attack.degrees, remaining, salvo.wide)
+					: 0;
 				// -- damage per torpedo (printed pp7-9) ------------------------
 				const terms = damageTermsOf(salvo.damage);
 				const armour = Math.max(0, targetSystem.armour ?? 0);
@@ -718,6 +767,7 @@ const torpedoRunRow: ShipRow = {
 						label: ports.i18n.t("SHIP_ORDNANCE.HIT_ROW", { n: hit + 1 }),
 						display: `${hitDamage.raw} → ${hitDamage.hullDamage}`,
 					});
+					sunkHullDamage += hitDamage.hullDamage;
 					if (hitDamage.critical) {
 						const critRoll = await ports.dice.roll("1d5");
 						rolls.push(...(critRoll.rolls ? [...critRoll.rolls] : []));
@@ -730,8 +780,10 @@ const torpedoRunRow: ShipRow = {
 					if (salvo.warhead === "vortex") {
 						const morale = await ports.dice.roll("1d5");
 						rolls.push(...(morale.rolls ? [...morale.rolls] : []));
-						targetSystem.crewMorale =
-							Math.max(0, Math.max(0, targetSystem.crewMorale ?? 100) - morale.total);
+						targetSystem.crewMorale = Math.max(
+							0,
+							Math.max(0, targetSystem.crewMorale ?? 100) - morale.total,
+						);
 						rows.push({
 							id: "ord:vortex",
 							label: ports.i18n.t("SHIP_ORDNANCE.VORTEX_ROW"),
@@ -747,7 +799,8 @@ const torpedoRunRow: ShipRow = {
 						);
 						targetSystem.crewPopulation = Math.max(
 							0,
-							Math.max(0, targetSystem.crewPopulation ?? 100) - population.total,
+							Math.max(0, targetSystem.crewPopulation ?? 100) -
+								population.total,
 						);
 						targetSystem.crewMorale = Math.max(
 							0,
@@ -766,15 +819,12 @@ const torpedoRunRow: ShipRow = {
 						critText = critText || ports.i18n.t("SHIP_ORDNANCE.BOARDING_HIT");
 					}
 				}
-				// Boarding torpedoes never wound the hull (printed p8).
-				if (salvo.warhead === "boarding") hullDamage = 0;
-				// Hull + crew writes: per-hit totals are individually compared, so
-				// the applied HI damage is the SUM; the Crew/Morale drag follows
-				// the Core Rulebook p221 rule through crewLossFromHullDamage.
-				hullDamage = rows
-					.filter((row) => row.id.startsWith("ord:hit-"))
-					.map((row) => Number(row.display.split("→")[1]?.trim() ?? "0"))
-					.reduce((sum, value) => sum + value, 0);
+				// Boarding torpedoes never wound the hull (printed p8); the rest of
+				// the Hull + crew writes book the ACCUMULATED per-hit totals (the
+				// applied HI damage is the SUM — no re-parsing of display strings) and
+				// the Crew/Morale drag follows the Core Rulebook p221 rule through
+				// crewLossFromHullDamage.
+				hullDamage = salvo.warhead === "boarding" ? 0 : sunkHullDamage;
 				if (hullDamage > 0) {
 					await ports.actors.update(target, {
 						system: crewTrackWrite(targetSystem, hullDamage),
@@ -896,15 +946,15 @@ async function promptPick(
 		buttons: items.map((item) => ({
 			action: String(item.id ?? item.name ?? ""),
 			label: `${item.name ?? "?"}${
-				item.system?.quantity != null
-					? ` ×${item.system.quantity}`
-					: ""
+				item.system?.quantity != null ? ` ×${item.system.quantity}` : ""
 			}`,
 			callback: () => String(item.id ?? item.name ?? ""),
 		})),
 	})) as string | null;
 	if (pick === null) return null;
-	return items.find((item) => String(item.id ?? item.name ?? "") === pick) ?? null;
+	return (
+		items.find((item) => String(item.id ?? item.name ?? "") === pick) ?? null
+	);
 }
 
 /** The active salvo pick (id + remaining). */
@@ -1123,7 +1173,9 @@ function strikeRunRow(kind: "bombing-run" | "assault-boat-run"): ShipRow {
 		async after(request, prepared, outcome, _messageId) {
 			const ports = getPorts();
 			const data = prepared.kindData as
-				| (OrdnanceKindData & { extra?: { strikeKind?: string; squadrons?: number } })
+				| (OrdnanceKindData & {
+						extra?: { strikeKind?: string; squadrons?: number };
+				  })
 				| undefined;
 			if (!data) return;
 			const strikeKind = data.extra?.strikeKind ?? "bombing-run";
@@ -1145,17 +1197,22 @@ function strikeRunRow(kind: "bombing-run" | "assault-boat-run"): ShipRow {
 				ports.notify.warn("SHIP_COMBAT.NO_TARGET");
 				return;
 			}
-			const mode = strikeKind === "assault-boat-run" ? "assault-boats" : "bombers";
+			const mode =
+				strikeKind === "assault-boat-run" ? "assault-boats" : "bombers";
 			if (!outcome.success) {
-				await postCard(request.actor, `${TEMPLATE_ROOT}chat/ship-ordnance.hbs`, {
-					title: prepared.title,
-					titleDoc: { prefix: "", suffix: "", name: data.name, link },
-					mode,
-					failed: true,
-					targetName: (target as { name?: string } | undefined)?.name ?? "",
-					outcomeLabel: outcomeLabel(false, outcome.degrees),
-					strikeNote: ports.i18n.t("SHIP_ORDNANCE.STRIKE_WITHDRAW"),
-				});
+				await postCard(
+					request.actor,
+					`${TEMPLATE_ROOT}chat/ship-ordnance.hbs`,
+					{
+						title: prepared.title,
+						titleDoc: { prefix: "", suffix: "", name: data.name, link },
+						mode,
+						failed: true,
+						targetName: (target as { name?: string } | undefined)?.name ?? "",
+						outcomeLabel: outcomeLabel(false, outcome.degrees),
+						strikeNote: ports.i18n.t("SHIP_ORDNANCE.STRIKE_WITHDRAW"),
+					},
+				);
 				return;
 			}
 			const targetSystem = readShipSystem(target);
@@ -1173,19 +1230,23 @@ function strikeRunRow(kind: "bombing-run" | "assault-boat-run"): ShipRow {
 					Math.floor(Number(survivorsInput.survivors) || 0),
 				);
 				const landings = assaultBoatLandings(outcome.degrees, survivors);
-				await postCard(request.actor, `${TEMPLATE_ROOT}chat/ship-ordnance.hbs`, {
-					title: prepared.title,
-					titleDoc: { prefix: "", suffix: "", name: data.name, link },
-					mode,
-					failed: false,
-					targetName: (target as { name?: string }).name ?? "",
-					outcomeLabel: outcomeLabel(true, outcome.degrees),
-					landingNote: ports.i18n.t("SHIP_ORDNANCE.LANDING_NOTE", {
-						count: landings,
-						bonus: landings * 10,
-					}),
-					strikeNote: ports.i18n.t("SHIP_ORDNANCE.HIT_AND_RUN_NOTE"),
-				});
+				await postCard(
+					request.actor,
+					`${TEMPLATE_ROOT}chat/ship-ordnance.hbs`,
+					{
+						title: prepared.title,
+						titleDoc: { prefix: "", suffix: "", name: data.name, link },
+						mode,
+						failed: false,
+						targetName: (target as { name?: string }).name ?? "",
+						outcomeLabel: outcomeLabel(true, outcome.degrees),
+						landingNote: ports.i18n.t("SHIP_ORDNANCE.LANDING_NOTE", {
+							count: landings,
+							bonus: landings * 10,
+						}),
+						strikeNote: ports.i18n.t("SHIP_ORDNANCE.HIT_AND_RUN_NOTE"),
+					},
+				);
 				return;
 			}
 			// Bombing run: hits, cap 3 + 1 per additional squadron (printed p13).
@@ -1314,7 +1375,9 @@ const fighterAttackRow: ShipRow = {
 			window: { title: ports.i18n.t("SHIP_BOARDING.DEGREES_TITLE") },
 			content: `<p>${ports.i18n.t("SHIP_BOARDING.DEGREES_PROMPT", {
 				winner: escapeDocumentData(
-					winner === "ship" ? (ship as { name?: string }).name ?? "" : (target.name ?? ""),
+					winner === "ship"
+						? ((ship as { name?: string }).name ?? "")
+						: (target.name ?? ""),
 				),
 			})}</p><div class="form-group"><input type="number" name="degrees" value="1" min="1" max="20" step="1"></div>`,
 			ok: { label: ports.i18n.t("SHIP_BOARDING.DEGREES_CONFIRM") },
@@ -1325,7 +1388,9 @@ const fighterAttackRow: ShipRow = {
 			Math.min(20, Math.floor(Number(degreeInput.degrees) || 0)),
 		);
 		const loserName =
-			winner === "ship" ? (target.name ?? "") : ((ship as { name?: string }).name ?? "");
+			winner === "ship"
+				? (target.name ?? "")
+				: ((ship as { name?: string }).name ?? "");
 		// The LOSER's torpedo runs take the eliminations (machine state); the
 		// loser's fighter/bomber squadrons are a manual note only.
 		const loser = winner === "ship" ? target : ship;
@@ -1336,20 +1401,23 @@ const fighterAttackRow: ShipRow = {
 			const nextRuns = runs
 				.map((salvo) => {
 					const down = Math.min(salvo.remaining, degrees);
-					if (down > 0) salvoRows.push({ name: salvo.name, display: `-${down}` });
-					return { ...salvo, remaining: Math.max(0, salvo.remaining - degrees) };
+					if (down > 0)
+						salvoRows.push({ name: salvo.name, display: `-${down}` });
+					return {
+						...salvo,
+						remaining: Math.max(0, salvo.remaining - degrees),
+					};
 				})
 				.filter((salvo) => !torpedoRunSpent(salvo as ShipTorpedoSalvo));
-			const flags = (loserSystem.turnFlags ?? []).filter(
-				(flag) =>
-					flag.key !== "torpedo-run" ||
-					nextRuns.some((salvo) => salvo.id === flag.id),
-			)
+			const flags = (loserSystem.turnFlags ?? [])
+				.filter(
+					(flag) =>
+						flag.key !== "torpedo-run" ||
+						nextRuns.some((salvo) => salvo.id === flag.id),
+				)
 				.map((flag) => {
 					const run = nextRuns.find((salvo) => salvo.id === flag.id);
-					return run
-						? { ...flag, value: Math.max(0, run.remaining) }
-						: flag;
+					return run ? { ...flag, value: Math.max(0, run.remaining) } : flag;
 				});
 			await ports.actors.update(loser, {
 				system: { torpedoSalvos: nextRuns, turnFlags: flags },
@@ -1364,7 +1432,10 @@ const fighterAttackRow: ShipRow = {
 				link: docAnchor(prepared.kindData),
 			},
 			mode: "fighters",
-			winnerName: winner === "ship" ? (ship as { name?: string }).name ?? "" : (target.name ?? ""),
+			winnerName:
+				winner === "ship"
+					? ((ship as { name?: string }).name ?? "")
+					: (target.name ?? ""),
 			loserName,
 			degrees,
 			salvoRows,
@@ -1393,6 +1464,18 @@ export const ordnanceRowHandlers: Readonly<Record<string, ShipRow>> = {
 	"assault-boat-run": assaultBoatRunRow,
 	"attack-with-fighters": fighterAttackRow,
 };
+
+/**
+ * The PREPARE-ONLY ordnance rows (Launch / Run / the manual opposed fighter
+ * attack): these rows' own prompts roll the dice, so the combat-tab chips for
+ * them skip the shared TestDialog (the Break Free / Rout machinery precedent);
+ * the standard-path rows (Reload, the two strike runs) keep the dialog.
+ */
+export const ORDNANCE_PROMPT_ONLY_ROWS: ReadonlySet<string> = new Set([
+	"launch-torpedoes",
+	"torpedo-run",
+	"attack-with-fighters",
+]);
 
 /** Type anchor: the rows satisfy the ship-action after-hook contract. */
 export type OrdnanceRowAfter = RollHandler<"ship-action">["after"];

@@ -8,6 +8,7 @@
 
 import {
 	applyVoidShields,
+	activeTurnFlag,
 	composeSalvoDamageFormula,
 	crewLossFromHullDamage,
 	crippledEffects,
@@ -435,6 +436,7 @@ export const shipRepairHandler: RollHandler<"ship-repair"> = {
 		}
 		const system = systemOf(ship) as unknown as {
 			crewQuality?: string;
+			turnFlags?: ShipTurnFlag[];
 		};
 		const crew = crewQualityEffects(system.crewQuality ?? "competent");
 		const difficultModifier: Modifier = {
@@ -443,6 +445,24 @@ export const shipRepairHandler: RollHandler<"ship-repair"> = {
 			label: ports.i18n.t("SHIP_COMBAT.REPAIR_DIFFICULT"),
 			value: -10,
 		};
+		// Put Your Backs Into It! (bead 6ddz, printed p218): the "Emergency
+		// Repairs" aid flag reads HERE as a VISIBLE row — the +5 rides the
+		// chosen action's own roll (the BS path reads the same flag through the
+		// salvo pipeline's turn-flag rows).
+		const initialModifiers: Modifier[] = [difficultModifier];
+		const backs = activeTurnFlag(
+			system.turnFlags ?? [],
+			"backs-into-it",
+			"emergency-repairs",
+		);
+		if (backs && backs.value !== 0) {
+			initialModifiers.push({
+				id: "ship:backs-into-it:emergency-repairs",
+				source: { type: "item", label: "SHIP_COMBAT.TURN_FLAGS" },
+				label: ports.i18n.t("SHIP_COMBAT.TURN_FLAG_BACKS_INTO_IT_OWN"),
+				value: backs.value,
+			});
+		}
 		return {
 			title: `${ship.name} — ${ports.i18n.t("SHIP_COMBAT.REPAIR_TITLE", {
 				component: item.name ?? "",
@@ -450,7 +470,7 @@ export const shipRepairHandler: RollHandler<"ship-repair"> = {
 			baseTarget: crew.skill,
 			testKind: "characteristic",
 			testKey: "tech-use",
-			initialModifiers: [difficultModifier],
+			initialModifiers,
 			weapon: null,
 			context: {},
 			kindData: { itemId: request.itemId, componentId: item.id ?? undefined },

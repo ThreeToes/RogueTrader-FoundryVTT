@@ -54,7 +54,7 @@ import type {
 import { escapeDocumentData, promptTargetComponent } from "../roll-prompts";
 import { characteristicHandler, skillHandler } from "./characteristic-skill";
 import type { PerformerSide } from "./ship-action";
-import { findOwnedSkillItem, untrainedCharacteristicFor } from "./skill-lookup";
+import { findOwnedSkillItem } from "./skill-lookup";
 
 // ------------------------------------------------------------- shared shapes
 
@@ -213,16 +213,34 @@ async function promptChoice(
  * name are Interaction skills — the Table 8-11 cells pair "Deceive or
  * Blather" and "Intimidate or Charm", p293 names Charm/Command/Deceive/
  * Intimidate. Intimidate's characteristic is STRENGTH (`s`); the others are
- * Fellowship. Blather is Advanced (Table 3-1) — basic-only untrained rule
- * (Core Rulebook p74) has no untrained Blather.
+ * Fellowship. Each entry therefore carries the skill's PRINTED characteristic
+ * (verified in the cached core dump, file pages 77-82 = printed pp76-81:
+ * Blather/Charm/Command/Deceive → Fellowship, Intimidate → Strength — the
+ * printed header, with p81's GM option to substitute Int or Fel for
+ * subtle threats staying a table, not a silent override) so an UNTRAINED
+ * candidate resolves to the right characteristic instead of riding the
+ * evasion-only UNTRAINED_SKILL_CHARACTERISTIC table (bead tueu: that
+ * fallback used to send Intimidate to Fellowship). BLATHER IS ADVANCED —
+ * basic-only untrained rule (Core Rulebook p74) has no untrained Blather,
+ * so its entry is never picked untrained.
  */
-const INTERACTION_SKILLS: Readonly<Record<string, { basic: boolean }>> = {
-	Blather: { basic: false },
-	Charm: { basic: true },
-	Command: { basic: true },
-	Deceive: { basic: true },
-	Intimidate: { basic: true },
+const INTERACTION_SKILLS: Readonly<
+	Record<string, { basic: boolean; characteristic: string }>
+> = {
+	Blather: { basic: false, characteristic: "fel" },
+	Charm: { basic: true, characteristic: "fel" },
+	Command: { basic: true, characteristic: "fel" },
+	Deceive: { basic: true, characteristic: "fel" },
+	Intimidate: { basic: true, characteristic: "s" },
 };
+
+/**
+ * The untrained-characteristic fallback per interaction skill name; every
+ * candidate in the table has one, so the fallback text is unreachable here.
+ */
+function candidateCharacteristic(skill: string): string {
+	return INTERACTION_SKILLS[skill]?.characteristic ?? "fel";
+}
 
 type SkillCandidate = {
 	skill: string;
@@ -230,14 +248,6 @@ type SkillCandidate = {
 	itemId?: string;
 	characteristicKey?: string;
 };
-
-/**
- * The untrained-characteristic fallback per interaction skill name; every
- * candidate has one, so the table's absence is impossible here.
- */
-function candidateCharacteristic(skill: string): string {
-	return untrainedCharacteristicFor(skill) ?? "fel";
-}
 
 /**
  * The p74 rules per candidate: an owned skill item is a TRAINED attempt;

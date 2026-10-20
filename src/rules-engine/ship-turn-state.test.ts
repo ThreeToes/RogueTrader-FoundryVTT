@@ -566,3 +566,123 @@ describe("routRoll (bead w98s, Core Rulebook p215)", () => {
 		expect(routRoll(1, 0).routed).toBe(true);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// bead 6ddz: the Strategic Turn START maintenance (expiry + rotation in one
+// step — the kernel contract the adapters drive at the combat tracker's turn
+// change) and the backs-into-it read path on the salvo row derivation.
+// ---------------------------------------------------------------------------
+
+import { type ShipCrewLosses, shipTurnStart } from "./ship-turn-state";
+
+describe("shipTurnStart — the Strategic Turn boundary maintenance (bead 6ddz)", () => {
+	it("expires next-turn flags AND rotates the losses at one boundary", () => {
+		const snapshot = { population: 90, morale: 60 } as ShipCrewLosses;
+		const next = shipTurnStart(
+			{
+				turnFlags: [
+					evasive(), // null expiry — cleared at the ship's own turn
+					evasive({
+						id: "run",
+						key: "torpedo-run",
+						value: 2,
+						expiresAtTurn: 4,
+					}),
+					evasive({
+						id: "repel",
+						key: "repel-boarders",
+						value: 10,
+						persistent: true,
+					}),
+				],
+				lastTurnLosses: { population: 3, morale: 2 },
+				turnStartCrew: snapshot,
+			},
+			{ population: 85, morale: 55 },
+			4,
+		);
+		// Null-expiry evasive is gone at the own turn; the recorded-index run
+		// survives while 4 < 4 is false — dropped at index 4.
+		expect(next.turnFlags.map((flag) => flag.id)).toEqual(["repel"]);
+		// The turn now closing lost 5/5 (90→85, 60→55): the memory rotates.
+		expect(next.lastTurnLosses).toEqual({ population: 5, morale: 5 });
+		// The snapshot replants at the current tracks for the next rotation.
+		expect(next.turnStartCrew).toEqual({ population: 85, morale: 55 });
+	});
+
+	it("keeps a recorded-index flag that has not reached its expiry turn", () => {
+		const next = shipTurnStart(
+			{
+				turnFlags: [
+					evasive({
+						id: "run",
+						key: "torpedo-run",
+						value: 2,
+						expiresAtTurn: 5,
+					}),
+				],
+				lastTurnLosses: { population: 0, morale: 0 },
+				turnStartCrew: { population: 100, morale: 100 },
+			},
+			{ population: 100, morale: 100 },
+			4,
+		);
+		expect(next.turnFlags).toHaveLength(1);
+	});
+
+	it("seeds the snapshot on the first observed boundary without rotating the memory", () => {
+		const next = shipTurnStart(
+			{
+				turnFlags: [evasive()],
+				lastTurnLosses: { population: 4, morale: 1 },
+				turnStartCrew: null,
+			},
+			{ population: 97, morale: 88 },
+			2,
+		);
+		// The pre-existing memory is PRESERVED (the just-ended turn's losses
+		// were unattributable), the snapshot is seeded, and the flag expired.
+		expect(next.lastTurnLosses).toEqual({ population: 4, morale: 1 });
+		expect(next.turnStartCrew).toEqual({ population: 97, morale: 88 });
+		expect(next.turnFlags).toEqual([]);
+	});
+});
+
+describe("salvoTurnFlagRows reads the backs-into-it flag (bead 6ddz, p218)", () => {
+	const weaponId = "wpn-1";
+	it("rows the +5 when the flag names the weapon component being fired", () => {
+		const rows = salvoTurnFlagRows({
+			firingFlags: [
+				evasive({
+					id: "backs",
+					key: "backs-into-it",
+					value: 5,
+					target: weaponId,
+				}),
+			],
+			targetFlags: [],
+			weaponId,
+		});
+		expect(rows).toContainEqual({
+			side: "firing",
+			key: "backs-into-it",
+			value: 5,
+		});
+	});
+
+	it("rows nothing for a backs flag naming a DIFFERENT component", () => {
+		const rows = salvoTurnFlagRows({
+			firingFlags: [
+				evasive({
+					id: "backs",
+					key: "backs-into-it",
+					value: 5,
+					target: "wpn-2",
+				}),
+			],
+			targetFlags: [],
+			weaponId,
+		});
+		expect(rows.some((row) => row.key === "backs-into-it")).toBe(false);
+	});
+});

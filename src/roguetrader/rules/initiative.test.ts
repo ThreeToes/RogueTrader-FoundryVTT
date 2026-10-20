@@ -444,14 +444,17 @@ describe("starship initiative (bead qkq1)", () => {
 		}
 	});
 
-	// Boarded pair (Core Rulebook p215; S2's boardedWith uuid-or-null): the
-	// banner rides the card; the tracker reorder stays GM-manual.
+	// Boarded pair (Core Rulebook p215; S2's boardedWith OBJECT — the
+	// { uuid, breakFreeFailedThisTurn } pair state, bead tueu): the banner
+	// rides the card; the tracker reorder stays GM-manual.
 	test("a boarded ship's card carries the Boarding banner", async () => {
 		wirePorts(1);
 		const restore = wireDialog();
 		try {
 			await rollInitiativeAction(
-				starshipFixture(25, { boardedWith: "Actor.x9" }) as never,
+				starshipFixture(25, {
+					boardedWith: { uuid: "Actor.x9", breakFreeFailedThisTurn: false },
+				}) as never,
 			);
 			expect(lastCardVars?.boarded).toBe(true);
 		} finally {
@@ -470,10 +473,22 @@ describe("starship initiative (bead qkq1)", () => {
 		}
 	});
 
+	// The S2 PAIR-state shape ({ uuid, breakFreeFailedThisTurn }, bead tueu):
+	// only a non-empty uuid inside the pair counts; the S2-preceding shape
+	// (a bare uuid STRING) is NOT boarded — the old test pinned it green.
 	test("the shipBoarded read treats a missing field as unset", () => {
 		expect(shipBoarded({})).toBe(false);
 		expect(shipBoarded({ boardedWith: null })).toBe(false);
-		expect(shipBoarded({ boardedWith: "Actor.x9" })).toBe(true);
+		expect(shipBoarded({ boardedWith: undefined })).toBe(false);
+		expect(shipBoarded({ boardedWith: {} })).toBe(false);
+		expect(
+			shipBoarded({ boardedWith: { uuid: "", breakFreeFailedThisTurn: false } }),
+		).toBe(false);
+		expect(
+			shipBoarded({ boardedWith: { uuid: "Actor.x9", breakFreeFailedThisTurn: false } }),
+		).toBe(true);
+		// A stale uuid STRING (the pre-S2 shape) never reads as boarded.
+		expect(shipBoarded({ boardedWith: "Actor.x9" })).toBe(false);
 		expect(shipBoarded(undefined)).toBe(false);
 	});
 

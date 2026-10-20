@@ -210,19 +210,28 @@ export async function manoeuvreRowPrepare(
 	// Silent Running interplay (Core Rulebook p218): "the difficulty of all
 	// related Skill Tests increases by one step" — one RT-ladder step (−10)
 	// as a VISIBLE row; a silent modifier is a bug.
-	const starship = systemOf(ship) as unknown as {
-		silentRunning?: boolean;
-		hullClass?: string;
-	};
-	if (starship.silentRunning) {
-		extra.push({
-			id: "ship:silent-running",
-			source: { type: "item", label: "SHIP_ACTION.SILENT_RUNNING" },
-			label: ports.i18n.t("SHIP_ACTION.SILENT_RUNNING_STEP"),
-			value: -10,
-		});
-	}
+	const silentRow = silentRunningRow(ship);
+	if (silentRow) extra.push(silentRow);
 	return extra;
+}
+
+/**
+ * The Silent Running difficulty row (Core Rulebook p218): "the difficulty of
+ * all related Skill Tests increases by one step" — one RT-ladder step (−10)
+ * as a VISIBLE row (a silent modifier is a bug). Shared so the row shape is
+ * identical on BOTH the Table 8-10 manoeuvre overlay and the ram/boarding/
+ * break-free combined tests (bead tueu, nit 17: those combined tests skipped
+ * the same phrase). Null = the flag is unset, nothing to add.
+ */
+export function silentRunningRow(ship: Actor): Modifier | null {
+	const starship = systemOf(ship) as unknown as { silentRunning?: boolean };
+	if (!starship.silentRunning) return null;
+	return {
+		id: "ship:silent-running",
+		source: { type: "item", label: "SHIP_ACTION.SILENT_RUNNING" },
+		label: getPorts().i18n.t("SHIP_ACTION.SILENT_RUNNING_STEP"),
+		value: -10,
+	};
 }
 
 // -------------------------------------------------------------- after-side

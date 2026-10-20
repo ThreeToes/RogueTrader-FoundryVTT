@@ -48,7 +48,11 @@ globalThisRecord.ui = {
 };
 
 import { afterEach, describe, expect, it } from "bun:test";
-import { getPorts, resetPorts, setPorts } from "../../infrastructure/foundry/ports";
+import {
+	getPorts,
+	resetPorts,
+	setPorts,
+} from "../../infrastructure/foundry/ports";
 import { ordnanceRowHandlers } from "./ship-ordnance";
 import { boardingRowKey } from "./ship-boarding";
 
@@ -155,10 +159,17 @@ function cueDialog(
 	return { waits, inputs };
 }
 
-/** Capture the port traffic (the captureEffectPorts idiom, extended). */
+/** Capture the port traffic (the captureEffectPorts idiom, extended).
+ * `diceFormula` may carry per-die payloads (`dice`) for the damage rolls,
+ * and `clockRound` overrides the clock's round (the run's travelled cap
+ * derives from it). */
 function capturePorts(
-	diceFormula: (formula: string) => { total: number },
+	diceFormula: (formula: string) => {
+		total: number;
+		dice?: Array<{ result: number }>;
+	},
 	targetActor: unknown = null,
+	clockRound = 3,
 ) {
 	const shipUpdates: Array<Record<string, unknown>> = [];
 	const itemUpdates: Array<Record<string, unknown>> = [];
@@ -172,7 +183,7 @@ function capturePorts(
 				const value = diceFormula(formula);
 				return {
 					total: value.total,
-					dice: [],
+					dice: value.dice ?? [],
 					terms: [],
 					rolls: [],
 					formula,
@@ -195,7 +206,7 @@ function capturePorts(
 			...getPorts().targets,
 			actor: () => targetActor,
 		},
-		clock: { round: () => 3 },
+		clock: { round: () => clockRound },
 		chat: {
 			...getPorts().chat,
 			post: async (_actor: unknown, _t: string, vars: unknown) => {
@@ -313,9 +324,9 @@ describe("Launch Torpedoes gates (Battlefleet Koronus printed pp6-7)", () => {
 describe("Launch Torpedoes bookkeeping (Battlefleet Koronus printed pp6-9)", () => {
 	it("decrements the stores through the ONE helper and books the salvo + run flag", async () => {
 		cueDialog([], [{ size: "6" }], { wait: ["narrow", "standard"] });
-		const { shipUpdates, itemUpdates, posts } = capturePorts(
-			() => ({ total: 10 }),
-		);
+		const { shipUpdates, itemUpdates, posts } = capturePorts(() => ({
+			total: 10,
+		}));
 		const ship = shipFixture([tube, plasmaStore]);
 		await ordnanceRowHandlers["launch-torpedoes"]!.after?.(
 			{ kind: "ship-action", actor: ship as never, itemId: "act-1" } as never,
@@ -373,9 +384,7 @@ describe("Launch Torpedoes bookkeeping (Battlefleet Koronus printed pp6-9)", () 
 			expiresAtTurn: 10,
 			persistent: false,
 		});
-		expect(
-			(posts[0] as { mode?: string }).mode,
-		).toBe("launch");
+		expect((posts[0] as { mode?: string }).mode).toBe("launch");
 	});
 });
 
@@ -398,9 +407,12 @@ describe("Torpedo Run bookkeeping (Battlefleet Koronus printed pp6-9)", () => {
 			],
 		});
 		// Travel input: 10 VU this turn; the distance prompt (0 → no attack —
-		// the salvo is out past range anyway, 55+10 = 65 ≥ 60).
+		// the salvo is out past range anyway 55+10 = 65 ≥ 60). The clock reads
+		// turn 8: the kernel's travelled cap (min(Range, 8 × Speed 10) = 60)
+		// leaves 5 VU of headroom over the 55 already booked, so the input is
+		// capped there and the salvo still retires past its Range.
 		cueDialog([], [{ distance: "10" }, { distance: "3" }]);
-		const { shipUpdates, posts } = capturePorts(() => ({ total: 10 }));
+		const { shipUpdates, posts } = capturePorts(() => ({ total: 10 }), null, 8);
 		await ordnanceRowHandlers["torpedo-run"]!.after?.(
 			{ kind: "ship-action", actor: ship as never, itemId: "act-1" } as never,
 			{
@@ -528,7 +540,11 @@ describe("strike-run rows: Bombing Run (Battlefleet Koronus printed p13)", () =>
 	it("carries the Craft Rating + squadron rows as visible modifiers", async () => {
 		cueDialog([], [{ rating: "10" }, { squadrons: "3" }]);
 		const prepared = await ordnanceRowHandlers["bombing-run"]!.prepare(
-			{ kind: "ship-action", actor: shipFixture([]) as never, itemId: "act-1" } as never,
+			{
+				kind: "ship-action",
+				actor: shipFixture([]) as never,
+				itemId: "act-1",
+			} as never,
 			{
 				name: "Bombing Run",
 				type: "ship-action",
@@ -545,10 +561,172 @@ describe("strike-run rows: Bombing Run (Battlefleet Koronus printed p13)", () =>
 		const ids = rows.map((row) => row.id);
 		expect(ids).toContain("ship-ordnance:craft-rating");
 		expect(ids).toContain("ship-ordnance:squadron-bonus");
-		const combined = (
-			prepared!.kindData as { combinedTarget?: number }
-		).combinedTarget;
+		const combined = (prepared!.kindData as { combinedTarget?: number })
+			.combinedTarget;
 		// Command 30 + Craft Rating 10 + (+5 × 2 extra squadrons) = 50.
 		expect(combined).toBe(50);
+	});
+});
+
+// -------------------------------------------------Torpedo Run: attack maths
+
+describe("Torpedo Run attack maths (bead brex, Battlefleet Koronus printed p7)", () => {
+	const runKindData = {
+		itemId: "act-1",
+		uuid: "Item.act-1",
+		name: "Torpedo Run",
+		actionCost: "",
+		description: "",
+		testKey: "torpedo-run",
+		difficulty: "",
+		difficultyKind: "none",
+		crewFallback: true,
+		shipMod: 0,
+		combinedTarget: 0,
+	};
+	const flagFor = (value: number) => ({
+		id: "salvo-1",
+		key: "torpedo-run",
+		value,
+		target: "all",
+		expiresAtTurn: 10,
+		persistent: false,
+	});
+
+	it("a FAILED attack scores NO hits and burns no torpedoes (printed p7)", async () => {
+		// Travel 10 VU, then close within 1 VU — the BS + Torpedo Rating test
+		// FAILS (roll 100): the salvo keeps its 3 torpedoes and the target
+		// takes nothing.
+		const target = shipFixture([], {
+			armour: 20,
+			turretRating: 0,
+			hullIntegrity: { value: 40, max: 40 },
+		});
+		const ship = shipFixture([], {
+			torpedoSalvos: [{ ...plasmaSalvo, travelled: 0 }],
+			turnFlags: [flagFor(3)],
+		});
+		cueDialog([], [{ distance: "10" }, { distance: "0" }]);
+		const { shipUpdates, posts, rolled } = capturePorts(
+			() => ({ total: 100 }),
+			target,
+		);
+		await ordnanceRowHandlers["torpedo-run"]!.after?.(
+			{ kind: "ship-action", actor: ship as never, itemId: "act-1" } as never,
+			{
+				title: "Test Ship — Torpedo Run",
+				kindData: runKindData,
+				baseTarget: 0,
+			} as never,
+			{ success: false, degrees: 0 } as never,
+			"",
+		);
+		// The attack rolled ONCE (the d100); NO damage dice followed.
+		expect(rolled).toEqual(["1d100"]);
+		// The salvo survives intact AND books its travel; the run flag stays.
+		expect(shipUpdates).toHaveLength(1);
+		const written = shipUpdates[0]!.system as {
+			torpedoSalvos: Array<{ remaining: number; travelled: number }>;
+			turnFlags: Array<{ value: number }>;
+		};
+		expect(written.torpedoSalvos[0]!.remaining).toBe(3);
+		expect(written.torpedoSalvos[0]!.travelled).toBe(10);
+		expect(written.turnFlags[0]!.value).toBe(3);
+		// The card shows the failed attack: no hits, no hull damage.
+		const post = posts[0] as {
+			mode?: string;
+			attempted?: boolean;
+			hits?: number;
+			hullDamage?: number;
+			spent?: boolean;
+		};
+		expect(post.mode).toBe("run");
+		expect(post.attempted).toBe(true);
+		expect(post.hits).toBe(0);
+		expect(post.hullDamage).toBe(0);
+		expect(post.spent).toBe(false);
+	});
+
+	it("caps the travel input by Speed × the elapsed turns (nit 11)", async () => {
+		// Launched on turn 1, clock reads 3: the salvo may only have moved
+		// 2 turns × Speed 10 = 20 VU total, however far the prompt asks.
+		const ship = shipFixture([], {
+			torpedoSalvos: [{ ...plasmaSalvo, travelled: 0, launchTurn: 1 }],
+			turnFlags: [flagFor(3)],
+		});
+		cueDialog([], [{ distance: "60" }, { distance: "5" }]);
+		const { shipUpdates, posts } = capturePorts(() => ({ total: 100 }), null); // distance 5 > cover 1 → no attack
+		await ordnanceRowHandlers["torpedo-run"]!.after?.(
+			{ kind: "ship-action", actor: ship as never, itemId: "act-1" } as never,
+			{
+				title: "Test Ship — Torpedo Run",
+				kindData: runKindData,
+				baseTarget: 0,
+			} as never,
+			{ success: false, degrees: 0 } as never,
+			"",
+		);
+		const written = shipUpdates[0]!.system as {
+			torpedoSalvos: Array<{ travelled: number }>;
+		};
+		expect(written.torpedoSalvos[0]!.travelled).toBe(20);
+		const post = posts[0] as { attempted?: boolean };
+		expect(post.attempted).toBe(false);
+	});
+
+	it("accumulates the per-hit Hull damage and writes the HI + crew loss once", async () => {
+		// Three torpedoes hit (5 degrees, salvo of 3); each rolls 4+5 = 9 dice
+		// + 14 bonus = 23 raw, vs Armour 20 → 3 Hull per hit, 9 in total — the
+		// write sums the ACCUMULATED values, not re-parsed display strings.
+		const target = shipFixture([], {
+			armour: 20,
+			turretRating: 0,
+			hullIntegrity: { value: 40, max: 40 },
+			crewPopulation: 100,
+			crewMorale: 100,
+		});
+		const ship = shipFixture([], {
+			torpedoSalvos: [{ ...plasmaSalvo, travelled: 0 }],
+			turnFlags: [flagFor(3)],
+		});
+		cueDialog([], [{ distance: "10" }, { distance: "0" }]);
+		const { shipUpdates, posts, rolled } = capturePorts(
+			(formula) =>
+				formula === "1d100"
+					? { total: 1 }
+					: { total: 9, dice: [{ result: 4 }, { result: 5 }] },
+			target,
+		);
+		await ordnanceRowHandlers["torpedo-run"]!.after?.(
+			{ kind: "ship-action", actor: ship as never, itemId: "act-1" } as never,
+			{
+				title: "Test Ship — Torpedo Run",
+				kindData: runKindData,
+				baseTarget: 0,
+			} as never,
+			{ success: true, degrees: 0 } as never,
+			"",
+		);
+		// 1d100 attack + THREE 2d10 damage rolls, no Terminal-Penetration
+		// re-rolls (4/5 > TP 3) and no critical (dice < Crit Rating 10).
+		expect(rolled).toEqual(["1d100", "2d10", "2d10", "2d10"]);
+		// FIRST write: the TARGET takes the accumulated 9 (HI 40→31, crew/morale
+		// −9 via crewLossFromHullDamage); SECOND write books the salvo (all 3
+		// fired → spent → retired).
+		expect(shipUpdates).toHaveLength(2);
+		expect(shipUpdates[0]!.system).toMatchObject({
+			hullIntegrity: { value: 31 },
+			crewPopulation: 91,
+			crewMorale: 91,
+		});
+		expect(shipUpdates[1]!.system).toMatchObject({ torpedoSalvos: [] });
+		const post = posts[0] as {
+			hits?: number;
+			hullDamage?: number;
+			spent?: boolean;
+		};
+		expect(post.hits).toBe(3);
+		expect(post.hullDamage).toBe(9);
+		expect(post.spent).toBe(true);
 	});
 });

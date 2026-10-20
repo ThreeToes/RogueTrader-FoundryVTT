@@ -607,6 +607,66 @@ describe("the ship-actions view model (bead 7gcm)", () => {
 		expect(chip("Break Free-ish", "machinery")).toBe(false);
 	});
 
+	test("the ships-pack BFK ordnance rows group under their own label (bead brex blocker 1)", () => {
+		const context = shipActionGroupsContext(
+			[
+				{
+					type: "ship-action",
+					name: "Launch Torpedoes",
+					uuid: "o1",
+					system: {},
+				},
+				{ type: "ship-action", name: "Torpedo Run", uuid: "o2", system: {} },
+				{
+					type: "ship-action",
+					name: "Reload Torpedo Tubes",
+					uuid: "o3",
+					system: { roll: { test: "command", difficulty: "Difficult (-10)" } },
+				},
+				{
+					type: "ship-action",
+					name: "Bombing Run",
+					uuid: "o4",
+					system: { roll: { test: "command" } },
+				},
+				{
+					type: "ship-action",
+					name: "Assault Boat Run",
+					uuid: "o5",
+					system: { roll: { test: "command" } },
+				},
+				{
+					type: "ship-action",
+					name: "Attack with Fighters",
+					uuid: "o6",
+					system: { roll: { test: "command" } },
+				},
+			],
+			localizeStub,
+		);
+		const group = context.groups.find((g) => g.key === "ordnance");
+		expect(group?.labelKey).toBe("SHIP_COMBAT.ACTION_GROUP_ORDNANCE");
+		expect(group?.rows.map((row) => row.name)).toEqual([
+			"Launch Torpedoes",
+			"Torpedo Run",
+			"Reload Torpedo Tubes",
+			"Bombing Run",
+			"Assault Boat Run",
+			"Attack with Fighters",
+		]);
+		// The prepare-only rows (their own prompts roll the dice) skip the
+		// shared dialog; the standard-path rows keep it ( Ramming precedent ).
+		const skip = Object.fromEntries(
+			group!.rows.map((row) => [row.name, row.skipDialog]),
+		);
+		expect(skip["Launch Torpedoes"]).toBe(true);
+		expect(skip["Torpedo Run"]).toBe(true);
+		expect(skip["Attack with Fighters"]).toBe(true);
+		expect(skip["Reload Torpedo Tubes"]).toBe(false);
+		expect(skip["Bombing Run"]).toBe(false);
+		expect(skip["Assault Boat Run"]).toBe(false);
+	});
+
 	test("helmsman options annotate the bare Pilot (decision 10) and flag the pick", () => {
 		const options = helmsmanOptions(
 			[
@@ -739,7 +799,6 @@ describe("the ship-actions view model (bead 7gcm)", () => {
 // --- the ship-action handler's pack-uuid seam (bead 7gcm) -------------------
 
 describe("resolveShipActionItem (the chips' pack-uuid fallback)", () => {
-
 	const packRow = {
 		type: "ship-action",
 		name: "Adjust Bearing",
@@ -811,6 +870,147 @@ describe("resolveShipActionItem (the chips' pack-uuid fallback)", () => {
 			})) as { title?: string; kindData?: { crewFallback?: boolean } };
 			expect(prepared?.kindData?.crewFallback).toBe(true);
 		} finally {
+			resetPorts();
+		}
+	});
+});
+
+// --- the ship refit drop handler (bead brex blocker 2) ----------------------
+
+describe("the ship refit drop handler (bead brex blocker 2)", () => {
+	/** The stubbed drag event data + its source doc. */
+	function stubFoundryForDrop(
+		source: Record<string, unknown> & { uuid: string },
+	): () => void {
+		const foundryRecord = (globalThis as Record<string, unknown>)
+			.foundry as Record<string, unknown>;
+		const applications = foundryRecord.applications as Record<string, unknown>;
+		const utils = foundryRecord.utils as Record<string, unknown>;
+		const previous = {
+			ux: applications.ux,
+			fromUuid: utils.fromUuid,
+		};
+		applications.ux = {
+			TextEditor: {
+				getDragEventData: () => ({ type: "Item", uuid: source.uuid }),
+			},
+		};
+		utils.fromUuid = async () => source;
+		return () => {
+			applications.ux = previous.ux;
+			if (previous.fromUuid === undefined) delete utils.fromUuid;
+			else utils.fromUuid = previous.fromUuid;
+		};
+	}
+
+	function sourceItem(): Record<string, unknown> & { uuid: string } {
+		const ItemClass = (
+			(
+				(globalThis as Record<string, unknown>).foundry as Record<
+					string,
+					unknown
+				>
+			).documents as { Item: new () => object }
+		).Item;
+		// The instance carries its own type/name so the refusal test can
+		// mutate them (the toObject closure reads the live fields).
+		const item = Object.assign(new ItemClass() as Record<string, unknown>, {
+			uuid: "Compendium.rogue-trader.ships.Item.store-1",
+			type: "ship-ordnance",
+			toObject(): Record<string, unknown> {
+				return {
+					uuid: item.uuid,
+					name: item.name as string,
+					type: item.type as string,
+					system: { kind: "torpedo", quantity: 8 },
+				};
+			},
+		}) as Record<string, unknown> & { uuid: string };
+		item.name = "Plasma Torpedo";
+		return item as Record<string, unknown> & { uuid: string };
+	}
+
+	function shipDocFixture(): {
+		document: unknown;
+		created: Array<Record<string, unknown>>;
+		deleted: string[];
+	} {
+		const created: Array<Record<string, unknown>> = [];
+		const deleted: string[] = [];
+		const items: Array<Record<string, unknown>> = [];
+		const document = {
+			name: "Test Ship",
+			system: { voidShields: 0 },
+			items: Object.assign([...items], {
+				get: (id: string) => items.find((i) => i.id === id),
+			}),
+			createEmbeddedDocuments: async (
+				_type: string,
+				data: Array<Record<string, unknown>>,
+			) => {
+				created.push(...data);
+				return data.map((d, index) => ({ ...d, id: `new-${index}` }));
+			},
+			deleteEmbeddedDocuments: async (_type: string, ids: string[]) => {
+				deleted.push(...ids);
+			},
+		};
+		return { document, created, deleted };
+	}
+
+	async function runDrop(document: unknown): Promise<unknown> {
+		// A REAL sheet instance: the private-method brand (#clampVoidShields)
+		// only attaches at construction, so a plain fake `this` cannot call it.
+		const sheet = new ShipSheet() as unknown as {
+			document: unknown;
+			render: (options?: object) => Promise<void>;
+			_onDrop: (event: DragEvent) => Promise<unknown>;
+		};
+		sheet.document = document;
+		sheet.render = async () => undefined;
+		return sheet._onDrop({} as never);
+	}
+
+	test("a dropped ship-ordnance STORE installs (the BFK rows' stock)", async () => {
+		const source = sourceItem();
+		const restore = stubFoundryForDrop(source);
+		const { document, created, deleted } = shipDocFixture();
+		try {
+			await runDrop(document);
+			expect(created).toHaveLength(1);
+			expect(created[0]).toMatchObject({ type: "ship-ordnance" });
+			// Nothing deleted: the old branch destroyed exactly this item.
+			expect(deleted).toEqual([]);
+		} finally {
+			restore();
+		}
+	});
+
+	test("anything else is still refused loudly (warn + delete, unchanged)", async () => {
+		const source = sourceItem();
+		source.uuid = "Compendium.rogue-trader.weapons.Item.gear-1";
+		source.type = "gear";
+		source.name = "Random Gear";
+		const restore = stubFoundryForDrop(source);
+		const warnings: string[] = [];
+		setPorts({
+			...getPorts(),
+			notify: {
+				...getPorts().notify,
+				warn: (key: string) => {
+					warnings.push(key);
+				},
+			},
+		} as never);
+		const { document, created, deleted } = shipDocFixture();
+		try {
+			await runDrop(document);
+			expect(warnings).toContain("STARSHIP.DROP_NOT_COMPONENT");
+			// The created clone is deleted right back out.
+			expect(created).toHaveLength(1);
+			expect(deleted).toEqual(["new-0"]);
+		} finally {
+			restore();
 			resetPorts();
 		}
 	});

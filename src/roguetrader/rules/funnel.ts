@@ -1,14 +1,16 @@
 /**
  * Compatibility shim (bead 8ycd): the funnel machinery itself hoisted to
  * src/ffg/application/funnel.ts, where it is system-neutral and Foundry-free.
- * This module keeps every existing `rules/funnel` import working and — by
- * importing the RT modules below — registers the system-specific contributors
- * (origin traits, fire-mode homebrew) that used to be hard-coded in the
- * funnel. Importing either this shim or `ffg/application/funnel` alone is
- * safe; only the RT contributors' presence differs.
+ * This module keeps every existing `rules/funnel` import working: it calls
+ * `registerRtFunnelContributors()` — the explicit, idempotent registration
+ * module (bead i4b0) — so the shim's callers still guarantee the RT
+ * contributors regardless of import order. Importing either this
+ * shim or `ffg/application/funnel` alone is safe; only the RT
+ * contributors' presence differs until something registers them.
  */
 
-import "./homebrew";
-import "./origin-traits";
+import { registerRtFunnelContributors } from "./funnel-registration";
+
+registerRtFunnelContributors();
 
 export * from "../../ffg/application/funnel";

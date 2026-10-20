@@ -409,6 +409,8 @@ describe("ownership gate (bead qiuo)", () => {
 			["ship-repair", { itemId: "c1" }],
 			["fear", { severity: 1 }],
 			["snap-out", {}],
+			// Bead 77r1: the initiative kind is gated like every other kind.
+			["initiative", {}],
 		];
 		for (const [kind, extra] of kinds) {
 			posted.length = 0;

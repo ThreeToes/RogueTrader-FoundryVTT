@@ -486,8 +486,14 @@ function mergeEffectiveProfile(
 // Additional hits are out of scope here (to-hit modifier only). The values
 // come from the effective profile (core p237/+10/+20 or the world's house
 // rules) — data-driven, no core-code edits (bead 9if).
+//
+// Registration is explicit, not an import side effect (bead i4b0): the
+// function is called from rules/funnel-registration.ts, so a caller that
+// imports the funnel machinery directly still sees the RT contributors
+// without depending on which module happened to load first.
 // ---------------------------------------------------------------------------
-testContributors.register("attack-context", (_view, context) => {
+export function registerAttackContextContributor(): void {
+	testContributors.register("attack-context", (_view, context) => {
 	if (context.kind !== "attack") return [];
 	// Bead dfdv: Modifier.label is documented as a localized label, so the
 	// contributor resolves its keys through the i18n port (same keys the
@@ -513,6 +519,7 @@ testContributors.register("attack-context", (_view, context) => {
 	}
 	return mods;
 });
+}
 
 /**
  * Settings keys (bead wxut.3).

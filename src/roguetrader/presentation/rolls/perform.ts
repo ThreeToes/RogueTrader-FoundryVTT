@@ -28,6 +28,7 @@ import { shipRepairHandler, shipWeaponHandler } from "./ship";
 import { actionHandler } from "./action";
 import { characteristicHandler, skillHandler } from "./characteristic-skill";
 import { fearHandler } from "./fear";
+import { initiativeHandler } from "./initiative";
 import { navigatorHandler } from "./navigator";
 import { psychicHandler } from "./psychic";
 import { snapOutHandler } from "./snap-out";
@@ -50,6 +51,7 @@ export const rollHandlers: {
 	"ship-repair": shipRepairHandler,
 	fear: fearHandler,
 	"snap-out": snapOutHandler,
+	initiative: initiativeHandler,
 	action: actionHandler,
 };
 
@@ -330,4 +332,19 @@ export async function rollSnapOut(
 		modifiers: options.modifiers,
 		skipDialog: options.skipDialog,
 	});
+}
+
+/**
+ * Initiative (bead 77r1): routed through performRoll, which owns the
+ * ownership gate and the modifier dialog — the hand-rolled dialog/merge/dice
+ * card sequence in rules/adapter.ts skipped the gate, letting a non-owner
+ * roll another character's initiative. The handler is prepare-only (the kind
+ * is a raw d10, no pass/fail test); the total is reported on the card, not
+ * the return value.
+ */
+export async function rollInitiativeAction(
+	actor: Actor,
+): Promise<TestOutcome | null> {
+	// Prepare-only kinds return no kernel outcome — always null today.
+	return await performRoll({ kind: "initiative", actor });
 }

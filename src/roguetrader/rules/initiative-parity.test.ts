@@ -184,6 +184,8 @@ function actorFixture() {
 		id: "a1",
 		name: "Explorer",
 		type: "explorer",
+		// Bead 77r1: the roll routes through the pipeline's ownership gate.
+		isOwner: true,
 		system: {
 			characteristics: { ag: { value: AG_BONUS * 10, unnatural: 1 } },
 			characteristicBonus: (key: string) => (key === "ag" ? AG_BONUS : 0),

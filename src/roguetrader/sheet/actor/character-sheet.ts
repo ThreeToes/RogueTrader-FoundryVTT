@@ -164,10 +164,11 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	/**
-	 * Roll initiative (bead dt8t → bead yxm5 funnel): 1d10 + the derived
-	 * initiative bonus, funnel-visible (talent/item rows in the dialog) and
-	 * assigned to every combatant of the actor via rules/adapter.ts
-	 * rollInitiativeAction.
+	 * Roll initiative (bead dt8t → bead yxm5 funnel → bead 77r1 pipeline):
+	 * 1d10 + the derived initiative bonus, funnel-visible (talent/item rows in
+	 * the dialog) and assigned to every combatant of the actor via
+	 * rollInitiativeAction — the `initiative` RollKind, routed through
+	 * performRoll (presentation/rolls/initiative.ts).
 	 */
 	static async #onRollInitiative(this: {
 		actor: foundry.documents.Actor;

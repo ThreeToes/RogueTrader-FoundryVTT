@@ -123,12 +123,16 @@ function wireDialog(): () => void {
 	};
 }
 
-/** A character-shaped fixture: Character model's bonus + an empty inventory. */
+/** A character-shaped fixture: Character model's bonus + an empty inventory.
+ * `isOwner: true` clears the pipeline's ownership gate (bead qiuo) — bead 77r1
+ * routes the roll through runRoll, so non-owners are refused before any
+ * dialog. */
 function actorFixture(agBonus: number) {
 	return {
 		id: "a1",
 		name: "Explorer",
 		type: "explorer",
+		isOwner: true,
 		system: {
 			characteristics: { ag: { value: agBonus * 10, unnatural: 1 } },
 			characteristicBonus: (key: string) => (key === "ag" ? agBonus : 0),
@@ -154,9 +158,12 @@ describe("rollInitiativeAction funnel flow (bead yxm5)", () => {
 		const restore = wireDialog();
 		try {
 			const actor = actorFixture(5);
+			// Bead 77r1: the wrapper now returns the pipeline's result (null for
+			// prepare-only kinds — no kernel outcome); the TOTAL is asserted on
+			// the card below, where it was always meant to come from.
 			const value = await rollInitiativeAction(actor as never);
+			expect(value).toBeNull();
 			// d10(4) + agility(5)
-			expect(value).toBe(9);
 			expect(rollCalls).toEqual(["1d10"]);
 			// The dialog request: d10 cap as baseTarget, no difficulty ladder.
 			expect(dialogRequests).toHaveLength(1);
@@ -201,9 +208,9 @@ describe("rollInitiativeAction funnel flow (bead yxm5)", () => {
 				],
 			};
 			const actor = actorFixture(4);
-			const value = await rollInitiativeAction(actor as never);
-			// d10(2) + base(4) + custom(+3)
-			expect(value).toBe(9);
+			await rollInitiativeAction(actor as never);
+			// d10(2) + base(4) + custom(+3) — on the card's breakdown/total.
+			expect(lastCardVars?.value).toBe(9);
 			const analysis = (lastCardVars?.analysis ?? []) as unknown[];
 			expect(analysis.length).toBe(2);
 		} finally {
@@ -218,7 +225,7 @@ describe("rollInitiativeAction funnel flow (bead yxm5)", () => {
 		try {
 			dialogResult = null;
 			const value = await rollInitiativeAction(actorFixture(5) as never);
-			expect(value).toBe(undefined);
+			expect(value).toBeNull();
 			expect(rollCalls).toEqual([]);
 			expect(postedCards).toEqual([]);
 		} finally {
@@ -257,6 +264,24 @@ describe("rollInitiativeAction funnel flow (bead yxm5)", () => {
 		}
 	});
 
+	// Bead 77r1: routing through the pipeline adds the ownership gate every
+	// other kind gets — a non-owner is refused loudly before any dialog.
+	test("a non-owner is refused by the pipeline's ownership gate (bead 77r1)", async () => {
+		wirePorts();
+		const restore = wireDialog();
+		try {
+			const actor = { ...actorFixture(5), isOwner: false };
+			const value = await rollInitiativeAction(actor as never);
+			expect(value).toBeNull();
+			expect(dialogRequests).toHaveLength(0);
+			expect(rollCalls).toEqual([]);
+			expect(postedCards).toEqual([]);
+			expect(warnings).toEqual(["ROLL.NOT_OWNER"]);
+		} finally {
+			restore();
+		}
+	});
+
 	test("fails closed for a non-character system (no characteristicBonus)", async () => {
 		wirePorts();
 		const restore = wireDialog();
@@ -265,12 +290,16 @@ describe("rollInitiativeAction funnel flow (bead yxm5)", () => {
 				id: "v1",
 				name: "Lander",
 				type: "vehicle",
+				// Owned, so the refusal below is the HANDLER's shape gate, not
+				// the ownership gate — the fail-closed gate must stay meaningful.
+				isOwner: true,
 				system: { size: "huge" },
 				items: [],
 			};
 			const value = await rollInitiativeAction(vehicle as never);
-			expect(value).toBe(undefined);
+			expect(value).toBeNull();
 			expect(dialogRequests).toHaveLength(0);
+			expect(warnings).toEqual([]); // silent, like the old shape gate
 		} finally {
 			restore();
 		}

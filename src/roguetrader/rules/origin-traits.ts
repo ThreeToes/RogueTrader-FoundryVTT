@@ -105,7 +105,13 @@ export function traitModifierId(def: OriginTraitDef): string {
 // (additive); grants/notes render on the Background tab and never contribute
 // here. Definitions come through the config seam (ports.config.originTraits()),
 // so this file stays Foundry-free.
-testContributors.register("origin-traits", (view, context) => {
+//
+// Registration is explicit, not an import side effect (bead i4b0): the
+// function is called from rules/funnel-registration.ts, so a caller that
+// imports the funnel machinery directly still sees the RT contributors
+// without depending on which module happened to load first.
+export function registerOriginTraitsContributor(): void {
+	testContributors.register("origin-traits", (view, context) => {
 	const defs = getPorts().config.originTraits() as OriginTraitDef[];
 	if (defs.length === 0) return [];
 	// Bead l2wz: the view's system types as the family union; origins are a
@@ -126,3 +132,4 @@ testContributors.register("origin-traits", (view, context) => {
 			value: m.def.value,
 		}));
 });
+}

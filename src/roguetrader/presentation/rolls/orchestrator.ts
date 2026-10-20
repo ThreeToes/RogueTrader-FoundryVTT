@@ -33,6 +33,20 @@ const conditionLabel = (key: string): string =>
 	talentConditions.get(key) ?? key;
 
 /**
+ * A neutral outcome for prepare-only kinds (bead 77r1): the shared test step
+ * did not run, so after() must act on its OWN dice and never on this — it
+ * exists because the handler contract types the outcome parameter.
+ */
+const NO_TEST_OUTCOME: TestOutcome = {
+	roll: 0,
+	success: false,
+	degrees: 0,
+	margin: 0,
+	isDouble: false,
+	critical: false,
+};
+
+/**
  * Run one prepared-handler roll end to end: the ownership gate, the handler's
  * prepare, the TestDialog (unless skipped), post-dialog modifiers, the shared
  * test and the handler's after-hook. Returns the test outcome (null when the
@@ -130,6 +144,18 @@ export async function runRoll<K extends RollKind>(
 	const context = dialog?.flags
 		? { ...baseContext, flags: { ...baseContext.flags, ...dialog.flags } }
 		: baseContext;
+
+	// Prepare-only kinds (bead 77r1): the shared test step would be WRONG
+	// (a d100 + a pass/fail ladder against a raw-d10 kind), so the handler's
+	// after-hook owns the dice + card and runRoll returns no kernel outcome.
+	if (prepared.prepareOnly) {
+		await handler.after?.(request, prepared, NO_TEST_OUTCOME, null, {
+			target: prepared.baseTarget,
+			modifiers,
+			context,
+		});
+		return null;
+	}
 
 	const { outcome, messageId, target } = await runTest(
 		view,

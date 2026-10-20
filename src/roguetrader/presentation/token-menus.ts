@@ -16,11 +16,14 @@
  * The entry is offered ONLY where a roll can actually happen (bead qiuo fails
  * closed, extended by bead nt34 F1): core's Combat#rollInitiative only rolls
  * combatants where `combatant.isOwner`, so a non-owner could never complete
- * the roll anyway — AND the adapter's shape gate (rules/adapter.ts
- * rollInitiativeAction) only accepts character-shaped systems that carry an
+ * the roll anyway — AND the initiative handler's shape gate (see the bead
+ * 77r1 note below) only accepts character-shaped systems that carry an
  * initiativeBonus (a getter on the model, bead jpt3), so owned
  * vehicle/starship tokens must not see a dead entry whose click silently
  * no-ops. canRollToken mirrors both gates.
+ * bead 77r1: the roll itself runs through the roll pipeline now — the
+ * `initiative` RollKind handler (presentation/rolls/initiative.ts) carries
+ * the shape gate; performRoll applies the ownership gate.
  */
 
 import { rollInitiativeAction } from "../rules/adapter";
@@ -53,7 +56,9 @@ function resolveToken(element?: HTMLElement): TokenMenuDocument | undefined {
 function canRollToken(element?: HTMLElement): boolean {
 	const token = resolveToken(element);
 	if (!token?.actor?.isOwner) return false;
-	// Mirror the adapter's shape gate (rules/adapter.ts rollInitiativeAction):
+	// Mirror the initiative handler's shape gate (presentation/rolls/
+	// initiative.ts; the roll routes through performRoll's ownership gate,
+	// bead 77r1):
 	// only character-shaped systems carry an initiativeBonus (a getter on the
 	// Character model prototype, bead jpt3) — `in` reads it straight off the
 	// model instance the same way the roll interpolation's getProperty does —

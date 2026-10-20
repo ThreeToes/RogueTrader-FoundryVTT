@@ -98,6 +98,14 @@ export interface PreparedRoll<
 	autoFailRoll?: number | null;
 	/** Profile override (bead jpbm: Fearless auto-passes the Fear Test). */
 	autoPassRoll?: number | null;
+	/**
+	 * Prepare-only kinds (bead 77r1: initiative): the kind has NO pass/fail
+	 * test — the shared test step (funnel -> d100 -> resolveTest -> roll card)
+	 * is not part of it. When set, the orchestrator skips the shared test and
+	 * hands the after-hook the dice, the card and any document writes; the
+	 * pipeline still owns the ownership gate and the dialog.
+	 */
+	prepareOnly?: boolean;
 	/** Kind-specific data carried from prepare to after (see KindDataMap). */
 	kindData?: KindDataMap[K];
 }

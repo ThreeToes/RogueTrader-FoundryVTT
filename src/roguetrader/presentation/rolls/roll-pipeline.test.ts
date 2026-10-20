@@ -137,6 +137,7 @@ describe("handler registry (bead mvu2)", () => {
 				"action",
 				"characteristic",
 				"fear",
+				"initiative",
 				"navigator",
 				"psychic",
 				"ship-repair",
@@ -1808,6 +1809,24 @@ describe("action after-hook (bead et5a)", () => {
 	it("posts the action card with the lookup anatomy + roll result", async () => {
 		resetSpies();
 		const entry = actionEntry("Called Shot", "weapon-skill", "Hard (–20)");
+		// Bead obbp pin: the card's outcome label renders through the SAME
+		// interpolated i18n key the shared pipeline uses (bead s1lv's
+		// ROLL.SUCCESS_WITH_DEGREES path) — not hand-concatenated English.
+		const formats: Array<[string, unknown]> = [];
+		const gameStub = (globalThis as Record<string, unknown>).game as {
+			i18n: {
+				localize: (key: string) => string;
+				format: (key: string, vars?: Record<string, unknown>) => string;
+			};
+		};
+		const savedI18n = gameStub.i18n;
+		gameStub.i18n = {
+			localize: savedI18n.localize,
+			format: (key: string, vars?: Record<string, unknown>) => {
+				formats.push([key, vars]);
+				return savedI18n.format(key, vars);
+			},
+		};
 		const captured = await captureCards();
 		try {
 			await actionHandler.after?.(
@@ -1820,6 +1839,7 @@ describe("action after-hook (bead et5a)", () => {
 		} finally {
 			const render = foundry.applications.handlebars;
 			render.renderTemplate = async () => "<div>card</div>";
+			gameStub.i18n = savedI18n;
 		}
 		expect(captured).toHaveLength(1);
 		expect(captured[0].titleDoc).toMatchObject({
@@ -1828,7 +1848,11 @@ describe("action after-hook (bead et5a)", () => {
 		expect(captured[0].cost).toBe("Full");
 		expect(captured[0].target).toBe(20);
 		expect(captured[0].roll).toBe(23);
-		expect(captured[0].outcomeLabel).toContain("ROLL.SUCCESS");
+		// The stubbed Foundry format() echoes the key, so the label EQUALS the
+		// key only when it went through the shared interpolated key — a
+		// concatenation like "ROLL.SUCCESS (+3 ROLL.DEGREES)" would fail this.
+		expect(captured[0].outcomeLabel).toBe("ROLL.SUCCESS_WITH_DEGREES");
+		expect(formats).toContainEqual(["ROLL.SUCCESS_WITH_DEGREES", { degrees: 3 }]);
 		expect(captured[0].opposedNote).toBe("");
 	});
 

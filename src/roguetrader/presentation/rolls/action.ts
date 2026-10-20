@@ -39,6 +39,7 @@ import {
 import type { RollHandler } from "../../rules/roll-contract";
 import { postCard } from "../../rules/chat-flags";
 import { getPorts } from "../../infrastructure/foundry/ports";
+import { outcomeLabel } from "../../../ffg/presentation/rolls/pipeline";
 import { characteristicHandler, skillHandler } from "./characteristic-skill";
 
 // ------------------------------------------------------------- the test vocabulary
@@ -166,9 +167,10 @@ export const actionHandler: RollHandler<"action"> = {
 		const data = prepared.kindData;
 		if (!data) return;
 		const ports = getPorts();
-		const outcomeLabel = outcome.success
-			? `${ports.i18n.t("ROLL.SUCCESS")} (+${outcome.degrees} ${ports.i18n.t("ROLL.DEGREES")})`
-			: ports.i18n.t("ROLL.FAILURE");
+		// Bead obbp: the SAME interpolated key the shared pipeline renders — the
+		// literal "(+N degrees)" scaffolding stays in the lang files, not in
+		// hand-concatenated English word order here.
+		const outcomeText = outcomeLabel(outcome.success, outcome.degrees);
 		await postCard(
 			request.actor,
 			ACTION_ROLL_TEMPLATE,
@@ -181,7 +183,7 @@ export const actionHandler: RollHandler<"action"> = {
 				result: {
 					target: info?.target ?? prepared.baseTarget,
 					roll: outcome.roll,
-					outcomeLabel,
+					outcomeLabel: outcomeText,
 					outcomeClass: outcome.success ? "success" : "failure",
 					opposedNote: data.opposed
 						? ports.i18n.t("ACTION.OPPOSED_MANUAL")

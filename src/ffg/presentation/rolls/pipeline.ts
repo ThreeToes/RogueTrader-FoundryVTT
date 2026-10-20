@@ -48,6 +48,30 @@ import { getPorts, localizeLabel } from "../../infrastructure/foundry/ports";
  * dialog round-trip, so the test step's funnel merge dedupes instead of
  * doubling.
  */
+/**
+ * Shared roll-card outcome label (bead s1lv, reused by bead obbp): one
+ * interpolated i18n key per outcome — ROLL.SUCCESS_WITH_DEGREES with
+ * {degrees} on success, ROLL.FAILURE otherwise — so other languages control
+ * the sentence shape. Every roll-card outcome label (the pipeline's inline
+ * card, the action handler's result card) renders through here; hand-built
+ * concatenation elsewhere is a drift bug.
+ */
+export function outcomeLabel(success: boolean, degrees: number): string {
+	const i18n = getPorts().i18n;
+	return success
+		? i18n.t("ROLL.SUCCESS_WITH_DEGREES", { degrees })
+		: i18n.t("ROLL.FAILURE");
+}
+
+/**
+ * Dialog contributors = caller modifiers + a funnel collection for the test
+ * context, so talent/gear/item effects are visible (and editable-previewed)
+ * in the dialog, not only on the chat card. Attack-context-dependent
+ * contributors (fire-mode, condition flags) are chosen inside the dialog and
+ * stay post-dialog only - the card shows the full breakdown. Ids survive the
+ * dialog round-trip, so the test step's funnel merge dedupes instead of
+ * doubling.
+ */
 export function dialogContributors(
 	view: ActorView,
 	kind: TestKind,
@@ -120,9 +144,7 @@ export async function runTest<
 	// Bead s1lv: one interpolated i18n key per outcome — the literal
 	// "(+N degrees)" scaffolding is data (all four lang files carry
 	// ROLL.SUCCESS_WITH_DEGREES), never English word order baked into code.
-	const outcomeLabel = outcome.success
-		? ports.i18n.t("ROLL.SUCCESS_WITH_DEGREES", { degrees: outcome.degrees })
-		: ports.i18n.t("ROLL.FAILURE");
+	const cardOutcomeLabel = outcomeLabel(outcome.success, outcome.degrees);
 
 	// Bead w9sa.8: the card template is system BRANDING and the widened
 	// config port makes branding OPTIONAL, so a system that has not named a
@@ -151,7 +173,7 @@ export async function runTest<
 				label: localizeLabel(mod.label),
 			})),
 			roll: rollResult,
-			outcomeLabel,
+			outcomeLabel: cardOutcomeLabel,
 			outcomeClass: outcome.success ? "success" : "failure",
 			critical: outcome.critical,
 			isDouble: outcome.isDouble,

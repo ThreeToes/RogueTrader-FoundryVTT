@@ -52,6 +52,7 @@ const ROLL_FUNCTIONS = [
 	"rollNavigatorPower",
 	"rollFearTest",
 	"rollSnapOut",
+	"rollInitiativeAction",
 	"rollShipSalvo",
 	"rollShipRepair",
 	"rollToxicToughnessTest",

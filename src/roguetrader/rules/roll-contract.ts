@@ -46,6 +46,7 @@ export type RollKind =
 	| "ship-repair"
 	| "fear"
 	| "snap-out"
+	| "initiative"
 	| "action";
 
 /** Shared request data (generic base, narrowed to the Foundry Actor). */
@@ -159,10 +160,22 @@ export type RollRequest =
 	| ShipRepairRollRequest
 	| FearRollRequest
 	| SnapOutRollRequest
+	| InitiativeRollRequest
 	| ActionRollRequest;
 
 /**
- * A combat action's printed roll spec (bead et5a, epic moew): the sheet
+ * Initiative (bead 77r1, Core Rulebook p212): a RAW d10 plus the derived
+ * initiative bonus — no target, no pass/fail ladder. The handler is
+ * prepare-only (the handler's after-hook owns the d10, the combatant write
+ * and the initiative card); the pipeline still applies the ownership gate
+ * and the modifier dialog the hand-rolled sequence in rules/adapter.ts
+ * used to bypass.
+ */
+export interface InitiativeRollRequest extends RollBase {
+	kind: "initiative";
+}
+
+/** A combat action's printed roll spec (bead et5a, epic moew): the sheet
  * resolves the action's warmed catalog entry FIRST (the chip click surface
  * carries only the name), so the request carries the FULL entry —
  * verbatim name/uuid for the cards, the test vocabulary + difficulty for
@@ -233,6 +246,9 @@ export interface RollKindData {
 	};
 	/** Snap-out carries nothing from prepare to after (bead n0tp). */
 	"snap-out": undefined;
+	/** The initiative after-hook carries nothing from prepare to after
+	 * (bead 77r1) — it reads the merged rows off `info.modifiers`. */
+	initiative: undefined;
 	/** The combat-action card inputs (bead et5a, epic moew). */
 	action: {
 		/** The catalog entry snapshot: doc link + verbatim card text. */

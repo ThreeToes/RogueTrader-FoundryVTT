@@ -187,7 +187,7 @@ describe("the ship-combat tab template render", () => {
 									difficulty: "Challenging (+0)",
 									skipDialog: false,
 									tooltip:
-										"Half Action — Turn the ship. — SHIP_ACTION.DIFFICULTY: Challenging (+0)",
+										"Half Action — Turn the ship. — Pilot (Space Craft) + SHIP_COMBAT.STAT_MANOEUVRABILITY Challenging (+0)",
 								},
 							],
 						},
@@ -626,11 +626,15 @@ describe("the ship-combat tab template render", () => {
 		const cssShared = readFileSync("css/sheet-character.css", "utf8");
 		expect(cssShared).toContain(".rogue-trader .action-list {");
 		expect(cssShared).toContain(".rogue-trader .action-chip {");
-		// And the duplicated starship anatomy is gone — the ship block keeps
-		// only the test-spec cell modifier.
+		// The muted test-spec cell is GONE (owner ask: the skill roll lives in
+	// 	the tooltip now) — the chip visible row is dice mark + name only; the
+	// 	CSS rule is deleted with it.
+		expect(html).not.toContain("sc-action-test");
+		// And the duplicated starship anatomy is gone — no starship action-list
+		// block at all (the shared rule carries the anatomy).
 		const cssShip = readFileSync("css/sheet-gear.css", "utf8");
 		expect(cssShip).not.toContain(".sc-action-list {\n\tdisplay: grid;");
-		expect(cssShip).toContain(".sc-action-list .sc-action-test {");
+		expect(cssShip).not.toContain("sc-action-test");
 		// GROUP HEADERS: the four group h3s render as slim one-line
 		// .inv-group-label rows (the existing shared class).
 		expect(html.match(/<h3 class="inv-group-label">/g)?.length).toBe(1);

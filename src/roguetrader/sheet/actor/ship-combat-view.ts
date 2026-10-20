@@ -218,17 +218,25 @@ export function shipActionChipRow(
 	const skipDialog =
 		(group === "machinery" && (rowKey === "break-free" || rowKey === "rout")) ||
 		(group === "ordnance" && ORDNANCE_PROMPT_ONLY_ROWS.has(rowKey));
+	const testLabel = shipActionTestLabel(data.roll?.test ?? "", localize);
+	// Roll spec (owner ask, 2026-10-20): the test label + printed difficulty
+	// live IN THE TOOLTIP, not on the visible chip row — the row shows only
+	// the dice mark + the action name. Without a test the actions-tab fallback
+	// line still applies (difficulty alone, or the roll-click hint).
+	const rollSpec = testLabel
+		? `${testLabel}${difficulty ? ` ${difficulty}` : ""}`
+		: difficulty
+			? `${localize("ACTION.DIFFICULTY")}: ${difficulty}`
+			: "";
 	return {
 		name,
 		uuid: doc.uuid ?? "",
-		testLabel: shipActionTestLabel(data.roll?.test ?? "", localize),
+		testLabel,
 		difficulty,
 		skipDialog,
 		tooltip:
-			`${cost} — ${data.shortDescription ?? ""} — ` +
-			(difficulty
-				? `${localize("ACTION.DIFFICULTY")}: ${difficulty}`
-				: localize("ACTION.ROLL_CLICK")),
+			`${cost} — ${data.shortDescription ?? ""}` +
+			(rollSpec ? ` — ${rollSpec}` : ` — ${localize("ACTION.ROLL_CLICK")}`),
 	};
 }
 

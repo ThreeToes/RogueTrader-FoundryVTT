@@ -1618,20 +1618,8 @@
    SHARED .action-list anatomy (promoted to the .rogue-trader layer in
    css/sheet-character.css, bead t2bj): the two-column grid, the centre
    vertical rule, the plain chip rows, the aligned roll-mark slot and the
-   hover gold, verbatim. The ship-side residue is only the printed test-spec
-   cell — the .action-cost precedent (fixed-width, right-aligned, muted,
-   ellipsised) so the specs align down the column like the character cost
-   marks do. */
-.rogue-trader.sheet.starship .sc-action-list .sc-action-test {
-	flex: none;
-	min-width: 12em;
-	font-size: var(--rt-fs-sm);
-	color: var(--rt-muted);
-	text-align: right;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
+   hover gold, verbatim. (The printed test spec lives in the chip tooltip —
+   owner ask, 2026-10-20 — so no ship-side rule remains.)
 
 /* Combat tab (bead 9oxq, rev per owner): the sections STACK full-width —
    Ship Actions in two columns, then Ship Weapons, then Component

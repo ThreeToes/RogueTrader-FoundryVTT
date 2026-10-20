@@ -62,6 +62,20 @@ export const SHIP_ACTION_SKILL_ROUTES: Readonly<
 	"tech-use": { skill: "Tech-Use" },
 	// Scrutiny: the Active Augury half of "Scrutiny + Detection" (p216-218).
 	scrutiny: { skill: "Scrutiny" },
+	// The Table 8-11 skill rows the starship-actions pack (bead ca3x) authors:
+	// each maps to its trained skill item through the kernel's own
+	// resolvePerformerSide delegation, no new plumbing.
+	// - Prepare to Repel Boarders! (printed p217-218: "Command").
+	command: { skill: "Command" },
+	// - Triage (printed p218: "Difficult (–10) Medicae Test").
+	medicae: { skill: "Medicae" },
+	// - Disinformation (printed p216): the print is "Deceive or Blather" — the
+	//   key carries the first named skill; the pack guard test pins the
+	//   choice, the handler may prompt for the alternative.
+	deceive: { skill: "Deceive" },
+	// - Put Your Backs Into It! (printed p218): print "Intimidate or Charm",
+	//   same either-skill shape as Disinformation.
+	intimidate: { skill: "Intimidate" },
 };
 
 /** The ship-side ability vocabulary — a `+`-composed suffix read off the

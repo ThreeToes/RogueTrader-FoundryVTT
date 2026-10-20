@@ -10,5 +10,7 @@
 - Firing under Silent Running now clears the flag and warns the shooter they betrayed their position.
 - A boarded ship refuses ship-weapon salvoes with an explicit warning; extended actions (Emergency Repairs) stay allowed.
 - Added the starship initiative path (1d10 + the Detection tens digit, Core Rulebook p212-213) to the initiative roll: token context menu and the ship sheet's Combat tab roll it for owned ships, the card shows the Detection row of the breakdown, and the result is assigned to the ship's combatants.
+- Added the `starship-actions` compendium pack: one Ship Action item per printed Core Rulebook Table 8-10 Manoeuvre (Adjust Bearing, Adjust Speed, Adjust Speed & Bearing, Come to New Heading, Disengage, Evasive Manoeuvres) and Table 8-11 Extended Action row, each carrying the printed test, difficulty token and the verbatim book prose; Stern Chase stays deferred (Exploration Challenge machinery) and Emergency Repairs remains the ship-repair path.
+- Added the Pilot skill groups (Personal, Flyers, Space Craft) to the character-options pack alongside bare Pilot, acquired separately as the book's Skill Groups rule requires.
 - A ship whose Detection field is missing fails loudly instead of silently.
 - The ship initiative card carries the combat-start manual rulings as note lines (Surprise +20 in Round 1; the NPC vessel 3-actions-per-Strategic-Round cap) and a Boarding banner for boarded ships — visibility only, no automation.

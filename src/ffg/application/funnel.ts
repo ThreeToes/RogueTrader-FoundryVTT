@@ -66,16 +66,87 @@ export const testContributors = {
 	types(): string[] {
 		return contributors.keys();
 	},
-	/** Run every registered contributor; malformed results are ignored. */
+	/**
+	 * Run every registered contributor. Malformed results (a forgotten return,
+	 * a bare Modifier instead of an array, a non-moder element) warn at this
+	 * seam naming the registry and source type (bead otpj) and contribute
+	 * nothing — the failure is loud, not a silently-short breakdown row.
+	 */
 	run(view: ActorView, context: TestModifierContext): Modifier[] {
 		const out: Modifier[] = [];
-		for (const fn of contributors.all()) {
-			const mods = fn(view, context) ?? [];
-			if (Array.isArray(mods)) out.push(...mods);
+		// keys()/for() walks the same handlers as all(), but keeps the source
+		// type so a malformed return can name it in the warning.
+		for (const type of contributors.keys()) {
+			for (const fn of contributors.for(type)) {
+				out.push(
+					...normalizeContributorResult(fn(view, context), type, context),
+				);
+			}
 		}
 		return out;
 	},
 };
+
+/** Registry name used in the seam's loud-failure warnings (bead otpj). */
+const REGISTRY_NAME = "test-contributors";
+
+function isModifierLike(value: unknown): boolean {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		typeof (value as Modifier).id === "string" &&
+		typeof (value as Modifier).label === "string" &&
+		typeof (value as Modifier).value === "number" &&
+		Number.isFinite((value as Modifier).value)
+	);
+}
+
+/** Serialization best effort — a malformed element may not stringify. */
+function describeValue(value: unknown): string {
+	try {
+		return JSON.stringify(value) ?? String(value);
+	} catch {
+		return "<unserializable>";
+	}
+}
+
+/**
+ * The seam's loud-failure gate (bead otpj): a contributor's result must be a
+ * `Modifier` array. Anything else warns (naming the source type) and drops
+ * the value; well-formed elements inside a malformed-shaped array are kept.
+ */
+function normalizeContributorResult(
+	result: unknown,
+	type: string,
+	context: TestModifierContext,
+): Modifier[] {
+	if (result === undefined || result === null) {
+		console.warn(
+			`[${REGISTRY_NAME}] "${type}" contributor returned ${String(result)} — forgot its return? Expected Modifier[]; contributed nothing ` +
+				`(${context.kind} test "${context.key}").`,
+		);
+		return [];
+	}
+	if (!Array.isArray(result)) {
+		console.warn(
+			`[${REGISTRY_NAME}] "${type}" contributor returned a bare ${typeof result} — expected Modifier[]; contributed nothing ` +
+				`(${context.kind} test "${context.key}").`,
+		);
+		return [];
+	}
+	const out: Modifier[] = [];
+	for (const mod of result as unknown[]) {
+		if (isModifierLike(mod)) {
+			out.push(mod as Modifier);
+		} else {
+			console.warn(
+				`[${REGISTRY_NAME}] "${type}" contributor emitted a malformed modifier — expected {id, label, value}. ` +
+					`Got: ${describeValue(mod)}; dropped (${context.kind} test "${context.key}").`,
+			);
+		}
+	}
+	return out;
+}
 
 /** Merge de-duplicating by modifier id (first registration wins). */
 export function mergeModifiers(

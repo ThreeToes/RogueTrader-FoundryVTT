@@ -31,11 +31,8 @@ import {
 	shotsForFireMode,
 } from "./ordnance";
 import { toxicActivates, toxicToughnessPenalty } from "./toxic";
-import {
-	breakdown,
-	collectTestModifiers,
-	mergeModifiers,
-} from "../../ffg/application/funnel";
+import { breakdown, mergeModifiers } from "../../ffg/application/funnel";
+import { collectInitiativeRows } from "./initiative-rows";
 import { TestDialog } from "./test-dialog";
 import { messageFlagNamespace } from "../../ffg/application/chat-flags";
 import {
@@ -767,17 +764,17 @@ export async function rollInitiativeAction(actor: Actor): Promise<unknown> {
 	const agBonus = (
 		system as { characteristicBonus: (k: string) => number }
 	).characteristicBonus("ag");
-	// One collector — the same explicit rows the model's initiativeBonus
-	// getter folds (kind "initiative", exact key only). Wildcard/condition
-	// funnel rows apply on DIALOG paths and are deliberately NOT part of the
-	// algebra: the tracker's bulk formula roll cannot carry guarded or
-	// wildcard contributions, so both routes count the same explicit set and
-	// never double-count (review finding 4: the old comment said the
-	// opposite).
-	const collected = collectTestModifiers(actorView(actor), {
-		kind: "initiative",
-		key: "initiative",
-	}).filter((mod) => mod.id.includes(":initiative:"));
+	// One collector — rules/initiative-rows.ts (bead zl6e) is the ONE
+	// initiative-row collector both this path and the model's initiativeBonus
+	// getter walk: explicit `testKey === "initiative"` rows, structured key
+	// matching (never id text — a wildcard row labelled "initiative" does not
+	// leak), and the SAME guard policy — a guarded row counts only when its
+	// condition flag is set (the dialog offers none here, so guarded rows stay
+	// out of a bulk-formula parity set). Wildcard rows are dialog-path rows
+	// and are deliberately NOT part of the algebra: the tracker's bulk formula
+	// roll cannot carry them, so both routes count the same set and never
+	// double-count (review finding 4).
+	const collected = collectInitiativeRows(actorView(actor).items);
 	const rows: Modifier[] = [
 		{
 			id: "initiative-base:agility",

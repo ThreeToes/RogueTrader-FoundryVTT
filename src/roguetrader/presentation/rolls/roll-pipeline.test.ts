@@ -1489,6 +1489,121 @@ describe("evasion reaction (bead nkwa)", () => {
 	});
 });
 
+/*
+ * Ownership gate (bead ly52): resolveEvasion fires AUTOMATICALLY on a hit,
+ * on the CLICKING client, for whatever ports.targets.actor() returns. A player
+ * attacking a GM-owned NPC cannot roll for the defender (permissions fail
+ * closed), so the after-hook must not open a prompt the inner runRoll would
+ * then refuse — it posts a "the defender may react" note and stops instead.
+ */
+describe("evasion ownership gate (bead ly52)", () => {
+	const afterArgs = (attacker: unknown) =>
+		[
+			{
+				kind: "weapon",
+				actor: attacker,
+				itemId: "w1",
+			} as never,
+			{ title: "Tester — Lasgun" } as never,
+			{ success: true, roll: 20, degrees: 1, critical: false } as never,
+			// No messageId: the damage-flag update is a separate concern (it
+			// throws loudly in the default stub), and the evasion gate runs on
+			// outcome alone.
+			"",
+		] as const;
+
+	it("does NOT open the defender's prompt when this client cannot roll for them", async () => {
+		resetSpies();
+		const dialogCalls: unknown[] = [];
+		const notes: string[] = [];
+		const foundryGlobal = (globalThis as Record<string, unknown>).foundry as {
+			applications: { api: { DialogV2: { wait: unknown } } };
+		};
+		const originalWait = foundryGlobal.applications.api.DialogV2.wait;
+		foundryGlobal.applications.api.DialogV2.wait = async (
+			...args: unknown[]
+		) => {
+			dialogCalls.push(args);
+			return "react";
+		};
+		setPorts({
+			...getPorts(),
+			targets: {
+				...getPorts().targets,
+				actor: () => fixtureActor(),
+			},
+			permissions: { canRoll: () => false },
+			chat: {
+				...getPorts().chat,
+				postHtml: async (_actor: unknown, content: string) => {
+					notes.push(content);
+					return { id: "note-1" };
+				},
+			},
+		} as never);
+		try {
+			await weaponHandler.after?.(...afterArgs(fixtureActor([weaponItem])));
+		} finally {
+			foundryGlobal.applications.api.DialogV2.wait = originalWait;
+			resetPorts();
+		}
+		// The prompt was never opened for a client that cannot roll the
+		// defender, and a note says the reaction is still owed.
+		expect(dialogCalls).toHaveLength(0);
+		expect(notes).toHaveLength(1);
+		expect(notes[0] as string).toContain("EVASION.DEFENDER_MAY_REACT");
+		expect(rollCalls).toHaveLength(0);
+	});
+
+	it("still fires the prompt and the reaction roll when this client CAN roll for the defender", async () => {
+		resetSpies();
+		const dialogCalls: unknown[] = [];
+		const posted: unknown[] = [];
+		const foundryGlobal = (globalThis as Record<string, unknown>).foundry as {
+			applications: { api: { DialogV2: { wait: unknown } } };
+			documents: {
+				ChatMessage: { create: (d: unknown) => Promise<unknown> };
+			};
+		};
+		const originalWait = foundryGlobal.applications.api.DialogV2.wait;
+		const originalCreate = foundryGlobal.documents.ChatMessage.create;
+		const originalShow = TestDialog.show;
+		foundryGlobal.applications.api.DialogV2.wait = async (
+			...args: unknown[]
+		) => {
+			dialogCalls.push(args);
+			return "react";
+		};
+		foundryGlobal.documents.ChatMessage.create = async (data: unknown) => {
+			posted.push(data);
+			return { id: "msg-evasion" };
+		};
+		TestDialog.show = (async () => ({
+			modifiers: [],
+		})) as typeof TestDialog.show;
+		setPorts({
+			...getPorts(),
+			targets: {
+				...getPorts().targets,
+				actor: () => fixtureActor(),
+			},
+		} as never);
+		try {
+			await weaponHandler.after?.(...afterArgs(fixtureActor([weaponItem])));
+		} finally {
+			foundryGlobal.applications.api.DialogV2.wait = originalWait;
+			foundryGlobal.documents.ChatMessage.create = originalCreate;
+			TestDialog.show = originalShow;
+			resetPorts();
+		}
+		// Same contract as the direct resolveEvasion tests above, reached
+		// through the after-hook gate.
+		expect(dialogCalls).toHaveLength(1);
+		expect(rollCalls).toHaveLength(1);
+		expect(posted).toHaveLength(1);
+	});
+});
+
 // --- Action rolls (bead et5a, epic moew) ----------------------------------
 
 /**

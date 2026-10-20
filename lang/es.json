@@ -968,6 +968,7 @@
 	"CONDITION.UNCONSCIOUS": "Inconsciente",
 	"DIALOG.EVASION": "Evasión",
 	"EVASION.DO_NOTHING": "No hacer nada",
+	"EVASION.DEFENDER_MAY_REACT": "Impacto: {name} puede esquivar o apurar — este cliente no puede tirar por él; quien lo controla (normalmente el GM) hace la reacción desde su cliente.",
 	"DIALOG.DENY_THE_WITCH": "Niega a la Bruja",
 	"EXPERIENCE.REMAINING": "Restante",
 	"TRAUMA.HEADER": "Trauma",

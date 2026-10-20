@@ -13,6 +13,11 @@ import { effectsAreLive } from "../item/effects";
 import { sourceField } from "../item/source";
 import { careers, sorceryRanks } from "../../registry";
 import { MAX_CRITICAL_SEVERITY } from "../../../rules-engine/index";
+import {
+	collectInitiativeRows,
+	sumInitiativeRows,
+	type InitiativeItemIn,
+} from "../../rules/initiative-rows";
 
 export {
 	CHARACTERISTIC_KEYS,
@@ -519,9 +524,13 @@ export class Character extends foundry.abstract.TypeDataModel<
 	 * modifier rows (bead yxm5, owner: talents/items modify initiative — both
 	 * the tracker's formula roll and the funnel card count the SAME rows).
 	 *
-	 * Explicit `testKey === "initiative"` rows ONLY: wildcard rows stay
-	 * dialog-path modifiers (they cannot join a bulk formula roll), so the
-	 * funnel-driven button path and this getter never double-count.
+	 * Explicit `testKey === "initiative"` rows ONLY, and ONLY via the ONE
+	 * shared collector (rules/initiative-rows.ts, bead zl6e): structured key
+	 * matching and the SAME guard policy as the funnel button path — a guarded
+	 * row counts only when its condition holds (the bulk formula roll has no
+	 * flag context, so guarded rows never count on this path). Wildcard rows
+	 * stay dialog-path modifiers (they cannot join a bulk formula roll), so
+	 * the funnel-driven button path and this getter fold one identical set.
 	 *
 	 * A GETTER, not a method (bead jpt3): core's tracker path interpolates the
 	 * formula "1d10 + @initiativeBonus" against actor.getRollData() === this
@@ -536,31 +545,9 @@ export class Character extends foundry.abstract.TypeDataModel<
 	 */
 	get initiativeBonus(): number {
 		const items = (
-			this.parent as unknown as {
-				items?: Iterable<{
-					type?: string;
-					system?: {
-						equipState?: string;
-						effects?: Array<{
-							kind?: string;
-							testKey?: string;
-							value?: number;
-						}>;
-					};
-				}>;
-			} | null
+			this.parent as unknown as { items?: Iterable<InitiativeItemIn> } | null
 		)?.items;
 		if (!items) return this.agilityBonus();
-		let delta = 0;
-		for (const item of items) {
-			if (!effectsAreLive(item.type ?? "", item.system?.equipState)) continue;
-			for (const effect of item.system?.effects ?? []) {
-				if (effect.kind !== "test-modifier") continue;
-				if (effect.testKey !== "initiative") continue;
-				const value = Number(effect.value ?? 0);
-				if (Number.isFinite(value) && value !== 0) delta += value;
-			}
-		}
-		return this.agilityBonus() + delta;
+		return this.agilityBonus() + sumInitiativeRows(collectInitiativeRows(items));
 	}
 }

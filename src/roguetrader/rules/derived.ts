@@ -77,9 +77,10 @@ export function fatigueThreshold(character: CharacterSystemLike): number {
  *   "undefined" and Roll.create throws an unresolved-StringTerm error,
  *   foundry.mjs:59885 + 59939-59941 + 200897).
  * • @initiativeBonus resolves through the model's initiativeBonus getter,
- *   which folds live "initiative"-keyed owned-item modifiers (bead yxm5), so
- *   the tracker's bulk roll counts talent/item contributions; the sheet
- *   button shows the SAME rows through the funnel dialog.
+ *   which folds live "initiative"-keyed owned-item modifiers (bead yxm5) via
+ *   the ONE shared collector (rules/initiative-rows.ts, bead zl6e), so the
+ *   tracker's bulk roll counts talent/item contributions; the sheet button
+ *   shows the SAME rows through the funnel dialog.
  */
 export const INITIATIVE_FORMULA = "1d10 + @initiativeBonus";
 

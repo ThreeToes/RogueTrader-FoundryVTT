@@ -115,8 +115,16 @@ describe("breakdown", () => {
 });
 
 describe("contributor registry", () => {
-	test("register + run, malformed returns ignored", () => {
-		testContributors.register("test-only", () => null);
+	// One-shot malformed contributor (bead otpj): malformed on its first
+	// invocation only — the registration is permanent (no unregister), and
+	// later runs in this file must stay silent.
+		let malformedFired = false;
+		test("register + run, malformed returns ignored with a warning", () => {
+			testContributors.register("test-only", () => {
+				if (malformedFired) return [];
+				malformedFired = true;
+				return null as unknown as Modifier[];
+			});
 		testContributors.register("test-only", () => [
 			{
 				id: "custom",
@@ -125,12 +133,23 @@ describe("contributor registry", () => {
 				value: 5,
 			},
 		]);
-		const mods = testContributors.run(buildActorView({}), {
-			kind: "characteristic",
-			key: "ws",
-		});
+		let warnings: string[] = [];
+		let mods: Modifier[] = [];
+		const originalWarn = console.warn;
+		console.warn = (...args: unknown[]) => {
+			warnings.push(args.map((a) => String(a)).join(" "));
+		};
+		try {
+			mods = testContributors.run(buildActorView({}), {
+				kind: "characteristic",
+				key: "ws",
+			});
+		} finally {
+			console.warn = originalWarn;
+		}
 		expect(mods).toHaveLength(1);
 		expect(mods[0].id).toBe("custom");
+		expect(warnings.some((w) => w.includes("test-contributors"))).toBe(true);
 	});
 
 	test("extras take precedence over contributors by id", () => {
@@ -149,6 +168,131 @@ describe("contributor registry", () => {
 		const custom = mods.find((m) => m.id === "custom");
 		expect(custom?.value).toBe(30);
 		expect(custom?.label).toBe("Override");
+	});
+});
+
+// Bead otpj: the contributor registry is the extension seam — a mis-returning
+// contributor (forgot the return, bare Modifier instead of an array, malformed
+// element) must warn loudly, not silently drop breakdown rows.
+describe("contributor failure loudness (bead otpj)", () => {
+	const context: TestModifierContext = { kind: "characteristic", key: "ws" };
+	const captureWarnings = (run: () => void): string[] => {
+		const warnings: string[] = [];
+		const original = console.warn;
+		console.warn = (...args: unknown[]) => {
+			warnings.push(args.map((a) => String(a)).join(" "));
+		};
+		try {
+			run();
+		} finally {
+			console.warn = original;
+		}
+		return warnings;
+	};
+
+	// One-shots: registered permanently, contributing only on the first call
+	// so later runs in this file stay silent and unpolluted.
+	let validFired = false;
+	test("a valid array contributor lands untouched with no warning", () => {
+		testContributors.register("otpj-valid", () => {
+			if (validFired) return [];
+			validFired = true;
+			return [
+				{
+					id: "otpj-valid",
+					source: { type: "dialog" as const, label: "d" },
+					label: "Valid",
+					value: 10,
+				},
+			];
+		});
+		const warnings = captureWarnings(() => {
+			const mods = testContributors.run(buildActorView({}), context);
+			expect(mods.find((m) => m.id === "otpj-valid")?.value).toBe(10);
+		});
+		expect(warnings.some((w) => w.includes("otpj-valid"))).toBe(false);
+	});
+
+	let bareFired = false;
+	let missingFired = false;
+	let shapeFired = false;
+
+	test("a bare Modifier return warns and contributes nothing", () => {
+		testContributors.register("otpj-bare", () => {
+			if (bareFired) return [];
+			bareFired = true;
+			const bare = {
+				id: "otpj-bare",
+				source: { type: "dialog" as const, label: "d" },
+				label: "Bare",
+				value: 10,
+			};
+			return bare as unknown as Modifier[];
+		});
+		let mods: Modifier[] = [];
+		const warnings = captureWarnings(() => {
+			mods = testContributors.run(buildActorView({}), context);
+		});
+		expect(mods.find((m) => m.id === "otpj-bare")).toBeUndefined();
+		expect(
+			warnings.some(
+				(w) =>
+					w.includes("test-contributors") &&
+					w.includes('"otpj-bare"') &&
+					w.includes("Modifier[]"),
+			),
+		).toBe(true);
+	});
+
+	test("a forgotten return (undefined) warns", () => {
+		testContributors.register("otpj-missing", () => {
+			if (missingFired) return [];
+			missingFired = true;
+			return undefined as unknown as Modifier[];
+		});
+		const warnings = captureWarnings(() => {
+			testContributors.run(buildActorView({}), context);
+		});
+		expect(
+			warnings.some(
+				(w) => w.includes('"otpj-missing"') && w.includes("undefined"),
+			),
+		).toBe(true);
+	});
+
+	test("a malformed element in an array warns and is dropped, good siblings kept", () => {
+		testContributors.register("otpj-shape", () => {
+			if (shapeFired) return [];
+			shapeFired = true;
+			return [
+				{
+					id: "otpj-bad",
+					source: { type: "dialog" as const, label: "d" },
+					label: "Bad",
+					value: "ten" as unknown as number,
+				},
+				{
+					id: "otpj-good",
+					source: { type: "dialog" as const, label: "d" },
+					label: "Good",
+					value: 5,
+				},
+			];
+		});
+		let mods: Modifier[] = [];
+		const warnings = captureWarnings(() => {
+			mods = testContributors.run(buildActorView({}), context);
+		});
+		expect(
+			mods
+				.filter((m) => m.id.startsWith("otpj-"))
+				.map((m) => m.id),
+		).toEqual(["otpj-good"]);
+		expect(
+			warnings.some(
+				(w) => w.includes('"otpj-shape"') && w.includes("malformed"),
+			),
+		).toBe(true);
 	});
 });
 

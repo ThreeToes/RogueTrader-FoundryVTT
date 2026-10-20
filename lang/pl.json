@@ -991,6 +991,7 @@
 	"CONDITION.UNCONSCIOUS": "Nieprzytomny",
 	"DIALOG.EVASION": "Unik",
 	"EVASION.DO_NOTHING": "Nic nie rób",
+	"EVASION.DEFENDER_MAY_REACT": "Trafienie: {name} może uniknąć lub parować — ten klient nie może rzucać za niego; osoba go kontrolująca (zwykle MG) wykonuje reakcję u siebie.",
 	"DIALOG.DENY_THE_WITCH": "Odmów Wiedźmie",
 	"EXPERIENCE.REMAINING": "Pozostało",
 	"TRAUMA.HEADER": "Trauma",

@@ -182,7 +182,31 @@ export const weaponHandler: RollHandler<"weapon"> = {
 		// Evasion (bead 97a): decision DIALOG again, but informational only
 		// - it posts the defender's reaction test card and does NOT feed
 		// the damage calculation (resolution stays manual for now).
+		//
+		// Ownership gate (bead ly52): resolveEvasion fires AUTOMATICALLY on a
+		// hit, on the CLICKING client, for whatever targets.actor() returns. A
+		// player attacking a GM-owned NPC used to get the defender's Dodge/
+		// Parry prompt on THEIR screen, only for the inner runRoll ownership
+		// gate to refuse it (NOT_OWNER toast, no reaction — a wasted prompt).
+		// Gate on canRoll FIRST: when this client cannot act for the defender,
+		// post a note that the reaction is still owed instead of opening a
+		// prompt we are about to refuse (the controller presses it from a
+		// client that CAN — typically the GM).
 		if (outcome.success && target && target !== request.actor) {
+			if (!ports.permissions.canRoll(target)) {
+				try {
+					await ports.chat.postHtml(
+						request.actor,
+						`<p class="note">${ports.i18n.t(
+							"EVASION.DEFENDER_MAY_REACT",
+							{ name: (target as { name?: string }).name ?? "" },
+						)}</p>`,
+					);
+				} catch (error) {
+					console.error("rogue-trader | evasion note failed", error);
+				}
+				return;
+			}
 			try {
 				await resolveEvasion(target, request);
 			} catch (error) {

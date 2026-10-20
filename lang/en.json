@@ -323,6 +323,7 @@
 	"DIALOG.AIM": "Aiming",
 	"DIALOG.EVASION": "Evasion",
 	"EVASION.DO_NOTHING": "Do Nothing",
+	"EVASION.DEFENDER_MAY_REACT": "Hit: {name} may Dodge or Parry — this client cannot roll for them, so the defender's controller (typically the GM) presses the reaction from a controlling client.",
 	"DIALOG.DENY_THE_WITCH": "Deny the Witch",
 	"DRUG.HEADER": "Drug",
 	"DRUG.NAME": "Name",

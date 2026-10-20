@@ -973,6 +973,7 @@
 	"CONDITION.UNCONSCIOUS": "Inconscient",
 	"DIALOG.EVASION": "Esquive",
 	"EVASION.DO_NOTHING": "Ne rien faire",
+	"EVASION.DEFENDER_MAY_REACT": "Touché : {name} peut esquiver ou parrer — ce client ne peut pas lancer pour lui ; celui qui le contrôle (généralement le MJ) déclenche la réaction depuis son client.",
 	"DIALOG.DENY_THE_WITCH": "Renier la Sorcière",
 	"EXPERIENCE.REMAINING": "Restant",
 	"TRAUMA.HEADER": "Traumatisme",

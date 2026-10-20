@@ -87,8 +87,11 @@ function funnelId(item: ItemView, effect: EffectData, keyPart: string): string {
 	return `${prefix}:${item.id || item.name}:${keyPart}:${effect.label ?? ""}:${effect.condition || "any"}`;
 }
 
-/** The shared funnel modifier builder for the three test kinds. */
-function funnelModifier(
+/** The shared funnel modifier builder for the three test kinds. Exported for
+ * the shared initiative-row collector (bead zl6e), which reuses the domain id
+ * source/label/id shape so its rows merge/dedupe like every other funnel
+ * row. */
+export function funnelModifier(
 	item: ItemView,
 	effect: EffectData,
 	keyPart: string,

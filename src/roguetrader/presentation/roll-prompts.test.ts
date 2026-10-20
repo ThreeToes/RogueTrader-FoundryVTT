@@ -57,9 +57,8 @@ for (const key of ["game", "ui", "foundry", "Handlebars"]) {
 (globalThis as Record<string, unknown>).Handlebars = HandlebarsLib;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { promptTargetComponent, promptShieldAbsorption } = await import(
-	"./roll-prompts"
-);
+const { promptTargetComponent, promptShieldAbsorption, escapeDocumentData } =
+	await import("./roll-prompts");
 const { foundryPorts, resetPorts, setPorts } = await import(
 	"../infrastructure/foundry/ports"
 );
@@ -102,6 +101,39 @@ function setPortsWithI18n() {
 function expectedEscape(name: string): string {
 	return HandlebarsLib.escapeExpression(name);
 }
+
+// --- escapeDocumentData (fallback branch, bead nrfr) -------------------------
+
+describe("escapeDocumentData fallback (bead nrfr)", () => {
+	test("entity parity with the Handlebars path when the global is deleted", () => {
+		const name = 'Bob "the" <Vat> & Sons';
+		const savedHb = globals.Handlebars;
+		delete globals.Handlebars;
+		try {
+			// Not tautological: the global is gone, so this runs the hand-rolled
+			// branch — it must still pin against the same escape output the
+			// Handlebars path produces.
+			expect(escapeDocumentData(name)).toBe(
+				'Bob &quot;the&quot; &lt;Vat&gt; &amp; Sons',
+			);
+			expect(escapeDocumentData(name)).toBe(expectedEscape(name));
+		} finally {
+			globals.Handlebars = savedHb;
+		}
+	});
+
+	test("a Handlebars-like stub without escapeExpression falls back instead of throwing", () => {
+		const savedHb = globals.Handlebars;
+		globals.Handlebars = {};
+		try {
+			expect(escapeDocumentData("Evil & Co <Ltd>")).toBe(
+				"Evil &amp; Co &lt;Ltd&gt;",
+			);
+		} finally {
+			globals.Handlebars = savedHb;
+		}
+	});
+});
 
 // --- promptTargetComponent --------------------------------------------------
 

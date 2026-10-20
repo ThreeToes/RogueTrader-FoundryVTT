@@ -497,7 +497,6 @@
 	"ROLL.CHARGE": "Charge (+10 WS; Berserk Charge grants +20 instead)",
 	"ROLL.SUCCESS": "Success",
 	"ROLL.FAILURE": "Failure",
-	"ROLL.DEGREES": "degrees",
 	"ROLL.SUCCESS_WITH_DEGREES": "Success (+{degrees} degrees)",
 	"FEAR.TEST_TITLE": "Fear Test",
 	"FEAR.SOURCE_PREFIX": "caused by",

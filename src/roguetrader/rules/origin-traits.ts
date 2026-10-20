@@ -13,7 +13,10 @@
  */
 
 import { storedOriginPicks, type StoredOrigins } from "./origins";
-import { testContributors } from "../../ffg/application/funnel";
+import {
+	type TestContributor,
+	testContributors,
+} from "../../ffg/application/funnel";
 import { isCharacterView } from "../../ffg/domain/model/actor";
 import { getPorts } from "../infrastructure/foundry/ports";
 
@@ -110,8 +113,7 @@ export function traitModifierId(def: OriginTraitDef): string {
 // function is called from rules/funnel-registration.ts, so a caller that
 // imports the funnel machinery directly still sees the RT contributors
 // without depending on which module happened to load first.
-export function registerOriginTraitsContributor(): void {
-	testContributors.register("origin-traits", (view, context) => {
+export const originTraitsContributor: TestContributor = (view, context) => {
 	const defs = getPorts().config.originTraits() as OriginTraitDef[];
 	if (defs.length === 0) return [];
 	// Bead l2wz: the view's system types as the family union; origins are a
@@ -131,5 +133,12 @@ export function registerOriginTraitsContributor(): void {
 			label: m.def.name,
 			value: m.def.value,
 		}));
-});
+};
+
+/** Registration is explicit (bead i4b0) — see the heading above. The
+ * contributor lives in a module-level const so rules/funnel-registration.ts
+ * can identity-check the exact handle (bead 4tx6): a foreign module
+ * registering the "origin-traits" type must not satisfy the RT guard. */
+export function registerOriginTraitsContributor(): void {
+	testContributors.register("origin-traits", originTraitsContributor);
 }

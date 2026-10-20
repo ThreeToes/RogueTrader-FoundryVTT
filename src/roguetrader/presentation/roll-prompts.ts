@@ -23,7 +23,7 @@ export function escapeDocumentData(value: unknown): string {
 	// The Foundry runtime always provides the global Handlebars; test fakes may
 	// not, so fall back to the identical entity substitution instead of
 	// throwing a ReferenceError mid-prompt.
-	if (typeof globalThis.Handlebars !== "undefined") {
+	if (typeof globalThis.Handlebars?.escapeExpression === "function") {
 		return globalThis.Handlebars.escapeExpression(String(value ?? ""));
 	}
 	return String(value ?? "")

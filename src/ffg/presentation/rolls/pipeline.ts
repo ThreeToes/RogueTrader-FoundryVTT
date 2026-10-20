@@ -40,15 +40,6 @@ import type {
 import { getPorts, localizeLabel } from "../../infrastructure/foundry/ports";
 
 /**
- * Dialog contributors = caller modifiers + a funnel collection for the test
- * context, so talent/gear/item effects are visible (and editable-previewed)
- * in the dialog, not only on the chat card. Attack-context-dependent
- * contributors (fire-mode, condition flags) are chosen inside the dialog and
- * stay post-dialog only - the card shows the full breakdown. Ids survive the
- * dialog round-trip, so the test step's funnel merge dedupes instead of
- * doubling.
- */
-/**
  * Shared roll-card outcome label (bead s1lv, reused by bead obbp): one
  * interpolated i18n key per outcome — ROLL.SUCCESS_WITH_DEGREES with
  * {degrees} on success, ROLL.FAILURE otherwise — so other languages control

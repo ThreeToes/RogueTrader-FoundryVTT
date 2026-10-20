@@ -807,7 +807,6 @@
 	"ROLL.CHARGE": "Charge (+10 CC ; Charge Frénétique accorde +20 à la place)",
 	"ROLL.SUCCESS": "Réussite",
 	"ROLL.FAILURE": "Échec",
-	"ROLL.DEGREES": "degrés",
 	"ROLL.SUCCESS_WITH_DEGREES": "Réussite (+{degrees} degrés)",
 	"FEAR.TEST_TITLE": "Test de Peur",
 	"FEAR.SOURCE_PREFIX": "causé par",

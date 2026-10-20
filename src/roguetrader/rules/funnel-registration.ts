@@ -14,14 +14,21 @@
  * entry points call `registerRtFunnelContributors()` directly, and the
  * rules/funnel shim keeps calling it so existing shim imports keep working.
  *
- * `applied` guards the double registration (HandlerRegistry.register appends,
- * it does not replace), and the keys are re-checked defensively so a caller
- * whose registry is already populated pays nothing.
+ * The applied-guard is IDENTITY-based (bead 4tx6): only the exact RT
+ * contributor function for a type key counts as already applied (checked by
+ * reference against the registry). The old keys-only check would have been
+ * satisfied by a FOREIGN module registering "attack-context"/"origin-traits"
+ * first — silently skipping the RT fns and re-opening the missing-row class
+ * i4b0 exists to kill. With the identity check a foreign registration is
+ * appended beside, never substituted for, the RT fns.
  */
 
-import { testContributors } from "../../ffg/application/funnel";
-import { registerAttackContextContributor } from "./homebrew";
-import { registerOriginTraitsContributor } from "./origin-traits";
+import {
+	type TestContributor,
+	testContributors,
+} from "../../ffg/application/funnel";
+import { attackContextContributor } from "./homebrew";
+import { originTraitsContributor } from "./origin-traits";
 
 /** Source types this module is responsible for (funnel registry keys). */
 export const RT_FUNNEL_CONTRIBUTOR_TYPES = [
@@ -29,23 +36,24 @@ export const RT_FUNNEL_CONTRIBUTOR_TYPES = [
 	"origin-traits",
 ] as const;
 
-let applied = false;
+/** This module's contributors, each with its registry type key (bead 4tx6). */
+const RT_FUNNEL_CONTRIBUTORS: ReadonlyArray<
+	readonly [string, TestContributor]
+> = [
+	["attack-context", attackContextContributor],
+	["origin-traits", originTraitsContributor],
+];
 
 /**
  * Register the RT-specific funnel contributors into the shared registry.
- * Idempotent: a repeat call (recomposed entry point, another test in the same
- * process, a future second caller) contributes nothing extra.
+ * Idempotent: a repeat call (recomposed entry point, another test in the
+ * same process, a future second caller) contributes nothing extra — each
+ * type key is registered only when the EXACT RT contributor for it is absent.
  */
 export function registerRtFunnelContributors(): void {
-	if (applied) return;
-	const already = new Set(testContributors.types());
-	if (
-		RT_FUNNEL_CONTRIBUTOR_TYPES.every((type) => already.has(type))
-	) {
-		applied = true;
-		return;
+	for (const [type, fn] of RT_FUNNEL_CONTRIBUTORS) {
+		if (!testContributors.contributorsFor(type).includes(fn)) {
+			testContributors.register(type, fn);
+		}
 	}
-	registerAttackContextContributor();
-	registerOriginTraitsContributor();
-	applied = true;
 }

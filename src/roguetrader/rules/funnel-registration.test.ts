@@ -31,6 +31,17 @@ const originalGame = (globalThis as Record<string, unknown>).game;
 const { collectTestModifiers, testContributors } = await import(
 	"../../ffg/application/funnel"
 );
+
+// Bead 4tx6, FOREIGN-FIRST registration: before anything RT is imported, a
+// (fictional) foreign module registers its own contributors under the SAME
+// type keys the RT registrar owns. With the old keys-based applied-guard this
+// made the RT registrar skip itself — the RT rows would silently vanish (the
+// missing-row class bead i4b0 exists to kill). With the identity-based guard
+// the RT fns append BESIDE them, never get substituted for. The stubs return
+// empty arrays so they contribute no rows to the assertions below or to any
+// later suite in this process.
+testContributors.register("attack-context", () => []);
+testContributors.register("origin-traits", () => []);
 // The view builder from the domain layer — loose objects in, ActorView out.
 const { buildActorView } = await import("../../ffg/domain/model/build");
 // The RT pipeline shim — WITHOUT the rules/funnel side-effect shim in the
@@ -41,6 +52,10 @@ const {
 	registerRtFunnelContributors,
 	RT_FUNNEL_CONTRIBUTOR_TYPES,
 } = await import("./funnel-registration");
+// The exact RT contributor handles, for the identity-based guard assertions
+// (bead 4tx6).
+const { attackContextContributor } = await import("./homebrew");
+const { originTraitsContributor } = await import("./origin-traits");
 
 import { afterAll, describe, expect, test } from "bun:test";
 
@@ -55,6 +70,10 @@ afterAll(() => {
 const view = () => buildActorView({});
 
 describe("registerRtFunnelContributors (bead i4b0)", () => {
+	// Bead 4tx6: this file registers FOREIGN stubs under the RT type keys
+	// BEFORE importing the pipeline (see the top of the file), so this
+	// assertion — run in isolation — fails against any keys-based guard that
+	// a foreign registration could satisfy.
 	test("the fire-mode row is present on a bare pipeline import (no shim)", () => {
 		const mods = collectTestModifiers(
 			view(),
@@ -88,6 +107,26 @@ describe("registerRtFunnelContributors (bead i4b0)", () => {
 		);
 		expect(
 			mods.filter((m) => m.id === "attack:fire-mode:burst"),
+		).toHaveLength(1);
+	});
+
+	// Bead 4tx6: the applied-guard is IDENTITY-based. A foreign module's
+	// contributors under the same type keys (stubbed in at the top of this
+	// file) must never satisfy the RT registration — the exact RT handles
+	// must be registered beside them, each exactly once.
+	test("a foreign registration of the same type keys does not satisfy the guard", () => {
+		registerRtFunnelContributors();
+		const attackHandlers = testContributors.contributorsFor("attack-context");
+		const originHandlers = testContributors.contributorsFor("origin-traits");
+		expect(attackHandlers).toContain(attackContextContributor);
+		expect(originHandlers).toContain(originTraitsContributor);
+		// No duplicate RT registration on the repeat call (or on the shim's
+		// module-load call earlier in the graph).
+		expect(
+			attackHandlers.filter((fn) => fn === attackContextContributor),
+		).toHaveLength(1);
+		expect(
+			originHandlers.filter((fn) => fn === originTraitsContributor),
 		).toHaveLength(1);
 	});
 });

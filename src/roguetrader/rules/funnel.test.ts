@@ -118,13 +118,13 @@ describe("contributor registry", () => {
 	// One-shot malformed contributor (bead otpj): malformed on its first
 	// invocation only — the registration is permanent (no unregister), and
 	// later runs in this file must stay silent.
-		let malformedFired = false;
-		test("register + run, malformed returns ignored with a warning", () => {
-			testContributors.register("test-only", () => {
-				if (malformedFired) return [];
-				malformedFired = true;
-				return null as unknown as Modifier[];
-			});
+	let malformedFired = false;
+	test("register + run, malformed returns ignored with a warning", () => {
+		testContributors.register("test-only", () => {
+			if (malformedFired) return [];
+			malformedFired = true;
+			return null as unknown as Modifier[];
+		});
 		testContributors.register("test-only", () => [
 			{
 				id: "custom",

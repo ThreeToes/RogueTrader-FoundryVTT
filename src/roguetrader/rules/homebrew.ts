@@ -66,7 +66,10 @@ function registryInForce(): readonly RuleKnob[] {
 	return ruleKnobs();
 }
 import type { Modifier } from "../../rules-engine/modifier";
-import { testContributors } from "../../ffg/application/funnel";
+import {
+	type TestContributor,
+	testContributors,
+} from "../../ffg/application/funnel";
 import { getPorts } from "../infrastructure/foundry/ports";
 
 /**
@@ -492,8 +495,7 @@ function mergeEffectiveProfile(
 // imports the funnel machinery directly still sees the RT contributors
 // without depending on which module happened to load first.
 // ---------------------------------------------------------------------------
-export function registerAttackContextContributor(): void {
-	testContributors.register("attack-context", (_view, context) => {
+export const attackContextContributor: TestContributor = (_view, context) => {
 	if (context.kind !== "attack") return [];
 	// Bead dfdv: Modifier.label is documented as a localized label, so the
 	// contributor resolves its keys through the i18n port (same keys the
@@ -518,7 +520,14 @@ export function registerAttackContextContributor(): void {
 		});
 	}
 	return mods;
-});
+};
+
+/** Registration is explicit (bead i4b0) — see the heading above. The
+ * contributor lives in a module-level const so rules/funnel-registration.ts
+ * can identity-check the exact handle (bead 4tx6): a foreign module
+ * registering the "attack-context" type must not satisfy the RT guard. */
+export function registerAttackContextContributor(): void {
+	testContributors.register("attack-context", attackContextContributor);
 }
 
 /**

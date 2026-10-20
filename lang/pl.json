@@ -831,7 +831,6 @@
 	"ROLL.CHARGE": "Szarża (+10 WW; Szaleńczy Szturm daje zamiast tego +20)",
 	"ROLL.SUCCESS": "Sukces",
 	"ROLL.FAILURE": "Porażka",
-	"ROLL.DEGREES": "stopnie",
 	"ROLL.SUCCESS_WITH_DEGREES": "Sukces (+{degrees} stopnie)",
 	"FEAR.TEST_TITLE": "Test Strachu",
 	"FEAR.SOURCE_PREFIX": "spowodowany przez",

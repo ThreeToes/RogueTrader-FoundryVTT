@@ -794,7 +794,6 @@
 	"ROLL.CHARGE": "Cargar (+10 HA; Embestida Frenética otorga +20 en su lugar)",
 	"ROLL.SUCCESS": "Éxito",
 	"ROLL.FAILURE": "Fallo",
-	"ROLL.DEGREES": "grados",
 	"ROLL.SUCCESS_WITH_DEGREES": "Éxito (+{degrees} grados)",
 	"FEAR.TEST_TITLE": "Prueba de Miedo",
 	"FEAR.SOURCE_PREFIX": "causado por",

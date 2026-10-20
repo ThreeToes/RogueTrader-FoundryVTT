@@ -87,15 +87,27 @@ export async function runRoll<K extends RollKind>(
 		// Guarded affliction/talent conditions (bead xu83): offer a pre-roll
 		// toggle for every guard that could apply to this test, and re-collect
 		// the visible rows when one is switched on so the preview matches.
+		//
+		// Bead 4tx6: prepare-only kinds are excluded STRUCTURALLY, not by a
+		// handler-maintained key list — their after-hook owns the test
+		// entirely, and a toggle's collectForConditions re-collection over the
+		// generic test channel would admit wildcard rows the handler's pinned
+		// set never counts (the zl6e leak). Covering this with a
+		// handledConditionFlags list that mirrors the handler's own scope would
+		// break silently the moment either scope widens; a prepare-only kind
+		// gets no generic toggles at all. (handledConditionFlags still applies
+		// to ordinary kinds whose own dialog controls already own a flag.)
 		const conditionScope = {
 			kind: prepared.testKind,
 			key: prepared.testKey,
 			weapon: prepared.weapon,
 			skillName: prepared.context.skillName,
 		};
-		const conditions = collectConditionKeys(view, conditionScope).filter(
-			(key) => !(prepared.handledConditionFlags ?? []).includes(key),
-		);
+		const conditions = prepared.prepareOnly
+			? []
+			: collectConditionKeys(view, conditionScope).filter(
+					(key) => !(prepared.handledConditionFlags ?? []).includes(key),
+				);
 		const result = await TestDialog.show({
 			title: prepared.title,
 			baseTarget: prepared.baseTarget,

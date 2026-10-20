@@ -61,6 +61,7 @@ const { foundryPorts, setPorts } = await import(
 	"../../ffg/infrastructure/foundry/ports"
 );
 const { TestDialog } = await import("./test-dialog");
+const { runRoll } = await import("../presentation/rolls/orchestrator");
 
 // --- Fixture ----------------------------------------------------------------
 
@@ -315,5 +316,73 @@ describe("initiative parity (bead zl6e)", () => {
 		expect(
 			(modelFixture() as unknown as { initiativeBonus: number }).initiativeBonus,
 		).toBe(AG_BONUS + 15); // 5 + 10; the wildcard's 7 never folds
+	});
+
+	// Bead 4tx6: the prepare-only condition-toggle suppression is STRUCTURAL
+	// in the orchestrator — a prepare-only kind gets NO generic toggles, no
+	// matter what its handler sets (or omits) in handledConditionFlags. The
+	// fixture actor carries the guarded "charging" Charger row, so the scope
+	// WOULD offer that toggle if the suppression ever drifted.
+	test("a prepare-only handler receives no condition toggles even with an empty handledConditionFlags", async () => {
+		wirePaths();
+		const infos: Array<Record<string, unknown> | undefined> = [];
+		const handler = {
+			prepare: async () => ({
+				title: "T",
+				baseTarget: 10,
+				testKind: "characteristic",
+				testKey: "initiative", // matches the guarded Charger fixture row
+				initialModifiers: [],
+				weapon: null,
+				context: {},
+				prepareOnly: true,
+				// Deliberately empty: any key-list coverage scheme would offer
+				// a toggle exactly when this list stopped mirroring the scope.
+				handledConditionFlags: [],
+			}),
+			after: async (
+				...args: unknown[]
+			) => {
+				infos.push(args[4] as Record<string, unknown>);
+			},
+		};
+		const result = await runRoll(
+			{ kind: "initiative", actor: actorFixture() } as never,
+			handler as never,
+		);
+		expect(result).toBeNull(); // prepare-only: no kernel outcome
+		const request = dialogRequests[0] as Record<string, unknown>;
+		expect(request).toBeDefined();
+		expect(request.conditions).toBeUndefined();
+		expect(request.collectForConditions).toBeUndefined();
+		// The after-hook contract holds: info carries the dialog rows.
+		expect((infos[0]?.modifiers as unknown[]) ?? []).toEqual([]);
+	});
+
+	// The suppression is prepare-only-SCOPED, not global: an ordinary kind
+	// over the same fixture still gets its toggles (the dialog returns null
+	// so no shared test runs — only the offered request shape is pinned).
+	test("an ordinary kind over the same fixture still receives the condition toggles", async () => {
+		wirePaths();
+		dialogResult = null;
+		const handler = {
+			prepare: async () => ({
+				title: "T",
+				baseTarget: 30,
+				testKind: "characteristic",
+				testKey: "initiative",
+				initialModifiers: [],
+				weapon: null,
+				context: {},
+			}),
+		};
+		const result = await runRoll(
+			{ kind: "initiative", actor: actorFixture() } as never,
+			handler as never,
+		);
+		expect(result).toBeNull(); // the dialog refused — runTest never ran
+		const request = dialogRequests[0] as Record<string, unknown>;
+		expect(request).toBeDefined();
+		expect(request.conditions).toEqual(["charging"]);
 	});
 });

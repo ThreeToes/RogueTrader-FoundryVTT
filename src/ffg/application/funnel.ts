@@ -67,6 +67,15 @@ export const testContributors = {
 		return contributors.keys();
 	},
 	/**
+	 * The contributors registered under one source type, in registration
+	 * order (bead 4tx6): lets a system's explicit-registrar compare HANDLES,
+	 * so a foreign module registering the same type key can never satisfy its
+	 * applied-guard by key shape alone.
+	 */
+	contributorsFor(type: string): readonly TestContributor[] {
+		return contributors.for(type);
+	},
+	/**
 	 * Run every registered contributor. Malformed results (a forgotten return,
 	 * a bare Modifier instead of an array, a non-moder element) warn at this
 	 * seam naming the registry and source type (bead otpj) and contribute

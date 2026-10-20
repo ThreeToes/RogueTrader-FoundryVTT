@@ -27,30 +27,27 @@
  * bulk formula roll keys on the explicit "initiative" rows only), guarded
  * rows count only when their condition flag is set — and the dialog offers
  * NO condition toggles here (the old dialog offered none, and a toggle's
- * generic re-collection would leak wildcards into a parity-pinned set), so
- * every guarded key the scope would offer is marked `handledConditionFlags`.
+ * generic re-collection would leak wildcards into a parity-pinned set). Bead
+ * 4tx6: that suppression is structural in the orchestrator (prepare-only
+ * kinds never receive generic condition toggles at all), so this handler
+ * carries no handledConditionFlags list that could drift from runRoll's own
+ * condition scope.
  */
 
 import { breakdown, mergeModifiers } from "../../../ffg/application/funnel";
 import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { systemOf } from "../../data/accessors";
-import { collectConditionKeys } from "../../rules/funnel";
 import { collectInitiativeRows } from "../../rules/initiative-rows";
 import { postCard } from "../../rules/chat-flags";
 import type { RollHandler } from "../../rules/roll-contract";
-import type { Modifier } from "../../../rules-engine/index";
+import { sumModifiers, type Modifier } from "../../../rules-engine/index";
 import { getPorts } from "../../infrastructure/foundry/ports";
 
 /** One combatant document on the active tracker (combat-end.ts precedent). */
 interface CombatantLike {
 	actorId?: string;
 	update: (data: object) => Promise<unknown>;
-}
-
-/** The scope the generic condition-key collection would use for this kind. */
-function initiativeConditionScope() {
-	return { kind: "characteristic" as const, key: "initiative", weapon: null };
 }
 
 /** "Roll for initiative" (bead 77r1): a raw d10 + the initiative bonus. */
@@ -80,7 +77,8 @@ export const initiativeHandler: RollHandler<"initiative"> = {
 		// guarded row counts only when its condition flag is set (the dialog
 		// offers no toggles here — see the header — so guarded rows stay out
 		// of a bulk-formula parity set; review finding 4).
-		const collected = collectInitiativeRows(actorView(actor).items);
+		const view = actorView(actor);
+		const collected = collectInitiativeRows(view.items);
 		const rows: Modifier[] = [
 			{
 				id: "initiative-base:agility",
@@ -90,7 +88,6 @@ export const initiativeHandler: RollHandler<"initiative"> = {
 			},
 			...collected,
 		];
-		const view = actorView(actor);
 		return {
 			title: `${actor.name} — ${ports.i18n.t("ROLL.INITIATIVE_TITLE")}`,
 			// The d10 cap; the dialog's preview reads base + rows. There is no
@@ -103,12 +100,10 @@ export const initiativeHandler: RollHandler<"initiative"> = {
 			weapon: null,
 			context: {},
 			prepareOnly: true,
-			// Suppress the generic pre-roll condition toggles: any key the
-			// scope would offer is owned by the collector's guard policy.
-			handledConditionFlags: collectConditionKeys(
-				view,
-				initiativeConditionScope(),
-			),
+			// No handledConditionFlags list: the suppression is STRUCTURAL —
+			// the orchestrator offers no generic condition toggles for
+			// prepare-only kinds at all (bead 4tx6), so no list here has to
+			// match runRoll's own condition scope.
 		};
 	},
 
@@ -135,12 +130,11 @@ export const initiativeHandler: RollHandler<"initiative"> = {
 		// MERGED set is both the arithmetic and the card's breakdown.
 		const merged = mergeModifiers(dialogRows, prepared.initialModifiers);
 		// Bead wvkd: the evaluated d10 rides the card so Dice So Nice!
-		// animates it. Raw formula — no d100, no kernel.
+		// animates it. Raw formula — no d100, no kernel. The sum is the
+		// one in rules-engine (bead 4tx6: no inline reduce re-implementing
+		// sumModifiers).
 		const rolled = await ports.dice.roll("1d10");
-		const total = rolled.total + merged.reduce(
-			(sum, mod) => sum + mod.value,
-			0,
-		);
+		const total = rolled.total + sumModifiers(merged);
 		// Combat integration: assign to EVERY combatant of this actor on the
 		// active tracker (a multi-token actor keeps its tokens in step — the
 		// old core path rolled all of them; review finding 3).

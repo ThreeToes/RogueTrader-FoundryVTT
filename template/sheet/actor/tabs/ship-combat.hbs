@@ -1,5 +1,12 @@
 <section class="tab {{tabs.combat.cssClass}}" data-group="primary" data-tab="combat">
-    <div class="starship border">
+    {{!-- Bead 9oxq (pass B): the owner-approved two-column combat layout.
+         .sc-combat-head spans the top (vitals strip, crippled banner,
+         toolbar, boarding banner, turn flags — all full-width state and
+         controls); .sc-combat-body is the CSS grid holding the two columns:
+         primary = SHIP ACTIONS, secondary = SHIP WEAPONS + COMPONENT
+         CONDITIONS. No selector renames, no behaviour changes. --}}
+    <div class="starship border sc-combat-grid">
+        <div class="sc-combat-head">
         {{!-- Vitals strip (bead ecnp): the test-dialog target-strip pattern —
              gold small-caps label over a big number, thin vertical rules.
              Void Shields render as pips (one per shield, all lit). --}}
@@ -112,6 +119,10 @@
         </div>
         {{/unless}}
 
+        </div>
+
+        <div class="sc-combat-body">
+        <div class="sc-combat-col primary">
         {{!-- SHIP ACTIONS (bead 7gcm): the starship-actions pack rows, --}}
         {{!-- grouped through the S5/S7 dispatch tables; every chip enters --}}
         {{!-- the S1 ship-action roll kind, with the helmsman as performer. --}}
@@ -142,6 +153,8 @@
         <p class="method-hint">{{localize "SHIP_COMBAT.NO_SHIP_ACTIONS"}}</p>
         {{/unless}}
 
+        </div>
+        <div class="sc-combat-col secondary">
         {{!-- Weapons: fire action per installed ship-weapon-component --}}
         <div class="inv-group-header">
             <h2 class="inv-group-label">{{localize "SHIP_COMBAT.WEAPONS"}}</h2>
@@ -242,5 +255,7 @@
         {{/"rt/ship-component-row"}}
         {{/each}}
         {{/if}}
+        </div>
+        </div>
     </div>
 </section>

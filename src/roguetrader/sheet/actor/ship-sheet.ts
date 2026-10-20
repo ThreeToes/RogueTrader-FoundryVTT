@@ -109,8 +109,10 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		position: { width: 640, height: 560 },
 		// Resizable per the repo UI rule, with min clamps (the rules-app
 		// precedent): the two-column chip grids and the vitals strip need the
-		// room; ApplicationV2 clamps the resize to minWidth/minHeight.
-		window: { resizable: true, minWidth: 560, minHeight: 440 },
+		// room. Bead 9oxq (pass B) put the Combat tab into two columns — the
+		// battery card grids only reflow cleanly at 720px+.
+		// ApplicationV2 clamps the resize to minWidth/minHeight.
+		window: { resizable: true, minWidth: 720, minHeight: 440 },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
 			editImage: imageActions.editImage,

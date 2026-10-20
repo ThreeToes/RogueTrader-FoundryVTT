@@ -1631,6 +1631,79 @@
 	white-space: nowrap;
 }
 
+/* Combat tab two-column pass (bead 9oxq): the wrapper's .sc-combat-grid is a
+   single-track grid so .sc-combat-head (full-width top region: vitals strip,
+   crippled banner, toolbar, boarding banner) and .sc-combat-body stack in one
+   row each; the head keeps grid-column: 1 / -1 so it also spans correctly if
+   it sits inside a grid. min-width: 0 everywhere — grid children overflow
+   instead of shrinking otherwise. align-items: start so the two body columns
+   size to their own content. NO viewport media queries (floating app
+   windows — media queries lie); the window min clamp lives in ship-sheet.ts. */
+.rogue-trader.sheet.starship .sc-combat-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	align-items: start;
+}
+
+.rogue-trader.sheet.starship .sc-combat-head {
+	grid-column: 1 / -1;
+	min-width: 0;
+}
+
+/* The body: exactly two equal columns — primary (SHIP ACTIONS) and secondary
+   (SHIP WEAPONS battery + COMPONENT CONDITIONS). Row gap is the
+   design-language 8px; the column gap widens to the 20px gutter the shared
+   action-list rule uses (sheet-character.css) so the seam rule below has
+   room. NO media queries. */
+.rogue-trader.sheet.starship .sc-combat-body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	align-items: start;
+	gap: 8px 20px;
+	position: relative;
+}
+
+/* Left/right seam: the same one-line ::before rule pattern as the shared
+   action-list centre rule, down the gutter between the two columns. */
+.rogue-trader.sheet.starship .sc-combat-body::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	width: 1px;
+	transform: translateX(-0.5px);
+	background: var(--rt-border);
+}
+
+.rogue-trader.sheet.starship .sc-combat-col {
+	min-width: 0;
+}
+
+/* SECONDARY column reflow (bead 9oxq): the weapon battery keeps its 2-up
+   card grid (with minmax(0, 1fr) the cards shrink, never overflow), and the
+   card-stats mini stat grid gains a wrap floor — 4-up STR·DMG·CRIT·RNG
+   crushes at card scale inside a half-width column, so each stat cell keeps
+   a 3.8em floor and wraps to a 2×2 grid when the card is narrow. */
+.rogue-trader.sheet.starship .sc-combat-col.secondary .battery-card .card-stats {
+	grid-template-columns: repeat(auto-fit, minmax(3.8em, 1fr));
+}
+
+/* PRIMARY column reflow (bead 9oxq): the promoted action-list two-column
+   chip grid (sheet-character.css) does not survive a half-width column — the
+   fixed-width .sc-action-test cell is 12em, so a 2-up sub-grid at ~300px
+   leaves nothing for the name. Pinned here as a starship-scoped modifier:
+   ONE sub-column, the centre rule hidden (there is no middle gutter in a
+   single column); the chip's flexible name keeps its ellipsis and the test
+   spec aligns right at full row width. No selector renames. */
+.rogue-trader.sheet.starship .sc-combat-col.primary .action-list {
+	grid-template-columns: 1fr;
+}
+
+.rogue-trader.sheet.starship .sc-combat-col.primary .action-list::before {
+	display: none;
+}
+
 /* GM-facing NPC sheet (bead mqdy): horizontal characteristic table +
    compact skill/combat lists. Design-language tokens throughout. Label
    typography comes from the shared small-caps label rule (xcte). */

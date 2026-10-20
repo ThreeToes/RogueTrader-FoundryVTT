@@ -488,6 +488,87 @@ describe("the ship-combat tab template render", () => {
 		expect(html).toContain('data-action="defaultManoeuvre"');
 	});
 
+	test("the two-column combat layout: head spans, columns land, action contracts intact (bead 9oxq)", () => {
+		const html = compiled()(
+			templateContext(
+				baseCombatContext({
+					shipActionGroups: [
+						{
+							key: "manoeuvre",
+							labelKey: "SHIP_COMBAT.ACTION_GROUP_MANOEUVRE",
+							rows: [
+								{
+									name: "Adjust Bearing",
+									uuid: "u1",
+									testLabel: "Pilot",
+									difficulty: "",
+									skipDialog: false,
+									tooltip: "t",
+								},
+							],
+						},
+					],
+					shipActionGroupsEmpty: false,
+					weapons: [],
+					roster: [],
+					weaponRoster: [],
+					helmsman: { uuid: "", options: [] },
+					turnFlags: [],
+					turnFlagsEmpty: true,
+					boarding: { locked: false },
+					silentRunning: false,
+				}),
+			),
+		);
+		// The pinned class contract: the wrapper gains sc-combat-grid; ONE
+		// sc-combat-head; the body grid with EXACTLY two sc-combat-col divs.
+		expect(html).toContain('class="starship border sc-combat-grid"');
+		expect(html.match(/class="sc-combat-head"/g)?.length).toBe(1);
+		expect(html.match(/class="sc-combat-body"/g)?.length).toBe(1);
+		expect(html.match(/class="sc-combat-col primary"/g)?.length).toBe(1);
+		expect(html.match(/class="sc-combat-col secondary"/g)?.length).toBe(1);
+		// Head spans: the vitals strip + toolbar live in the head region, which
+		// closes before the body grid opens.
+		const headOpen = html.indexOf('class="sc-combat-head"');
+		const bodyOpen = html.indexOf('class="sc-combat-body"');
+		const primaryOpen = html.indexOf('class="sc-combat-col primary"');
+		const secondaryOpen = html.indexOf('class="sc-combat-col secondary"');
+		expect(headOpen).toBeGreaterThan(html.indexOf("starship border"));
+		expect(bodyOpen).toBeGreaterThan(headOpen);
+		expect(primaryOpen).toBeGreaterThan(bodyOpen);
+		expect(secondaryOpen).toBeGreaterThan(primaryOpen);
+		const headSlice = html.slice(headOpen, bodyOpen);
+		expect(headSlice).toContain("sc-vitals-strip");
+		expect(headSlice).toContain("sc-combat-toolbar");
+		// Sections land in the right column: SHIP ACTIONS (header + groups) in
+		// primary; SHIP WEAPONS + COMPONENT CONDITIONS in secondary.
+		const actions = html.indexOf("SHIP_COMBAT.SHIP_ACTIONS");
+		const weapons = html.indexOf("SHIP_COMBAT.WEAPONS");
+		const conditions = html.indexOf("SHIP_COMBAT.CONDITIONS");
+		expect(actions).toBeGreaterThan(primaryOpen);
+		expect(html.indexOf("sc-action-list")).toBeGreaterThan(primaryOpen);
+		// The primary col closes before weapons open.
+		const primaryClose = html.indexOf("</div>", html.indexOf("sc-action-list"));
+		expect(weapons).toBeGreaterThan(primaryClose);
+		expect(conditions).toBeGreaterThan(primaryClose);
+		const secondarySlice = html.slice(secondaryOpen);
+		expect(secondarySlice).toContain("SHIP_COMBAT.WEAPONS");
+		expect(secondarySlice).toContain("SHIP_COMBAT.CONDITIONS");
+		expect(secondarySlice).toContain("SHIP_COMBAT.NO_WEAPONS");
+		// DATA-ACTION CONTRACTS unchanged.
+		for (const action of [
+			"shipActionChip",
+			"rollInitiative",
+			"setHelmsman",
+			"toggleSilentRunning",
+			"defaultManoeuvre",
+			// openItem/fireWeapon/repairComponent/setComponentState stay
+			// asserted wherever their sections render (battery badges test etc.).
+		]) {
+			expect(html).toContain(`data-action="${action}"`);
+		}
+	});
+
 	test("the de-crowded tab: ONE merged toolbar, chip anatomy + slim group labels (bead t2bj)", () => {
 		const html = compiled()(
 			templateContext(

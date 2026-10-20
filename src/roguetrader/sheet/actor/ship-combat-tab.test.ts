@@ -488,7 +488,7 @@ describe("the ship-combat tab template render", () => {
 		expect(html).toContain('data-action="defaultManoeuvre"');
 	});
 
-	test("the two-column combat layout: head spans, columns land, action contracts intact (bead 9oxq)", () => {
+	test("the stacked combat layout: sections in order (Rev per owner, bead 9oxq)", () => {
 		const html = compiled()(
 			templateContext(
 				baseCombatContext({
@@ -537,47 +537,25 @@ describe("the ship-combat tab template render", () => {
 				}),
 			),
 		);
-		// The pinned class contract: the wrapper gains sc-combat-grid; ONE
-		// sc-combat-head; the body grid with EXACTLY two sc-combat-col divs.
-		expect(html).toContain('class="starship border sc-combat-grid"');
-		expect(html.match(/class="sc-combat-head"/g)?.length).toBe(1);
-		expect(html.match(/class="sc-combat-body"/g)?.length).toBe(1);
-		expect(html.match(/class="sc-combat-col primary"/g)?.length).toBe(1);
-		expect(html.match(/class="sc-combat-col secondary"/g)?.length).toBe(1);
-		// Head spans: the vitals strip + toolbar live in the head region, which
-		// closes before the body grid opens.
-		const headOpen = html.indexOf('class="sc-combat-head"');
-		const bodyOpen = html.indexOf('class="sc-combat-body"');
-		const primaryOpen = html.indexOf('class="sc-combat-col primary"');
-		const secondaryOpen = html.indexOf('class="sc-combat-col secondary"');
-		expect(headOpen).toBeGreaterThan(html.indexOf("starship border"));
-		expect(bodyOpen).toBeGreaterThan(headOpen);
-		expect(primaryOpen).toBeGreaterThan(bodyOpen);
-		expect(secondaryOpen).toBeGreaterThan(primaryOpen);
-		const headSlice = html.slice(headOpen, bodyOpen);
-		expect(headSlice).toContain("sc-vitals-strip");
-		expect(headSlice).toContain("sc-combat-toolbar");
-		// The boarding banner + command reminder and the turn-flag chips are
-		// also full-width head region — they must NOT drift into a column
-		// (bead 9oxq review finding 2).
-		expect(headSlice).toContain("sc-boarded");
-		expect(headSlice).toContain("sc-command-reminder");
-		expect(headSlice).toContain("sc-turn-flags");
-		// Sections land in the right column: SHIP ACTIONS (header + groups) in
-		// primary; SHIP WEAPONS + COMPONENT CONDITIONS in secondary.
+		// The pass-B two-column wrapper is GONE; sections stack full-width in
+		// order: Ship Actions → Ship Weapons → Component Conditions.
+		expect(html).toContain('class="starship border"');
+		expect(html).not.toContain("sc-combat-grid");
+		expect(html).not.toContain("sc-combat-body");
+		expect(html).not.toContain("sc-combat-col");
+		// Full-width state/controls above the sections.
+		expect(html).toContain("sc-vitals-strip");
+		expect(html).toContain("sc-combat-toolbar");
+		expect(html).toContain("sc-boarded");
+		expect(html).toContain("sc-command-reminder");
+		expect(html).toContain("sc-turn-flags");
+		// Stacked order:
 		const actions = html.indexOf("SHIP_COMBAT.SHIP_ACTIONS");
 		const weapons = html.indexOf("SHIP_COMBAT.WEAPONS");
 		const conditions = html.indexOf("SHIP_COMBAT.CONDITIONS");
-		expect(actions).toBeGreaterThan(primaryOpen);
-		expect(html.indexOf("sc-action-list")).toBeGreaterThan(primaryOpen);
-		// The primary col closes before weapons open.
-		const primaryClose = html.indexOf("</div>", html.indexOf("sc-action-list"));
-		expect(weapons).toBeGreaterThan(primaryClose);
-		expect(conditions).toBeGreaterThan(primaryClose);
-		const secondarySlice = html.slice(secondaryOpen);
-		expect(secondarySlice).toContain("SHIP_COMBAT.WEAPONS");
-		expect(secondarySlice).toContain("SHIP_COMBAT.CONDITIONS");
-		expect(secondarySlice).toContain("SHIP_COMBAT.NO_WEAPONS");
+		expect(actions).toBeGreaterThan(-1);
+		expect(weapons).toBeGreaterThan(actions);
+		expect(conditions).toBeGreaterThan(weapons);
 		// DATA-ACTION CONTRACTS unchanged.
 		for (const action of [
 			"shipActionChip",

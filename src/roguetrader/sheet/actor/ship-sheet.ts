@@ -112,7 +112,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// room. Bead 9oxq (pass B) put the Combat tab into two columns — the
 		// battery card grids only reflow cleanly at 720px+.
 		// ApplicationV2 clamps the resize to minWidth/minHeight.
-		window: { resizable: true, minWidth: 720, minHeight: 440 },
+		window: { resizable: true, minWidth: 560, minHeight: 440 },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
 			editImage: imageActions.editImage,

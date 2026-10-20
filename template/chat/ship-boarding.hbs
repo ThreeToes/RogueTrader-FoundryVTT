@@ -1,0 +1,45 @@
+{{!-- The boarding card (epic necp bead w98s, Core Rulebook p215): the lock
+     lands on BOTH ships (Manoeuvre/Shooting denied, last in initiative) or
+     the break-free attempt resolves — its failure sets the −20 on the
+     subsequent opposed Command. The manual opposed-Command reminder carries
+     the computed bonus rows as visible contributors (both directions). --}}
+<div class="rogue-trader chat roll">
+    <div class="background border">
+        <h1>
+            {{title}}
+{{#if titleDoc.link}}
+            <a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}" data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{titleDoc.link.name}}</a>
+{{/if}}
+        </h1>
+{{#if locked}}
+        <h3>{{targetName}}</h3>
+        <p class="action-note">{{localize "SHIP_BOARDING.LOCK_NOTE"}}</p>
+        <p class="action-note">{{localize "SHIP_BOARDING.OPPOSED_COMMAND_NOTE"}}</p>
+{{#if commandRows.length}}
+        <p><strong>{{localize "SHIP_BOARDING.COMMAND_ROWS"}}</strong></p>
+        <ul class="salvo-list">
+{{#each commandRows}}
+            <li>{{label}}: <strong>{{display}}</strong></li>
+{{/each}}
+        </ul>
+{{/if}}
+{{#if enemyCommandRows.length}}
+        <p><strong>{{localize "SHIP_BOARDING.COMMAND_ROWS_ENEMY"}}</strong></p>
+        <ul class="salvo-list">
+{{#each enemyCommandRows}}
+            <li>{{label}}: <strong>{{display}}</strong></li>
+{{/each}}
+        </ul>
+{{/if}}
+{{else}}
+        <p class="action-note">{{localize "SHIP_BOARDING.COMBINED_FAILED"}}</p>
+{{/if}}
+{{#if brokeFree}}
+        <p class="action-note">{{localize "SHIP_BOARDING.BREAK_FREE_CLEARED"}}</p>
+{{/if}}
+{{#if breakFreePenalty}}
+        <p class="action-note">{{localize "SHIP_BOARDING.BREAK_FREE_PENALTY"}}</p>
+        <p class="action-note">{{localize "SHIP_BOARDING.BREAK_FREE_HINT"}}</p>
+{{/if}}
+    </div>
+</div>

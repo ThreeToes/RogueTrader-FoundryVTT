@@ -114,13 +114,24 @@ export async function promptShieldAbsorption(
 
 /**
  * Critical component selection among the target's installed components
- * (book p221-222; "known" components — v1 lists all installed).
+ * (book p221-222; the attacker picks among components he "knows of").
+ *
+ * DECISION 11 (bead z697, Core Rulebook printed p217): `revealGated` prompts
+ * read the TARGET's `system.revealedComponents` set (filled by Focused
+ * Augury; bead vph0's schema field) and REFUSE un-revealed picks — the
+ * all-known stand-in is gone for the enemy-critical path. With nothing
+ * revealed yet the prompt offers nothing and warns loudly (the critical
+ * still lands; only the component pick is gated). Own-ship prompts (the
+ * Flank Speed hard-fail) and the ABOARD-THE-TARGET Hit and Run pick
+ * (bead z697) pass no gate — the crew knows its own hull, and raiders
+ * picking a component know it at first hand.
  */
 export async function promptTargetComponent(
 	target: unknown,
+	opts?: { revealGated?: boolean },
 ): Promise<unknown | null> {
 	const ports = getPorts();
-	const items = ((
+	let items = ((
 		target as { items?: { filter: (fn: unknown) => unknown[] } }
 	).items?.filter((i: { type?: string }) => {
 		return i.type === "ship-component" || i.type === "ship-weapon-component";
@@ -129,6 +140,21 @@ export async function promptTargetComponent(
 		name?: string;
 		system?: { state?: string };
 	}>;
+	if (opts?.revealGated) {
+		const revealed = new Set(
+			(
+				((target as { system?: { revealedComponents?: string[] } }).system
+					?.revealedComponents ?? []) as unknown[]
+			).map(String),
+		);
+		items = items.filter((i) => i.id !== undefined && revealed.has(i.id));
+		if (items.length === 0) {
+			ports.notify.warn("SHIP_COMBAT.COMPONENTS_NOT_REVEALED", {
+				target: (target as { name?: string }).name ?? "?",
+			});
+			return null;
+		}
+	}
 	const fixable = items.filter(
 		(i) => (i.system?.state ?? "intact") !== "destroyed",
 	);

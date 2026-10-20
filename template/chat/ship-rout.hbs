@@ -1,0 +1,41 @@
+{{!-- The boarding-turn / rout card (epic necp bead w98s, Core Rulebook
+     p215): the manual opposed Command's resolution (the winner + winning
+     degrees), the winner's per-degree pick applied to the loser, then the
+     loser's rout d100 vs CURRENT Morale — equal or lower keeps fighting;
+     higher routes: the NPC vessel SURRENDERS, the explorers' vessel faces
+     the grim choice (the book's own words; GM decision). --}}
+<div class="rogue-trader chat roll">
+    <div class="background border">
+        <h1>
+            {{title}}
+{{#if titleDoc.link}}
+            <a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}" data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{titleDoc.link.name}}</a>
+{{/if}}
+        </h1>
+        <p><strong>{{localize "SHIP_BOARDING.ROUT_WINNER"}}</strong>: {{winnerName}} — {{localize "SHIP_BOARDING.ROUT_DEGREES"}}: {{degrees}}</p>
+{{#if hullDamage}}
+        <ul class="salvo-list">
+            <li>{{localize "STARSHIP.HULL_INTEGRITY"}}: {{hullDamage}}</li>
+            <li>{{localize "STARSHIP.CREW_POPULATION"}}: -{{populationLoss}}</li>
+            <li>{{localize "STARSHIP.CREW_MORALE"}}: -{{moraleLoss}}</li>
+        </ul>
+{{else}}
+{{#if populationLoss}}
+        <ul class="salvo-list">
+            <li>{{localize "STARSHIP.CREW_POPULATION"}}: -{{populationLoss}}</li>
+            <li>{{localize "STARSHIP.CREW_MORALE"}}: -{{moraleLoss}}</li>
+        </ul>
+{{/if}}
+{{/if}}
+        <p><strong>{{localize "SHIP_BOARDING.ROUT_ROLL"}}</strong>: {{routRoll}} {{localize "SHIP_BOARDING.ROUT_MORALE"}}: {{routMorale}}</p>
+{{#if surrender}}
+        <p class="critical">⚠ {{localize "SHIP_BOARDING.ROUT_SURRENDER"}}</p>
+{{else}}
+{{#if grimChoice}}
+        <p class="method-hint warn">⚠ {{localize "SHIP_BOARDING.ROUT_GRIM_CHOICE"}}</p>
+{{else}}
+        <p class="action-note">{{localize "SHIP_BOARDING.ROUT_CONTINUES"}}</p>
+{{/if}}
+{{/if}}
+    </div>
+</div>

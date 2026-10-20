@@ -1,0 +1,46 @@
+{{!-- The ramming card (epic necp bead w98s, Core Rulebook p215): both ships'
+     damage applications — the ram die + the ramming ship's prow armour on
+     the defender, the defender's Armour + 1d5 back into the rammer's prow —
+     both IGNORING void shields (no shield prompt on this card). --}}
+<div class="rogue-trader chat roll">
+    <div class="background border">
+        <h1>
+            {{title}}
+{{#if titleDoc.link}}
+            <a class="adv-doc-link" data-action="{{titleDoc.link.action}}" data-uuid="{{titleDoc.link.uuid}}" data-tooltip="{{localize "ADVANCE.OPEN_DOC"}}">{{titleDoc.link.name}}</a>
+{{/if}}
+        </h1>
+        <div class="roll-summary">
+            <div class="roll-target">
+                <span class="label">{{localize "ROLL.TARGET"}}</span>
+                <span class="value">{{roll}}</span>
+            </div>
+            <div class="roll-result {{#if success}}success{{else}}failure{{/if}}">
+                <span class="label">{{outcomeLabel}}</span>
+            </div>
+        </div>
+{{#if success}}
+        <h3>{{localize "SHIP_BOARDING.RAM_TARGET"}}: {{targetName}}</h3>
+        <ul class="salvo-list">
+            <li>{{localize "SHIP_BOARDING.RAM_DIE"}}: <strong>{{ramDie}}</strong> — {{localize "SHIP_BOARDING.RAM_DAMAGE"}}: <strong>{{ramDamage}}</strong></li>
+            <li>{{localize "STARSHIP.ARMOUR"}}: {{ramArmour}}</li>
+            <li>{{localize "STARSHIP.HULL_INTEGRITY"}}: <strong>{{ramHullDamage}}</strong></li>
+            <li>{{localize "STARSHIP.CREW_POPULATION"}}: -{{ramPopulationLoss}}</li>
+            <li>{{localize "STARSHIP.CREW_MORALE"}}: -{{ramMoraleLoss}}</li>
+        </ul>
+        <h3>{{localize "SHIP_BOARDING.RAM_BACKLASH"}}</h3>
+        <ul class="salvo-list">
+            <li>{{localize "SHIP_BOARDING.RAM_DAMAGE"}}: <strong>{{backDamage}}</strong></li>
+            <li>{{localize "STARSHIP.ARMOUR"}}: {{backArmour}}</li>
+            <li>{{localize "STARSHIP.HULL_INTEGRITY"}}: <strong>{{backHullDamage}}</strong></li>
+            <li>{{localize "STARSHIP.CREW_POPULATION"}}: -{{backPopulationLoss}}</li>
+            <li>{{localize "STARSHIP.CREW_MORALE"}}: -{{backMoraleLoss}}</li>
+        </ul>
+        <p class="action-note">{{localize "SHIP_BOARDING.IGNORES_SHIELDS"}}</p>
+        <p class="action-note">{{localize "SHIP_BOARDING.RAM_FACING_NOTE"}}</p>
+{{else}}
+        <p class="action-note">{{localize "SHIP_BOARDING.RAM_FAILED"}}</p>
+        <p class="action-note">{{localize "SHIP_BOARDING.GIVES_UP_SHOOTING"}}</p>
+{{/if}}
+    </div>
+</div>

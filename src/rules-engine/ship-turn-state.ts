@@ -30,7 +30,12 @@ export type ShipTurnFlagKey =
 	| "lock-on-target"
 	| "aid-machine-spirit"
 	| "repel-boarders"
-	| "come-to-new-heading-bs-penalty";
+	| "come-to-new-heading-bs-penalty"
+	// Put Your Backs Into It! (bead z697, Core Rulebook printed p218): the
+	// +5 aid to a chosen Ballistic Skill (one weapon component) / Emergency
+	// Repairs / fire-fighting action this turn; `target` carries the weapon
+	// item id or the "emergency-repairs" / "firefighting" token.
+	| "backs-into-it";
 
 export const SHIP_TURN_FLAG_KEYS: readonly ShipTurnFlagKey[] = [
 	"evasive",
@@ -38,6 +43,7 @@ export const SHIP_TURN_FLAG_KEYS: readonly ShipTurnFlagKey[] = [
 	"aid-machine-spirit",
 	"repel-boarders",
 	"come-to-new-heading-bs-penalty",
+	"backs-into-it",
 ];
 
 /** The `"all"` target marker: the flag applies to every weapon/side. */
@@ -117,6 +123,91 @@ export function activeTurnFlag(
 			return true;
 		}) ?? null
 	);
+}
+
+// ---------------------------------------------------------------------------
+// Turn-flag writes + the Focused Augury reveal ladder (Core Rulebook p217)
+// ---------------------------------------------------------------------------
+
+/**
+ * INSERT/REPLACE a turn flag by KEY: a re-applied action (a second Aid the
+ * Machine Spirit, Lock on Target, Prepare to Repel Boarders!) supersedes the
+ * old entry rather than stacking a second read path onto the same key.
+ */
+export function replaceTurnFlag(
+	flags: readonly ShipTurnFlag[],
+	flag: ShipTurnFlag,
+): ShipTurnFlag[] {
+	return [...flags.filter((existing) => existing.key !== flag.key), flag];
+}
+
+/**
+ * INSERT/REPLACE a turn flag by stable id (bead z697): several
+ * Put Your Backs Into It! entries may coexist for DIFFERENT targets, so
+ * re-rolling the action replaces only its own entry, never the others.
+ */
+export function upsertTurnFlag(
+	flags: readonly ShipTurnFlag[],
+	flag: ShipTurnFlag,
+): ShipTurnFlag[] {
+	return [...flags.filter((existing) => existing.id !== flag.id), flag];
+}
+
+/**
+ * The component shapes the Focused Augury ladder reads (structural, so the
+ * kernel test drives plain objects).
+ */
+export interface AugurComponentLike {
+	type?: string;
+	system?: { category?: string; componentType?: string };
+}
+
+/**
+ * The machine weapon-component set (Core Rulebook pp200-203 + battlefleet
+ * koronus additions, bead 5lbn): weapon systems the ship-weapon-component
+ * item type and the weapon-ish componentType families cover.
+ */
+const WEAPON_COMPONENT_TYPES: ReadonlySet<string> = new Set([
+	"macrobattery",
+	"lance",
+	"nova-cannon",
+	"torpedo-tube",
+	"landing-bay",
+]);
+
+/**
+ * Focused Augury reveal ladder (Core Rulebook printed p217, the pack's
+ * verbatim prose; CUMULATIVE — each degree includes the previous rungs):
+ * - 0 degrees (Basic Success): all Essential Components EXCEPT Auger Arrays
+ *   and Void Shields;
+ * - 1 degree: all Weapon Components;
+ * - 2 degrees: Auger Arrays, Void Shields and any combat related Components
+ *   (under the machine taxonomy the combat Component list is already inside
+ *   the earlier rungs — weapons reveal at 1°, the essential combat components
+ *   such as the Bridge at 0° — so this rung adds augur/shield only);
+ * - 3 degrees: ALL Components aboard the target ship.
+ *
+ * Returns true when the component is revealed at this degree of success.
+ */
+export function focusedAuguryReveal(
+	component: AugurComponentLike,
+	degrees: number,
+): boolean {
+	const degree = Math.min(3, Math.max(0, Math.floor(degrees)));
+	const system = component.system ?? {};
+	const componentType = system.componentType ?? "";
+	const essential = (system.category ?? "") === "essential";
+	const weapon =
+		(component.type ?? "") === "ship-weapon-component" ||
+		WEAPON_COMPONENT_TYPES.has(componentType);
+	const augurOrShield =
+		componentType === "augur-array" || componentType === "void-shield";
+	if (weapon) return degree >= 1;
+	if (augurOrShield) return degree >= 2;
+	if (essential) return true;
+	// Everything else (supplemental non-weapon, archeotech, xeno-tech): the
+	// "All Components" rung.
+	return degree >= 3;
 }
 
 /** Which side of a salvo a flag row modifies. */
@@ -276,7 +367,10 @@ export function sustainedCrewLosses(
 	current: ShipCrewLosses,
 ): ShipCrewLosses {
 	return {
-		population: Math.max(0, Math.floor(start.population) - Math.floor(current.population)),
+		population: Math.max(
+			0,
+			Math.floor(start.population) - Math.floor(current.population),
+		),
 		morale: Math.max(0, Math.floor(start.morale) - Math.floor(current.morale)),
 	};
 }
@@ -295,4 +389,122 @@ export function rotateLastTurnLosses(
 		population: Math.max(0, Math.floor(latest.population)),
 		morale: Math.max(0, Math.floor(latest.morale)),
 	};
+}
+
+// ---------------------------------------------------------------------------
+// Ramming + boarding turns (bead w98s, Core Rulebook p215)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ramming damage die by hull class (Core Rulebook p215): "doing damage
+ * based on its hull size—1d5 for transports and raiders, 1d10 for frigates,
+ * 2d5 for light cruisers, and 2d10 for cruisers". The table is keyed by the
+ * starship `hullClass` TOKEN FAMILY, mirroring the
+ * rules/ship-systems.ts HULL_CLASS_TOKENS precedent: grand cruisers and
+ * battlecruisers are cruiser-family hulls (BFK Ch. II, epic decision 5) so
+ * they roll the cruiser 2d10. An UNMAPPED hull class (a space station
+ * ramming) returns null — the caller refuses LOUDLY, never silently infers.
+ */
+export const RAM_HULL_CLASS_DIE: Readonly<Record<string, string>> = {
+	transport: "1d5",
+	raider: "1d5",
+	frigate: "1d10",
+	"light cruiser": "2d5",
+	cruiser: "2d10",
+	// The cruiser family (rules/ship-systems.ts HULL_CLASS_TOKENS precedent).
+	"grand-cruiser": "2d10",
+	battlecruiser: "2d10",
+};
+
+/** The ramming damage die for a hull class; null = unmapped (refuse loudly). */
+export function ramHullClassDie(hullClass: string): string | null {
+	return RAM_HULL_CLASS_DIE[(hullClass ?? "").trim().toLowerCase()] ?? null;
+}
+
+/**
+ * The pair state BOTH ships hold once the boarding lock lands (Core
+ * Rulebook p215): each carries the OTHER ship's uuid, no failed-break-free
+ * penalty yet.
+ */
+export function boardLockPairState(opponentUuid: string): ShipBoardingState {
+	return { uuid: opponentUuid, breakFreeFailedThisTurn: false };
+}
+
+/** One side's statline the boarding opposed-Command rows read (p215 + p220). */
+export interface BoardingTurnSide {
+	crewPopulation: number;
+	hullIntegrity: number;
+	/** The ship's turret rating (p220: +10 per point to its side's Command). */
+	turretRating: number;
+	/** The side's own persistent Repel Boarders bonus (p218; 0 = not maintained). */
+	repelBonus: number;
+}
+
+/**
+ * The opposed-Command bonus rows for the ROLLING side of a boarding turn
+ * (Core Rulebook p215): "+10 bonus ... for every full 10 points difference"
+ * in Crew Population (the print's "Hull Integrity" sentence repeats the
+ * Crew-Population wording, but the bead/epic book-map reads it as Hull
+ * Integrity — the same +10-per-full-10 mechanism), the turret-rating bonus
+ * BOTH directions (p220), and the Repel Boarders values (p218). The
+ * truncation is toward zero on BOTH axes: a 15-point population gap is
+ * "every full 10 points" = one step (+10), never two.
+ */
+export interface BoardingCommandBonus {
+	/** Signed +10 per full 10 points of Crew Population difference. */
+	population: number;
+	/** Signed +10 per full 10 points of Hull Integrity difference. */
+	hullIntegrity: number;
+	/** +10 × the rolling side's own turret rating (Core Rulebook p220). */
+	turret: number;
+	/** The OPPONENT's turret rating works against the roller (−10 per point, p220). */
+	opponentTurret: number;
+	/** The rolling side's own repel-boarders bonus minus the opponent's. */
+	repel: number;
+	/** The signed total of the five rows. */
+	total: number;
+}
+
+/** One full-10 step per axis, signed toward the larger side (Core Rulebook p215). */
+function fullTenStep(rolling: number, opponent: number): number {
+	const delta = rolling - opponent;
+	const steps = Math.floor(Math.abs(delta) / 10);
+	return steps === 0 ? 0 : Math.sign(delta) * steps * 10;
+}
+
+/** The five opposed-Command bonus rows for one boarding turn (see the type). */
+export function boardingCommandBonus(
+	rolling: BoardingTurnSide,
+	opponent: BoardingTurnSide,
+): BoardingCommandBonus {
+	const population = fullTenStep(
+		rolling.crewPopulation,
+		opponent.crewPopulation,
+	);
+	const hullIntegrity = fullTenStep(
+		rolling.hullIntegrity,
+		opponent.hullIntegrity,
+	);
+	const turret = Math.max(0, rolling.turretRating) * 10;
+	// `|| 0` normalises the -0 a 0-rating opponent would produce.
+	const opponentTurret = -(Math.max(0, opponent.turretRating) * 10) || 0;
+	const repel =
+		Math.max(0, rolling.repelBonus) - Math.max(0, opponent.repelBonus);
+	return {
+		population,
+		hullIntegrity,
+		turret,
+		opponentTurret,
+		repel,
+		total: population + hullIntegrity + turret + opponentTurret + repel,
+	};
+}
+
+/**
+ * The rout roll (Core Rulebook p215): the losing ship's crew "roll a d100
+ * and compare it to their current Morale" — equal or lower keeps fighting;
+ * HIGHER routes (surrender, or the explorers' grim choice).
+ */
+export function routRoll(roll: number, morale: number): { routed: boolean } {
+	return { routed: roll > Math.max(0, morale) };
 }

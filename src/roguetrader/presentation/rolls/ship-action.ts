@@ -23,11 +23,11 @@
 import type { TestKind } from "../../../ffg/domain/model/test";
 import type { Modifier } from "../../../rules-engine/index";
 import { combinedTarget } from "../../../rules-engine/index";
-import { postCard } from "../../rules/chat-flags";
 import {
 	actionDifficulty,
 	ACTION_ROLL_TEMPLATE,
 } from "../../rules/actions";
+import { postCard } from "../../rules/chat-flags";
 import type {
 	PackDocAnchor,
 } from "../../sheet/pack-doc-links";
@@ -41,6 +41,20 @@ import { systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { outcomeLabel } from "../../../ffg/presentation/rolls/pipeline";
 import { skillHandler } from "./characteristic-skill";
+import { extendedRowAfter, extendedRowHandlers } from "./ship-extended";
+// The Table 8-10 manoeuvre-row overlay (epic bead g53f).
+import {
+	manoeuvreRow,
+	manoeuvreRowAfter,
+	manoeuvreRowPrepare,
+} from "./ship-manoeuvre";
+// Row dispatch (epic necp bead w98s, Core Rulebook p215): the ramming/
+// boarding machinery rows route through their handler map below.
+import {
+	boardingRowHandlers,
+	boardingRowKey,
+	type ShipRow,
+} from "./ship-boarding";
 import {
 	resolveSpecialisedSkillItem,
 	type SpecialisedSkillResolution,
@@ -49,10 +63,23 @@ import {
 // ------------------------------------------------- the printed test vocabulary
 
 /** The printed test vocabulary → the character-side skill items (owner
- * decisions 9/10). Unmapped keys fail LOUDLY (the ports convention); the pack
- * guard test (S4) pins this table, so extending it is a deliberate choice. */
+ * decisions 9/10). A value's `skill` names the trained skill item (with the
+ * optional bare parent standing in at the p75 penalty); the S6 entries
+ * instead name a CHARACTERISTIC (Hold Fast!'s Willpower) or a skill CLASS
+ * (Hail the Enemy's Interaction skills) — their sides resolve through the
+ * extended-row dispatch (ship-extended.ts).
+ * Unmapped keys fail LOUDLY (the ports convention); the pack guard test (S4)
+ * pins this table, so extending it is a deliberate choice. */
 export const SHIP_ACTION_SKILL_ROUTES: Readonly<
-	Record<string, { skill: string; bare?: string }>
+	Record<
+		string,
+		{
+			skill: string;
+			bare?: string;
+			characteristic?: string;
+			interaction?: boolean;
+		}
+	>
 > = {
 	// Pilot (Space Craft): the manoeuvre-side character skill; trained Pilot
 	// without the specialisation stands in at −10 (Core Rulebook p75).
@@ -76,6 +103,15 @@ export const SHIP_ACTION_SKILL_ROUTES: Readonly<
 	// - Put Your Backs Into It! (printed p218): print "Intimidate or Charm",
 	//   same either-skill shape as Disinformation.
 	intimidate: { skill: "Intimidate" },
+	// - Hold Fast! (printed p217-218): a Willpower CHARACTERISTIC test — NOT a
+	//   skill item; the extended-row dispatch (ship-extended.ts) resolves the
+	//   side and gates it on Air of Authority, refusing when no Explorer is
+	//   assigned (the crew fallback carries no Willpower).
+	willpower: { skill: "", characteristic: "wp" },
+	// - Hail the Enemy (printed p217): the Test column NAMES A CLASS, not one
+	//   skill — the dispatch prompts over the performer's owned Interaction
+	//   skills (Core Rulebook p293). No printed difficulty rides it.
+	"interaction-skill": { skill: "", interaction: true },
 };
 
 /** The ship-side ability vocabulary — a `+`-composed suffix read off the
@@ -134,7 +170,7 @@ export function shipAbilityRow(ability: string, value: number): Modifier {
 // ------------------------------------------------- the performer (character side)
 
 /** The resolved character side of the combined test. */
-interface PerformerSide {
+export interface PerformerSide {
 	/** baseTarget for the character-side skill. */
 	baseTarget: number;
 	/** Funnel test kind (the trained skill path or the crew surrogate). */
@@ -151,9 +187,11 @@ interface PerformerSide {
  * The character side: the helmsman's trained skill when given, the crew
  * quality otherwise (owner decision 1). Null = the performer is unresolvable
  * (owns neither the specialisation nor the bare parent) — refused LOUDLY, the
- * same class the ownership gate treats as a bug-shaped silence.
+ * same class the ownership gate treats as a bug-shaped silence. Exported for
+ * the machinery-row modules (ship-boarding.ts, epic necp bead w98s) whose row
+ * handlers share this exact resolution through their own dispatch.
  */
-async function resolvePerformerSide(
+export async function resolvePerformerSide(
 	request: ShipActionRollRequest,
 	route: { skill: string; bare?: string },
 	routeKey: string,
@@ -221,6 +259,14 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 			ports.notify.warn("ROLL.UNKNOWN_ITEM");
 			return null;
 		}
+		// Row dispatch (epic necp bead w98s, Core Rulebook p215): the
+		// boarding-machinery rows — Ramming / Boarding / Break Free / Rout —
+		// enter through this SAME ship-action kind (decision 2: no parallel
+		// roll path); each row owns its whole preparation and its outcome
+		// machinery. Any OTHER row ships into the standard combined-test path
+		// below unchanged (sibling row maps merge the same way).
+		const machineryRow = boardingRowHandlers[boardingRowKey(item.name ?? "")];
+		if (machineryRow) return machineryRow.prepare(request, item);
 		const data = item.system as unknown as {
 			actionCost?: string;
 			shortDescription?: string;
@@ -234,18 +280,29 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 			});
 			return null;
 		}
-		const side = await resolvePerformerSide(
-			request,
-			parsed.skillRoute,
-			parsed.routeKey,
-		);
+		// bead z697 (epic necp S6): the Table 8-11 extended-row dispatch merges
+		// here (presentation/rolls/ship-extended.ts, and in after()). A row with
+		// a prepare hook resolves its OWN side when the printed test names a
+		// characteristic or an interaction-skill class (the Willpower
+		// characteristic test, Hail the Enemy, the either-skill rows) and/or
+		// appends the row's visible rows (Hit and Run's Turret Rating); its null
+		// IS a loud refusal (prereq gates, missing Explorer). Rows without hooks
+		// fall through to the shared resolution below, as the manoeuvre rows do.
+		const row = extendedRowHandlers[item.name ?? ""] ?? null;
+		const rowPrepared = row?.prepare
+			? await row.prepare(request, item)
+			: undefined;
+		if (rowPrepared === null) return null;
+		const side =
+			rowPrepared?.side ??
+			(await resolvePerformerSide(request, parsed.skillRoute, parsed.routeKey));
 		if (!side) return null;
 
 		// Ship-side ability (p212): read off the starship and folded in as a
 		// VISIBLE contributor row — the pipeline clamps/sums, this handler only
 		// derives. A starship schema always carries the field (initial 0); an
 		// unset one contributes a 0-valued row, still visible.
-		const modifiers: Modifier[] = [];
+		const modifiers: Modifier[] = [...(rowPrepared?.modifiers ?? [])];
 		let shipMod = 0;
 		if (parsed.shipStat) {
 			const starship = systemOf(ship) as unknown as Record<
@@ -296,6 +353,22 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 			return null;
 		}
 
+		// The Table 8-10 manoeuvre-row overlay (epic bead g53f): the rows
+		// keyed by their verbatim pack name ride this handler's generic
+		// combined test — the overlay adds the boarding-lock gate (book p215),
+		// the Disengage distance prompt (p214, manual entry, never a spatial
+		// refusal) and the Silent Running one-step row (p218) to the dialog's
+		// contributor list. An unrefused overlay adds ZERO or more rows; null
+		// = the row refused loudly, no dialog, no dice.
+		const manoeuvreOverlay: ReturnType<typeof manoeuvreRow> = manoeuvreRow(
+			item.name ?? "",
+		);
+		if (manoeuvreOverlay) {
+			const rowModifiers = await manoeuvreRowPrepare(manoeuvreOverlay, ship);
+			if (!rowModifiers) return null;
+			modifiers.push(...rowModifiers);
+		}
+
 		modifiers.push(...(request.modifiers ?? []));
 
 		return {
@@ -331,6 +404,17 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 		// (the fear-handler precedent, bead ezys).
 		const data = prepared.kindData;
 		if (!data) return;
+		// Row after-effects (epic necp bead w98s): the machinery rows take over
+		// the outcome machinery INSTEAD of the standard action card — each row
+		// posts its own card. Keyed off the same canonical row vocabulary as
+		// the prepare dispatch (the item name does not reach prepare's map
+		// lookup here because rows may prepare-only).
+		const machineryRow: ShipRow | undefined = boardingRowHandlers[
+			boardingRowKey(data.name ?? "")
+		];
+		if (machineryRow?.after) {
+			return machineryRow.after(request, prepared, outcome, _messageId, info);
+		}
 		const ports = getPorts();
 		// The SAME interpolated key the shared pipeline renders (bead obbp).
 		const outcomeText = outcomeLabel(outcome.success, outcome.degrees);
@@ -341,6 +425,20 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 					name: data.name,
 				}
 			: null;
+		// The manoeuvre overlay's after side (bead g53f): the success-gated
+		// turn-flag writes (Come to New Heading p214, Evasive Manoeuvres p215)
+		// and the row's GM note card — the facing note (p213), Disengage's
+		// both-sides requirements and its no-re-engage / Stern Chase notes
+		// (pp214-215). Dispatch by the row's name (the kindData snapshot);
+		// non-manoeuvre rows (Table 8-11) stay on the generic card only.
+		const manoeuvreEntry = manoeuvreRow(data.name);
+		if (manoeuvreEntry) {
+			await manoeuvreRowAfter(
+				manoeuvreEntry,
+				request.actor,
+				outcome as unknown as { success: boolean; degrees: number },
+			);
+		}
 		await postCard(
 			request.actor,
 			ACTION_ROLL_TEMPLATE,
@@ -376,5 +474,8 @@ export const shipActionHandler: RollHandler<"ship-action"> = {
 				},
 			},
 		);
+		// bead z697 (epic necp S6): the extended row's after-effects (state
+		// writes, prompts, its effect-note card) ride behind the shared card.
+		await extendedRowAfter(request, prepared, outcome, info);
 	},
 };

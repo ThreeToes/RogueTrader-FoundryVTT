@@ -2580,3 +2580,1941 @@ describe("grep-guard: no hand-rolled dialog+test sequences (bead n0tp)", () => {
 		expect(strays).toEqual([]);
 	});
 });
+
+// ===========================================================================
+// bead z697 (epic necp S6): Table 8-11 extended-action row handlers
+// (Active/Focused Augury, Aid the Machine Spirit, Disinformation, Flank
+// Speed, Hail the Enemy, Hit and Run, Hold Fast!, Jam Communications, Lock
+// on Target, Prepare to Repel Boarders!, Put Your Backs Into It!, Triage).
+// Appended at a distinct end per the file-ownership contract.
+// ===========================================================================
+
+const { promptTargetComponent } = await import("../roll-prompts");
+
+/** A Foundry-Collection-shaped items list (iterable + `.get`). */
+const itemsCollection = (items: unknown[]) =>
+	Object.assign([...items] as unknown[], {
+		get: (id: string) =>
+			items.find((i) => (i as { id?: string }).id === id) ?? null,
+	});
+
+/** A Table 8-11 row item fixture with the pack's machine test key. */
+const rowItem = (
+	name: string,
+	test: string,
+	difficulty = "Challenging (+0)",
+) => ({
+	id: "sa9",
+	type: "ship-action",
+	name,
+	uuid: "Item.sa9",
+	system: {
+		actionCost: "Strategic Turn",
+		roll: { test, difficulty },
+		shortDescription: "Row.",
+		description: "<p>Row prose.</p>",
+	},
+});
+
+/** A character fixture that also carries the Strength characteristic
+ * (Intimidate tests it — Table 3-1, Core Rulebook p75). */
+const characterWithStrength = (items: unknown[] = []) =>
+	actorFixture({
+		items,
+		system: {
+			characteristics: {
+				ws: { value: 40, unnatural: 1 },
+				wp: { value: 45, unnatural: 1 },
+				fel: { value: 30, unnatural: 1 },
+				per: { value: 30, unnatural: 1 },
+				ag: { value: 35, unnatural: 1 },
+				s: { value: 40, unnatural: 1 },
+			},
+		},
+	});
+
+/** A starship fixture with the turn-state fields the row handlers read. */
+function extendedShip(
+	items: unknown[],
+	overrides: Record<string, unknown> = {},
+) {
+	return {
+		name: "Sabre",
+		type: "starship",
+		uuid: "Actor.sabre",
+		isOwner: true,
+		items: Object.assign([...items] as unknown[], {
+			get: (id: string) =>
+				items.find((i) => (i as { id?: string }).id === id) ?? null,
+		}),
+		system: {
+			crewQuality: "veteran",
+			manoeuvrability: 30,
+			detection: 12,
+			crewPopulation: 100,
+			crewMorale: 90,
+			turnFlags: [],
+			revealedComponents: [],
+			lastTurnLosses: { population: 0, morale: 0 },
+			...overrides,
+		},
+	} as never;
+}
+
+/**
+ * Temporarily stub DialogV2 (wait/input) for prompt-driven rows; restored
+ * after the run (the renderTemplate override pattern above).
+ */
+async function withDialogStubs(
+	stubs: {
+		wait?: (opts: Record<string, unknown>) => Promise<unknown>;
+		input?: (opts: Record<string, unknown>) => Promise<unknown>;
+	},
+	run: () => Promise<void>,
+): Promise<void> {
+	const api = foundry.applications.api as unknown as {
+		DialogV2: { wait: unknown; input: unknown };
+	};
+	const original = { wait: api.DialogV2.wait, input: api.DialogV2.input };
+	try {
+		if (stubs.wait) api.DialogV2.wait = stubs.wait as never;
+		if (stubs.input) api.DialogV2.input = stubs.input as never;
+		await run();
+	} finally {
+		api.DialogV2.wait = original.wait;
+		api.DialogV2.input = original.input;
+	}
+}
+
+/** The row after() effects need the writes + note cards captured. */
+function captureEffectPorts(overrides: Partial<Record<string, unknown>> = {}) {
+	const updates: Array<Record<string, unknown>> = [];
+	const posts: string[] = [];
+	const rolled: string[] = [];
+	return {
+		updates,
+		posts,
+		rolled,
+		ports: {
+			...getPorts(),
+			...(overrides.dice
+				? { dice: overrides.dice }
+				: {
+						dice: {
+							roll: async (formula: string) => {
+								rolled.push(formula);
+								const total = formula === "1d100" ? 10 : 3;
+								return { total, dice: [], terms: [], rolls: [], formula };
+							},
+						},
+					}),
+			actors: {
+				...getPorts().actors,
+				update: async (_doc: unknown, data: Record<string, unknown>) => {
+					updates.push(data);
+				},
+			},
+			chat: {
+				...getPorts().chat,
+				post: async () => ({ id: "msg-1" }),
+				postHtml: async (_actor: unknown, content: string) => {
+					posts.push(content);
+					return { id: "msg-1" };
+				},
+			},
+			...(overrides.targets ? { targets: overrides.targets } : {}),
+		} as never,
+	};
+}
+
+describe("extended-action test-key vocabulary (bead z697)", () => {
+	it("parses the Willpower characteristic route (Hold Fast!)", () => {
+		expect(parseShipActionTestKey("willpower")).toMatchObject({
+			routeKey: "willpower",
+		});
+	});
+
+	it("parses the Interaction-skill class route (Hail the Enemy)", () => {
+		expect(parseShipActionTestKey("interaction-skill")).toMatchObject({
+			routeKey: "interaction-skill",
+		});
+	});
+});
+
+describe("extended rows: Hold Fast! (bead z697, printed p218)", () => {
+	const holdFast = rowItem("Hold Fast!", "willpower");
+	const airOfAuthority = {
+		id: "t1",
+		type: "talent",
+		name: "Air of Authority",
+	};
+
+	it("refuses without an assigned Explorer (the crew cannot take Willpower)", async () => {
+		resetSpies();
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: extendedShip([holdFast]),
+			itemId: "sa9",
+		} as never);
+		expect(prepared).toBeNull();
+		expect(
+			warnings.some((w) => w.includes("SHIP_ACTION.ROW_REQUIRES_PERFORMER")),
+		).toBe(true);
+	});
+
+	it("refuses loudly without the Air of Authority talent", async () => {
+		resetSpies();
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: extendedShip([holdFast]),
+			itemId: "sa9",
+			performer: fixtureActor([]) as never,
+		} as never);
+		expect(prepared).toBeNull();
+		expect(
+			warnings.some((w) => w.includes("SHIP_ACTION.HOLD_FAST_AUTHORITY")),
+		).toBe(true);
+	});
+
+	it("resolves a Willpower CHARACTERISTIC test on the performer (no ship rows)", async () => {
+		resetSpies();
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: extendedShip([holdFast]),
+			itemId: "sa9",
+			performer: fixtureActor([airOfAuthority]) as never,
+		} as never);
+		// wp 45 (actorFixture) — a characteristic test, not a skill item.
+		expect(prepared).toMatchObject({
+			baseTarget: 45,
+			testKind: "characteristic",
+			testKey: "wp",
+		});
+		const rows = prepared?.initialModifiers as Array<{ id?: string }>;
+		expect(rows.every((mod) => mod.id !== "ship:manoeuvrability")).toBe(true);
+	});
+
+	it("cancels 1 + 1 per degree from the PREVIOUS turn's morale losses", async () => {
+		resetSpies();
+		const ship = extendedShip([holdFast], {
+			crewMorale: 90,
+			lastTurnLosses: { population: 0, morale: 5 },
+		});
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+			performer: fixtureActor([airOfAuthority]) as never,
+		} as never);
+		const { updates, posts, ports } = captureEffectPorts();
+		setPorts(ports);
+		try {
+			// 3 degrees → cancel 4 of the previous turn's 5.
+			await shipActionHandler.after?.(
+				{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+				prepared as never,
+				{ success: true, degrees: 3, roll: 10 } as never,
+				"",
+				{ target: 45, modifiers: [] },
+			);
+		} finally {
+			resetPorts();
+		}
+		expect(updates).toEqual([{ system: { crewMorale: 94 } }]); // 90 + 4
+		expect(posts.join(" ")).toContain("SHIP_ACTION.HOLD_FAST_NOTE");
+	});
+
+	it("clamps to the damage lastTurnLosses actually records", async () => {
+		resetSpies();
+		const ship = extendedShip([holdFast], {
+			crewMorale: 90,
+			lastTurnLosses: { population: 0, morale: 1 },
+		});
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+			performer: fixtureActor([airOfAuthority]) as never,
+		} as never);
+		const { updates, ports } = captureEffectPorts();
+		setPorts(ports);
+		try {
+			await shipActionHandler.after?.(
+				{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+				prepared as never,
+				{ success: true, degrees: 4, roll: 10 } as never,
+				"",
+				{ target: 45, modifiers: [] },
+			);
+		} finally {
+			resetPorts();
+		}
+		// Minimum-1 cancellation, clamped to the recorded 1 — never 5.
+		expect(updates).toEqual([{ system: { crewMorale: 91 } }]);
+	});
+
+	it("cancels nothing when the previous turn took no morale damage", async () => {
+		resetSpies();
+		const ship = extendedShip([holdFast], {
+			crewMorale: 90,
+			lastTurnLosses: { population: 3, morale: 0 },
+		});
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+			performer: fixtureActor([airOfAuthority]) as never,
+		} as never);
+		const { updates, posts, ports } = captureEffectPorts();
+		setPorts(ports);
+		try {
+			await shipActionHandler.after?.(
+				{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+				prepared as never,
+				{ success: true, degrees: 2, roll: 10 } as never,
+				"",
+				{ target: 45, modifiers: [] },
+			);
+		} finally {
+			resetPorts();
+		}
+		expect(updates).toEqual([]);
+		expect(posts.join(" ")).toContain("SHIP_ACTION.HOLD_FAST_NONE");
+	});
+});
+
+describe("extended rows: Triage (bead z697, printed p218)", () => {
+	const triage = rowItem("Triage", "medicae", "Difficult (–10)");
+
+	const triageAfter = async (
+		degrees: number,
+		losses: { population: number; morale: number },
+	) => {
+		const ship = extendedShip([triage], {
+			crewPopulation: 88,
+			lastTurnLosses: losses,
+		});
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+		} as never);
+		const { updates, ports } = captureEffectPorts();
+		setPorts(ports);
+		try {
+			await shipActionHandler.after?.(
+				{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+				prepared as never,
+				{ success: true, degrees, roll: 10 } as never,
+				"",
+				{ target: 50, modifiers: [] },
+			);
+		} finally {
+			resetPorts();
+		}
+		return updates;
+	};
+
+	it("cancels 1 + 1 per degree from the previous turn's population losses", async () => {
+		resetSpies();
+		// 2 degrees → cancel 3 of the previous turn's 5 (no performer: crew
+		// quality substitutes, as for every non-prompted row).
+		expect(await triageAfter(2, { population: 5, morale: 10 })).toEqual([
+			{ system: { crewPopulation: 91 } },
+		]);
+	});
+
+	it("clamps to the previous turn's recorded damage", async () => {
+		resetSpies();
+		expect(await triageAfter(5, { population: 2, morale: 0 })).toEqual([
+			{ system: { crewPopulation: 90 } }, // 2 cancelled, not 6
+		]);
+	});
+});
+
+describe("extended rows: Prepare to Repel Boarders! (bead z697, printed p218)", () => {
+	const repel = rowItem("Prepare to Repel Boarders!", "command");
+
+	it("writes the PERSISTENT +10 (+5 per degree) repel-boarders flag", async () => {
+		resetSpies();
+		const ship = extendedShip([repel]);
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+		} as never);
+		const { updates, ports } = captureEffectPorts();
+		setPorts(ports);
+		try {
+			await shipActionHandler.after?.(
+				{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+				prepared as never,
+				{ success: true, degrees: 2, roll: 10 } as never,
+				"",
+				{ target: 50, modifiers: [] },
+			);
+		} finally {
+			resetPorts();
+		}
+		// p218: +10 on success, +5 per degree of success → 20, PERSISTENT.
+		expect(updates).toHaveLength(1);
+		const flags = (
+			updates[0] as {
+				system: {
+					turnFlags: Array<{
+						key: string;
+						value: number;
+						persistent: boolean;
+						expiresAtTurn: number | null;
+					}>;
+				};
+			}
+		).system.turnFlags;
+		expect(flags).toEqual([
+			{
+				id: "repel-boarders",
+				key: "repel-boarders",
+				value: 20,
+				target: "all",
+				expiresAtTurn: null,
+				persistent: true,
+			},
+		]);
+	});
+});
+
+describe("extended rows: the augury pair (bead z697, printed pp216-217)", () => {
+	const activeAugury = rowItem("Active Augury", "scrutiny+detection");
+	const focusedAugury = rowItem("Focused Augury", "scrutiny+detection");
+
+	const auguryTarget = () => ({
+		name: "Dauntless",
+		system: {},
+		items: itemsCollection([
+			{
+				id: "c1",
+				name: "Plasma Drives",
+				type: "ship-component",
+				system: {
+					category: "essential",
+					componentType: "plasma-drive",
+					state: "intact",
+				},
+			},
+			{
+				id: "c2",
+				name: "Void Shield Array",
+				type: "ship-component",
+				system: {
+					category: "essential",
+					componentType: "void-shield",
+					state: "intact",
+				},
+			},
+			{
+				id: "c3",
+				name: "Augur Array",
+				type: "ship-component",
+				system: {
+					category: "essential",
+					componentType: "augur-array",
+					state: "intact",
+				},
+			},
+			{
+				id: "c4",
+				name: "Sunstorm Lance Battery",
+				type: "ship-weapon-component",
+				system: {
+					category: "supplemental",
+					componentType: "lance",
+					state: "intact",
+				},
+			},
+			{
+				id: "c5",
+				name: "Main Cargo Hold",
+				type: "ship-component",
+				system: {
+					category: "supplemental",
+					componentType: "supplemental",
+					state: "intact",
+				},
+			},
+		]),
+	});
+
+	const focusedRun = async (degrees: number) => {
+		resetSpies();
+		const ship = extendedShip([focusedAugury]);
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+		} as never);
+		const { updates, ports } = captureEffectPorts({
+			targets: { ...getPorts().targets, actor: auguryTarget },
+		});
+		setPorts(ports);
+		try {
+			await shipActionHandler.after?.(
+				{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+				prepared as never,
+				{ success: true, degrees, roll: 10 } as never,
+				"",
+				{ target: 50, modifiers: [] },
+			);
+		} finally {
+			resetPorts();
+		}
+		return (updates[0] as { system: { revealedComponents: string[] } }).system
+			.revealedComponents;
+	};
+
+	it("Focused Augury degree 1: essentials-minus-auger/shields + weapons", async () => {
+		expect(await focusedRun(1)).toEqual(["c1", "c4"]);
+	});
+
+	it("Focused Augury degree 2 adds auger + shields", async () => {
+		expect(await focusedRun(2)).toEqual(["c1", "c2", "c3", "c4"]);
+	});
+
+	it("Focused Augury degree 3 is everything", async () => {
+		expect(await focusedRun(3)).toEqual(["c1", "c2", "c3", "c4", "c5"]);
+	});
+
+	it("Active Augury flags Silent Running within the scan (degree range note)", async () => {
+		resetSpies();
+		const ship = extendedShip([activeAugury]);
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+		} as never);
+		const { posts, ports } = captureEffectPorts({
+			targets: {
+				...getPorts().targets,
+				actor: () => ({ name: "Silent Ship", system: { silentRunning: true } }),
+			},
+		});
+		setPorts(ports);
+		try {
+			// 2 degrees of success — the range note is the p216 formula.
+			await shipActionHandler.after?.(
+				{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+				prepared as never,
+				{ success: true, degrees: 2, roll: 10 } as never,
+				"",
+				{ target: 50, modifiers: [] },
+			);
+		} finally {
+			resetPorts();
+		}
+		const html = posts.join(" ");
+		expect(html).toContain("SHIP_ACTION.AUGURY_RANGE_NOTE");
+		expect(html).toContain("SHIP_ACTION.AUGURY_SILENT_DETECTED");
+	});
+
+	it("Active Augury posts no detection note without a silent target", async () => {
+		resetSpies();
+		const ship = extendedShip([activeAugury]);
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+		} as never);
+		const { posts, ports } = captureEffectPorts({
+			targets: {
+				...getPorts().targets,
+				actor: () => ({ name: "Loud Ship", system: {} }),
+			},
+		});
+		setPorts(ports);
+		try {
+			await shipActionHandler.after?.(
+				{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+				prepared as never,
+				{ success: true, degrees: 0, roll: 10 } as never,
+				"",
+				{ target: 50, modifiers: [] },
+			);
+		} finally {
+			resetPorts();
+		}
+		const html = posts.join(" ");
+		expect(html).toContain("SHIP_ACTION.AUGURY_RANGE_NOTE");
+		expect(html).not.toContain("SHIP_ACTION.AUGURY_SILENT_DETECTED");
+	});
+});
+
+describe("extended rows: the prompt-routed skill rows (bead z697)", () => {
+	const hail = rowItem("Hail the Enemy", "interaction-skill", "");
+	const disinfo = rowItem("Disinformation", "deceive", "Difficult (–10)");
+	const trainCharm = {
+		id: "ch1",
+		type: "skill",
+		name: "Charm",
+		system: { characteristic: "fel", ladder: 2 },
+	};
+	const trainBlather = {
+		id: "bl1",
+		type: "skill",
+		name: "Blather",
+		system: { characteristic: "fel", ladder: 2 },
+	};
+	const trainIntimidate = {
+		id: "in1",
+		type: "skill",
+		name: "Intimidate",
+		system: { characteristic: "s", ladder: 1 },
+	};
+
+	it("Hail the Enemy delegates to the CHARACTER's owned skill (no ship rows)", async () => {
+		resetSpies();
+		// Charm is the only candidate (owned; the other four unowned: Blather
+		// is advanced, Command/Deceive/Intimidate offer untrained attempts too,
+		// so this prompt opens) — pick Charm.
+		await withDialogStubs(
+			{ input: async () => ({ choice: "Charm" }) },
+			async () => {
+				const prepared = await shipActionHandler.prepare({
+					kind: "ship-action",
+					actor: extendedShip([hail]),
+					itemId: "sa9",
+					performer: characterWithStrength([trainCharm]) as never,
+				} as never);
+				// The delegated trained skill: fel 30 + one ladder step = 40.
+				expect(prepared).toMatchObject({
+					baseTarget: 40,
+					testKind: "skill",
+					testKey: "fel",
+				});
+				const rows = prepared?.initialModifiers as Array<{ id?: string }>;
+				// Hail the Enemy rides NO ship ability and no difficulty row.
+				expect(rows.every((mod) => !mod.id?.startsWith("ship:"))).toBe(true);
+			},
+		);
+	});
+
+	it("an unowned interaction skill is attempted UNTRAINED at half characteristic (p74)", async () => {
+		resetSpies();
+		await withDialogStubs(
+			{ input: async () => ({ choice: "Command" }) },
+			async () => {
+				const prepared = await shipActionHandler.prepare({
+					kind: "ship-action",
+					actor: extendedShip([hail]),
+					itemId: "sa9",
+					performer: characterWithStrength([]) as never,
+				} as never);
+				// fel 30 untrained → 15 (half, round down).
+				expect(prepared).toMatchObject({ baseTarget: 15 });
+				expect(warnings).toEqual([]);
+			},
+		);
+	});
+
+	it("Disinformation: the printed 'or Blather' alternative routes by prompt", async () => {
+		resetSpies();
+		await withDialogStubs(
+			{ input: async () => ({ choice: "Blather" }) },
+			async () => {
+				const prepared = await shipActionHandler.prepare({
+					kind: "ship-action",
+					actor: extendedShip([disinfo]),
+					itemId: "sa9",
+					performer: characterWithStrength([trainBlather]) as never,
+				} as never);
+				expect(prepared).toMatchObject({
+					// The prompt-CHOSEN trained Blather (fel 30 + ladder 10).
+					baseTarget: 40,
+					testKind: "skill",
+					testKey: "fel",
+				});
+			},
+		);
+	});
+
+	it("Disinformation posts the MANUAL morale note on success", async () => {
+		resetSpies();
+		const ship = extendedShip([disinfo]);
+		const { posts, ports } = captureEffectPorts();
+		setPorts(ports);
+		let prepared = null;
+		try {
+			await withDialogStubs(
+				{ input: async () => ({ choice: "Blather" }) },
+				async () => {
+					prepared = await shipActionHandler.prepare({
+						kind: "ship-action",
+						actor: ship,
+						itemId: "sa9",
+						performer: characterWithStrength([trainBlather]) as never,
+					} as never);
+					await shipActionHandler.after?.(
+						{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+						prepared as never,
+						{ success: true, degrees: 2, roll: 10 } as never,
+						"",
+						{ target: 40, modifiers: [] },
+					);
+				},
+			);
+		} finally {
+			resetPorts();
+		}
+		// Manual book call (bead z697): nothing auto-writes the Morale track —
+		// the card carries the printed rule as a loud note instead.
+		expect(posts.join(" ")).toContain("SHIP_ACTION.DISINFORMATION_NOTE");
+	});
+
+	it("Hail the Enemy notes the book's GM discretion (any outcome)", async () => {
+		resetSpies();
+		const ship = extendedShip([hail]);
+		const { posts, ports } = captureEffectPorts();
+		setPorts(ports);
+		try {
+			await withDialogStubs(
+				{ input: async () => ({ choice: "Charm" }) },
+				async () => {
+					const prepared = await shipActionHandler.prepare({
+						kind: "ship-action",
+						actor: ship,
+						itemId: "sa9",
+						performer: characterWithStrength([trainCharm]) as never,
+					} as never);
+					await shipActionHandler.after?.(
+						{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+						prepared as never,
+						{ success: false, degrees: 0, roll: 90 } as never,
+						"",
+						{ target: 40, modifiers: [] },
+					);
+				},
+			);
+		} finally {
+			resetPorts();
+		}
+		expect(posts.join(" ")).toContain("SHIP_ACTION.HAIL_NOTE");
+	});
+
+	it("Put Your Backs Into It! writes +5 per chosen target (+1 per 3 degrees)", async () => {
+		resetSpies();
+		const weapon = {
+			id: "w9",
+			type: "ship-weapon-component",
+			name: "Prow Sunstorm Lance",
+			system: {
+				category: "supplemental",
+				componentType: "lance",
+				state: "intact",
+			},
+		};
+		const backs = rowItem("Put Your Backs Into It!", "intimidate");
+		const ship = extendedShip([backs, weapon]);
+		const { updates, posts, ports } = captureEffectPorts();
+		setPorts(ports);
+		let pick = 0;
+		try {
+			await withDialogStubs(
+				{
+					// Prompt 1-3: the either-skill prompt (Intimidate trained),
+					// then per-degree picks (bs → its weapon prompt, repairs).
+					input: async () => {
+						pick += 1;
+						if (pick === 1) return { choice: "Intimidate" };
+						if (pick === 2) return { choice: "bs" };
+						if (pick === 3) return { choice: "w9" };
+						return { choice: "emergency-repairs" };
+					},
+				},
+				async () => {
+					const prepared = await shipActionHandler.prepare({
+						kind: "ship-action",
+						actor: ship,
+						itemId: "sa9",
+						performer: characterWithStrength([trainIntimidate]) as never,
+					} as never);
+					// Intimidate owned: s 40 + ladder 0 = 40, testKey s.
+					expect(prepared).toMatchObject({ baseTarget: 40, testKey: "s" });
+					// 3 degrees → 1 + floor(3/3) = 2 aided actions.
+					await shipActionHandler.after?.(
+						{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+						prepared as never,
+						{ success: true, degrees: 3, roll: 10 } as never,
+						"",
+						{ target: 40, modifiers: [] },
+					);
+				},
+			);
+		} finally {
+			resetPorts();
+		}
+		// Each upsert writes the FULL flag array; the LAST write carries both.
+		const flags = (
+			updates.at(-1) as {
+				system: {
+					turnFlags: Array<{
+						id: string;
+						key: string;
+						value: number;
+						target: string;
+						persistent: boolean;
+					}>;
+				};
+			}
+		).system.turnFlags;
+		expect(flags).toEqual([
+			{
+				id: "backs-into-it:w9",
+				key: "backs-into-it",
+				value: 5,
+				target: "w9",
+				expiresAtTurn: null,
+				persistent: false,
+			},
+			{
+				id: "backs-into-it:emergency-repairs",
+				key: "backs-into-it",
+				value: 5,
+				target: "emergency-repairs",
+				expiresAtTurn: null,
+				persistent: false,
+			},
+		]);
+		expect(posts.join(" ")).toContain("SHIP_ACTION.BACKS_NOTE");
+	});
+});
+
+describe("extended rows: Flank Speed + Lock on Target (bead z697, printed p217-218)", () => {
+	const flank = rowItem("Flank Speed", "tech-use");
+	const lock = rowItem("Lock on Target", "scrutiny+detection");
+
+	const runRowAfter = async (
+		row: { name?: string },
+		outcome: { success: boolean; degrees: number; roll: number },
+		dialogs?: {
+			wait?: (opts: Record<string, unknown>) => Promise<unknown>;
+			input?: (opts: Record<string, unknown>) => Promise<unknown>;
+		},
+	) => {
+		const ship = extendedShip([row]);
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+		} as never);
+		const { posts, ports, rolled } = captureEffectPorts();
+		setPorts(ports);
+		try {
+			if (dialogs) {
+				await withDialogStubs(dialogs, async () => {
+					await shipActionHandler.after?.(
+						{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+						prepared as never,
+						outcome as never,
+						"",
+						{ target: 50, modifiers: [] },
+					);
+				});
+			} else {
+				await shipActionHandler.after?.(
+					{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+					prepared as never,
+					outcome as never,
+					"",
+					{ target: 50, modifiers: [] },
+				);
+			}
+		} finally {
+			resetPorts();
+		}
+		return { posts, rolled };
+	};
+
+	it("Flank Speed success notes the +1 VU per degree movement", async () => {
+		resetSpies();
+		const { posts } = await runRowAfter(flank, {
+			success: true,
+			degrees: 2,
+			roll: 10,
+		});
+		expect(posts.join(" ")).toContain("SHIP_ACTION.FLANK_SPEED_NOTE");
+	});
+
+	it("Flank Speed hard-fail (2+ degrees of failure) posts the Engines Crippled (6) critical", async () => {
+		resetSpies();
+		const { posts } = await runRowAfter(
+			flank,
+			// roll 85 vs target 50 → floor(35/10)+1 = 4 degrees of failure.
+			{ success: false, degrees: 0, roll: 85 },
+		);
+		const html = posts.join(" ");
+		expect(html).toContain("SHIP_ACTION.FLANK_SPEED_CRIPPLED");
+	});
+
+	it("Flank Speed failing by 1 degree: no cripple, no note", async () => {
+		resetSpies();
+		const { posts } = await runRowAfter(flank, {
+			success: false,
+			degrees: 0,
+			roll: 55, // 1 degree of failure
+		});
+		expect(posts).toEqual([]);
+	});
+
+	it("Lock on Target writes the flag naming ONE weapon component (+5, +5 per 2 degrees)", async () => {
+		resetSpies();
+		const weapon = {
+			id: "w9",
+			type: "ship-weapon-component",
+			name: "Prow Sunstorm Lance",
+			system: {
+				category: "supplemental",
+				componentType: "lance",
+				state: "intact",
+			},
+		};
+		const ship = extendedShip([lock, weapon]);
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+		} as never);
+		const { updates, posts, ports } = captureEffectPorts();
+		setPorts(ports);
+		try {
+			await withDialogStubs(
+				{ input: async () => ({ choice: "w9" }) },
+				async () => {
+					// 2 degrees → 5 + 5 = 10.
+					await shipActionHandler.after?.(
+						{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+						prepared as never,
+						{ success: true, degrees: 2, roll: 10 } as never,
+						"",
+						{ target: 50, modifiers: [] },
+					);
+				},
+			);
+		} finally {
+			resetPorts();
+		}
+		const flags = (
+			updates[0] as {
+				system: {
+					turnFlags: Array<{
+						id: string;
+						key: string;
+						value: number;
+						target: string;
+						persistent: boolean;
+					}>;
+				};
+			}
+		).system.turnFlags;
+		expect(flags).toEqual([
+			{
+				id: "lock-on-target:w9",
+				key: "lock-on-target",
+				value: 10,
+				target: "w9",
+				expiresAtTurn: null,
+				persistent: false,
+			},
+		]);
+		expect(posts.join(" ")).toContain("SHIP_ACTION.LOCK_ON_TARGET_NOTE");
+	});
+});
+
+describe("extended rows: Hit and Run (bead z697, printed p218)", () => {
+	const hitAndRun = rowItem("Hit and Run", "pilot-space-craft");
+	const enemyShip = () => ({
+		name: "Ork Freighter",
+		system: {
+			turretRating: 2,
+			hullIntegrity: { value: 33, max: 33 },
+			crewPopulation: 100,
+			crewMorale: 80,
+		},
+		items: itemsCollection([
+			{
+				id: "e1",
+				name: "Ork Drive Tubes",
+				type: "ship-component",
+				system: {
+					category: "essential",
+					componentType: "plasma-drive",
+					state: "intact",
+				},
+			},
+		]),
+	});
+
+	it("rides the target's Turret Rating as a VISIBLE −10/point row", async () => {
+		resetSpies();
+		setPorts({
+			...getPorts(),
+			targets: { ...getPorts().targets, actor: enemyShip },
+		} as never);
+		try {
+			const prepared = await shipActionHandler.prepare({
+				kind: "ship-action",
+				actor: extendedShip([hitAndRun]),
+				itemId: "sa9",
+			} as never);
+			expect(prepared).toMatchObject({
+				baseTarget: 50,
+				testKind: "characteristic",
+			});
+			const rows = prepared?.initialModifiers as Array<{
+				id?: string;
+				value: number;
+			}>;
+			expect(
+				rows.find((mod) => mod.id === "ship-action:turret-rating"),
+			).toMatchObject({ value: -20 });
+		} finally {
+			resetPorts();
+		}
+	});
+
+	const runFailure = async (roll: number) => {
+		const ship = extendedShip([hitAndRun]);
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+		} as never);
+		const { posts, ports } = captureEffectPorts();
+		setPorts(ports);
+		try {
+			await shipActionHandler.after?.(
+				{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+				prepared as never,
+				{ success: false, degrees: 0, roll } as never,
+				"",
+				{ target: 50, modifiers: [] },
+			);
+		} finally {
+			resetPorts();
+		}
+		return posts;
+	};
+
+	it("failure by 4+ degrees: the craft is shot down (card note)", async () => {
+		resetSpies();
+		const html = (await runFailure(85)).join(" "); // 4 degrees of failure
+		expect(html).toContain("SHIP_ACTION.MANUAL_RANGE_HIT_RUN");
+		expect(html).toContain("SHIP_ACTION.HIT_RUN_SHOT_DOWN");
+		expect(html).not.toContain("SHIP_ACTION.HIT_RUN_RETURN");
+	});
+
+	it("a milder failure: forced to return", async () => {
+		resetSpies();
+		const html = (await runFailure(55)).join(" "); // 1 degree of failure
+		expect(html).toContain("SHIP_ACTION.HIT_RUN_RETURN");
+		expect(html).not.toContain("SHIP_ACTION.HIT_RUN_SHOT_DOWN");
+	});
+
+	const runManualWin = async (
+		dialogs: {
+			wait?: (opts: Record<string, unknown>) => Promise<unknown>;
+			input?: (opts: Record<string, unknown>) => Promise<unknown>;
+		},
+		withTarget = true,
+	) => {
+		const ship = extendedShip([hitAndRun]);
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: ship,
+			itemId: "sa9",
+		} as never);
+		const { posts, ports, rolled, updates } = captureEffectPorts(
+			withTarget
+				? { targets: { ...getPorts().targets, actor: enemyShip } as never }
+				: {},
+		);
+		setPorts(ports);
+		try {
+			await withDialogStubs(dialogs, async () => {
+				await shipActionHandler.after?.(
+					{ kind: "ship-action", actor: ship, itemId: "sa9" } as never,
+					prepared as never,
+					{ success: true, degrees: 1, roll: 10 } as never,
+					"",
+					{ target: 50, modifiers: [] },
+				);
+			});
+		} finally {
+			resetPorts();
+		}
+		return { posts, rolled, updates };
+	};
+
+	it("a manual win: 1d5 twice on the critical chart, pick one, HI/degree applied", async () => {
+		resetSpies();
+		const { posts, rolled, updates } = await runManualWin({
+			// The manual opposed Command: WON.
+			wait: async () => "won",
+			input: async (opts: Record<string, unknown>) => {
+				const content = typeof opts.content === "string" ? opts.content : "";
+				// The degrees prompt, the component pick (name="component"), then
+				// the critical pick-one.
+				if (content.includes('name="degrees"')) return { degrees: "2" };
+				if (content.includes('name="component"')) return { component: "e1" };
+				return { choice: "3 — Fire!" };
+			},
+		});
+		// Two 1d5 chart rolls.
+		expect(rolled.filter((formula) => formula === "1d5")).toHaveLength(2);
+		// HI −2 (the manual win's degrees) and the crew loss follows (p221).
+		const shipUpdate = updates.filter(
+			(update) =>
+				(update as { system: { hullIntegrity?: unknown } }).system
+					?.hullIntegrity !== undefined,
+		)[0] as {
+			system: {
+				hullIntegrity: { value: number };
+				crewPopulation: number;
+				crewMorale: number;
+			};
+		};
+		expect(shipUpdate).toMatchObject({
+			system: {
+				hullIntegrity: { value: 31 },
+				crewPopulation: 98,
+				crewMorale: 78,
+			},
+		});
+		// The picked critical damaged a component — the raiders are ABOARD, so
+		// this pick is NOT reveal-gated (decision 11 gates ship.ts's ranged
+		// critical path only).
+		expect(
+			updates.some(
+				(update) =>
+					(update as { system: { state?: string } }).system?.state ===
+					"damaged",
+			),
+		).toBe(true);
+		const html = posts.join(" ");
+		expect(html).toContain("SHIP_ACTION.HIT_RUN_CRIT_PICK");
+		expect(html).toContain("SHIP_ACTION.HIT_RUN_APPLIED");
+	});
+
+	it("a manual loss (or cancel): the raid retreats, no writes", async () => {
+		resetSpies();
+		const { posts, updates } = await runManualWin({
+			wait: async () => "failed",
+		});
+		expect(updates).toEqual([]);
+		expect(posts.join(" ")).toContain("SHIP_ACTION.HIT_RUN_RAID_LOST");
+	});
+});
+
+describe("decision 11: promptTargetComponent reveal gating (bead z697)", () => {
+	const gatedTarget = (revealed: string[]) => ({
+		name: "Dauntless",
+		system: { revealedComponents: revealed },
+		items: itemsCollection([
+			{
+				id: "r1",
+				name: "Revealed Drives",
+				type: "ship-component",
+				system: { state: "intact" },
+			},
+			{
+				id: "r2",
+				name: "Hidden Bridge",
+				type: "ship-component",
+				system: { state: "intact" },
+			},
+		]),
+	});
+
+	it("lists ONLY revealed components (un-revealed picks refused)", async () => {
+		resetSpies();
+		const captured: string[] = [];
+		await withDialogStubs(
+			{
+				input: async (opts: { content?: string }) => {
+					captured.push(opts.content ?? "");
+					return { component: "r1" };
+				},
+			},
+			async () => {
+				const component = await promptTargetComponent(gatedTarget(["r1"]), {
+					revealGated: true,
+				});
+				expect(component).toMatchObject({ id: "r1" });
+			},
+		);
+		expect(captured[0]).toContain("Revealed Drives");
+		expect(captured[0]).not.toContain("Hidden Bridge");
+	});
+
+	it("nothing revealed: the prompt refuses loudly and opens nothing", async () => {
+		resetSpies();
+		let prompted = false;
+		await withDialogStubs(
+			{
+				input: async () => {
+					prompted = true;
+					return { component: "r1" };
+				},
+			},
+			async () => {
+				const component = await promptTargetComponent(gatedTarget([]), {
+					revealGated: true,
+				});
+				expect(component).toBeNull();
+			},
+		);
+		expect(prompted).toBe(false);
+		expect(
+			warnings.some((w) => w.includes("SHIP_COMBAT.COMPONENTS_NOT_REVEALED")),
+		).toBe(true);
+	});
+
+	it("ungated prompts (own-ship/aboard knowledge) list all installed components", async () => {
+		resetSpies();
+		const captured: string[] = [];
+		await withDialogStubs(
+			{
+				input: async (opts: { content?: string }) => {
+					captured.push(opts.content ?? "");
+					return { component: "r2" };
+				},
+			},
+			async () => {
+				const component = await promptTargetComponent(gatedTarget([]));
+				expect(component).toMatchObject({ id: "r2" });
+			},
+		);
+		expect(captured[0]).toContain("Hidden Bridge");
+	});
+});
+
+// --- Boarding-machinery rows (epic necp bead w98s, Core Rulebook p215) ----
+
+const { boardingRowHandlers } = await import("./ship-boarding");
+
+/** A machinery-row item fixture: the canonical name carries the routing. */
+const boardingItem = (
+	id: string,
+	name: string,
+	overrides: Record<string, unknown> = {},
+) => ({
+	id,
+	type: "ship-action",
+	name,
+	uuid: `Item.${id}`,
+	system: {
+		actionCost: "Manoeuvre + Shooting",
+		roll: {
+			test: "pilot-space-craft+manoeuvrability",
+			difficulty: "Hard (–20)",
+		},
+		shortDescription: "Boarding machinery.",
+		description: "<p>Book prose.</p>",
+		...overrides,
+	},
+});
+
+const rammingItem = boardingItem("ram1", "Ramming");
+/** A LOCKED ship fixture (boardedWith pair state per S2). */
+function boardedShipFixture(
+	items: unknown[],
+	overrides: Record<string, unknown> = {},
+) {
+	return {
+		name: "Sabre",
+		type: "starship",
+		uuid: "Actor.sabre",
+		items: Object.assign([...items], {
+			get: (id: string) => items.find((i) => (i as { id?: string }).id === id),
+		}),
+		system: {
+			crewQuality: "veteran",
+			manoeuvrability: 30,
+			detection: 12,
+			hullClass: "frigate",
+			armour: 16,
+			voidShields: 2,
+			hullIntegrity: { value: 33, max: 33 },
+			crewPopulation: 100,
+			crewMorale: 100,
+			turretRating: 1,
+			boardedWith: { uuid: "", breakFreeFailedThisTurn: false },
+			...overrides,
+		},
+	} as never;
+}
+/** The boarding/ramming target fixture. */
+const boardingTarget = {
+	name: "Dauntless",
+	type: "starship",
+	uuid: "Actor.dauntless",
+	system: {
+		hullClass: "frigate",
+		armour: 18,
+		voidShields: 2,
+		hullIntegrity: { value: 33, max: 33 },
+		crewPopulation: 100,
+		crewMorale: 100,
+		turretRating: 1,
+		boardedWith: { uuid: "", breakFreeFailedThisTurn: false },
+	},
+};
+
+/** Dialog queue stubs: `DialogV2.input` answers in order (then nulls), so
+ * does `DialogV2.wait`'s button callbacks. */
+async function withDialogs(
+	inputs: Array<Record<string, string>>,
+	waits: Array<string | null>,
+	run: () => Promise<void>,
+): Promise<void> {
+	const globalFoundry = (globalThis as Record<string, unknown>).foundry as {
+		applications: { api: { DialogV2: unknown } };
+	};
+	const original = globalFoundry.applications.api.DialogV2 as {
+		input: unknown;
+		wait: unknown;
+	};
+	let inputIndex = 0;
+	let waitIndex = 0;
+	// REPLACE the global (a clone) instead of mutating the shared stub object:
+	// the queues stay per-call and the restore puts the original back.
+	globalFoundry.applications.api.DialogV2 = {
+		...original,
+		input: (async () => inputs[inputIndex++] ?? null) as unknown,
+		wait: (async () => waits[waitIndex++] ?? null) as unknown,
+	} as typeof original;
+	try {
+		await run();
+	} finally {
+		globalFoundry.applications.api.DialogV2 = original;
+	}
+}
+
+/** A per-formula dice fake for the boarding machinery's mixed rolls. */
+function boardingDice(byFormula: Record<string, number>) {
+	const Rolled: string[] = [];
+	return {
+		Rolled,
+		roll: async (formula: string) => {
+			Rolled.push(formula);
+			return {
+				total: byFormula[formula] ?? 0,
+				dice: [],
+				terms: [],
+				rolls: [],
+				formula,
+			};
+		},
+	};
+}
+
+interface BoardingDiceFake {
+	Rolled?: string[];
+	roll: (formula: string) => Promise<{
+		total: number;
+		dice: never[];
+		terms: never[];
+		rolls: never[];
+		formula: string;
+	}>;
+}
+
+/** Wire the fake ports for a row's after() outcome machinery; returns the
+ * captured updates + card vars, restoring the ports in the finally. */
+async function withRowPorts(
+	dice: BoardingDiceFake,
+	run: () => Promise<void>,
+	target: unknown = boardingTarget,
+): Promise<{
+	updates: Record<string, unknown>[];
+	cards: Array<Record<string, unknown>>;
+}> {
+	resetSpies();
+	const updates: Array<Record<string, unknown>> = [];
+	const cards: Array<Record<string, unknown>> = [];
+	setPorts({
+		...getPorts(),
+		dice,
+		actors: {
+			...getPorts().actors,
+			update: async (_doc: unknown, data: Record<string, unknown>) => {
+				updates.push(data);
+			},
+		},
+		targets: {
+			...getPorts().targets,
+			actor: () => target,
+		},
+		chat: {
+			...getPorts().chat,
+			post: async (
+				_actor: unknown,
+				template: string,
+				vars: Record<string, unknown>,
+			) => {
+				cards.push({ template, ...vars });
+				return { id: "msg-1" };
+			},
+		},
+	} as never);
+	try {
+		await run();
+	} finally {
+		resetPorts();
+	}
+	return { updates, cards };
+}
+
+/** Point the target port at the boarding target for the duration of run. */
+async function withTarget(run: () => Promise<void>): Promise<void> {
+	setPorts({
+		...getPorts(),
+		targets: {
+			...getPorts().targets,
+			actor: () => boardingTarget,
+		},
+	} as never);
+	try {
+		await run();
+	} finally {
+		resetPorts();
+	}
+}
+
+describe("boarding rows: ramming (bead w98s, Core Rulebook p215)", () => {
+	it("prepares the Hard (–20) combined test with the manual distance gate", async () => {
+		await withDialogs([{ distance: "1" }], [], async () => {
+			await withTarget(async () => {
+				const prepared = await shipActionHandler.prepare({
+					kind: "ship-action",
+					actor: boardedShipFixture([rammingItem]),
+					itemId: "ram1",
+				} as never);
+				// The same combined-test anatomy the standard path builds.
+				expect(prepared).toMatchObject({
+					baseTarget: 50, // veteran crew fallback
+					testKind: "characteristic",
+					testKey: "pilot-space-craft",
+				});
+				expect(prepared?.kindData).toMatchObject({
+					combinedTarget: 80,
+					crewFallback: true,
+				});
+			});
+		});
+	});
+
+	it("refuses the ram when the ship is LOCKED (no manoeuvre actions)", async () => {
+		await withDialogs([{ distance: "1" }], [], async () => {
+			const prepared = await shipActionHandler.prepare({
+				kind: "ship-action",
+				actor: boardedShipFixture([rammingItem], {
+					boardedWith: { uuid: "Actor.ork", breakFreeFailedThisTurn: false },
+				}),
+				itemId: "ram1",
+			} as never);
+			expect(prepared).toBeNull();
+		});
+	});
+
+	it("refuses the ram beyond the book's 1 VU (manual distance entry)", async () => {
+		await withDialogs([{ distance: "3" }], [], async () => {
+			await withTarget(async () => {
+				const prepared = await shipActionHandler.prepare({
+					kind: "ship-action",
+					actor: boardedShipFixture([rammingItem]),
+					itemId: "ram1",
+				} as never);
+				expect(prepared).toBeNull();
+				expect(
+					warnings.some((w) => w.includes("SHIP_BOARDING.OUT_OF_RANGE")),
+				).toBe(true);
+			});
+		});
+	});
+
+	it("applies BOTH damage applications and bypasses void shields (p215)", async () => {
+		await withDialogs([{ distance: "1" }], [], async () => {
+			let prepared: Awaited<ReturnType<typeof shipActionHandler.prepare>> =
+				null;
+			const { updates, cards } = await withRowPorts(
+				boardingDice({ "1d10": 7, "1d5": 3 }),
+				async () => {
+					prepared = await shipActionHandler.prepare({
+						kind: "ship-action",
+						actor: boardedShipFixture([rammingItem]),
+						itemId: "ram1",
+					} as never);
+					// Frigate ram die 1d10 -> 7; + prow armour 16 = 23 vs
+					// Armour 18.
+					await shipActionHandler.after?.(
+						{
+							kind: "ship-action",
+							actor: boardedShipFixture([rammingItem]),
+							itemId: "ram1",
+						} as never,
+						prepared as never,
+						{ success: true, roll: 12, degrees: 1, critical: false } as never,
+						"msg-1",
+					);
+				},
+			);
+			// EXACTLY two rolls: the ram die and the 1d5 backlash — the
+			// damage NEVER enters the salvo's void-shield prompt (no extra
+			// absorb step; the target's shields are not consulted at all).
+			expect(updates).toHaveLength(2);
+			// The DEFENDER's payload first (die + rammer armour, armour soaks,
+			// shields untouched); Crew follows the p221 1:1 hull loss.
+			expect(updates[0]).toEqual({
+				system: {
+					hullIntegrity: { value: 28 }, // 33 - (23 - 18)
+					crewPopulation: 95,
+					crewMorale: 95,
+				},
+			});
+			// The RAMMER's payload: defender Armour 18 + 1d5 3 = 21, own
+			// Armour 16 absorbs its share.
+			expect(updates[1]).toEqual({
+				system: {
+					hullIntegrity: { value: 28 }, // 33 - (21 - 16)
+					crewPopulation: 95,
+					crewMorale: 95,
+				},
+			});
+			expect(cards[0]).toMatchObject({
+				ramHullDamage: 5,
+				backHullDamage: 5,
+				success: true,
+			});
+		});
+	});
+
+	it("posts a no-damage card on a failed ram test", async () => {
+		await withDialogs([{ distance: "1" }], [], async () => {
+			let prepared: Awaited<ReturnType<typeof shipActionHandler.prepare>> =
+				null;
+			const { updates, cards } = await withRowPorts(
+				boardingDice({}),
+				async () => {
+					prepared = await shipActionHandler.prepare({
+						kind: "ship-action",
+						actor: boardedShipFixture([rammingItem]),
+						itemId: "ram1",
+					} as never);
+					await shipActionHandler.after?.(
+						{
+							kind: "ship-action",
+							actor: boardedShipFixture([rammingItem]),
+							itemId: "ram1",
+						} as never,
+						prepared as never,
+						{ success: false, roll: 88, degrees: 0, critical: false } as never,
+						"msg-1",
+					);
+				},
+			);
+			expect(updates).toEqual([]); // no damage on a failed ram
+			expect(cards).toHaveLength(1);
+		});
+	});
+});
+
+describe("boarding rows: the lock (bead w98s, Core Rulebook p215)", () => {
+	it("writes the boardedWith pair onto BOTH ships on success", async () => {
+		await withDialogs([{ distance: "1" }], [], async () => {
+			let prepared: Awaited<ReturnType<typeof shipActionHandler.prepare>> =
+				null;
+			const { updates, cards } = await withRowPorts(
+				boardingDice({}),
+				async () => {
+					prepared = await shipActionHandler.prepare({
+						kind: "ship-action",
+						actor: boardedShipFixture([boardingItem("brd1", "Boarding")]),
+						itemId: "brd1",
+					} as never);
+					await shipActionHandler.after?.(
+						{
+							kind: "ship-action",
+							actor: boardedShipFixture([boardingItem("brd1", "Boarding")]),
+							itemId: "brd1",
+						} as never,
+						prepared as never,
+						{ success: true, roll: 10, degrees: 1, critical: false } as never,
+						"msg-1",
+					);
+				},
+			);
+			// BOTH ships hold the pair (each uuid pointing at the other); the
+			// lock gate then denies Manoeuvre/Shooting both sides.
+			expect(updates).toEqual([
+				{
+					system: {
+						boardedWith: {
+							uuid: "Actor.dauntless",
+							breakFreeFailedThisTurn: false,
+						},
+					},
+				},
+				{
+					system: {
+						boardedWith: {
+							uuid: "Actor.sabre",
+							breakFreeFailedThisTurn: false,
+						},
+					},
+				},
+			]);
+			// The locked card carries the opposed-Command manual reminder with
+			// the computed (here zero) bonus rows.
+			expect(cards[0]).toMatchObject({
+				locked: true,
+			});
+			expect((cards[0].commandRows as unknown[]).length).toBe(5);
+		});
+	});
+
+	it("writes NOTHING on a failed lock", async () => {
+		await withDialogs([{ distance: "1" }], [], async () => {
+			let prepared: Awaited<ReturnType<typeof shipActionHandler.prepare>> =
+				null;
+			const { updates, cards } = await withRowPorts(
+				boardingDice({}),
+				async () => {
+					prepared = await shipActionHandler.prepare({
+						kind: "ship-action",
+						actor: boardedShipFixture([boardingItem("brd1", "Boarding")]),
+						itemId: "brd1",
+					} as never);
+					await shipActionHandler.after?.(
+						{
+							kind: "ship-action",
+							actor: boardedShipFixture([boardingItem("brd1", "Boarding")]),
+							itemId: "brd1",
+						} as never,
+						prepared as never,
+						{ success: false, roll: 92, degrees: 0, critical: false } as never,
+						"msg-1",
+					);
+				},
+			);
+			expect(updates).toEqual([]);
+			expect(cards[0]).toMatchObject({ locked: false });
+		});
+	});
+});
+
+describe("boarding rows: break-free (bead w98s, Core Rulebook p215)", () => {
+	const breakFreeItem2 = boardingItem("bf1", "Break Free");
+	const lockedShip = () =>
+		boardedShipFixture([breakFreeItem2], {
+			boardedWith: { uuid: "Actor.dauntless", breakFreeFailedThisTurn: false },
+		});
+
+	it("refuses break-free on a ship that is NOT boarded", async () => {
+		await withDialogs([], [], async () => {
+			const prepared = await shipActionHandler.prepare({
+				kind: "ship-action",
+				actor: boardedShipFixture([breakFreeItem2]),
+				itemId: "bf1",
+			} as never);
+			expect(prepared).toBeNull();
+			expect(
+				warnings.some((w) => w.includes("SHIP_BOARDING.NOT_BOARDED")),
+			).toBe(true);
+		});
+	});
+
+	it("clears the pair on BOTH ships when the test succeeds", async () => {
+		await withDialogs([], [], async () => {
+			const prepared = await shipActionHandler.prepare({
+				kind: "ship-action",
+				actor: lockedShip(),
+				itemId: "bf1",
+			} as never);
+			const partner = { name: "Dauntless", uuid: "Actor.dauntless" };
+			const utils = (
+				(globalThis as Record<string, unknown>).foundry as {
+					utils: { fromUuidSync: (uuid: string) => unknown };
+				}
+			).utils;
+			const original = utils.fromUuidSync;
+			utils.fromUuidSync = (uuid: string) =>
+				uuid === "Actor.dauntless" ? partner : null;
+			try {
+				const { updates, cards } = await withRowPorts(
+					boardingDice({}),
+					async () => {
+						await shipActionHandler.after?.(
+							{
+								kind: "ship-action",
+								actor: lockedShip(),
+								itemId: "bf1",
+							} as never,
+							prepared as never,
+							{ success: true, roll: 10, degrees: 1, critical: false } as never,
+							"msg-1",
+						);
+					},
+				);
+				// Own state cleared, then the partner's.
+				expect(updates).toEqual([
+					{
+						system: {
+							boardedWith: { uuid: "", breakFreeFailedThisTurn: false },
+						},
+					},
+					{
+						system: {
+							boardedWith: { uuid: "", breakFreeFailedThisTurn: false },
+						},
+					},
+				]);
+				expect(cards[0]).toMatchObject({ brokeFree: true, locked: false });
+			} finally {
+				utils.fromUuidSync = original;
+			}
+		});
+	});
+
+	it("keeps the lock and sets the −20 opposed-Command flag on failure", async () => {
+		await withDialogs([], [], async () => {
+			const prepared = await shipActionHandler.prepare({
+				kind: "ship-action",
+				actor: lockedShip(),
+				itemId: "bf1",
+			} as never);
+			const { updates, cards } = await withRowPorts(
+				boardingDice({}),
+				async () => {
+					await shipActionHandler.after?.(
+						{
+							kind: "ship-action",
+							actor: lockedShip(),
+							itemId: "bf1",
+						} as never,
+						prepared as never,
+						{ success: false, roll: 95, degrees: 0, critical: false } as never,
+						"msg-1",
+					);
+				},
+			);
+			// ONE write: only the failed ship's own state (its subsequent
+			// opposed Command suffers −20, Core Rulebook p215) — the partner's
+			// pair state is untouched.
+			expect(updates).toEqual([
+				{
+					system: {
+						boardedWith: {
+							uuid: "Actor.dauntless",
+							breakFreeFailedThisTurn: true,
+						},
+					},
+				},
+			]);
+			expect(cards[0]).toMatchObject({ breakFreePenalty: 20, locked: true });
+		});
+	});
+});
+
+describe("boarding rows: the rout roll (bead w98s, Core Rulebook p215)", () => {
+	const routItem = boardingItem("rt1", "Rout");
+
+	it("refuses the rout outside a boarding lock (book p215)", async () => {
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: boardedShipFixture([routItem]),
+			itemId: "rt1",
+		} as never);
+		expect(prepared).toBeNull();
+		expect(warnings.some((w) => w.includes("SHIP_BOARDING.NOT_BOARDED"))).toBe(
+			true,
+		);
+	});
+
+	it("prepares a prepare-only roll displaying the current Morale", async () => {
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: boardedShipFixture([routItem], {
+				boardedWith: {
+					uuid: "Actor.dauntless",
+					breakFreeFailedThisTurn: false,
+				},
+			}),
+			itemId: "rt1",
+		} as never);
+		expect(prepared?.prepareOnly).toBe(true);
+		expect(prepared?.baseTarget).toBe(100);
+		expect(prepared?.kindData).toMatchObject({ name: "Rout" });
+	});
+
+	it("resolves the manual Command, the per-degree pick, and the rout branch (surrender)", async () => {
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: boardedShipFixture([routItem], {
+				boardedWith: {
+					uuid: "Actor.dauntless",
+					breakFreeFailedThisTurn: false,
+				},
+			}),
+			itemId: "rt1",
+		} as never);
+		const loser = {
+			...boardingTarget,
+			uuid: "Actor.dauntless2",
+			system: { ...boardingTarget.system, crewMorale: 60 },
+		};
+		const { cards } = await withRowPorts(
+			boardingDice({ "2d5": 4, "1d100": 90 }),
+			async () => {
+				await withDialogs(
+					[{ degrees: "2" }],
+					["ship", "crew", "npc"],
+					async () => {
+						await boardingRowHandlers.rout.after?.(
+							{
+								kind: "ship-action",
+								actor: boardedShipFixture([routItem], {
+									boardedWith: {
+										uuid: "Actor.dauntless",
+										breakFreeFailedThisTurn: false,
+									},
+								}),
+								itemId: "rt1",
+							} as never,
+							prepared as never,
+							{ success: false, roll: 0, degrees: 0, critical: false } as never,
+							"msg-1",
+						);
+					},
+				);
+			},
+			loser,
+		);
+		// This ship won by 2 degrees; the crew-damage pick (2 × 1d5 + 1d5)
+		// lands on the LOSER, then the loser's rout d100 (90) exceeds its
+		// current Morale (56): the NPC branch → SURRENDER card.
+		expect(cards[0]).toMatchObject({
+			winnerName: "Sabre",
+			loserName: "Dauntless",
+			degrees: 2,
+			populationLoss: 4,
+			moraleLoss: 4,
+			routRoll: 90,
+			routMorale: 56,
+			routed: true,
+			surrender: true,
+		});
+	});
+
+	it("posts the explorers' grim-choice card on the explorers' branch", async () => {
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: boardedShipFixture([routItem], {
+				boardedWith: {
+					uuid: "Actor.dauntless",
+					breakFreeFailedThisTurn: false,
+				},
+				crewMorale: 60, // the LOSER (this ship) tests at 58 after the pick
+			}),
+			itemId: "rt1",
+		} as never);
+		const loser = {
+			...boardingTarget,
+			uuid: "Actor.dauntless2",
+			system: { ...boardingTarget.system, crewMorale: 60 },
+		};
+		const { cards } = await withRowPorts(
+			boardingDice({ "2d5": 4, "1d100": 90 }),
+			async () => {
+				await withDialogs(
+					[{ degrees: "2" }],
+					["target", "hull", "explorers"],
+					async () => {
+						await boardingRowHandlers.rout.after?.(
+							{
+								kind: "ship-action",
+								actor: boardedShipFixture([routItem], {
+									boardedWith: {
+										uuid: "Actor.dauntless",
+										breakFreeFailedThisTurn: false,
+									},
+									crewMorale: 60,
+								}),
+								itemId: "rt1",
+							} as never,
+							prepared as never,
+							{ success: false, roll: 0, degrees: 0, critical: false } as never,
+							"msg-1",
+						);
+					},
+				);
+			},
+			loser,
+		);
+		// The TARGET won by 2 degrees and picked 2 Hull Integrity — which
+		// then drags the loser's (this ship's) Crew/Morale 1:1 (p221) — and
+		// the LOSER (this ship) routed on 90 vs its CURRENT Morale (58).
+		expect(cards[0]).toMatchObject({
+			winnerName: "Dauntless",
+			loserName: "Sabre",
+			degrees: 2,
+			hullDamage: 2,
+			populationLoss: 2,
+			moraleLoss: 2,
+			routMorale: 58,
+			grimChoice: true,
+			surrender: false,
+		});
+	});
+
+	it("keeps fighting when the rout roll does not exceed current Morale", async () => {
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: boardedShipFixture([routItem], {
+				boardedWith: {
+					uuid: "Actor.dauntless",
+					breakFreeFailedThisTurn: false,
+				},
+			}),
+			itemId: "rt1",
+		} as never);
+		const loser = {
+			...boardingTarget,
+			uuid: "Actor.dauntless2",
+			system: { ...boardingTarget.system, crewMorale: 60 },
+		};
+		const { cards } = await withRowPorts(
+			boardingDice({ "2d5": 4, "1d100": 30 }),
+			async () => {
+				await withDialogs([{ degrees: "2" }], ["ship", "crew"], async () => {
+					await boardingRowHandlers.rout.after?.(
+						{
+							kind: "ship-action",
+							actor: boardedShipFixture([routItem], {
+								boardedWith: {
+									uuid: "Actor.dauntless",
+									breakFreeFailedThisTurn: false,
+								},
+							}),
+							itemId: "rt1",
+						} as never,
+						prepared as never,
+						{ success: false, roll: 0, degrees: 0, critical: false } as never,
+						"msg-1",
+					);
+				});
+			},
+			loser,
+		);
+		// 30 never exceeds the (post-damage) Morale 56: the fight continues,
+		// NO branch prompt (the waits list carries exactly the Command + pick).
+		expect(cards[0]).toMatchObject({ routed: false });
+	});
+});

@@ -28,6 +28,10 @@ import {
 	type ShipComponentState,
 } from "../../../rules-engine/index";
 import { systemOf } from "../../data/accessors";
+import {
+	normalizeShipWeaponRange,
+	type ShipWeaponRange,
+} from "../../data/item/ship-weapon-range";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { postCard } from "../../rules/chat-flags";
 import type {
@@ -36,10 +40,6 @@ import type {
 	ShipWeaponRollRequest,
 } from "../../rules/roll-contract";
 import { crewQualityEffects } from "../../rules/ship-crew";
-import {
-	normalizeShipWeaponRange,
-	type ShipWeaponRange,
-} from "../../data/item/ship-weapon-range";
 import { promptShieldAbsorption, promptTargetComponent } from "../roll-prompts";
 import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
@@ -346,14 +346,15 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 			// Bead wvkd: the damage dice (plus the critical chart die).
 			rolls: damageRolls,
 		});
-		// Critical component selection (book p221-222): the attacker picks
-		// among components he "knows of" (v1: all installed components are
-		// known — Active Augury scanning is a manual/UNVERIFIED IN WORLD step).
-		// Gating (decision 11, bead z697): promptTargetComponent narrows to the
-		// target's system.revealedComponents set once augury fills it (schema
-		// field added by bead vph0).
+		// Critical component selection (book p221-222): the attacker picks among
+		// components he "knows of" — DECISION 11 (bead z697, Core Rulebook
+		// p217): the pick reads the TARGET's system.revealedComponents set
+		// (Focused Augury fills it, ship-extended.ts) and refuses un-revealed
+		// components loudly; the all-known stand-in is gone.
 		if (criticalEntry) {
-			const component = await promptTargetComponent(target);
+			const component = await promptTargetComponent(target, {
+				revealGated: true,
+			});
 			if (component) {
 				await ports.actors.update(component, {
 					system: { state: "damaged" },

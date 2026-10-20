@@ -33,10 +33,39 @@
         <div class="sc-state-banner alarm">⚠ {{localize "SHIP_COMBAT.CRIPPLED"}} — {{localize "SHIP_COMBAT.CRIPPLED_EFFECTS"}}</div>
         {{/if}}
 
-        {{!-- Starship initiative (bead qkq1, Core Rulebook p212-213): 1d10 +
-             the Detection tens digit into the active tracker. --}}
-        <button type="button" class="rt-button sc-initiative" data-action="rollInitiative"
-            data-tooltip="{{localize "COMBAT.ROLL_INITIATIVE_HINT_SHIP"}}">{{localize "COMBAT.ROLL_INITIATIVE"}}</button>
+        {{!-- Combat controls toolbar (bead t2bj): Roll Initiative + the
+             Helmsman pick + Silent Running share ONE flex row (the
+             .traits-row vocabulary) so the controls stop stacking
+             full-width on the crowded tab. Every control keeps its own
+             class, click action and tooltip hint. --}}
+        <div class="traits-row sc-combat-toolbar">
+            {{!-- Starship initiative (bead qkq1, Core Rulebook p212-213):
+                 1d10 + the Detection tens digit into the active tracker. --}}
+            <button type="button" class="rt-button sc-initiative" data-action="rollInitiative"
+                data-tooltip="{{localize "COMBAT.ROLL_INITIATIVE_HINT_SHIP"}}">{{localize "COMBAT.ROLL_INITIATIVE"}}</button>
+
+            {{!-- Helmsman picker (epic necp bead 7gcm, owner decision 1): the
+                 performer of the combined test — ship rolls enter with the picked
+                 Explorer; unset falls through to the crew-quality skill (Table
+                 8-9). The STATE lives on the sheet, not the actor (setHelmsman
+                 writes the sheet field). The empty option IS the fallback row. --}}
+            <div class="traits-row sc-helmsman">
+                <span class="origin-label">{{localize "SHIP_COMBAT.HELMSMAN"}}:</span>
+                <select data-action="setHelmsman" data-tooltip="{{localize "SHIP_COMBAT.HELMSMAN_HINT"}}">
+                    <option value=""{{#unless combat.helmsman.uuid}} selected{{/unless}}>{{localize "SHIP_COMBAT.HELMSMAN_NONE"}}</option>
+                    {{#each combat.helmsman.options as |o|}}
+                    <option value="{{o.uuid}}"{{#if o.selected}} selected{{/if}}>{{o.label}}</option>
+                    {{/each}}
+                </select>
+            </div>
+
+            {{!-- Silent Running toggle (owner decision 8, Core Rulebook p218) --}}
+            <div class="traits-row sc-silent-running">
+                <button type="button" class="rt-button sc-silent-toggle{{#if combat.silentRunning}} engaged{{/if}}"
+                    data-action="toggleSilentRunning" aria-pressed="{{#if combat.silentRunning}}true{{else}}false{{/if}}"
+                    data-tooltip="{{localize "SHIP_COMBAT.SILENT_RUNNING_HINT"}}">{{localize "SHIP_ACTION.SILENT_RUNNING"}}</button>
+            </div>
+        </div>
 
         {{!-- Boarding banner (epic necp bead 7gcm, Core Rulebook p215): the
              locked pair, failed-break-free penalty, the Break Free button
@@ -73,21 +102,6 @@
         </div>
         {{/if}}
 
-        {{!-- Helmsman picker (epic necp bead 7gcm, owner decision 1): the
-             performer of the combined test — ship rolls enter with the picked
-             Explorer; unset falls through to the crew-quality skill (Table
-             8-9). The STATE lives on the sheet, not the actor (setHelmsman
-             writes the sheet field). The empty option IS the fallback row. --}}
-        <div class="traits-row sc-helmsman">
-            <span class="origin-label">{{localize "SHIP_COMBAT.HELMSMAN"}}:</span>
-            <select data-action="setHelmsman" data-tooltip="{{localize "SHIP_COMBAT.HELMSMAN_HINT"}}">
-                <option value=""{{#unless combat.helmsman.uuid}} selected{{/unless}}>{{localize "SHIP_COMBAT.HELMSMAN_NONE"}}</option>
-                {{#each combat.helmsman.options as |o|}}
-                <option value="{{o.uuid}}"{{#if o.selected}} selected{{/if}}>{{o.label}}</option>
-                {{/each}}
-            </select>
-        </div>
-
         {{!-- Turn-state flags (bead vph0/S2 surface) as bonus/penalty chips --}}
         {{#unless combat.turnFlagsEmpty}}
         <div class="sc-turn-flags" data-tooltip="{{localize "SHIP_COMBAT.TURN_FLAGS"}}">
@@ -97,13 +111,6 @@
             {{/each}}
         </div>
         {{/unless}}
-
-        {{!-- Silent Running toggle (owner decision 8, Core Rulebook p218) --}}
-        <div class="traits-row sc-silent-running">
-            <button type="button" class="rt-button sc-silent-toggle{{#if combat.silentRunning}} engaged{{/if}}"
-                data-action="toggleSilentRunning" aria-pressed="{{#if combat.silentRunning}}true{{else}}false{{/if}}"
-                data-tooltip="{{localize "SHIP_COMBAT.SILENT_RUNNING_HINT"}}">{{localize "SHIP_ACTION.SILENT_RUNNING"}}</button>
-        </div>
 
         {{!-- SHIP ACTIONS (bead 7gcm): the starship-actions pack rows, --}}
         {{!-- grouped through the S5/S7 dispatch tables; every chip enters --}}
@@ -118,7 +125,7 @@
         {{#unless combat.shipActionGroupsEmpty}}
         {{#each combat.shipActionGroups as |group|}}
         <h3 class="inv-group-label">{{localize group.labelKey}}</h3>
-        <ol class="sc-action-list">
+        <ol class="sc-action-list action-list">
             {{#each group.rows as |row|}}
             <li class="action-row">
                 <a class="action-chip" data-action="shipActionChip" data-item-id="{{row.uuid}}"{{#if row.skipDialog}} data-skip-dialog="true"{{/if}}
@@ -145,9 +152,12 @@
             {{#each combat.weapons as |w|}}
             <div class="battery-card" data-item-id="{{w.id}}">
                 <div class="card-head">
+                    {{!-- Bead t2bj: the slot renders ONLY when assigned — the
+                         unassigned case is the single .sc-state.no-slot badge
+                         below (the card-slot badge repeated the same string). --}}
                     <span class="card-name" data-action="openItem" data-item-id="{{w.id}}"
                         data-tooltip="{{localize "GEAR.OPEN_SHEET"}}">{{w.name}}</span>
-                    <span class="card-slot">{{localize w.slotLabel}}{{#if w.slot}} {{w.slot}}{{/if}}</span>
+                    {{#if w.slot}}<span class="card-slot">{{localize w.slotLabel}} {{w.slot}}</span>{{/if}}
                 </div>
                 <div class="card-badges">
                     {{#if (ne w.state "intact")}}

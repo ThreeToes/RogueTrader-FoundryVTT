@@ -487,6 +487,131 @@ describe("the ship-combat tab template render", () => {
 		);
 		expect(html).toContain('data-action="defaultManoeuvre"');
 	});
+
+	test("the de-crowded tab: ONE merged toolbar, chip anatomy + slim group labels (bead t2bj)", () => {
+		const html = compiled()(
+			templateContext(
+				baseCombatContext({
+					shipActionGroups: [
+						{
+							key: "manoeuvre",
+							labelKey: "SHIP_COMBAT.ACTION_GROUP_MANOEUVRE",
+							rows: [
+								{
+									name: "Adjust Bearing",
+									uuid: "u1",
+									testLabel: "Pilot (Space Craft) + Manoeuvrability",
+									difficulty: "Challenging (+0)",
+									skipDialog: false,
+									tooltip: "t",
+								},
+							],
+						},
+					],
+					shipActionGroupsEmpty: false,
+					helmsman: { uuid: "", options: [] },
+					turnFlags: [],
+					turnFlagsEmpty: true,
+					boarding: { locked: false },
+					silentRunning: false,
+				}),
+			),
+		);
+		// TOOLBAR MERGE: Roll Initiative + the Helmsman pick + Silent Running
+		// share ONE flex toolbar row — the standalone rows are gone.
+		expect(html.match(/sc-combat-toolbar/g)?.length).toBe(1);
+		expect(html).toContain('data-action="rollInitiative"');
+		expect(html).toContain('data-action="setHelmsman"');
+		expect(html).toContain('data-action="toggleSilentRunning"');
+		// Tooltips stay on every control.
+		expect(html).toContain("COMBAT.ROLL_INITIATIVE_HINT_SHIP");
+		expect(html).toContain("SHIP_COMBAT.SILENT_RUNNING_HINT");
+		// The three controls sit in toolbar order between the vitals strip and
+		// the SHIP ACTIONS header.
+		const toolbar = html.indexOf("sc-combat-toolbar");
+		expect(toolbar).toBeGreaterThan(html.indexOf("sc-vitals-strip"));
+		const initiative = html.indexOf("sc-initiative");
+		const helmsman = html.indexOf("sc-helmsman");
+		const silent = html.indexOf("sc-silent-toggle");
+		expect(initiative).toBeGreaterThan(toolbar);
+		expect(helmsman).toBeGreaterThan(initiative);
+		expect(silent).toBeGreaterThan(helmsman);
+		expect(silent).toBeLessThan(html.indexOf("SHIP_COMBAT.SHIP_ACTIONS"));
+
+		// CHIP ANATOMY: the lists carry BOTH classes — the ship hook and the
+		// promoted shared .action-list anatomy from css/sheet-character.css.
+		expect(html).toContain('class="sc-action-list action-list"');
+		const cssShared = readFileSync("css/sheet-character.css", "utf8");
+		expect(cssShared).toContain(".rogue-trader .action-list {");
+		expect(cssShared).toContain(".rogue-trader .action-chip {");
+		// And the duplicated starship anatomy is gone — the ship block keeps
+		// only the test-spec cell modifier.
+		const cssShip = readFileSync("css/sheet-gear.css", "utf8");
+		expect(cssShip).not.toContain(".sc-action-list {\n\tdisplay: grid;");
+		expect(cssShip).toContain(".sc-action-list .sc-action-test {");
+		// GROUP HEADERS: the four group h3s render as slim one-line
+		// .inv-group-label rows (the existing shared class).
+		expect(html.match(/<h3 class="inv-group-label">/g)?.length).toBe(1);
+		// The SHIP ACTIONS h2 header stays (with the default-manoeuvre button).
+		expect(html).toContain('data-action="defaultManoeuvre"');
+	});
+
+	test("battery badges: the no-slot state shows ONCE, the slot only when assigned (bead t2bj)", () => {
+		const weapon = (slot: string, slotLabel: string) => ({
+			id: "w1",
+			name: "Sunsear Laser Battery",
+			slot,
+			slotLabel,
+			state: "intact",
+			stateLabel: "SHIP_COMBAT.STATE_INTACT",
+			depressurised: false,
+			salvo: true,
+			strength: 6,
+			damage: "1d10+5",
+			critRating: 1,
+			rangeLabel: "SHIP_COMBAT.RANGE_NORMAL",
+		});
+		// Unassigned: the amber .sc-state.no-slot badge is the SINGLE
+		// presentation — the card-slot cell stays empty (it repeated the same
+		// "no capacity slot assigned" string).
+		const unassigned = compiled()(
+			templateContext(
+				baseCombatContext({
+					weapons: [weapon("", "STARSHIP.ISSUE_UNASSIGNED")],
+					helmsman: { uuid: "", options: [] },
+					turnFlags: [],
+					turnFlagsEmpty: true,
+					boarding: { locked: false },
+					shipActionGroups: [],
+					shipActionGroupsEmpty: true,
+					silentRunning: false,
+				}),
+			),
+		);
+		expect(unassigned.match(/STARSHIP.ISSUE_UNASSIGNED/g)?.length).toBe(1);
+		expect(unassigned).toContain('class="sc-state no-slot"');
+		expect(unassigned).not.toContain('class="card-slot"');
+		// Assigned: the card-slot cell carries slot label + designation and no
+		// no-slot badge fires.
+		const assigned = compiled()(
+			templateContext(
+				baseCombatContext({
+					weapons: [weapon("prow", "STARSHIP.SLOT_PROW")],
+					helmsman: { uuid: "", options: [] },
+					turnFlags: [],
+					turnFlagsEmpty: true,
+					boarding: { locked: false },
+					shipActionGroups: [],
+					shipActionGroupsEmpty: true,
+					silentRunning: false,
+				}),
+			),
+		);
+		expect(assigned).toContain('class="card-slot"');
+		expect(assigned).toContain("STARSHIP.SLOT_PROW");
+		expect(assigned).not.toContain('class="sc-state no-slot"');
+		expect(assigned).not.toContain("STARSHIP.ISSUE_UNASSIGNED");
+	});
 });
 
 // --- the view model ---------------------------------------------------------

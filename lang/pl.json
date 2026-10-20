@@ -1442,6 +1442,7 @@
 	"SHIP_COMBAT.SHIP_ACTIONS": "Akcje statku (Core Rulebook, Tabele 8-10/8-11)",
 	"SHIP_COMBAT.ACTION_GROUP_MANOEUVRE": "Akcje manewrowe (Tabela 8-10)",
 	"SHIP_COMBAT.ACTION_GROUP_MACHINERY": "Taranowanie, abordaż i mechanizmy (Core Rulebook p215)",
+	"SHIP_COMBAT.ACTION_GROUP_ORDNANCE": "Akcje uzbrojenia (Battlefleet Koronus)",
 	"SHIP_COMBAT.ACTION_GROUP_EXTENDED": "Akcje rozszerzone (Tabela 8-11)",
 	"SHIP_COMBAT.NO_SHIP_ACTIONS": "Kompendium starship-actions nie jest zainstalowane — brak żetonów akcji statku.",
 	"SHIP_COMBAT.BREAK_FREE": "Uwolnić się",

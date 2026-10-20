@@ -27,6 +27,11 @@ import { join } from "node:path";
 // The turn-flag vocabulary the runtime composes i18n keys from (bead c7jo:
 // the torpedo-run chip gap this test pins).
 import { SHIP_TURN_FLAG_KEYS } from "../rules-engine/ship-turn-state";
+// The ship-action GROUP LABEL map (bead t2bj): the four group h3 labels
+// localize through this table, so a group key added without translations
+// renders RAW in the tab — the parity guard pins the map instead
+// (ship-combat-view.ts's SHIP_ACTION_GROUP_KEYS dispatch).
+import { SHIP_ACTION_GROUP_KEYS } from "./sheet/actor/ship-combat-view";
 
 const LANGS = ["en", "es", "fr", "pl"] as const;
 type Dict = Record<string, string>;
@@ -373,6 +378,24 @@ describe("i18n key parity (bead qgtz)", () => {
 				dictionaries[lang]["SHIP_COMBAT.TURN_FLAG_EVASIVE_TARGET"] ?? "",
 				`${lang}.json missing SHIP_COMBAT.TURN_FLAG_EVASIVE_TARGET`,
 			).not.toBe("");
+		}
+	});
+
+	/** The ship-action group h3 labels (bead t2bj) — the SHIP_ACTION_GROUP_KEYS
+	 *  dispatch map in ship-combat-view.ts is the composition site; every
+	 *  entry must resolve in ALL FOUR files (ORdnance was missing from the
+	 *  lot and rendered raw as a group heading before this guard). */
+	test("the SHIP_ACTION_GROUP_KEYS group labels resolve in all four language files (bead t2bj)", () => {
+		expect(Object.values(SHIP_ACTION_GROUP_KEYS)).toContain(
+			"SHIP_COMBAT.ACTION_GROUP_ORDNANCE",
+		);
+		for (const labelKey of Object.values(SHIP_ACTION_GROUP_KEYS)) {
+			for (const lang of LANGS) {
+				expect(
+					dictionaries[lang][labelKey] ?? "",
+					`${lang}.json missing ship-action group label ${labelKey}`,
+				).not.toMatch(/^\s*$/);
+			}
 		}
 	});
 

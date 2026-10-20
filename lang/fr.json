@@ -1442,6 +1442,7 @@
 	"SHIP_COMBAT.SHIP_ACTIONS": "Actions de vaisseau (Core Rulebook, Tableaux 8-10/8-11)",
 	"SHIP_COMBAT.ACTION_GROUP_MANOEUVRE": "Actions de manœuvre (Tableau 8-10)",
 	"SHIP_COMBAT.ACTION_GROUP_MACHINERY": "Abordage-éperonnage et machinerie (Core Rulebook p215)",
+	"SHIP_COMBAT.ACTION_GROUP_ORDNANCE": "Actions d'armement (Battlefleet Koronus)",
 	"SHIP_COMBAT.ACTION_GROUP_EXTENDED": "Actions prolongées (Tableau 8-11)",
 	"SHIP_COMBAT.NO_SHIP_ACTIONS": "Le compendium starship-actions n'est pas installé — aucune pastille d'action de vaisseau disponible.",
 	"SHIP_COMBAT.BREAK_FREE": "Se libérer",

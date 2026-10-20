@@ -1480,6 +1480,7 @@
 	"SHIP_COMBAT.SHIP_ACTIONS": "Ship Actions (Core Rulebook Tables 8-10/8-11)",
 	"SHIP_COMBAT.ACTION_GROUP_MANOEUVRE": "Manoeuvre Actions (Table 8-10)",
 	"SHIP_COMBAT.ACTION_GROUP_MACHINERY": "Ramming, Boarding & Machinery (Core Rulebook p215)",
+	"SHIP_COMBAT.ACTION_GROUP_ORDNANCE": "Ordnance Actions (Battlefleet Koronus)",
 	"SHIP_COMBAT.ACTION_GROUP_EXTENDED": "Extended Actions (Table 8-11)",
 	"SHIP_COMBAT.NO_SHIP_ACTIONS": "The starship-actions compendium pack is not installed — no ship-action chips available.",
 	"SHIP_COMBAT.BREAK_FREE": "Break Free",

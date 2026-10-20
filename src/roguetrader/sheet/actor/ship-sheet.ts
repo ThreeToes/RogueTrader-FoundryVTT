@@ -107,7 +107,10 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
 		classes: ["rogue-trader", "sheet", "starship"],
 		position: { width: 640, height: 560 },
-		window: { resizable: true },
+		// Resizable per the repo UI rule, with min clamps (the rules-app
+		// precedent): the two-column chip grids and the vitals strip need the
+		// room; ApplicationV2 clamps the resize to minWidth/minHeight.
+		window: { resizable: true, minWidth: 560, minHeight: 440 },
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
 			editImage: imageActions.editImage,

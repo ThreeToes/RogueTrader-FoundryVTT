@@ -27,6 +27,9 @@
  */
 
 /** Weapon kinds per Table 8-4 (book p202). */
+import { parseDamageFormula } from "./damage";
+
+/** Weapon kinds per Table 8-4 (book p202). */
 export type ShipWeaponKind = "macrobattery" | "lance";
 
 /**
@@ -78,6 +81,46 @@ export function applyVoidShields(
 		through: Math.max(0, hits) - absorbed,
 		overloaded: shieldStrength > 0 && absorbed >= shieldStrength,
 	};
+}
+
+/**
+ * Compose the salvo damage formula for `hits` hits of a weapon whose stored
+ * per-hit damage string is `damage` (bead rhij). The book rolls damage once
+ * per hit and totals the hits (p220), and Foundry parses "21d10+2" as
+ * *twenty-one* d10 plus 2 — so string-concatenating the hit count in front
+ * of the per-hit formula over-deals ~10x. The dice and flat parts are
+ * scaled separately instead: 3 hits of "1d10+2" compose "3d10+6".
+ *
+ * A trailing damage-type suffix ("1d10+2 E") is stripped first (see
+ * parseDamageFormula). The supported per-hit shape is "<n>d<faces>" with an
+ * optional signed flat part ("1d10", "1d10+2", "2d5-1"); any pack value the
+ * kernel cannot compose soundly throws loudly rather than guessing.
+ */
+export function composeSalvoDamageFormula(
+	hits: number,
+	damage: string,
+): string {
+	const count = Math.floor(hits);
+	if (!Number.isFinite(count) || count <= 0) {
+		throw new Error(
+			`composeSalvoDamageFormula: hits must be a positive integer, got ${hits}`,
+		);
+	}
+	const { formula } = parseDamageFormula(damage);
+	const groups = /^(?<dice>\d+)d(?<faces>\d+)(?<flat>[+-]\d+)?$/u.exec(
+		formula.replaceAll(/\s+/gu, ""),
+	)?.groups;
+	const diceCount = groups ? Number.parseInt(groups.dice, 10) : 0;
+	const faces = groups ? Number.parseInt(groups.faces, 10) : 0;
+	if (!groups || diceCount < 1 || faces < 1) {
+		throw new Error(
+			`composeSalvoDamageFormula: cannot compose ${count} hit(s) of "${damage}" (parsed "${formula}"): expected "<n>d<faces>["+"|"-"<flat>]" — refusing to guess the salvo damage`,
+		);
+	}
+	const flat = groups.flat ? Number.parseInt(groups.flat, 10) : 0;
+	const flatPart =
+		flat === 0 ? "" : `${flat > 0 ? "+" : "-"}${Math.abs(flat * count)}`;
+	return `${diceCount * count}d${faces}${flatPart}`;
 }
 
 export interface SalvoRequest {

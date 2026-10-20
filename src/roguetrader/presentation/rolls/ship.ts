@@ -8,6 +8,7 @@
 
 import {
 	applyVoidShields,
+	composeSalvoDamageFormula,
 	crewLossFromHullDamage,
 	crippledEffects,
 	criticalFromCrippledDamage,
@@ -200,7 +201,15 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		const damageRolls: unknown[] = [];
 		let damageTotal = 0;
 		if (through > 0) {
-			const damageRoll = await ports.dice.roll(`${through}${damage}`);
+			// Bead rhij: damage is rolled once per hit and COMBINED (book p220),
+			// so the per-hit formula's dice and flat parts scale separately:
+			// 3 hits of "1d10+2" compose "3d10+6", NOT "31d10+2" (which Foundry
+			// parses as 31 d10 + 2 — ~10x over-deal per hit). Lance and
+			// macrobattery share this hits path; only the armour soak differs in
+			// resolveSalvoDamage.
+			const damageRoll = await ports.dice.roll(
+				composeSalvoDamageFormula(through, damage),
+			);
 			damageTotal = damageRoll.total;
 			damageRolls.push(...(damageRoll.rolls ?? []));
 		}

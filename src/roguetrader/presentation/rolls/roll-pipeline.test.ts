@@ -1240,29 +1240,51 @@ const salvoTarget = {
 	},
 };
 
+/**
+ * Deterministic damage-dice parse for the salvo dice fake (bead rhij): the
+ * composed formula is EVALUATED, not answered with a constant — every die
+ * rolls its minimum, any flat part adds as written. This keeps the class of
+ * bug bead rhij fixes ("21d10+2" composed from `${through}${damage}`)
+ * invisible to a constant fake from hiding here again.
+ */
+const fakeDamageRollTotal = (formula: string): number => {
+	const match = /^(\d+)d(\d+)([+-]\d+)?$/.exec(formula.replaceAll(/\s+/g, ""));
+	if (!match) return 0;
+	const dice = Number.parseInt(match[1], 10);
+	const flat = match[3] ? Number.parseInt(match[3], 10) : 0;
+	return dice + flat;
+};
+
 describe("ship-weapon salvo actor write (bead 6l68: one payload, not two)", () => {
-	/** Run after() for a successful salvo with a controlled dice fake; returns the actor updates. */
-	const runSalvo = async (outcome: { degrees: number }) => {
+	/** Run after() for a successful salvo with a controlled dice fake; returns the actor updates and the requested formulas. */
+	const runSalvo = async (
+		outcome: { degrees: number },
+		weapon: unknown = lasBattery,
+	) => {
 		resetSpies();
 		const updates: Array<Record<string, unknown>> = [];
+		const rolled: string[] = [];
 		const prepared = await shipWeaponHandler.prepare({
 			kind: "ship-weapon",
-			actor: shipFixture([lasBattery]),
-			itemId: "sw1",
+			actor: shipFixture([weapon] as never),
+			itemId: (weapon as { id: string }).id,
 			rangeBand: "normal",
 		} as never);
 		setPorts({
 			...getPorts(),
-			// The damage formula is `${through}${damage}`: total 2 keeps the
-			// salvo at 2 points of damage, fully absorbed by 18 armour (macro).
+			// Bead rhij: the fake PARSES the requested salvo formula so the
+			// composed string controls the total; assert on the formulas too.
 			dice: {
-				roll: async (formula: string) => ({
-					total: formula === "1d5" ? 3 : 2,
-					dice: [],
-					terms: [],
-					rolls: [],
-					formula,
-				}),
+				roll: async (formula: string) => {
+					rolled.push(formula);
+					return {
+						total: fakeDamageRollTotal(formula),
+						dice: [],
+						terms: [],
+						rolls: [],
+						formula,
+					};
+				},
 			},
 			actors: {
 				...getPorts().actors,
@@ -1281,7 +1303,11 @@ describe("ship-weapon salvo actor write (bead 6l68: one payload, not two)", () =
 		} as never);
 		try {
 			await shipWeaponHandler.after?.(
-				{ kind: "ship-weapon", actor: shipFixture([]), itemId: "sw1" } as never,
+				{
+					kind: "ship-weapon",
+					actor: shipFixture([]),
+					itemId: (weapon as { id: string }).id,
+				} as never,
 				prepared as never,
 				{ success: true, degrees: outcome.degrees, roll: 10 } as never,
 				"",
@@ -1289,14 +1315,20 @@ describe("ship-weapon salvo actor write (bead 6l68: one payload, not two)", () =
 		} finally {
 			resetPorts();
 		}
-		return updates;
+		return { updates, rolled };
 	};
 
 	it("folds the critical auto-loss into ONE update on a critical with no Hull damage (p220)", async () => {
-		// 4 degrees vs Crit Rating 4 = critical (p221 example); the shield
-		// eats 1 hit, 18 armour eats the 2 damage: hull damage 0, but the
+		// 4 degrees vs Crit Rating 4 = critical (p221 example); Strength 4
+		// caps the hits at 4, the shield eats 1, and the 3 through hit for
+		// "3d10+6" — the fake rolls every die at its minimum (3) + the scaled
+		// flat (6), so the 18 armour absorbs all 9: hull damage 0, but the
 		// critical still takes 1 HI automatically.
-		const updates = await runSalvo({ degrees: 4 });
+		const { updates, rolled } = await runSalvo({ degrees: 4 });
+		// Bead rhij: the salvo damage formula must compose hits-scaled dice
+		// and flat parts ("3d10+6"), never "31d10+2"-style concatenation.
+		expect(rolled).toContain("3d10+6");
+		expect(rolled).not.toContain("31d10+2");
 		expect(updates).toHaveLength(1);
 		expect(updates[0]).toEqual({
 			system: {
@@ -1308,13 +1340,38 @@ describe("ship-weapon salvo actor write (bead 6l68: one payload, not two)", () =
 	});
 
 	it("writes one payload on an ordinary salvo without the critical fold", async () => {
-		// 1 degree vs Crit Rating 4: no critical, 2 damage fully absorbed by
-		// 18 armour — HI stands, still exactly ONE write.
-		const updates = await runSalvo({ degrees: 1 });
+		// 1 degree vs Crit Rating 4: no critical; 2 hits (1 + 1 per degree,
+		// p220), the shield eats 1, the surviving hit rolls "1d10+2" (fake
+		// total 3) and 18 armour absorbs it — HI stands, still exactly ONE
+		// write.
+		const { updates, rolled } = await runSalvo({ degrees: 1 });
+		expect(rolled).toEqual(["1d10+2"]);
 		expect(updates).toHaveLength(1);
 		expect(updates[0]).toEqual({
 			system: {
-				hullIntegrity: { value: 33 }, // 2 damage, fully absorbed by 18 armour
+				hullIntegrity: { value: 33 },
+				crewPopulation: 100,
+				crewMorale: 100,
+			},
+		});
+	});
+
+	it("composes multi-die formulas hits-scaled (bead rhij)", async () => {
+		const gunz = {
+			...lasBattery,
+			id: "sw4",
+			name: "Dorsal Gunz",
+			system: { ...lasBattery.system, damage: "2d5+1" },
+		};
+		// 2 degrees vs Crit Rating 4 = no critical; 3 hits (strength cap 4),
+		// shield eats 1, 2 through: "2d5+1" per hit composes "4d5+2".
+		const { updates, rolled } = await runSalvo({ degrees: 2 }, gunz);
+		expect(rolled).toContain("4d5+2");
+		// Fake total 4*1+2 = 6, absorbed by 18 armour — HI stands.
+		expect(updates).toHaveLength(1);
+		expect(updates[0]).toEqual({
+			system: {
+				hullIntegrity: { value: 33 },
 				crewPopulation: 100,
 				crewMorale: 100,
 			},
@@ -1648,6 +1705,74 @@ describe("evasion ownership gate (bead ly52)", () => {
 		expect(dialogCalls).toHaveLength(0);
 		expect(notes).toHaveLength(1);
 		expect(notes[0] as string).toContain("EVASION.DEFENDER_MAY_REACT");
+		expect(rollCalls).toHaveLength(0);
+	});
+
+	it("escapes a markup-laden defender name in the ownership-gate note (bead oeal)", async () => {
+		resetSpies();
+		const formats: Array<[string, unknown]> = [];
+		const notes: string[] = [];
+		const gameStub = (globalThis as Record<string, unknown>).game as {
+			i18n: {
+				localize: (key: string) => string;
+				format: (key: string, vars?: Record<string, unknown>) => string;
+			};
+		};
+		const savedI18n = gameStub.i18n;
+		// The default stub drops the vars; interpolate {name} like the real
+		// Foundry format does so the pin sees what ships to the clients.
+		gameStub.i18n = {
+			localize: savedI18n.localize,
+			format: (key: string, vars?: Record<string, unknown>) => {
+				formats.push([key, vars]);
+				const rendered = savedI18n.format(key, vars);
+				// The saved stub returns the key verbatim (tests have no
+				// translations); interpolate the name inline so the pin sees
+				// what a real translation with {name} would ship.
+				return vars?.name !== undefined
+					? `${rendered}|${vars.name}|`
+					: rendered;
+			},
+		};
+		setPorts({
+			...getPorts(),
+			targets: {
+				...getPorts().targets,
+				// The target's name is document data (user/pack-authored) and
+				// reaches the note via i18n interpolation into RAW chat HTML —
+				// it must be escaped BEFORE the interpolation.
+				actor: () => ({
+					...(fixtureActor() as unknown as Record<string, unknown>),
+					name: `Bob "the" <Vat> & Sons`,
+				}),
+			},
+			permissions: { canRoll: () => false },
+			chat: {
+				...getPorts().chat,
+				postHtml: async (_actor: unknown, content: string) => {
+					notes.push(content);
+					return { id: "note-1" };
+				},
+			},
+		} as never);
+		try {
+			await weaponHandler.after?.(...afterArgs(fixtureActor([weaponItem])));
+		} finally {
+			gameStub.i18n = savedI18n;
+			resetPorts();
+		}
+		// The name escapes at the interpolation point...
+		const evasionFormat = formats.find(([k]) => k === "EVASION.DEFENDER_MAY_REACT");
+		expect(evasionFormat?.[1]).toEqual({
+			name: "Bob &quot;the&quot; &lt;Vat&gt; &amp; Sons",
+		});
+		// ...and no raw markup survives into the posted HTML.
+		const note = notes[0] as string;
+		expect(note).toContain(
+			"Bob &quot;the&quot; &lt;Vat&gt; &amp; Sons",
+		);
+		expect(note).not.toContain(`<Vat>`);
+		expect(note).not.toContain(`"the"`);
 		expect(rollCalls).toHaveLength(0);
 	});
 

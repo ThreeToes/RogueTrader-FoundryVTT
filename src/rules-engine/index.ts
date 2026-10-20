@@ -23,6 +23,7 @@ export { type Modifier, sumModifiers } from "./modifier";
 export { type RuleProfile, rtCore } from "./profile";
 export {
 	applyVoidShields,
+	composeSalvoDamageFormula,
 	crewLossFromHullDamage,
 	crippledEffects,
 	emergencyRepairsCanFix,

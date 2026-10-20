@@ -15,8 +15,11 @@ import { getPorts } from "../infrastructure/foundry/ports";
  * into hand-built dialog HTML (bead 3z02): `Handlebars.escapeExpression` is
  * the Foundry stdlib for this. Everything else in the roll surface escapes
  * through Handlebars templates; these DialogV2 prompts are hand-built.
+ *
+ * Exported (bead oeal) so the other hand-interpolated chat HTML — the
+ * evasion ownership-gate note — shares the same escape.
  */
-function escapeDocumentData(value: unknown): string {
+export function escapeDocumentData(value: unknown): string {
 	// The Foundry runtime always provides the global Handlebars; test fakes may
 	// not, so fall back to the identical entity substitution instead of
 	// throwing a ReferenceError mid-prompt.

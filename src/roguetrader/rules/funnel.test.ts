@@ -216,6 +216,7 @@ describe("contributor failure loudness (bead otpj)", () => {
 	let bareFired = false;
 	let missingFired = false;
 	let shapeFired = false;
+	let sourcelessFired = false;
 
 	test("a bare Modifier return warns and contributes nothing", () => {
 		testContributors.register("otpj-bare", () => {
@@ -291,6 +292,44 @@ describe("contributor failure loudness (bead otpj)", () => {
 		expect(
 			warnings.some(
 				(w) => w.includes('"otpj-shape"') && w.includes("malformed"),
+			),
+		).toBe(true);
+	});
+
+	// Bead xpeh: `source` is part of every Modifier — a row without it passed
+	// the old gate and crashed the dialog seam (m.source.label). It must be
+	// dropped here, warning, like any other malformed element.
+	test("a source-less modifier element warns and is dropped, good siblings kept", () => {
+		testContributors.register("otpj-sourceless", () => {
+			if (sourcelessFired) return [];
+			sourcelessFired = true;
+			return [
+				{
+					id: "otpj-sourceless-bad",
+					label: "No source",
+					value: 10,
+				} as unknown as Modifier,
+				{
+					id: "otpj-sourceless-good",
+					source: { type: "dialog" as const, label: "d" },
+					label: "Good",
+					value: 5,
+				},
+			];
+		});
+		let mods: Modifier[] = [];
+		const warnings = captureWarnings(() => {
+			mods = testContributors.run(buildActorView({}), context);
+		});
+		expect(
+			mods
+				.filter((m) => m.id.startsWith("otpj-sourceless"))
+				.map((m) => m.id),
+		).toEqual(["otpj-sourceless-good"]);
+		expect(
+			warnings.some(
+				(w) =>
+					w.includes('"otpj-sourceless"') && w.includes("malformed"),
 			),
 		).toBe(true);
 	});

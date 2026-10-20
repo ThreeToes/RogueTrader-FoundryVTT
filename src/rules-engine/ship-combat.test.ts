@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	applyVoidShields,
+	composeSalvoDamageFormula,
 	crewLossFromHullDamage,
 	crippledEffects,
 	criticalFromCrippledDamage,
@@ -204,5 +205,70 @@ describe("component states + repairs (book p223-224, bead cj6k)", () => {
 			moraleDice: 2,
 			moraleFaces: 10,
 		});
+	});
+});
+
+describe("salvo damage formula composition (bead rhij)", () => {
+	test("'1d10+2': the dice and flat parts scale separately, per hit", () => {
+		// The old `${through}${damage}` string-concat composed "21d10+2" for 2
+		// hits — Foundry parses that as 21 d10 + 2 (~10x over-deal). The
+		// composed string must keep dice and flat parts apart.
+		expect(composeSalvoDamageFormula(1, "1d10+2")).toBe("1d10+2");
+		expect(composeSalvoDamageFormula(2, "1d10+2")).toBe("2d10+4");
+		expect(composeSalvoDamageFormula(3, "1d10+2")).toBe("3d10+6");
+	});
+
+	test("multi-dice formulas scale their dice count too", () => {
+		expect(composeSalvoDamageFormula(2, "2d5+1")).toBe("4d5+2");
+		expect(composeSalvoDamageFormula(3, "2d10+4")).toBe("6d10+12");
+	});
+
+	test("bare dice formulas stay bare", () => {
+		expect(composeSalvoDamageFormula(4, "1d5")).toBe("4d5");
+		expect(composeSalvoDamageFormula(2, "1d10")).toBe("2d10");
+	});
+
+	test("negative flat parts scale with a sign", () => {
+		expect(composeSalvoDamageFormula(2, "1d10-1")).toBe("2d10-2");
+	});
+
+	test("a trailing damage-type suffix is stripped before composing", () => {
+		expect(composeSalvoDamageFormula(2, "1d10+2 E")).toBe("2d10+4");
+	});
+
+	test("refuses formulas without a dice part", () => {
+		expect(() => composeSalvoDamageFormula(2, "4")).toThrow(
+			/composeSalvoDamageFormula/,
+		);
+		expect(() => composeSalvoDamageFormula(2, "")).toThrow(
+			/composeSalvoDamageFormula/,
+		);
+	});
+
+	test("refuses shapes it cannot compose soundly", () => {
+		// Non-numeric flat part.
+		expect(() => composeSalvoDamageFormula(2, "1d10+SB")).toThrow(
+			/composeSalvoDamageFormula/,
+		);
+		// Two dice terms.
+		expect(() => composeSalvoDamageFormula(2, "1d10+2d5")).toThrow(
+			/composeSalvoDamageFormula/,
+		);
+		// Zero-sided dice / zero dice.
+		expect(() => composeSalvoDamageFormula(2, "0d10+2")).toThrow(
+			/composeSalvoDamageFormula/,
+		);
+		expect(() => composeSalvoDamageFormula(2, "1d0")).toThrow(
+			/composeSalvoDamageFormula/,
+		);
+	});
+
+	test("refuses non-positive hit counts", () => {
+		expect(() => composeSalvoDamageFormula(0, "1d10+2")).toThrow(
+			/hits must be a positive integer/,
+		);
+		expect(() => composeSalvoDamageFormula(-1, "1d10+2")).toThrow(
+			/hits must be a positive integer/,
+		);
 	});
 });

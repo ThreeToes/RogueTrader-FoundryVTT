@@ -18,6 +18,7 @@ import {
 import { getPorts } from "../../infrastructure/foundry/ports";
 import type { RollHandler } from "../../rules/roll-contract";
 import { chatCardTitleDoc } from "../chat-doc-links";
+import { escapeDocumentData } from "../roll-prompts";
 import { resolveEvasion } from "./evasion";
 import {
 	effectiveProfile,
@@ -206,7 +207,10 @@ export const weaponHandler: RollHandler<"weapon"> = {
 						request.actor,
 						`<p class="note">${ports.i18n.t(
 							"EVASION.DEFENDER_MAY_REACT",
-							{ name: (target as { name?: string }).name ?? "" },
+							// Bead oeal: the note is posted raw (ports.chat.postHtml)
+							// and rendered on every client — escape the defender's
+							// name like every other document-data interpolation.
+							{ name: escapeDocumentData((target as { name?: string }).name ?? "") },
 						)}</p>`,
 					);
 				} catch (error) {

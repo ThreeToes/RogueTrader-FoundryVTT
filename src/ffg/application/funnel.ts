@@ -91,13 +91,19 @@ export const testContributors = {
 const REGISTRY_NAME = "test-contributors";
 
 function isModifierLike(value: unknown): boolean {
+	const mod = value as Modifier;
 	return (
 		typeof value === "object" &&
 		value !== null &&
-		typeof (value as Modifier).id === "string" &&
-		typeof (value as Modifier).label === "string" &&
-		typeof (value as Modifier).value === "number" &&
-		Number.isFinite((value as Modifier).value)
+		typeof mod.id === "string" &&
+		typeof mod.label === "string" &&
+		typeof mod.value === "number" &&
+		Number.isFinite(mod.value) &&
+		// Bead xpeh: `source` is part of every Modifier (`m.source.label` is read
+		// at the dialog seam) — a source-less row must be rejected here, not
+		// crash later with a TypeError.
+		typeof mod.source?.type === "string" &&
+		typeof mod.source?.label === "string"
 	);
 }
 

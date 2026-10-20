@@ -63,10 +63,19 @@
 .rogue-trader.chat.roll ul.modifier-breakdown,
 .rogue-trader.chat.damage ul.quality-notes,
 .rogue-trader.chat.roll p.action-note,
+.rogue-trader.chat.initiative p.note,
 .rogue-trader.chat.damage p.ordnance-usage {
 	margin: 4px 0 0;
 	font-size: var(--rt-fs-lg);
 	color: var(--rt-chat-note);
+}
+
+/* Bead qkq1: the starship initiative card's Boarding banner — the note
+   anatomy plus the alarm ink, since a boarded pair is an active tactical
+   state the GM must resolve manually (Core Rulebook p215). */
+.rogue-trader.chat.initiative p.note.boarding {
+	color: var(--rt-danger-alarm);
+	font-weight: bold;
 }
 
 .rogue-trader.chat.roll ul.modifier-breakdown,

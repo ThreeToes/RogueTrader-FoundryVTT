@@ -140,6 +140,7 @@ describe("handler registry (bead mvu2)", () => {
 				"initiative",
 				"navigator",
 				"psychic",
+				"ship-action",
 				"ship-repair",
 				"ship-weapon",
 				"snap-out",
@@ -2102,6 +2103,319 @@ describe("action after-hook (bead et5a)", () => {
 		expect(captured).toHaveLength(1);
 		expect(captured[0].outcomeLabel).toBe("ROLL.FAILURE");
 		expect(captured[0].opposedNote).toBe("ACTION.OPPOSED_MANUAL");
+	});
+});
+
+// --- Ship-action handler (epic necp bead oumh) ----------------------------
+
+const { shipActionHandler, parseShipActionTestKey } = await import(
+	"./ship-action"
+);
+
+/** A ship-action Item fixture: Table 8-10 "Adjust Bearing" with the combined
+ * manoeuvre test key (the pack bead authors the real rows). */
+const shipActionItem = {
+	id: "sa1",
+	type: "ship-action",
+	name: "Adjust Bearing",
+	uuid: "Item.sa1",
+	system: {
+		actionCost: "Half Action",
+		roll: {
+			test: "pilot-space-craft+manoeuvrability",
+			difficulty: "Challenging (+0)",
+		},
+		shortDescription: "Turn the ship on its axis.",
+		description: "<p>Full prose.</p>",
+	},
+};
+
+const pilotSpec = {
+	id: "ps1",
+	type: "skill",
+	name: "Pilot (Space Craft)",
+	system: { characteristic: "ag", ladder: 2 },
+};
+const pilotBare = {
+	id: "p1",
+	type: "skill",
+	name: "Pilot",
+	system: { characteristic: "ag", ladder: 2 },
+};
+
+function actionShipFixture(items: unknown[], crewQuality = "veteran") {
+	return {
+		name: "Sabre",
+		type: "starship",
+		uuid: "Actor.sabre",
+		isOwner: true,
+		items: Object.assign([...items], {
+			get: (id: string) =>
+				items.find((i) => (i as { id?: string }).id === id),
+		}),
+		system: {
+			crewQuality,
+			manoeuvrability: 30,
+			detection: 12,
+		},
+	} as never;
+}
+
+describe("ship-action test-key vocabulary (bead oumh)", () => {
+	it("splits a combined key into skill route + ship stat", () => {
+		const parsed = parseShipActionTestKey(
+			"pilot-space-craft+manoeuvrability",
+		);
+		expect(parsed).toMatchObject({
+			routeKey: "pilot-space-craft",
+			skillRoute: { skill: "Pilot (Space Craft)", bare: "Pilot" },
+			shipStat: "manoeuvrability",
+		});
+	});
+
+	it("accepts a bare skill key with no ship ability", () => {
+		expect(parseShipActionTestKey("tech-use")).toMatchObject({
+			routeKey: "tech-use",
+			shipStat: undefined,
+		});
+	});
+
+	it("accepts Scrutiny + Detection (Active Augury, book p216-218)", () => {
+		expect(parseShipActionTestKey("scrutiny+detection")).toMatchObject({
+			routeKey: "scrutiny",
+			shipStat: "detection",
+		});
+	});
+
+	it("refuses unknown parts and double fills loudly", () => {
+		expect(parseShipActionTestKey("unknown-skill")).toBeNull();
+		expect(parseShipActionTestKey("dodge")).toBeNull();
+		expect(
+			parseShipActionTestKey(
+				"pilot-space-craft+manoeuvrability+detection",
+			),
+		).toBeNull();
+	});
+});
+
+describe("ship-action handler (epic necp bead oumh)", () => {
+	it("crew fallback: the crew-quality skill substitutes (Table 8-9, book p214)", async () => {
+		resetSpies();
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: actionShipFixture([shipActionItem]),
+			itemId: "sa1",
+		} as never);
+		// Veteran crew = 50 (Table 8-9); no performer, so the Ag ladder never
+		// applies.
+		expect(prepared).toMatchObject({
+			title: "Sabre — Adjust Bearing",
+			baseTarget: 50,
+			testKind: "characteristic",
+			testKey: "pilot-space-craft",
+		});
+		const rows = prepared?.initialModifiers as Array<{
+			id: string;
+			value: number;
+		}>;
+		// The ship half rides as a visible row and the kindData fold (p212);
+		// "Challenging (+0)" contributes its printed 0 row, visible like any.
+		expect(rows.map((mod) => ({ id: mod.id, value: mod.value }))).toEqual([
+			{ id: "ship:manoeuvrability", value: 30 },
+			{ id: "ship-action:difficulty", value: 0 },
+		]);
+		expect(prepared?.kindData).toMatchObject({
+			crewFallback: true,
+			shipMod: 30,
+			combinedTarget: 80,
+		});
+	});
+
+	it("helmsman: the owned Pilot (Space Craft) item wins (decision 10)", async () => {
+		resetSpies();
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: actionShipFixture([shipActionItem]),
+			itemId: "sa1",
+			performer: fixtureActor([pilotSpec]) as never,
+		} as never);
+		// Ag 35 + one +10 ladder step = 45; +30 Manoeuvrability → 75 combined.
+		expect(prepared).toMatchObject({
+			baseTarget: 45,
+			testKind: "skill",
+			testKey: "ag",
+		});
+		expect(prepared?.context.skillName).toBe("pilot (space craft)");
+		expect(prepared?.kindData).toMatchObject({
+			crewFallback: false,
+			combinedTarget: 75,
+		});
+		const rows = prepared?.initialModifiers as Array<{
+			id?: string;
+			value: number;
+		}>;
+		// No penalty row on the specialised path.
+		expect(
+			rows.some((mod) => mod.id === "ship:untrained-specialisation"),
+		).toBe(false);
+	});
+
+	it("helmsman: trained bare Pilot stands in with the VISIBLE p75 -10 row", async () => {
+		resetSpies();
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: actionShipFixture([shipActionItem]),
+			itemId: "sa1",
+			performer: fixtureActor([pilotBare]) as never,
+		} as never);
+		expect(prepared?.baseTarget).toBe(45);
+		const rows = prepared?.initialModifiers as Array<{
+			id?: string;
+			value: number;
+		}>;
+		// BOTH rows visible: the ship ability and the untrained specialisation.
+		expect(
+			rows.find((mod) => mod.id === "ship:manoeuvrability"),
+		).toMatchObject({ value: 30 });
+		expect(
+			rows.find((mod) => mod.id === "ship:untrained-specialisation"),
+		).toMatchObject({ value: -10 });
+	});
+
+	it("refuses an unresolvable performer LOUDLY", async () => {
+		resetSpies();
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: actionShipFixture([shipActionItem]),
+			itemId: "sa1",
+			performer: fixtureActor([]) as never,
+		} as never);
+		expect(prepared).toBeNull();
+		expect(
+			warnings.some((w) => w.includes("SHIP_ACTION.PERFORMER_UNRESOLVED")),
+		).toBe(true);
+	});
+
+	it("refuses an unknown printed test key LOUDLY", async () => {
+		resetSpies();
+		const broken = {
+			...shipActionItem,
+			system: {
+				...shipActionItem.system,
+				roll: { test: "charm+love", difficulty: "" },
+			},
+		};
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: actionShipFixture([broken]),
+			itemId: "sa1",
+		} as never);
+		expect(prepared).toBeNull();
+		expect(warnings.some((w) => w.includes("SHIP_ACTION.UNKNOWN_TEST"))).toBe(
+			true,
+		);
+	});
+
+	it("refuses an unknown item id", async () => {
+		resetSpies();
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: actionShipFixture([]),
+			itemId: "missing",
+		} as never);
+		expect(prepared).toBeNull();
+		expect(warnings).toContain("ROLL.UNKNOWN_ITEM");
+	});
+
+	it("refuses a difficulty token with no printed value (a broken pack row)", async () => {
+		resetSpies();
+		const broken = {
+			...shipActionItem,
+			system: {
+				...shipActionItem.system,
+				// The actionDifficulty ladder maps "(+/-N)" parenthesised tokens;
+				// a bare word with no value resolves to NO machine kind — the
+				// loud refusal, never a silently-dropped difficulty.
+				roll: { test: "pilot-space-craft", difficulty: "Brutal" },
+			},
+		};
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: actionShipFixture([broken]),
+			itemId: "sa1",
+		} as never);
+		expect(prepared).toBeNull();
+		expect(
+			warnings.some((w) => w.includes("SHIP_ACTION.UNKNOWN_DIFFICULTY")),
+		).toBe(true);
+	});
+
+	it("rolls as ONE combined target through the pipeline (p212)", async () => {
+		resetSpies();
+		const captured: Array<Record<string, unknown>> = [];
+		const originalRender = foundry.applications.handlebars.renderTemplate;
+		foundry.applications.handlebars.renderTemplate = (async (
+			_template: string,
+			vars: Record<string, unknown>,
+		) => {
+			captured.push(vars);
+			return "<div>card</div>";
+		}) as typeof originalRender;
+		try {
+			await performRoll({
+				kind: "ship-action",
+				actor: actionShipFixture([shipActionItem]),
+				itemId: "sa1",
+				skipDialog: true,
+			} as never);
+		} finally {
+			foundry.applications.handlebars.renderTemplate = originalRender;
+		}
+		// One 1d100 + TWO cards: the inline roll card + the action card.
+		expect(rollCalls).toHaveLength(1);
+		expect(captured).toHaveLength(2);
+		// The inline card's target = the crew-side 50 + the folded rows
+		// (Manoeuvrability +30, Challenging +0), asserted RELATIVE to the
+		// card's own rows (the funnel.test.ts "Custom" global leak must not
+		// flip it in the full suite).
+		const analysis = captured[0].analysis as Array<{
+			id?: string;
+			label: string;
+			value: number;
+		}>;
+		expect(
+			analysis.find((m) => m.id === "ship:manoeuvrability"),
+		).toMatchObject({ value: 30 });
+		const sum = analysis.reduce((total, mod) => total + mod.value, 0);
+		expect(captured[0].target).toBe(Math.min(100, Math.max(1, 50 + sum)));
+		// The action card carries the p212 combined number + the crew note.
+		expect(captured[1].combinedTarget).toBe(80);
+		expect(captured[1].crewNote).toBe("SHIP_ACTION.CREW_FALLBACK");
+	});
+
+	it("opposed difficulties post the manual-resolution note", async () => {
+		resetSpies();
+		const item = {
+			...shipActionItem,
+			system: {
+				...shipActionItem.system,
+				roll: {
+					test: "pilot-space-craft+manoeuvrability",
+					difficulty: "Opposed",
+				},
+			},
+		};
+		const prepared = await shipActionHandler.prepare({
+			kind: "ship-action",
+			actor: actionShipFixture([item]),
+			itemId: "sa1",
+		} as never);
+		const rows = prepared?.initialModifiers as Array<{ id?: string }>;
+		// No numeric difficulty row for an opposed token; the card note says so.
+		expect(
+			rows.every((mod) => mod.id !== "ship-action:difficulty"),
+		).toBe(true);
+		expect(prepared?.kindData).toMatchObject({ difficultyKind: "opposed" });
 	});
 });
 

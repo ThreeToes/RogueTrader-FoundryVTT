@@ -16,8 +16,12 @@
 		}
 	],
 	"scripts": [],
-	"esmodules": ["./entry-point.js"],
-	"styles": ["./css/rogue-trader.css"],
+	"esmodules": [
+		"./entry-point.js"
+	],
+	"styles": [
+		"./css/rogue-trader.css"
+	],
 	"packs": [],
 	"languages": [
 		{
@@ -27,12 +31,12 @@
 		},
 		{
 			"lang": "es",
-			"name": "Espa\u00f1ol",
+			"name": "Español",
 			"path": "lang/es.json"
 		},
 		{
 			"lang": "fr",
-			"name": "Fran\u00e7ais",
+			"name": "Français",
 			"path": "lang/fr.json"
 		},
 		{
@@ -44,115 +48,197 @@
 	"documentTypes": {
 		"Actor": {
 			"dynasty": {
-				"htmlFields": ["notes"]
+				"htmlFields": [
+					"notes"
+				]
 			},
 			"explorer": {
-				"htmlFields": ["life.motivation", "notes", "description"]
+				"htmlFields": [
+					"life.motivation",
+					"notes",
+					"description"
+				]
 			},
 			"npc": {
-				"htmlFields": ["life.motivation", "notes", "description"]
+				"htmlFields": [
+					"life.motivation",
+					"notes",
+					"description"
+				]
 			},
 			"planet": {
-				"htmlFields": ["notes"]
+				"htmlFields": [
+					"notes"
+				]
 			},
 			"cache": {
-				"htmlFields": ["notes"]
+				"htmlFields": [
+					"notes"
+				]
 			},
 			"starship": {
-				"htmlFields": ["notes"]
+				"htmlFields": [
+					"notes"
+				]
 			},
 			"vehicle": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			}
 		},
 		"Item": {
 			"action": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"gear": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"ranged-weapon": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"melee-weapon": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"armour": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"battlesuit": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"battlesuit-system": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"skill": {},
 			"talent": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"psychicpower": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"ammunition": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"force-field": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"weapon-modification": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"armour-modification": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"tool": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"drug": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"special-ability": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"aptitude": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"trait": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"warrant-option": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"ship-component": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"ship-weapon-component": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
+			},
+			"ship-action": {
+				"htmlFields": [
+					"description"
+				]
 			},
 			"ship": {
-				"htmlFields": ["description", "specialRules"]
+				"htmlFields": [
+					"description",
+					"specialRules"
+				]
 			},
 			"ship-complication": {
-				"htmlFields": ["effect"]
+				"htmlFields": [
+					"effect"
+				]
 			},
 			"game-table": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"gearset": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"career": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"heirloom": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"madnessentry": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"mutation": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"navigatorpower": {
 				"htmlFields": [
@@ -163,10 +249,14 @@
 				]
 			},
 			"origin": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			},
 			"origintrait": {
-				"htmlFields": ["description"]
+				"htmlFields": [
+					"description"
+				]
 			}
 		}
 	},

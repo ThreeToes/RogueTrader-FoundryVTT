@@ -83,6 +83,10 @@ const FOLDER_TYPE_DEFAULTS: Record<string, string> = {
 	// Combat actions (bead moew): Core Rulebook Table 9-4 + Action
 	// Descriptions, one `action` item per row — the actions tab's source.
 	actions: "action",
+	// Ship actions (epic necp bead oumh): Core Rulebook Table 8-10 Manoeuvre
+	// + Table 8-11 Extended Action rows, one `ship-action` item per row —
+	// the ship-combat tab's source (S-siblings consume it).
+	"starship-actions": "ship-action",
 };
 
 /** Work out the real item type for an authored entry. */

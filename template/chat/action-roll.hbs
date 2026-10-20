@@ -26,12 +26,19 @@
                 <span class="value">{{roll}}</span>
             </div>
         </div>
+        {{#if combinedTarget}}
+        <div class="roll-result">
+            <span class="label">{{combinedLabel}}</span>
+            <span class="value">{{combinedTarget}}</span>
+        </div>
+        {{/if}}
         {{#if description}}
         <div class="roll-result">
             <span class="label">{{descriptionLabel}}</span>
             <span class="value">{{description}}</span>
         </div>
         {{/if}}
+        {{#if crewNote}}<p class="action-note">{{crewNote}}</p>{{/if}}
         {{#if opposedNote}}<p class="action-note">{{opposedNote}}</p>{{/if}}
     </div>
 </div>

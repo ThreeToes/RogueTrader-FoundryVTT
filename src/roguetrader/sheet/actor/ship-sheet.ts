@@ -15,7 +15,7 @@ import {
 	emergencyRepairsCanFix,
 	SHIP_COMPONENT_STATES,
 } from "../../../rules-engine/index";
-import { performRoll, rollShipSalvo } from "../../rules/adapter";
+import { performRoll, rollInitiativeAction, rollShipSalvo } from "../../rules/adapter";
 import { cloneItemFromDrop } from "../drop-clone";
 import {
 	formatShipWeaponRange,
@@ -66,6 +66,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			setWeaponSlot: ShipSheet.#onSetWeaponSlot,
 			openItem: ShipSheet.#onOpenItem,
 			fireWeapon: ShipSheet.#onFireWeapon,
+			rollInitiative: ShipSheet.#onRollInitiative,
 			repairComponent: ShipSheet.#onRepairComponent,
 			setComponentState: ShipSheet.#onSetComponentState,
 		},
@@ -627,6 +628,16 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				? choice
 				: "normal";
 		await rollShipSalvo(this.document, id, band);
+	}
+
+	/**
+	 * Starship initiative (bead qkq1, Core Rulebook p212-213): 1d10 + the
+	 * Detection tens digit through the initiative RollKind's ship path —
+	 * assigned to the ship's combatants and posted with the visible
+	 * breakdown + the combat-start note lines.
+	 */
+	static async #onRollInitiative(this: ShipSheet): Promise<void> {
+		await rollInitiativeAction(this.document);
 	}
 
 	/** Emergency Repairs on an installed component (book p216-218). */

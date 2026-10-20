@@ -16,14 +16,14 @@
  * The entry is offered ONLY where a roll can actually happen (bead qiuo fails
  * closed, extended by bead nt34 F1): core's Combat#rollInitiative only rolls
  * combatants where `combatant.isOwner`, so a non-owner could never complete
- * the roll anyway — AND the initiative handler's shape gate (see the bead
- * 77r1 note below) only accepts character-shaped systems that carry an
- * initiativeBonus (a getter on the model, bead jpt3), so owned
- * vehicle/starship tokens must not see a dead entry whose click silently
- * no-ops. canRollToken mirrors both gates.
+ * the roll anyway — AND the initiative handler's shape gates only accept
+ * character-shaped systems (initiativeBonus, a getter on the model, bead
+ * jpt3) and starship-shaped systems (Detection, bead qkq1), so owned
+ * vehicle tokens must not see a dead entry whose click silently no-ops.
+ * canRollToken mirrors all the gates.
  * bead 77r1: the roll itself runs through the roll pipeline now — the
  * `initiative` RollKind handler (presentation/rolls/initiative.ts) carries
- * the shape gate; performRoll applies the ownership gate.
+ * the shape gates; performRoll applies the ownership gate.
  */
 
 import { rollInitiativeAction } from "../rules/adapter";
@@ -56,16 +56,21 @@ function resolveToken(element?: HTMLElement): TokenMenuDocument | undefined {
 function canRollToken(element?: HTMLElement): boolean {
 	const token = resolveToken(element);
 	if (!token?.actor?.isOwner) return false;
-	// Mirror the initiative handler's shape gate (presentation/rolls/
+	// Mirror the initiative handler's shape gates (presentation/rolls/
 	// initiative.ts; the roll routes through performRoll's ownership gate,
 	// bead 77r1):
-	// only character-shaped systems carry an initiativeBonus (a getter on the
-	// Character model prototype, bead jpt3) — `in` reads it straight off the
-	// model instance the same way the roll interpolation's getProperty does —
-	// so an owned vehicle/starship token does not get a dead entry whose click
-	// silently no-ops (bead nt34 F1).
+	// - a character-shaped system carries an initiativeBonus (a getter on the
+	//   Character model prototype, bead jpt3) — `in` reads it straight off the
+	//   model instance the same way the roll interpolation's getProperty does
+	//   (bead nt34 F1);
+	// - a starship-shaped system carries the StarshipActor's Detection
+	//   statline field (bead qkq1, Core Rulebook p212-213) — the ship path is
+	//   1d10 + the Detection tens digit.
+	// A vehicle carries neither, so it gets no dead entry whose click
+	// silently no-ops.
 	const system = token.actor.system;
-	return system != null && "initiativeBonus" in system;
+	if (system == null) return false;
+	return "initiativeBonus" in system || "detection" in system;
 }
 
 /** Register the token context-menu combat entries. */

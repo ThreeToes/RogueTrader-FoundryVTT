@@ -337,3 +337,24 @@ export function emergencyRepairsOutcome(
 	const die = Math.max(0, d5);
 	return { turns: Math.max(1, die - reduction) };
 }
+
+/**
+ * The COMBINED TEST (epic necp bead oumh, Core Rulebook p212): the character
+ * side's test value (a skill or characteristic target) plus the SHIP-side
+ * ability (such as Manoeuvrability) resolve as ONE combined target — "add the
+ * ship's ability, such as Manoeuvrability, to the character's Skill, such as
+ * Pilot (Space Craft)".
+ *
+ * Pure seam: the roll pipeline runs the combined value through the ordinary
+ * funnel, so the ship half must ALSO ride as a visible contributor row
+ * (`id: "ship:<ability>"` — silent modifiers are bugs). This helper is the
+ * kernel statement of the rule; the handler consumes it for the card's
+ * combined-target display, and any S-sibling that needs the combined number
+ * (odds, AI resolution) reads the same fold rather than re-summing.
+ */
+export function combinedTarget(
+	characteristicRoll: number,
+	shipMod: number,
+): number {
+	return characteristicRoll + shipMod;
+}

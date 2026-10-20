@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	applyVoidShields,
+	combinedTarget,
 	composeSalvoDamageFormula,
 	crewLossFromHullDamage,
 	crippledEffects,
@@ -270,5 +271,17 @@ describe("salvo damage formula composition (bead rhij)", () => {
 		expect(() => composeSalvoDamageFormula(-1, "1d10+2")).toThrow(
 			/hits must be a positive integer/,
 		);
+	});
+});
+
+// Bead oumh (epic necp): the COMBINED TEST (Core Rulebook p212) — "add the
+// ship's ability, such as Manoeuvrability, to the character's Skill, such as
+// Pilot (Space Craft)". Pure fold; the ship half also rides the roll funnel
+// as a visible contributor row (id "ship:<ability>").
+describe("combined target (book p212, bead oumh)", () => {
+	test("folds the ship ability onto the character's skill target", () => {
+		expect(combinedTarget(50, 30)).toBe(80); // Pilot 50 + Manoeuvrability +30
+		expect(combinedTarget(31, 0)).toBe(31); // no ship ability → unchanged
+		expect(combinedTarget(45, -10)).toBe(35); // negative ship-side delta still folds
 	});
 });

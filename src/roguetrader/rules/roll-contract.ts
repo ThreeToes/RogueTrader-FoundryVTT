@@ -44,6 +44,7 @@ export type RollKind =
 	| "navigator"
 	| "ship-weapon"
 	| "ship-repair"
+	| "ship-action"
 	| "fear"
 	| "snap-out"
 	| "initiative"
@@ -121,6 +122,32 @@ export interface ShipRepairRollRequest extends RollBase {
 }
 
 /**
+ * A ship action (epic necp bead oumh, Core Rulebook pp213-218): one of the
+ * Table 8-10 Manoeuvre Actions or Table 8-11 Extended Actions, rolled on the
+ * STARSHIP as a combined test — the character's skill plus the ship's ability
+ * (Core Rulebook p212). The actor is the STARSHIP; the item is a
+ * `ship-action` type carrying the machine test key and difficulty token.
+ *
+ * Helmsman (owner decision 1): when `performer` names an Explorer, the test
+ * runs on THEIR trained skill (with the p75 bare-Pilot fallback when only the
+ * bare parent is trained); when absent — NPC vessels, no helmsman picked —
+ * the ship's crew-quality skill (Table 8-9, rules/ship-crew.ts) substitutes.
+ */
+export interface ShipActionRollRequest extends RollBase {
+	kind: "ship-action";
+	/** The ship-action item id on the starship. */
+	itemId: string;
+	/**
+	 * The optional performer character (the helmsman / gunnery officer). When
+	 * undefined the crew-quality fallback applies (Core Rulebook p214 Table
+	 * 8-9). S2's picker fills this from the Ship Combat tab.
+	 */
+	performer?: Actor;
+	/** Caller-provided modifiers, merged with the funnel collection. */
+	modifiers?: Modifier[];
+}
+
+/**
  * Fear Test (bead jpbm, Core Rulebook p295): a Willpower test rolled by the
  * character CONFRONTING the fearsome thing. `rating` is the Fear (X) of the
  * source (an NPC's Fear trait, a Rite of Fear aura, a scene hazard); the
@@ -158,6 +185,7 @@ export type RollRequest =
 	| NavigatorRollRequest
 	| ShipWeaponRollRequest
 	| ShipRepairRollRequest
+	| ShipActionRollRequest
 	| FearRollRequest
 	| SnapOutRollRequest
 	| InitiativeRollRequest
@@ -235,6 +263,29 @@ export interface RollKindData {
 		itemId: string;
 		componentId?: string;
 	};
+	/** The ship-action card inputs (epic necp bead oumh, book pp213-218). */
+	"ship-action": {
+		itemId: string;
+		/** The pack doc's uuid (the card's doc anchor; empty when unset). */
+		uuid: string;
+		/** The action's verbatim name and cost. */
+		name: string;
+		actionCost: string;
+		/** The terse printed description. */
+		description: string;
+		/** The printed test string ("Pilot (Space Craft) + Manoeuvrability"). */
+		testKey: string;
+		/** Printed difficulty token ("Hard (-20)"), empty when none. */
+		difficulty: string;
+		/** The printed difficulty's machine bits (rules/actions.ts classifier). */
+		difficultyKind: "none" | "opposed" | "numeric";
+		/** True = no performer: the crew-quality skill substituted (Table 8-9). */
+		crewFallback: boolean;
+		/** The ship-ability value folded in (p212; also a visible row). */
+		shipMod: number;
+		/** The p212 COMBINED target (character skill + ship ability). */
+		combinedTarget: number;
+	};
 	/** Fear Test bookkeeping (bead jpbm, p294-296). */
 	fear: {
 		rating: number;
@@ -246,9 +297,18 @@ export interface RollKindData {
 	};
 	/** Snap-out carries nothing from prepare to after (bead n0tp). */
 	"snap-out": undefined;
-	/** The initiative after-hook carries nothing from prepare to after
-	 * (bead 77r1) — it reads the merged rows off `info.modifiers`. */
-	initiative: undefined;
+	/**
+	 * Initiative kind data (bead qkq1, Core Rulebook p212-213): which PATH
+	 * ran (the card's combat-start notes render on the ship card only) + the
+	 * boarding state (the boarded pair drops to last — Core Rulebook p215).
+	 * The merged rows themselves ride `info.modifiers` (bead 77r1).
+	 */
+	initiative: {
+		/** True when the roll ran the starship path (1d10 + Detection tens digit). */
+		starship: boolean;
+		/** S2's `boardedWith` is set on this ship — the card carries the banner. */
+		boarded: boolean;
+	};
 	/** The combat-action card inputs (bead et5a, epic moew). */
 	action: {
 		/** The catalog entry snapshot: doc link + verbatim card text. */

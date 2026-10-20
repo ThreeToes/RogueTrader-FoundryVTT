@@ -43,8 +43,28 @@ export {
 	resolveSalvoDamage,
 	type ShipCriticalEntry,
 	type ShipWeaponKind,
+	combinedTarget,
 	rangeModifier,
 } from "./ship-combat";
+export {
+	activeTurnFlag,
+	breakFreePairState,
+	expireTurnFlags,
+	rotateLastTurnLosses,
+	salvoTurnFlagRows,
+	shipIsBoarded,
+	shipLockGate,
+	sustainedCrewLosses,
+	SHIP_TURN_FLAG_KEYS,
+	SHIP_TURN_FLAG_TARGET_ALL,
+	type ShipBoardingState,
+	type ShipCrewLosses,
+	type ShipLockAction,
+	type ShipTurnFlag,
+	type ShipTurnFlagKey,
+	type ShipTurnFlagRow,
+	type ShipTurnFlagRowSide,
+} from "./ship-turn-state";
 export {
 	degreesOfFailure,
 	degreesOfSuccess,

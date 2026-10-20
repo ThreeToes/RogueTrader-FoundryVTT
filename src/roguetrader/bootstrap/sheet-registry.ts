@@ -40,6 +40,7 @@ import {
 	ShipWeaponComponent,
 } from "../data/item/ship-component";
 import { ShipComplication, Starship } from "../data/item/starship";
+import { ShipAction } from "../data/item/ship-action";
 import { Skill } from "../data/item/skill";
 import { Talent } from "../data/item/talent";
 import { Trait } from "../data/item/trait";
@@ -165,6 +166,16 @@ export const SHEET_REGISTRY: Record<
 			model: ShipWeaponComponent,
 			sheet: ShipComponentSheet,
 			label: "TYPES.Item.ship-weapon-component",
+		},
+		// Ship actions (epic necp bead oumh): Table 8-10 Manoeuvre + Table 8-11
+		// Extended Action rows; rolled on the starship through the ship-action
+		// roll kind's combined-test contract. No dedicated sheet yet — the
+		// generic Gear sheet renders the data/notes tabs (the battlesuit-system
+		// precedent).
+		"ship-action": {
+			model: ShipAction,
+			sheet: GearSheet,
+			label: "TYPES.Item.ship-action",
 		},
 		// Game reference tables (planet/system generation rows):
 		// dedicated type so they are not plain Gear; attach to planet

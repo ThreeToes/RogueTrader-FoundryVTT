@@ -15,6 +15,15 @@ import {
 	crewQualityEffects,
 } from "../../rules/ship-crew";
 import { sourceField } from "../item/source";
+import {
+	SHIP_TURN_FLAG_KEYS,
+	SHIP_TURN_FLAG_TARGET_ALL,
+} from "../../../rules-engine/index";
+import type {
+	ShipBoardingState,
+	ShipCrewLosses,
+	ShipTurnFlag,
+} from "../../../rules-engine/index";
 
 export { CREW_QUALITIES, type CrewQuality, crewQualityEffects };
 
@@ -56,6 +65,17 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 	declare machineSpiritOddity: string;
 	declare pastHistory: string;
 	declare notes: string;
+	/**
+	 * Combat turn state (bead vph0, Core Rulebook pp215-218): turn-scoped
+	 * modifier flags, the boarding pair, augury-revealed components, Silent
+	 * Running and the one-turn crew-loss memory. Pure derivations live in
+	 * rules-engine/ship-turn-state.ts.
+	 */
+	declare turnFlags: ShipTurnFlag[];
+	declare boardedWith: ShipBoardingState;
+	declare revealedComponents: string[];
+	declare silentRunning: boolean;
+	declare lastTurnLosses: ShipCrewLosses;
 
 	static override defineSchema() {
 		return {
@@ -161,6 +181,86 @@ export class StarshipActor extends foundry.abstract.TypeDataModel<
 			machineSpiritOddity: textField(),
 			pastHistory: textField(),
 			notes: new foundry.data.fields.HTMLField({ initial: "" }),
+			/**
+			 * Turn-scoped modifier flags (bead vph0, decision 3): the salvo and
+			 * manoeuvre pipelines read them as visible modifier rows; expiry at
+			 * the flagged ship's next Strategic Turn is rules-engine/
+			 * ship-turn-state.ts's expireTurnFlags.
+			 */
+			turnFlags: new foundry.data.fields.ArrayField(
+				new foundry.data.fields.SchemaField({
+					id: new foundry.data.fields.StringField({
+						required: true,
+						initial: "",
+					}),
+					key: new foundry.data.fields.StringField({
+						required: true,
+						nullable: false,
+						choices: Object.fromEntries(
+							SHIP_TURN_FLAG_KEYS.map((key) => [key, key]),
+						),
+						initial: "evasive",
+					}),
+					/** Signed BS/Command modifier (e.g. evasive −10). */
+					value: new foundry.data.fields.NumberField({
+						integer: true,
+						initial: 0,
+					}),
+					/** Named weapon component item id, or "all". */
+					target: new foundry.data.fields.StringField({
+						initial: SHIP_TURN_FLAG_TARGET_ALL,
+					}),
+					/** Recorded expiry turn; null = cleared at next own turn. */
+					expiresAtTurn: new foundry.data.fields.NumberField({
+						integer: true,
+						nullable: true,
+						initial: null,
+					}),
+					/** PERSISTENT (Repel Boarders!, Core Rulebook p218). */
+					persistent: new foundry.data.fields.BooleanField({
+						initial: false,
+					}),
+				}),
+				{ initial: () => [] },
+			),
+			/**
+			 * Boarding pair (bead vph0, Core Rulebook p215): BOTH ships hold the
+			 * pair; a set uuid locks both against Manoeuvre and Shooting Actions
+			 * (extended actions stay legal).
+			 */
+			boardedWith: new foundry.data.fields.SchemaField({
+				uuid: new foundry.data.fields.StringField({ initial: "" }),
+				/** −20 on the subsequent opposed Command after a failed break-free. */
+				breakFreeFailedThisTurn: new foundry.data.fields.BooleanField({
+					initial: false,
+				}),
+			}),
+			/**
+			 * Component item ids another ship's auguries have revealed (bead vph0,
+			 * decision 11): gates the critical-component prompt.
+			 */
+			revealedComponents: new foundry.data.fields.ArrayField(textField(), {
+				initial: () => [],
+			}),
+			/** Silent Running (bead vph0, decision 8, book p218): broken by firing. */
+			silentRunning: new foundry.data.fields.BooleanField({ initial: false }),
+			/**
+			 * One-turn memory of the PREVIOUS turn's crew losses (bead vph0, book
+			 * pp217-218), rewritten at the start of the ship's Strategic Turn;
+			 * consumed by Triage (population) and Hold Fast! (morale).
+			 */
+			lastTurnLosses: new foundry.data.fields.SchemaField({
+				population: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
+				morale: new foundry.data.fields.NumberField({
+					min: 0,
+					integer: true,
+					initial: 0,
+				}),
+			}),
 		};
 	}
 

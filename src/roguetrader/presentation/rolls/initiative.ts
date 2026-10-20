@@ -50,24 +50,103 @@ interface CombatantLike {
 	update: (data: object) => Promise<unknown>;
 }
 
-/** "Roll for initiative" (bead 77r1): a raw d10 + the initiative bonus. */
+/**
+ * The ship's Detection TENS DIGIT (bead qkq1, Core Rulebook p212-213): the
+ * captain's 1d10 adds the ship's Detection BONUS — the tens digit.
+ */
+export function shipDetectionBonus(detection: number): number {
+	return Math.floor(detection / 10);
+}
+
+/**
+ * Is the ship currently boarded (bead qkq1; the boarding pair is S2's
+ * `boardedWith` uuid-or-null on the ship actor)? Read DEFENSIVELY — the
+ * parallel bead may not have merged into this worktree yet, so a missing
+ * field reads as unset (the schema-first field lands with S2; note on the
+ * bead). Never a loud failure: boarding is a state, not corrupt data.
+ */
+export function shipBoarded(system: unknown): boolean {
+	const boardedWith = (system as { boardedWith?: unknown } | null | undefined)
+		?.boardedWith;
+	// uuid-or-null: only a non-empty uuid counts as locked.
+	return typeof boardedWith === "string" && boardedWith.length > 0;
+}
+
+/**
+ * "Roll for initiative" (bead 77r1 + bead qkq1): one kind, TWO paths per
+ * actor shape.
+ *
+ * - CHARACTER (bead 77r1/yxm5): a raw d10 + the initiative bonus — the
+ *   Agility-bonus base row + the collector-pinned `initiative` rows.
+ * - STARSHIP (bead qkq1, Core Rulebook p212-213): a raw d10 + the ship's
+ *   Detection TENS DIGIT — the captain rolls, character bonuses do NOT
+ *   apply, and there are no owned-item rows at all. The ship card also
+ *   carries the combat-start note lines (Surprise, NPC action cap; MANUAL
+ *   rulings — no automation in v1) and the Boarding banner when the ship's
+ *   `boardedWith` is set (the pair drops to last — p215; tracker-side
+ *   reordering stays GM-manual).
+ */
 export const initiativeHandler: RollHandler<"initiative"> = {
 	async prepare(request) {
 		const ports = getPorts();
 		const actor = request.actor;
-		const system = systemOf(actor);
-		// Fail closed for non-character systems (vehicles/starships lack the
-		// Character model's characteristicBonus) — the token-menu's visible()
-		// gate mirrors this so owned non-character tokens never see a dead
-		// entry. This used to be rollInitiativeAction's own shape gate.
-		if (
-			typeof (system as { characteristicBonus?: unknown })
-				.characteristicBonus !== "function"
-		) {
+		const system = systemOf(actor) as unknown as
+			| (Record<string, unknown> & { characteristicBonus?: unknown })
+			| null;
+
+		// STARSHIP PATH (bead qkq1, Core Rulebook p212-213). Schema-first: the
+		// actor type resolves to the registered StarshipActor model, whose
+		// statline Detection field is the rule's input.
+		if ((actor as { type?: string }).type === "starship") {
+			// Fail LOUDLY on missing Detection (the bead's gate: corrupt data
+			// must not look like a broken button — contrast the character path's
+			// silent shape gate, which the token menu hides instead).
+			if (typeof system?.detection !== "number") {
+				ports.notify.error("ROLL.INITIATIVE_NO_DETECTION", {
+					actor: (actor as { name?: string }).name ?? "?",
+				});
+				return null;
+			}
+			return {
+				title: `${actor.name} — ${ports.i18n.t("ROLL.INITIATIVE_TITLE")}`,
+				// The d10 cap; no pass/fail ladder (prepare-only), exactly like
+				// the character path.
+				baseTarget: 10,
+				testKind: "characteristic",
+				testKey: "initiative",
+				// No owned-item rows for ships: the book's rule is the Detection
+				// tens digit ALONE (character initiative bonuses do not apply),
+				// so no collector pass — the dialog still admits manual custom
+				// rows (the GM's ruling adjustments).
+				initialModifiers: [
+					{
+						id: "initiative-base:detection",
+						source: { type: "item", label: "ROLL.BASE" },
+						label: ports.i18n.t("ROLL.INITIATIVE_DETECTION"),
+						value: shipDetectionBonus(system.detection),
+					},
+				],
+				weapon: null,
+				context: {},
+				prepareOnly: true,
+				// No handledConditionFlags list: the suppression is STRUCTURAL —
+				// the orchestrator offers no generic condition toggles for
+				// prepare-only kinds at all (bead 4tx6), so no list here has to
+				// match runRoll's own condition scope.
+				kindData: { starship: true, boarded: shipBoarded(system) },
+			};
+		}
+
+		// CHARACTER PATH (bead 77r1). Fail closed for non-character systems
+		// (vehicles lack the Character model's characteristicBonus) — the
+		// token-menu's visible() gate mirrors this so owned non-character tokens
+		// never see a dead entry. This used to be rollInitiativeAction's own
+		// shape gate.
+		if (typeof system?.characteristicBonus !== "function") {
 			return null;
 		}
 		const agBonus = (
-			system as { characteristicBonus: (k: string) => number }
+			system as unknown as { characteristicBonus: (k: string) => number }
 		).characteristicBonus("ag");
 		// One collector — rules/initiative-rows.ts (bead zl6e) is the ONE
 		// initiative-row collector both this path and the model's
@@ -104,6 +183,7 @@ export const initiativeHandler: RollHandler<"initiative"> = {
 			// the orchestrator offers no generic condition toggles for
 			// prepare-only kinds at all (bead 4tx6), so no list here has to
 			// match runRoll's own condition scope.
+			kindData: { starship: false, boarded: false },
 		};
 	},
 
@@ -150,15 +230,28 @@ export const initiativeHandler: RollHandler<"initiative"> = {
 			await combatant.update({ initiative: total } as never);
 		}
 		const assigned = mine.length > 0;
+		const cardVars: Record<string, unknown> = {
+			title: actor.name ?? "",
+			value: total,
+			analysis: breakdown(merged),
+			assigned,
+		};
+		// Bead qkq1: the STARSHIP card also carries the combat-start manual
+		// rulings (Core Rulebook p213 + p213-214) as note lines, and the
+		// Boarding banner when the ship's `boardedWith` is set (p215) — both
+		// visibility-only, no automation in v1. The character card stays as it
+		// was (no notes key at all).
+		if (prepared.kindData?.starship) {
+			cardVars.notes = [
+				"ROLL.INITIATIVE_NOTE_SURPRISE",
+				"ROLL.INITIATIVE_NOTE_NPC_ACTIONS",
+			];
+			if (prepared.kindData.boarded) cardVars.boarded = true;
+		}
 		await postCard(
 			actor,
 			`${TEMPLATE_ROOT}chat/initiative.hbs`,
-			{
-				title: actor.name ?? "",
-				value: total,
-				analysis: breakdown(merged),
-				assigned,
-			},
+			cardVars,
 			undefined,
 			rolled.rolls,
 		);

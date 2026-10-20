@@ -62,6 +62,11 @@ export const ITEM_MODELS: Record<string, ModelEntry> = {
 		spec: "../roguetrader/data/item/ship-component",
 		className: "ShipWeaponComponent",
 	},
+	// Ship actions (epic necp bead oumh): Table 8-10/8-11 rows.
+	"ship-action": {
+		spec: "../roguetrader/data/item/ship-action",
+		className: "ShipAction",
+	},
 	"game-table": {
 		spec: "../roguetrader/data/item/game-table",
 		className: "GameTable",

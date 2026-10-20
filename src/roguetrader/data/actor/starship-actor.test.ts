@@ -10,6 +10,9 @@ describe("crew quality (Core Rulebook p193)", () => {
 		expect(crewQualityEffects("competent")).toEqual({ skill: 30, spDelta: 0 });
 		expect(crewQualityEffects("crack")).toEqual({ skill: 40, spDelta: -5 });
 		expect(crewQualityEffects("veteran")).toEqual({ skill: 50, spDelta: -15 });
+		// Table 8-9 (Core Rulebook p214): Elite is an NPC crew rating, NOT a
+		// SP purchase rung — skill 60, no SP delta.
+		expect(crewQualityEffects("elite")).toEqual({ skill: 60, spDelta: 0 });
 	});
 
 	it("falls back to competent for unknown values", () => {

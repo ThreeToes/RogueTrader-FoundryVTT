@@ -11,6 +11,10 @@ export const CREW_QUALITIES = {
 	competent: { skill: 30, spDelta: 0 },
 	crack: { skill: 40, spDelta: -5 },
 	veteran: { skill: 50, spDelta: -15 },
+	// Table 8-9 NPC Crew Ratings (Core Rulebook p214): Elite crews rate 60. The
+	// SP purchase ladder (Core Rulebook p193) stops at Veteran — Elite is an NPC
+	// crew rating only, so spDelta stays 0 and the PC tables are untouched.
+	elite: { skill: 60, spDelta: 0 },
 } as const;
 
 export type CrewQuality = keyof typeof CREW_QUALITIES;

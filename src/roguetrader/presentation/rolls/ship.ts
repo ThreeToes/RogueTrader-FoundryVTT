@@ -20,6 +20,10 @@ import {
 	rangeModifier,
 	resolveSalvoDamage,
 	shipCritical,
+	salvoTurnFlagRows,
+	shipLockGate,
+	type ShipBoardingState,
+	type ShipTurnFlag,
 	type ShipComponentState,
 } from "../../../rules-engine/index";
 import { systemOf } from "../../data/accessors";
@@ -43,6 +47,19 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 	async prepare(request) {
 		const ports = getPorts();
 		const ship = request.actor;
+		// Lock gate (Core Rulebook p215): a boarded ship takes no Shooting
+		// Actions — the salvo is refused loudly before any dialog or dice.
+		// Extended actions (Emergency Repairs) stay allowed; the manoeuvre-side
+		// gate for the S1 ship-action handlers is the same pure helper.
+		const lockGate = shipLockGate(
+			(systemOf(ship) as unknown as { boardedWith?: ShipBoardingState })
+				.boardedWith,
+			"shooting",
+		);
+		if (!lockGate.allowed) {
+			ports.notify.warn("SHIP_COMBAT.BOARDED_NO_SHOOTING");
+			return null;
+		}
 		// Hard 2x range cap (Core Rulebook pp219-220): beyond twice the
 		// weapon's range the shot cannot be made at all — refuse before any
 		// dice are rolled instead of firing at -10 against unlimited range
@@ -77,6 +94,7 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 			crewQuality?: string;
 			armour?: number;
 			voidShields?: number;
+			turnFlags?: ShipTurnFlag[];
 		};
 		// Gunner BS: the ship's crew skill (Core Rulebook p193 crew quality;
 		// p220 example, gunner BS 48).
@@ -99,12 +117,41 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 				strength,
 			});
 		}
+		// Turn-flag rows (bead vph0, decision 3, Core Rulebook pp214-217):
+		// BOTH sides read as visible modifier rows — the firing ship's own
+		// Evasive Manoeuvres (-10 to its OWN fire, p215), the Come to New
+		// Heading BS penalty (p214) and Lock on Target's +5 when the flag
+		// names THE weapon component being fired (p217) — plus the target
+		// ship's Evasive Manoeuvres against the incoming fire (p215). The
+		// values come from the flags themselves (house rules stay data-driven).
+		const targetAtPrepare = ports.targets.actor() as
+			| (Actor & { system?: Record<string, unknown> })
+			| undefined;
+		const turnFlagRows: Modifier[] = salvoTurnFlagRows({
+			firingFlags: system.turnFlags ?? [],
+			targetFlags:
+				((targetAtPrepare?.system as { turnFlags?: ShipTurnFlag[] })
+					?.turnFlags) ?? [],
+			weaponId: item.id ?? "",
+		}).map((row) => ({
+			id: `ship:flag:${row.side}:${row.key}`,
+			source: { type: "item" as const, label: "SHIP_COMBAT.TURN_FLAGS" },
+			label:
+				row.side === "firing"
+					? ports.i18n.t(
+						`SHIP_COMBAT.TURN_FLAG_${row.key.replaceAll("-", "_").toUpperCase()}_OWN`,
+					)
+					: ports.i18n.t(
+						`SHIP_COMBAT.TURN_FLAG_${row.key.replaceAll("-", "_").toUpperCase()}_TARGET`,
+					),
+			value: row.value,
+		}));
 		return {
 			title: `${ship.name} — ${item.name} (${ports.i18n.t(`SHIP_COMBAT.${kind.toUpperCase()}`)})`,
 			baseTarget: crew.skill,
 			testKind: "characteristic",
 			testKey: "bs",
-			initialModifiers: [],
+			initialModifiers: turnFlagRows,
 			weapon: null,
 			context: {},
 			templateVars: {
@@ -154,6 +201,19 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 	},
 	async after(request, prepared, outcome, _messageId) {
 		const ports = getPorts();
+		// Silent Running broken by firing (bead vph0, Core Rulebook p218):
+		// firing immediately reveals the ship — the flag clears on the FIRING
+		// ship (a different document from the single target payload below, so
+		// the bead 6l68 one-write fold is untouched) and the shooter is warned
+		// they betrayed their position. A miss betrays it just the same.
+		const firingSystem = ((request.actor as { system?: unknown }).system ??
+			{}) as { silentRunning?: boolean };
+		if (firingSystem.silentRunning) {
+			await ports.actors.update(request.actor, {
+				system: { silentRunning: false },
+			});
+			ports.notify.warn("SHIP_COMBAT.SILENT_RUNNING_REVEALED");
+		}
 		const data = prepared.kindData;
 		// Miss: no hits, no damage (the card already shows the failure).
 		// prepare() always sets kindData for a salvo; the guard types it (bead ezys).
@@ -273,6 +333,9 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		// Critical component selection (book p221-222): the attacker picks
 		// among components he "knows of" (v1: all installed components are
 		// known — Active Augury scanning is a manual/UNVERIFIED IN WORLD step).
+		// Gating (decision 11, bead z697): promptTargetComponent narrows to the
+		// target's system.revealedComponents set once augury fills it (schema
+		// field added by bead vph0).
 		if (criticalEntry) {
 			const component = await promptTargetComponent(target);
 			if (component) {

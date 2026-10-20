@@ -25,6 +25,7 @@ import type {
 	RollRequest,
 } from "../../rules/roll-contract";
 import { shipRepairHandler, shipWeaponHandler } from "./ship";
+import { shipActionHandler } from "./ship-action";
 import { actionHandler } from "./action";
 import { characteristicHandler, skillHandler } from "./characteristic-skill";
 import { fearHandler } from "./fear";
@@ -49,6 +50,7 @@ export const rollHandlers: {
 	navigator: navigatorHandler,
 	"ship-weapon": shipWeaponHandler,
 	"ship-repair": shipRepairHandler,
+	"ship-action": shipActionHandler,
 	fear: fearHandler,
 	"snap-out": snapOutHandler,
 	initiative: initiativeHandler,
@@ -289,6 +291,31 @@ export async function rollShipRepair(
 		kind: "ship-repair",
 		actor,
 		itemId,
+		skipDialog: options.skipDialog,
+	});
+}
+
+/**
+ * A ship action (epic necp bead oumh, Core Rulebook pp213-218): a Table 8-10
+ * Manoeuvre or Table 8-11 Extended Action, rolled on the starship as a
+ * combined test (the character's skill + the ship's ability, p212). When no
+ * performer is passed the crew-quality skill substitutes (Table 8-9); when a
+ * performer is passed without the trained skill the handler refuses loudly.
+ */
+export async function rollShipAction(
+	actor: Actor,
+	itemId: string,
+	options: {
+		/** The helmsman/officer performing the action (owner decision 1). */
+		performer?: Actor;
+	} & RollTestOptions = {},
+): Promise<void> {
+	await performRoll({
+		kind: "ship-action",
+		actor,
+		itemId,
+		performer: options.performer,
+		modifiers: options.modifiers,
 		skipDialog: options.skipDialog,
 	});
 }

@@ -59,3 +59,47 @@ export const UNTRAINED_SKILL_CHARACTERISTIC: Readonly<Record<string, string>> = 
 export function untrainedCharacteristicFor(name: string): string | undefined {
 	return UNTRAINED_SKILL_CHARACTERISTIC[name];
 }
+
+// ------------------------------------------------------- specialised skills
+
+/**
+ * The printed untrained-specialisation penalty (Core Rulebook p75): an
+ * Explorer attempting a specialisation who is NOT trained in it uses the bare
+ * parent skill at -10. This is the shared constant for every resolver user
+ * (the space-combat combined test, epic necp decision 10, is the first).
+ */
+export const UNTRAINED_SPECIALISATION_MODIFIER = -10;
+
+/**
+ * A specialisation resolved on the actor (epic necp decision 10, Core
+ * Rulebook p75): the-owned-specialised-item form wins; when only the BARE
+ * parent skill is trained, the bare item stands in with the p75 penalty as a
+ * VISIBLE row (the handler builds it — this module stays Foundry-free).
+ */
+export type SpecialisedSkillResolution =
+	| { kind: "specialised"; itemId: string }
+	| { kind: "bare"; itemId: string; specPenalty: number };
+
+/**
+ * Resolve a specialised skill the actor may hold either in its printed
+ * specialisation form ("Pilot (Space Craft)") or as the bare parent ("Pilot"
+ * standing in at the p75 -10). `undefined` = neither item is owned — the
+ * caller refuses LOUDLY (an unresolvable performer), never silently rolls.
+ */
+export function resolveSpecialisedSkillItem(
+	actor: SkillItemSource,
+	specName: string,
+	bareName: string,
+): SpecialisedSkillResolution | undefined {
+	const spec = findOwnedSkillItem(actor, specName);
+	if (spec?.id) return { kind: "specialised", itemId: spec.id };
+	const bare = findOwnedSkillItem(actor, bareName);
+	if (bare?.id) {
+		return {
+			kind: "bare",
+			itemId: bare.id,
+			specPenalty: UNTRAINED_SPECIALISATION_MODIFIER,
+		};
+	}
+	return undefined;
+}

@@ -33,6 +33,10 @@
         <div class="sc-state-banner alarm">⚠ {{localize "SHIP_COMBAT.CRIPPLED"}} — {{localize "SHIP_COMBAT.CRIPPLED_EFFECTS"}}</div>
         {{/if}}
 
+        {{!-- Starship initiative (bead qkq1, Core Rulebook p212-213): 1d10 +
+             the Detection tens digit into the active tracker. --}}
+        <button type="button" class="rt-button sc-initiative" data-action="rollInitiative"
+            data-tooltip="{{localize "COMBAT.ROLL_INITIATIVE_HINT_SHIP"}}">{{localize "COMBAT.ROLL_INITIATIVE"}}</button>
 
         {{!-- Weapons: fire action per installed ship-weapon-component --}}
         <div class="inv-group-header">

@@ -20,6 +20,12 @@
         {{/each}}
     </div>
     {{/if}}
+    {{#if boarded}}
+    <p class="note boarding">⚠ {{localize "ROLL.INITIATIVE_BOARDING"}}</p>
+    {{/if}}
+    {{#each notes as |note|}}
+    <p class="note">{{localize note}}</p>
+    {{/each}}
     {{#unless assigned}}
     <p class="hint">{{localize "ROLL.INITIATIVE_NOT_IN_COMBAT"}}</p>
     {{/unless}}

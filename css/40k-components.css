@@ -125,6 +125,13 @@
 	cursor: pointer;
 }
 
+/* A dead control must not invite the pointer (review 2026-10-22): core gives
+ * disabled buttons cursor: inherit at lower specificity, so the base would
+ * beat it. */
+.rt-component .rtk-button:disabled {
+	cursor: default;
+}
+
 /* ================================================================== *
  * Creator wizard frame (bead j9so, cmio.6b)
  *

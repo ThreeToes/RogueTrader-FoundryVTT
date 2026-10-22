@@ -64,12 +64,12 @@
     {{#if difficulty.length}}
     <h3 class="dialog-group-label">{{localize "ROLL.DIFFICULTY"}}</h3>
     <div class="difficulty-ladder" role="group" aria-label="{{localize "ROLL.DIFFICULTY"}}">
-        <button type="button" class="difficulty-chip none{{#if difficultyNone}} checked{{/if}}"
+        <button type="button" class="chip difficulty-chip none{{#if difficultyNone}} checked{{/if}}"
             data-difficulty data-value="" data-action="updateDifficulty"
             aria-pressed="{{#if difficultyNone}}true{{else}}false{{/if}}"
         >{{localize "ROLL.DIFFICULTY_NONE"}}</button>
         {{#each difficulty as |d|}}
-        <button type="button" class="difficulty-chip{{#if (eq ../difficultyValue d.value)}} checked{{/if}}"
+        <button type="button" class="chip difficulty-chip{{#if (eq ../difficultyValue d.value)}} checked{{/if}}"
             data-difficulty data-value="{{d.value}}" data-action="updateDifficulty"
             data-tooltip="{{d.label}} {{#if (gt d.value 0)}}+{{/if}}{{d.value}}"
             aria-pressed="{{#if (eq ../difficultyValue d.value)}}true{{else}}false{{/if}}"
@@ -82,7 +82,7 @@
     <h3 class="dialog-group-label">{{localize "ROLL.CONDITIONS"}}</h3>
     <div class="condition-chips">
         {{#each conditions as |c|}}
-        <label class="condition-chip">
+        <label class="chip condition-chip">
             <input type="checkbox" data-condition="{{c.key}}" {{#if c.checked}}checked{{/if}} />
             <span class="chip-name">{{c.label}}</span>
         </label>

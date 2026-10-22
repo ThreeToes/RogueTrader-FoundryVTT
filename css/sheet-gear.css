@@ -52,8 +52,10 @@
 /* Shared chip base + both checked treatments (bead 6zha) now live in the
    system-neutral shared layer, css/40k-components.css (cmio.6) — re-rooted
    from .rogue-trader to the rt-component root class every consuming window
-   carries. This file keeps only the site-local modifiers; the base is
-   bundled FIRST, so the per-site rules below still win. */
+   carries, and keyed on the chip family's ROLE classes (cmio.6b, bead
+   huyp) instead of site paths. This file keeps only the site-local
+   modifiers; the base is bundled FIRST, so the per-site rules below still
+   win. */
 
 .rogue-trader .tab {
 	min-height: 0;
@@ -1196,12 +1198,21 @@
 .rogue-trader.sheet.starship .inv-row .sc-repair {
 	flex: none;
 }
-/* Fixed status-badge colour code (bead uc08): intact = muted, unpowered =
-   muted-deep, damaged = amber warn, destroyed = danger-alarm. Tokens only.
-   Shared by inv-row and battery-card badges (depressurised/no-slot are
-   battery-card-only states, styled there). */
+/* ONE status-badge anatomy (bead eydj, cmio.6b): the full box + type + row
+   geometry lives HERE for both surfaces (inv-row rows and battery cards) —
+   border + radius + the battery card's padding/type/flex steps merged into
+   one rule so the badge renders identically everywhere. The markup carries
+   the chip role class too (class="chip sc-state …"), so the shared chip
+   base underwrites the anatomy and this rule keeps only the deltas.
+   Colour code (bead uc08): intact = muted, unpowered = muted-deep, damaged
+   = amber warn, destroyed = danger-alarm — tokens only; shared by inv-row
+   and battery-card badges (depressurised/no-slot are battery-card-only
+   states, styled there). */
 .rogue-trader.sheet.starship .sc-state {
-	border: 1px solid var(--rt-border-strong);
+	flex: none;
+	padding: 0 6px;
+	font-size: var(--rt-fs-sm);
+	border-color: var(--rt-border-strong);
 	border-radius: var(--rt-radius);
 }
 
@@ -1463,13 +1474,8 @@
 	gap: 4px;
 }
 
-/* Battery-card status badges reuse the shared uc08 colour code (above);
-   only the card-local box styling sits here. */
-.rogue-trader.sheet.starship .battery-card .sc-state {
-	flex: none;
-	padding: 0 6px;
-	font-size: var(--rt-fs-sm);
-}
+/* Battery-card badges keep only the card-local states — the full badge
+   anatomy is the ONE .sc-state rule above (bead eydj, cmio.6b). */
 
 /* Card-only states outside the shared uc08 vocabulary. */
 .rogue-trader.sheet.starship .battery-card .sc-state.depressurised,
@@ -1496,15 +1502,14 @@
 	font-weight: bold;
 }
 
-/* Fire button: the dialog Roll treatment — gold border, primary emphasis. */
+/* Fire button: the dialog Roll treatment — gold border, primary emphasis.
+   Modifier on the shared .rtk-button base (bead saz2 — the button carries
+   the base class; only the gold emphasis + density differ). */
 .rogue-trader.sheet.starship .battery-card .sc-fire {
 	padding: 4px 8px;
 	font-weight: bold;
 	color: var(--rt-gold);
-	background: none;
-	border: 1px solid var(--rt-gold);
-	border-radius: var(--rt-radius);
-	cursor: pointer;
+	border-color: var(--rt-gold);
 }
 
 .rogue-trader.sheet.starship .battery-card .sc-fire:hover:not(:disabled) {
@@ -1518,18 +1523,16 @@
 }
 
 /* Ship Combat tab state surfaces (epic necp bead 7gcm): the boarding
-   banner rides the shared alarm .sc-state-banner; the break-free button,
-   the helmsman row, the turn-flag chips, the silent-running toggle and the
+   banner rides the shared alarm .sc-state-banner; the break-free button
+   modifier (on the shared .rtk-button base, bead saz2), the helmsman row,
+   the turn-flag chips, the silent-running toggle modifier and the
    ship-action chip lists sit under here. */
 .rogue-trader.sheet.starship .sc-boarded .sc-break-free {
 	margin-left: auto;
 	padding: 2px 8px;
 	font-weight: bold;
 	color: var(--rt-danger-alarm);
-	background: none;
-	border: 1px solid var(--rt-danger-alarm);
-	border-radius: var(--rt-radius);
-	cursor: pointer;
+	border-color: var(--rt-danger-alarm);
 }
 
 .rogue-trader.sheet.starship .sc-boarded .boarded-penalty {
@@ -1600,14 +1603,13 @@
 	border-style: double;
 }
 
-/* Silent Running toggle: the state-chip treatment (lit when engaged). */
+/* Silent Running toggle: the state-chip treatment (lit when engaged).
+   Modifier on the shared .rtk-button base (bead saz2): the base border/
+   radius/background/cursor are inherited; only the density and the muted
+   ink differ. */
 .rogue-trader.sheet.starship .sc-silent-toggle {
 	padding: 2px 10px;
 	color: var(--rt-muted);
-	background: none;
-	border: 1px solid var(--rt-border);
-	border-radius: var(--rt-radius);
-	cursor: pointer;
 }
 
 .rogue-trader.sheet.starship .sc-silent-toggle.engaged {
@@ -1650,7 +1652,7 @@
    css/sheet-character.css, bead t2bj): the two-column grid, the centre
    vertical rule, the plain chip rows, the aligned roll-mark slot and the
    hover gold, verbatim. (The printed test spec lives in the chip tooltip —
-   owner ask, 2026-10-20 — so no ship-side rule remains.)
+   owner ask, 2026-10-20 — so no ship-side rule remains.) */
 
 /* Combat tab (bead 9oxq, rev per owner): the sections STACK full-width —
    Ship Actions in two columns, then Ship Weapons, then Component

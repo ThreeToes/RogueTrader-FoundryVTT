@@ -17,12 +17,12 @@
 <div class="rt-creator-nav">
     <div class="nav-side nav-left">
         {{#unless backHidden}}
-        <button type="button" class="rt-button rt-creator-nav-back" data-action="{{ifThen backAction backAction "prev"}}"
+        <button type="button" class="rtk-button rt-creator-nav-back" data-action="{{ifThen backAction backAction "prev"}}"
             {{#if backDisabled}}disabled{{/if}}>{{backLabel}}</button>
         {{/unless}}
     </div>
     <div class="nav-side nav-right">
-        <button type="button" class="rt-button rt-creator-nav-forward{{#if forwardPrimary}} create{{/if}}"
+        <button type="button" class="rtk-button rt-creator-nav-forward{{#if forwardPrimary}} create{{/if}}"
             data-action="{{ifThen forwardAction forwardAction "next"}}"
             {{#if forwardDisabled}}disabled{{/if}}>{{forwardLabel}}</button>
     </div>

@@ -15,10 +15,12 @@
  * `["rogue-trader", ..., "rt-component"]` in DEFAULT_OPTIONS.classes (or
  * windowClasses, for the test dialog), guarded by
  * utils/rt-component-root.test.ts. THIS file contains NO system slug and NO
- * unrooted selector: every selector is rooted on .rt-component, except the
- * test-dialog chip entries, which keep the dialog's own .test-dialog-app
- * root (bead y8u3: that dialog sits outside the sheet root) — its window
- * also carries rt-component. Re-rooting preserved each selector's
+ * unrooted selector: every selector is rooted on .rt-component. The test
+ * dialog's chip entries ALSO carried the dialog's own .test-dialog-app root
+ * during the verbatim move (bead y8u3: that dialog sits outside the sheet
+ * root); cmio.6b re-rooted them onto .rt-component, which the dialog's
+ * window classes carry (bead huyp pass), so the file now has ONE root
+ * convention. Re-rooting preserved each selector's
  * specificity exactly (one class token swapped for one class token), so
  * cascade order against the remaining per-site rules is unchanged.
  *
@@ -31,27 +33,27 @@
  * Chip family (moved from css/sheet-gear.css, cmio.6)
  * ================================================================== */
 
-/* Shared chip base (bead 6zha): ONE anatomy for every boxed chip affordance
-   — border + radius + padding + type + cursor. Per-site modifiers keep only
-   what differs (font-size step, border token, cursor:help, display bits).
-   The scope list covers every chip site across the sheets, the creators and
-   the test dialog (which sits outside .rogue-trader — bead y8u3). It sits
-   before every per-site rule so modifiers always win. The ladder-option
-   entry is keyed to the ROLE level (bead qn9i): the chip renders on the
-   character, starship, planet and NPC sheets alike. */
-.rt-component.sheet .chip-option .chip,
+/* Shared chip base (bead 6zha; class-name pass cmio.6b / bead huyp): ONE
+   anatomy for every boxed chip affordance — border + radius + padding +
+   type + cursor + neutral background. KEYED ON THE ROLE, not site paths:
+   the rule enumerates the chip family's role classes (the shareable
+   vocabulary class .chip itself, plus the compound chip roles that predate
+   it — pick/origin/ladder/multiplier, the starship state/slot chips and the
+   test dialog's difficulty/condition chips, whose window carries
+   rt-component — bead y8u3's outside-the-sheet-root note is satisfied by
+   the shared root) so a NEW chip site just writes the role class and is
+   boxed; no context path to copy. Per-site MODIFIERS keep only what
+   differs (font-size step, border token, cursor:help, display bits) and
+   live in the skin files, which load after this one. */
+.rt-component .chip,
 .rt-component .pick-chip,
-.rt-component.sheet .traits-row .chip,
-.rt-component.sheet.starship .inv-row .state-chip,
-.rt-component.sheet.starship .inv-row .slot-chip,
+.rt-component .origin-chip,
 .rt-component .ladder-option,
-.rt-component.sheet .origin-chip,
-.rt-component .character-creator .chip,
-.rt-component .psychic .psychic-tags .chip,
-.rt-component .background .origin-mod,
-.rt-component .advancement .adv-multiplier,
-.test-dialog-app .test-dialog .difficulty-chip,
-.test-dialog-app .test-dialog .condition-chip {
+.rt-component .adv-multiplier,
+.rt-component .state-chip,
+.rt-component .slot-chip,
+.rt-component .difficulty-chip,
+.rt-component .condition-chip {
 	border: 1px solid var(--rt-border);
 	border-radius: var(--rt-radius);
 	padding: 1px 8px;
@@ -60,43 +62,174 @@
 	background: none;
 }
 
-/* Selected treatment 1 of 2 — solid gold FILL: the input:checked ladder and
-   radio toggles light fully gold (bead 6zha collapsed the per-site copies
-   of this treatment). */
+/* Selected treatment 1 of 2 — .is-filled, OPPAQUE GOLD FILL = a COMMITTED
+   CHOICE: the rung you took (skill ladder), the radio pick on a select-
+   group. The chip-option entry is CSS-driven via input:checked (the hidden
+   input is the state; the chip is its label) and the ladder's via its
+   .active class; NEW sites opt in deliberately with .is-filled on the chip
+   itself (bead ecja). */
 .rt-component.sheet .chip-option input:checked + .chip,
-.rt-component .ladder-option.active {
+.rt-component .ladder-option.active,
+.rt-component .chip.is-filled {
 	background: var(--rt-gold);
 	border-color: var(--rt-gold);
 	color: var(--rt-on-gold);
 }
 
-/* The two hover ramps travel WITH the checked tint (moved from
+/* The hover ramps travel WITH the checked tint (moved from
    css/sheet-gear.css, cmio.6): the checked gold border of treatment 2 must
    survive hovering, so the ramps stay ahead of the tint in source order. */
 .rt-component.sheet.starship .inv-row .state-chip:hover,
-.rt-component.sheet.starship .inv-row .slot-chip:hover {
+.rt-component.sheet.starship .inv-row .slot-chip:hover,
+.rt-component button.difficulty-chip:hover,
+.rt-component .condition-chip:hover {
 	border-color: var(--rt-border-strong);
 }
 
-/* The dialog's hover ramp and the checked TINT are ordered together: the
-   checked gold border must survive hovering (hover ramps then tint).
-   Also shared by state + slot chips below. */
-.test-dialog-app .test-dialog button.difficulty-chip:hover,
-.test-dialog-app .test-dialog .condition-chip:hover {
-	border-color: var(--rt-border-strong);
-}
-
-/* Checked treatment 2 of 2 — dim gold TINT (bead 6zha): the gold border +
-   faint gold wash + gold text rung, exactly as the test dialog renders its
-   selected ladder rung (owner round 3/5 ruling), shared by the checked
-   starship state/slot chips. */
-.test-dialog-app .test-dialog button.difficulty-chip.checked,
-.test-dialog-app .test-dialog .condition-chip:has(input:checked),
+/* Checked treatment 2 of 2 — .is-tinted, TRANSLUCENT GOLD TINT = a
+   MOMENTARY/HOLDING STATE: a checked toggle or the state a component is in
+   right now — the gold border + faint gold wash + gold text rung, exactly
+   as the test dialog renders its selected ladder rung (owner round 3/5
+   ruling). The difficulty/condition/state/slot entries are state-driven
+   (.checked on the button, :has(input:checked) behind the chip); NEW sites
+   opt in with .is-tinted (bead ecja). */
+.rt-component button.difficulty-chip.checked,
+.rt-component .condition-chip:has(input:checked),
 .rt-component.sheet.starship .inv-row .state-chip.checked,
-.rt-component.sheet.starship .inv-row .slot-chip.checked {
+.rt-component.sheet.starship .inv-row .slot-chip.checked,
+.rt-component .chip.is-tinted {
 	border-color: var(--rt-gold);
 	background: var(--rt-gold-alpha-faint);
 	color: var(--rt-gold);
+}
+
+/* ================================================================== *
+ * Button base (bead saz2, cmio.6b)
+ *
+ * ONE neutral anatomy for the family's push controls: markup carries the
+ * shared role class .rtk-button and per-site modifiers override only what
+ * differs (colour, padding density, emphasis). NO raised Foundry chrome:
+ * the background stays empty (the vocabulary has no --rt-surface token —
+ * background: none is the neutral), so a button never renders as core UI
+ * (the Roll Initiative button used to come through as Foundry-blue raised).
+ * ================================================================== */
+
+.rt-component .rtk-button {
+	background: none;
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius);
+	padding: 2px 8px;
+	font-size: var(--rt-fs-md);
+	font-family: inherit;
+	color: inherit;
+	cursor: pointer;
+}
+
+/* ================================================================== *
+ * Creator wizard frame (bead j9so, cmio.6b)
+ *
+ * ONE shared frame for the four creator wizards (character, ship, planet,
+ * warrant — every one routes through CreatorApplication and carries the
+ * rt-component root). Spacing/type steps stay inside the DESIGN-LANGUAGE
+ * token vocabulary; the framed step sections themselves ride the .border
+ * modifier below — the creator-section class adds nothing structural, it
+ * is the wizard hook. Quiet and structured: muted header, framed sections,
+ * footer strip.
+ * ================================================================== */
+
+/* Header strip: the wizard's name input (and, on the character creator,
+   the step path sits in its own nav below the header). */
+.rt-component .creator-header {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	margin: 0 0 8px;
+	color: var(--rt-muted);
+}
+
+.rt-component .creator-header input[type="text"] {
+	flex: 1;
+	min-width: 0;
+}
+
+/* A framed step section's heading: the shared section-heading convention
+   (margins under the <h1>, default size — the frame comes from .border). */
+.rt-component .creator-section h1 {
+	margin: 0 0 8px;
+}
+
+/* Footer strip: step actions (the shared creator-nav partial, or a single
+   control). The nav partial fills the row. */
+.rt-component .creator-footer {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.rt-component .creator-footer > .rt-creator-nav,
+.rt-component .creator-actions > .rt-creator-nav {
+	flex: 1 1 auto;
+}
+
+.rt-component .creator-actions {
+	margin-top: 8px;
+}
+
+/* Step counter — "2/6" behind a section heading. */
+.rt-component .step-counter {
+	font-size: var(--rt-fs-xs);
+	color: var(--rt-muted);
+	letter-spacing: 0.05em;
+}
+
+/* Step separator — the character creator's step path arrows. */
+.rt-component .step-sep {
+	color: var(--rt-muted-deep);
+	font-size: var(--rt-fs-xs);
+}
+
+/* Modifier bump control (planet creator): a small square stepper button. */
+.rt-component .bump {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.6em;
+	height: 1.6em;
+	line-height: 1;
+	padding: 0;
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius-sm);
+	background: none;
+	color: var(--rt-muted);
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.rt-component .bump:hover {
+	color: var(--rt-gold);
+	border-color: var(--rt-gold);
+}
+
+/* .roll-draw rides the .rtk-button base (the planet creator's draw
+   button carries both classes). */
+
+/* ================================================================== *
+ * Framed-section modifier (bead j9so / cmio.6b)
+ *
+ * .border is the shared vocabulary for framed content sections — every
+ * site that writes class="stats border" (headers, tab wrappers, note
+ * editors, creator sections, creator summaries) inherits this one frame.
+ * Before cmio.6b the class was inert markup: NO rule anywhere in the
+ * system css and Foundry defines no generic .border utility, so the frame
+ * IS the deliberate rendering change — one anatomy instead of 37 per-site
+ * copies (and instead of each creator wizard re-declaring it).
+ * ================================================================== */
+
+.rt-component .border {
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius);
+	padding: 6px 8px;
 }
 
 /* ================================================================== *

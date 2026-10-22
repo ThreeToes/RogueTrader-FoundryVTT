@@ -136,7 +136,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		// with their reason.
 		expect(html).toContain('data-slot="dorsal"');
 		expect(html).toContain('data-slot="prow"');
-		expect(html).toContain('class="slot-chip dorsal checked"');
+		expect(html).toContain('class="chip slot-chip dorsal checked"');
 		expect(html).toContain("disabled");
 		expect(html).toContain('data-tooltip="STARSHIP.ISSUE_UNKNOWN_SLOT"');
 		// and the unassign chip
@@ -187,14 +187,16 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		expect(html).not.toContain("TYPES.Item.ship-component");
 		// owner round 3: the state picker is BUTTON CHIPS (no dropdown) — one
 		// chip per state of the p223 vocabulary resolved via @root across the
-		// partial-block boundary, the current state lit.
-		expect(html).toContain('class="state-chip damaged checked"');
+		// partial-block boundary, the current state lit. cmio.6b: the chips
+		// carry the shared role class too class="chip state-chip …" (bead
+		// huyp) so the class-name chip base underwrites them.
+		expect(html).toContain('class="chip state-chip damaged checked"');
 		expect(html).toContain('data-state="damaged"');
 		expect(html).toContain('data-action="setComponentState"');
 		// intact chip is rendered unchecked on the damaged row
-		expect(html).toContain('class="state-chip intact"');
+		expect(html).toContain('class="chip state-chip intact"');
 		// and the weapon roster's intact row is lit
-		expect(html).toContain('class="state-chip intact checked"');
+		expect(html).toContain('class="chip state-chip intact checked"');
 	});
 
 	it("npc-main takes the editable branch via @root across the boundary", () => {

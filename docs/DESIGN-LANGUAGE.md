@@ -75,6 +75,47 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
 
 ## Component vocabulary
 
+- **Chips** (box pass, beads 6zha + huyp/cmio.6b): every boxed chip affordance
+  carries one of the family's role classes — `.chip` (the shared vocabulary
+  class for plain tags/badges), `pick-chip` / `origin-chip` / `ladder-option`
+  / `adv-multiplier`, the starship `state-chip` / `slot-chip`, and the test
+  dialog's `difficulty-chip` / `condition-chip` (the dialog window carries
+  the rt-component root). ONE base anatomy in `css/40k-components.css`,
+  keyed on those role classes — never on a site path: 1px `--rt-border`,
+  `--rt-radius`, `1px 8px` padding, `fs-md`, pointer cursor, neutral
+  background. Per-site rules are MODIFIERS ONLY (font-size step, border
+  token, cursor:help, padding density, display bits).
+- **Chip selected states** (bead ecja): two NAMED treatments, opt-in for new
+  chips by class, both in the shared layer:
+  - `.is-filled` — OPPAQUE GOLD FILL = a COMMITTED CHOICE (the rung you
+    took, the radio pick). CSS-driven equivalents that predate the name:
+    `.chip-option input:checked + .chip`, `.ladder-option.active`.
+  - `.is-tinted` — TRANSLUCENT GOLD TINT = a MOMENTARY/HOLDING STATE (a
+    checked toggle, the state a ship component is in right now).
+    State-driven equivalents: `difficulty-chip.checked`,
+    `condition-chip:has(input:checked)`, starship `state-chip.checked` /
+    `slot-chip.checked` (the `.checked` markup there predates the name and
+    stays).
+- **Buttons** (bead saz2): `.rtk-button` is the ONE neutral push-control
+  anatomy (1px `--rt-border`, `--rt-radius`, `2px 8px`, `fs-md`, pointer,
+  `background: none` — NO raised Foundry chrome; the family has no
+  `--rt-surface` token, empty background is the neutral). Site classes
+  (`.sc-fire`, `.sc-break-free`, `.sc-silent-toggle`) are modifiers that
+  override only colour/padding/emphasis; previously-unstyled buttons
+  (`.sc-initiative`, `.sc-default-manoeuvre`, `.sc-repair`, the
+  `rt-creator-nav-back`/`forward` pair keeping their `min-width` floors)
+  inherit the base as-is.
+- **Creator wizard frame** (bead j9so): ONE shared frame in
+  `css/40k-components.css` for the four creators (character, ship, planet,
+  warrant — all route through `CreatorApplication`, all carry
+  rt-component): muted `.creator-header`, `.creator-section` blocks that
+  ride the `.border` modifier, `.creator-footer` / `.creator-actions`
+  strips, `.step-counter` and `.step-sep`, `.bump` as a small square
+  stepper control and `.roll-draw` on the `.rtk-button` base.
+- **Framed sections**: `.border` is the framed-section modifier (1px
+  `--rt-border`, `--rt-radius`, `6px 8px` padding) — write
+  `class="stats border"` (or any wrapper) and the frame comes with the
+  class; never re-declare a section frame per site.
 - **Composite input group**: bordered flex group with `/` separators
   (`.rof-composite` renders S/2/3: hidden checkbox → `S`/off span; number inputs; a
   `rof-zero` dash overlay when the value is 0).

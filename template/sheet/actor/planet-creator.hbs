@@ -36,7 +36,7 @@
         <a class="bump" data-action="bump" data-stage="{{stage.key}}" data-delta="-1">–</a>
         <span class="mod-value">{{stage.state.modifier}}</span>
         <a class="bump" data-action="bump" data-stage="{{stage.key}}" data-delta="1">+</a>
-        <a class="roll-draw" data-action="roll" data-stage="{{stage.key}}">
+        <a class="rtk-button roll-draw" data-action="roll" data-stage="{{stage.key}}">
             <i class="fas fa-dice-d20"></i> {{localize "PLANET_CREATOR.ROLL"}} (1d{{stage.die}}{{#if stage.state.modifier}} {{#if (gt stage.state.modifier 0)}}+{{/if}}{{stage.state.modifier}}{{/if}})
         </a>
     </div>

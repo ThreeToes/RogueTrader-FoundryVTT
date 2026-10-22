@@ -697,13 +697,9 @@
 	gap: 4px;
 }
 
-/* The chips are <button> elements: without a background reset Foundry's
-   button chrome leaks through (bead z132 round 2); the chip anatomy comes
-   from the widened shared .pick-chip rule (sheet-gear.css). */
-.rogue-trader .advancement .rank-chips .pick-chip:not(.selected),
-.rogue-trader .advancement .advancement-toolbar .pick-chip:not(.selected) {
-	background: none;
-}
+/* The chips are <button> elements riding the shared pick-chip base — the
+   neutral background comes with it now (cmio.6b: the per-site copy of the
+   base anatomy was deleted; the .selected fill below still wins). */
 
 /* Search + filter toolbar over the shown rank's rows. */
 .rogue-trader .advancement .advancement-toolbar {
@@ -1230,11 +1226,12 @@
 }
 
 /* Difficulty chips are buttons: Foundry's button reset would leak through
-   without these (bead z132 round 2); .checked is the gold lit state. */
+   without these (bead z132 round 2); the neutral background comes from the
+   shared chip base (40k-components.css, cmio.6b) — only the text
+   inheritance sits here. .checked is the gold lit state. */
 .test-dialog-app .test-dialog button.difficulty-chip {
 	font-family: inherit;
 	color: inherit;
-	background: none;
 }
 
 .test-dialog-app .test-dialog .difficulty-chip .chip-value {

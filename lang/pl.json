@@ -277,6 +277,7 @@
 	"ROLL.LAUNCHER_UNLOADED": "{weapon} nie jest załadowany - załaduj amunicję przed strzałem.",
 	"ROLL.AMMO_ROF_UNRESOLVED": "Nie można ustalić liczby strzałów oddanych przez {weapon} na podstawie tempa strzelania - amunicja NIE została automatycznie zużyta.",
 	"ROLL.NOT_OWNER": "Nie jesteś właścicielem {actor} - nie możesz za niego rzucać.",
+	"PERMISSION.NOT_APPLY_OWNER": "Nie jesteś właścicielem {actor} - tylko jego właściciel lub MG może to zastosować.",
 	"HEADER.DESCRIPTION": "Opis",
 	"INITIATIVE": "Inicjatywa",
 	"INSANITY.MENTAL_DISORDER": "Zaburzenia Psychiczne",

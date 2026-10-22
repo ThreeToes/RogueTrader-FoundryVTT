@@ -299,10 +299,10 @@ describe("applyDamageFromCard (bead t2ei double-apply)", () => {
 			);
 			expect(victim.updates).toEqual([]); // wounds UNTOUCHED
 			// bead eolv: the refusal used to be silent, answering a different
-			// access rule per entry point — now it matches the roll pipeline's
-			// loud warn.
+			// access rule per entry point; bead yqa4: it is an APPLY, so the warn
+			// copy names the apply refusal, not the roll one.
 			expect(warns).toEqual([
-				{ key: "ROLL.NOT_OWNER", vars: { "actor": "Actor.victim" } },
+				{ key: "PERMISSION.NOT_APPLY_OWNER", vars: { "actor": "Actor.victim" } },
 			]);
 		});
 
@@ -330,7 +330,7 @@ describe("applyDamageFromCard (bead t2ei double-apply)", () => {
 				fakeButton({ target: "Actor.victim", wounds: "5" }),
 			);
 			expect(victim.updates).toEqual([]);
-			expect(warns).toContain("ROLL.NOT_OWNER");
+			expect(warns).toContain("PERMISSION.NOT_APPLY_OWNER");
 		});
 	});
 });

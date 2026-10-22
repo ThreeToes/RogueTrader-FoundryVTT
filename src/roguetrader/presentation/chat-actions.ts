@@ -108,9 +108,11 @@ async function applyToTarget(
 	// Only the defender's owner (or a GM, folded into isOwner by the port) may
 	// apply the wounds — the SAME Permissions port the roll pipeline gates on
 	// (bead eolv), and the refusal is LOUD like the port path's, not a silent
-	// no-op that reads like a broken button.
+	// no-op that reads like a broken button. bead yqa4: this is an APPLY, not a
+	// roll, so it warns with the apply refusal copy — the roll path keeps
+	// ROLL.NOT_OWNER.
 	if (!getPorts().permissions.canModify(target)) {
-		getPorts().notify.warn("ROLL.NOT_OWNER", {
+		getPorts().notify.warn("PERMISSION.NOT_APPLY_OWNER", {
 			actor: (target as { name?: string }).name ?? (targetUuid || "?"),
 		});
 		return;
@@ -229,9 +231,10 @@ export async function applyConditionFromCard(
 	// Only the victim's owner (or a GM, folded into isOwner by the port) may
 	// apply a condition — the SAME Permissions port the apply-damage path
 	// gates on (bead ncc; unified onto the port by bead eolv), and the refusal
-	// is LOUD like the roll pipeline's, not a silent no-op.
+	// is LOUD like the roll pipeline's, not a silent no-op. bead yqa4: this is
+	// an APPLY, not a roll, so it warns with the apply refusal copy.
 	if (!getPorts().permissions.canModify(target)) {
-		getPorts().notify.warn("ROLL.NOT_OWNER", {
+		getPorts().notify.warn("PERMISSION.NOT_APPLY_OWNER", {
 			actor: (target as { name?: string }).name ?? targetUuid,
 		});
 		return;
@@ -319,8 +322,17 @@ export async function spendOrdnanceFromCard(
 	if (!item) return;
 	// Spend permission = the fired item's owner or a GM — the same fails-
 	// closed qiuo gate the auto-consume funnel uses (bead 9b95 F5), and the
-	// same posture the apply-damage ownership gate keeps.
-	if (!getPorts().permissions.canRoll(item)) return;
+	// same posture the apply-damage ownership gate keeps. bead yqa4: a spend
+	// is a WRITE (quantity decrement), so it asks the WRITE predicate
+	// canModify — the ROLL predicate only made the split look accidental.
+	// The refusal stays LOUD like the other card refusals: the chip was
+	// printed with an outcome on it, so a no-op must be explained.
+	if (!getPorts().permissions.canModify(item)) {
+		getPorts().notify.warn("PERMISSION.NOT_APPLY_OWNER", {
+			actor: item.name ?? uuid,
+		});
+		return;
+	}
 	// Disable BEFORE the helper: a second click while the write is in flight
 	// must not double-spend.
 	button.disabled = true;

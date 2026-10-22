@@ -305,6 +305,7 @@
 	"ROLL.LAUNCHER_UNLOADED": "{weapon} is not loaded - load ordnance before firing.",
 	"ROLL.AMMO_ROF_UNRESOLVED": "Could not resolve the shots spent for {weapon} from its rate of fire - the ammunition was NOT auto-consumed.",
 	"ROLL.NOT_OWNER": "You do not own {actor} - you cannot roll for it.",
+	"PERMISSION.NOT_APPLY_OWNER": "You do not own {actor} - only its owner or the GM can apply this.",
 	"ROGUE_TRADER.GEAR.SHEET": "Rogue Trader Gear",
 	"ROGUE_TRADER.WEAPON.SHEET": "Rogue Trader Weapon",
 	"ROGUE_TRADER.ARMOUR.SHEET": "Rogue Trader Armour",

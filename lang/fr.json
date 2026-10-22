@@ -271,6 +271,7 @@
 	"ROLL.LAUNCHER_UNLOADED": "{weapon} n'est pas chargé - chargez une munition avant de tirer.",
 	"ROLL.AMMO_ROF_UNRESOLVED": "Impossible de déterminer les tirs effectués par {weapon} d'après sa cadence de tir - la munition n'a PAS été consommée automatiquement.",
 	"ROLL.NOT_OWNER": "Vous ne possédez pas {actor} - vous ne pouvez pas lancer de jet pour lui.",
+	"PERMISSION.NOT_APPLY_OWNER": "Vous ne possédez pas {actor} - seul son propriétaire ou le MJ peut l'appliquer.",
 	"HEADER.DESCRIPTION": "Description",
 	"INITIATIVE": "Initiative",
 	"INSANITY.MENTAL_DISORDER": "Troubles mentaux",

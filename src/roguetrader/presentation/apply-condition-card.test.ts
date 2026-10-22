@@ -404,10 +404,11 @@ describe("applyConditionFromCard dispatch (bead ronn)", () => {
 		);
 		expect(created).toEqual([]);
 		// bead eolv: the ownership refusal used to be silent, an inconsistency
-		// against the roll pipeline's loud ROLL.NOT_OWNER warn; now the card
-		// path warns too, and through the SAME port (double below).
+		// against the roll pipeline's loud warn; now the card path warns too,
+		// and through the SAME port (double below). bead yqa4: an APPLY warns
+		// with the apply refusal copy, not the roll one.
 		expect(warns).toEqual([
-			{ key: "ROLL.NOT_OWNER", vars: { "actor": "Actor.victim" } },
+			{ key: "PERMISSION.NOT_APPLY_OWNER", vars: { "actor": "Actor.victim" } },
 		]);
 	});
 
@@ -429,6 +430,6 @@ describe("applyConditionFromCard dispatch (bead ronn)", () => {
 			fakeButton({ condition: "stunned", target: "Actor.victim" }),
 		);
 		expect(created).toEqual([]); // the double's refusal controls the button
-		expect(warns.map((w) => w.key)).toContain("ROLL.NOT_OWNER");
+		expect(warns.map((w) => w.key)).toContain("PERMISSION.NOT_APPLY_OWNER");
 	});
 });

@@ -26,12 +26,12 @@
  * the shape gates; performRoll applies the ownership gate.
  */
 
+import { getPorts } from "../infrastructure/foundry/ports";
 import { rollInitiativeAction } from "../rules/adapter";
 import { type ContextMenuEntryOption } from "./context-menu-entry";
 
 type TokenMenuDocument = {
 	actor?: {
-		isOwner?: boolean;
 		system?: Record<string, unknown> | null;
 	} | null;
 };
@@ -55,7 +55,13 @@ function resolveToken(element?: HTMLElement): TokenMenuDocument | undefined {
 /** Can the current user roll THIS token's initiative? */
 function canRollToken(element?: HTMLElement): boolean {
 	const token = resolveToken(element);
-	if (!token?.actor?.isOwner) return false;
+	if (!token?.actor) return false;
+	// Ownership through the Permissions port (bead yqa4): ONE ownership
+	// answer per entry point. This gates a ROLL (the menu entry only offers
+	// the initiative roll and performRoll gates the roll itself), so the
+	// honest verb is canRoll — behaviour unchanged: the port folds GM into
+	// isOwner exactly like the inline check it replaces.
+	if (!getPorts().permissions.canRoll(token.actor)) return false;
 	// Mirror the initiative handler's shape gates (presentation/rolls/
 	// initiative.ts; the roll routes through performRoll's ownership gate,
 	// bead 77r1):

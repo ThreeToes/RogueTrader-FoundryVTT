@@ -598,7 +598,13 @@ describe("initiative wiring guards (bead dt8t)", () => {
 	// vehicle/starship token must not see a dead entry whose click silently
 	// no-ops. Source-scan guard: the visible() gate mirrors the adapter's gate.
 	test("the token menu gate mirrors the adapter's initiativeBonus shape gate", () => {
-		expect(menusSource).toContain("if (!token?.actor?.isOwner) return false;");
+		// bead yqa4: the ownership half of the gate moved INTO the Permissions
+		// port (canRoll, GM folded in) — one ownership answer per entry point —
+		// so the source-scan now pins the port call instead of a hand-rolled
+		// isOwner read.
+		expect(menusSource).toContain(
+			"getPorts().permissions.canRoll(token.actor)",
+		);
 		expect(menusSource).toContain('"initiativeBonus" in system');
 	});
 

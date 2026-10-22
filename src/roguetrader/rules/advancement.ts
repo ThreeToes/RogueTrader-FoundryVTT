@@ -31,12 +31,16 @@ import {
 	rtCore,
 	type SystemProfile,
 } from "../../ffg/domain/system-profile";
+import type { RtAdvanceLadder } from "../../rules-engine/profile-vocabulary";
 
 /**
  * xp considered already spent at character creation (Core Rulebook p13).
- * Profile data (bead yszf) — DH2 starts at 1,000 xp, OW at 600, etc.
+ * Profile data (bead yszf) — DH2 starts at 1,000 xp, OW at 600, etc. Derived
+ * from the profile's creation-xp economics (bead cmio.2's shared struct):
+ * `spentAtCreation` is the ledger's seed value.
  */
-export const PRE_SPENT_BASELINE: number = rtCore.preSpentBaseline;
+export const PRE_SPENT_BASELINE: number =
+	rtCore.creationXpEconomics.spentAtCreation;
 
 export type AdvanceType =
 	| "skill"
@@ -90,9 +94,17 @@ export interface CharacteristicSchemeLike {
 	expert: number;
 }
 
-export type SchemeTier = "simple" | "intermediate" | "trained" | "expert";
+export type SchemeTier = RtAdvanceLadder["tiers"][number];
 
-export const SCHEME_TIERS: SchemeTier[] = [
+/**
+ * RT's advance ladder, positionally indexed (SCHEME_TIERS[purchased]). Typed
+ * as the kernel's `rt` member's tier tuple (bead cmio.2) — DH2e's ladder is a
+ * DIFFERENT vocabulary (five tiers, exported once from the DH2 profile
+ * module), tagged `system: "dh2e"` there so the two can never be read
+ * positionally across systems; the guard pins live in
+ * `system-profile-dark-heresy.test.ts`.
+ */
+export const SCHEME_TIERS: RtAdvanceLadder["tiers"] = [
 	"simple",
 	"intermediate",
 	"trained",
@@ -109,7 +121,7 @@ export function totalSpent(
 	profile: SystemProfile = DEFAULT_SYSTEM_PROFILE,
 ): number {
 	return (
-		profile.preSpentBaseline +
+		profile.creationXpEconomics.spentAtCreation +
 		ledger.reduce((sum, entry) => {
 			const cost = Number(entry.cost);
 			return sum + (Number.isFinite(cost) ? cost : 0);
@@ -305,11 +317,17 @@ export function eliteLedgerEntry(
 	profile: SystemProfile = DEFAULT_SYSTEM_PROFILE,
 ): AdvanceLedgerEntry {
 	// Bead wxut.2: the base cost is profile DATA. An explicit argument always
-	// wins (a caller naming its own cost); otherwise the profile's value, with
-	// the book constant as the core fallback.
-	const baseCost = Number.isFinite(profile.eliteAdvanceBaseCost)
-		? profile.eliteAdvanceBaseCost
-		: ELITE_ADVANCE_BASE_COST;
+	// wins (a caller naming its own cost); otherwise the profile's flat-base
+	// member of the kernel's EliteAdvanceCost union (bead cmio.2), with the
+	// book constant as the core fallback. A per-advance profile (DH2e) has NO
+	// number to read — the union's other member cannot express one — so the
+	// old `Number.isFinite` guard over a same-named field with the wrong type
+	// is replaced by the narrowing.
+	const elite = profile.eliteAdvanceCost;
+	const baseCost =
+		elite.model === "flat-base" && Number.isFinite(elite.baseCost)
+			? elite.baseCost
+			: ELITE_ADVANCE_BASE_COST;
 	return {
 		type,
 		key: "",

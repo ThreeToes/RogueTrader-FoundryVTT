@@ -612,7 +612,11 @@ describe("talent contributor", () => {
 		});
 
 		test("non-contributing item types are ignored even when carried", () => {
-			expect(collect([item("madness", "carried")])).toHaveLength(0);
+			// Both are DECLARED types with no role in the liveness tables (bead
+			// cmio.5)'s registry, so they stay a quiet zero contribution; a truly
+			// foreign type is refused BY NAME — see
+			// ffg/domain/model/taxonomy-registry.test.ts.
+			expect(collect([item("navigatorpower", "carried")])).toHaveLength(0);
 			expect(collect([item("skill", "carried")])).toHaveLength(0);
 		});
 

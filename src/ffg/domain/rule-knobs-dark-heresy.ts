@@ -46,8 +46,10 @@
  *     unknown here — the inverted sign must never be readable through the wrong
  *     field.
  *   - RT's elite-advance BASE cost: DH2e's elite advances each carry their own
- *     Experience Cost (printed pp88-91), which `dh2Core.eliteAdvanceBaseCost`
- *     records as "per-advance". There is no number to tune.
+ *     Experience Cost (printed pp88-91), which `dh2Core.eliteAdvanceCost`
+ *     records as the kernel union's `per-advance` member (bead cmio.2 — the
+ *     old shared `eliteAdvanceBaseCost` name is gone). There is no number to
+ *     tune.
  *   - A single-shot fire mode: DH2e has no such ACTION — a single shot IS the
  *     Standard Attack (printed p223).
  *   - Wounds and fate per home world: the flat 7-9 and the fate threshold are
@@ -248,21 +250,13 @@ const KNOBS: RuleKnob[] = [
 		coreValue: dh2Core.psychicPush.caps.unbound,
 	},
 	// -- skills -------------------------------------------------------------
-	{
-		// Printed p80: the Known rank removes "the -20 penalty for untrained
-		// skills". DH2 models a FLAT penalty, not RT's half-characteristic
-		// model, so this is DH2's own key (RT's is
-		// `skills.untrainedSkill.penalty` under a select-model knob).
-		key: "skills.untrainedPenalty",
-		path: ["untrainedPenalty"],
-		labelKey: "RULES.SKILLS_UNTRAINED_PENALTY",
-		hintKey: "RULES.SKILLS_UNTRAINED_PENALTY_HINT",
-		group: "skills",
-		control: "number",
-		hazard: "auto-recomputed",
-		coreValue: dh2Core.untrainedPenalty,
-	},
-	// -- creation -----------------------------------------------------------
+	// DELIBERATELY EMPTY: DH2e's flat untrained penalty is the kernel
+	// UntrainedSkill union's flat-penalty MEMBER (bead cmio.2 collapsed
+	// `untrainedPenalty` onto `dh2Core.untrainedSkill`), and RT's
+	// `skills.untrainedSkill.model`/`.penalty` knobs are unknown here (the old
+	// `skills.untrainedPenalty` knob was deleted with the collapse — a stored
+	// DH2 delta carrying that key is now refused BY NAME).
+	// -- creation ----------------------------------------------------------
 	{
 		// Printed p31: "the player rolls 2d10, adds the results together, and
 		// then adds 20" — the DICE are the first half of that printed rule.
@@ -301,15 +295,17 @@ const KNOBS: RuleKnob[] = [
 	},
 	{
 		// Printed p78: 1,000 xp to SPEND at character creation, with nothing
-		// pre-spent — the inverse of RT's 4,500 already spent.
+		// pre-spent — the inverse of RT's 4,500 already spent. The key stays
+		// (stored DH2 deltas); the value lives on the shared creation-xp
+		// economics struct (bead cmio.2).
 		key: "creation.xpBudget",
-		path: ["creationXp"],
+		path: ["creationXpEconomics", "granted"],
 		labelKey: "RULES.CREATION_XP_BUDGET",
 		hintKey: "RULES.CREATION_XP_BUDGET_HINT",
 		group: "creation",
 		control: "number",
 		hazard: "creation-only",
-		coreValue: dh2Core.creationXp,
+		coreValue: dh2Core.creationXpEconomics.granted,
 	},
 ];
 

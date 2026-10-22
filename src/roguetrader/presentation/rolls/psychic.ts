@@ -97,14 +97,20 @@ export const psychicHandler: RollHandler<"psychic"> = {
 		// automatic phenomena). Push cap: sanctioned +3, renegades/sorcerers
 		// +4 (book p157), overridable by the effective profile (bead wxut.2:
 		// resolvePushCap and psychic.ts#pushCap's literal copy are gone — the
-		// profile is the single representation).
+		// profile is the single representation). Bead cmio.2: the caps live on
+		// the kernel union's "levels" member — the profile field is RT's own
+		// member of that union, and DH2e's rating-over-base member is not
+		// readable through this type (a compile error, never a split read).
 		const profile = effectiveProfile();
+		const push = profile.psychicPush;
 		const rawCap = casting.sanctioned
-			? profile.pushCap.sanctioned
-			: profile.pushCap.other;
+			? push.caps.sanctioned
+			: push.caps.other;
 		// Push must grant at least +1, and a non-finite house-rule value falls
 		// back to the core cap rather than poisoning the prompt.
-		const coreCap = rtCore.pushCap[casting.sanctioned ? "sanctioned" : "other"];
+		const coreCap = casting.sanctioned
+			? rtCore.psychicPush.caps.sanctioned
+			: rtCore.psychicPush.caps.other;
 		const cap = Number.isFinite(rawCap)
 			? Math.max(1, Math.floor(rawCap))
 			: coreCap;

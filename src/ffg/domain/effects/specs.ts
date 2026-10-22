@@ -15,6 +15,7 @@
 import type { Modifier } from "../../../rules-engine/modifier";
 import type { EffectData } from "../model/effect";
 import type { ItemView } from "../model/actor";
+import { itemTaxonomyRegistry } from "../model/taxonomy-registry";
 import { effectKinds } from "./registry";
 import type { EffectContext } from "./types";
 
@@ -22,23 +23,17 @@ import type { EffectContext } from "./types";
 // Shared helpers (id shape, source label, key grammar, guards)
 // ---------------------------------------------------------------------------
 
-/** Item type -> the breakdown source label. */
-const SOURCE_LABELS: Readonly<Record<string, string>> = {
-	talent: "SOURCE.FROM_TALENTS",
-	trait: "SOURCE.FROM_TRAITS",
-	mutation: "SOURCE.FROM_MUTATIONS",
-	madnessentry: "SOURCE.FROM_AFFLICTIONS",
-	armour: "SOURCE.FROM_ARMOUR",
-	gear: "SOURCE.FROM_GEAR",
-	"melee-weapon": "SOURCE.FROM_WEAPONS",
-	"ranged-weapon": "SOURCE.FROM_WEAPONS",
-};
-
 /** The Modifier source for an item (talents are their own source type). */
 function sourceFor(item: ItemView): Modifier["source"] {
+	// The per-type label is the ACTIVE system's registry data (bead cmio.5);
+	// a DECLARED type without one falls back to the gear label (a psychic
+	// power's contributions have always rendered there). Undeclared types
+	// never reach this lookup: every consumer gates on `effectsAreLive`, which
+	// refuses them BY NAME first.
 	return {
 		type: item.type === "talent" ? "talent" : "item",
-		label: SOURCE_LABELS[item.type] ?? "SOURCE.FROM_GEAR",
+		label:
+			itemTaxonomyRegistry().sourceLabels[item.type] ?? "SOURCE.FROM_GEAR",
 	};
 }
 

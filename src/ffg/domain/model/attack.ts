@@ -18,6 +18,7 @@
 
 import { normaliseDamageType } from "./damage";
 import { isWeaponType } from "./taxonomy";
+import { itemTaxonomyRegistry, requireDeclaredItemType } from "./taxonomy-registry";
 
 /** The subset of a weapon's system data the damage pipeline reads. */
 export interface DamageSource {
@@ -422,11 +423,16 @@ export function launcherProfile(
  *
  * A mutation resolves ONLY from an authored `attack` block — a mutation
  * without one is not an attack, however combat-flavoured its prose.
- * Anything else returns null.
+ * Anything else DECLARED returns null, and an UNDECLARED (foreign) item type
+ * throws a RangeError naming it (bead cmio.5): which types carry an intrinsic
+ * attack is the ACTIVE system's registry data (model/taxonomy-registry.ts),
+ * so a sibling system's types must never quietly resolve as "no attack".
  *
  * Explicit contract (bead 6l68, tested in attack.test.ts): a null/undefined
  * item yields null — the tolerance exists so callers can gate the document
- * lookup separately and MUST NOT lean on it for their own null checks.
+ * lookup separately and MUST NOT lean on it for their own null checks. A
+ * blank type yields null under the same tolerance (an item without a type
+ * has no attack); a NON-blank undeclared type is a loud refusal.
  */
 export function attackProfileOf(
 	item: AttackSource | null | undefined,
@@ -435,6 +441,10 @@ export function attackProfileOf(
 ): AttackProfile | null {
 	if (!item) return null;
 	const type = (item.type ?? "") as string;
+	// Bead cmio.5: a foreign item type is refused BY NAME — never silently
+	// resolved as "carries no attack". Declared types proceed; the weapon and
+	// intrinsic-attack gates below are the ACTIVE system's registry data.
+	if (type) requireDeclaredItemType(type);
 	if (isWeaponType(type)) {
 		const melee = type === "melee-weapon";
 		const system = (item.system ?? {}) as DamageSource["system"];
@@ -493,7 +503,11 @@ export function attackProfileOf(
 		}
 		return foldWeaponMods(base, attachedMods);
 	}
-	if (type !== "mutation") return null;
+	// The non-weapon intrinsic attacks resolve from an authored `attack` block.
+	// WHICH types those are is the ACTIVE system's registry data (bead cmio.5):
+	// for RT this is "mutation" — Corrosive Bile, Core Rulebook p369 — exactly
+	// the literal this used to be, moved, not re-designed.
+	if (!itemTaxonomyRegistry().intrinsicAttackTypes.includes(type)) return null;
 	const attack = (item.system as { attack?: MutationAttackLike } | undefined)
 		?.attack;
 	if (!attack?.damage) return null;

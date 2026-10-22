@@ -230,10 +230,16 @@ describe("mergeProfile", () => {
 
 	test("a leaf override leaves the sibling leaf at core (object knobs)", () => {
 		const merged = mergeProfile(rtCore, { "combat.fireModeBonus.burst": 0 });
-		expect(merged.fireModeBonus).toEqual({ burst: 0, full: 20 });
+		// Bead cmio.2: the value lives on the shared FireModes shape (the key is
+		// unchanged, the path moved) — the modifier leaf flips, the sibling
+		// burst mode stays core.
+		expect(merged.fireModes.semiAutoBurst.modifier).toBe(0);
+		expect(merged.fireModes.fullAutoBurst.modifier).toBe(
+			rtCore.fireModes.fullAutoBurst.modifier,
+		);
 		// ...and the other object knob is untouched.
-		expect(merged.pushCap).toEqual(rtCore.pushCap);
-		expect(merged.fireModeBonus).not.toBe(rtCore.fireModeBonus);
+		expect(merged.psychicPush).toEqual(rtCore.psychicPush);
+		expect(merged.fireModes).not.toBe(rtCore.fireModes);
 	});
 
 	test("an object-knob member keeps its sibling member (righteousFury)", () => {
@@ -267,8 +273,7 @@ describe("mergeProfile", () => {
 		).toEqual({ model: "flat-penalty", penalty: -10 });
 	});
 
-	test("tables.hitLocations is replaced WHOLE, never merged band-wise", () => {
-		const merged = mergeProfile(rtCore, {
+	test("tables.hitLocations is replaced WHOLE, never merged band-wise", () => {		const merged = mergeProfile(rtCore, {
 			"tables.hitLocations": { "01-05": "head" },
 		});
 		expect(merged.hitLocations).toEqual({ "01-05": "head" });
@@ -283,8 +288,8 @@ describe("mergeProfile", () => {
 			"tables.hitLocations": { "01-05": "head" },
 			"skills.untrainedSkill.model": "flat-penalty",
 		});
-		expect(rtCore.fireModeBonus).toEqual({ burst: 10, full: 20 });
-		expect(rtCore.pushCap).toEqual({ sanctioned: 3, other: 4 });
+		expect(rtCore.fireModes.semiAutoBurst.modifier).toBe(10);
+		expect(rtCore.psychicPush.caps.sanctioned).toBe(3);
 		expect(Object.keys(rtCore.hitLocations)).toEqual([
 			"01-10",
 			"11-20",
@@ -434,15 +439,16 @@ describe("validateProfile", () => {
 // Whose registry? (bead w9sa.2)
 // ---------------------------------------------------------------------------
 
-/**
- * A FAKE sibling system, in the shape bead w9sa.3 will author DH2's for real.
- *
- * Its knobs are deliberately DIFFERENT from RT's — inverted fire modes (a
- * penalty), no push caps, a flat untrained penalty — so a test that still
- * resolves RT's knobs cannot pass by accident. The paths point at fields the
- * RT profile really has, because the fake's purpose is the REGISTRY, not a
- * second profile type (bead w9sa.3 owns that).
- */
+	/**
+	 * A FAKE sibling system, in the shape bead w9sa.3 will author DH2's for real.
+	 *
+	 * Its knobs are deliberately DIFFERENT from RT's — inverted fire modes (a
+	 * penalty), no push caps, a flat untrained penalty — so a test that still
+	 * resolves RT's knobs cannot pass by accident. The paths point at fields
+	 * the RT profile really has (bead cmio.2: the shared FireModes shape),
+	 * because the fake's purpose is the REGISTRY, not a second profile type
+	 * (bead w9sa.3 owns that).
+	 */
 const SIBLING_SYSTEM_ID = "dark-heresy-2e";
 const SIBLING_KNOBS: readonly RuleKnob[] = [
 	{
@@ -457,13 +463,13 @@ const SIBLING_KNOBS: readonly RuleKnob[] = [
 	},
 	{
 		key: "combat.standardMode",
-		path: ["fireModeBonus", "burst"],
+		path: ["fireModes", "standard", "modifier"],
 		labelKey: labelKeyFor("combat.standardMode"),
 		hintKey: hintKeyFor("combat.standardMode"),
 		group: "combat",
 		control: "number",
 		hazard: "auto-recomputed",
-		coreValue: rtCore.fireModeBonus.burst,
+		coreValue: rtCore.fireModes.standard.modifier,
 	},
 	{
 		key: "skills.untrainedPenalty",
@@ -519,7 +525,7 @@ describe("the active registry is RT's until something registers another", () => 
 		).toThrow(/combat.standardMode/);
 		expect(
 			mergeProfile(rtCore, { "combat.standardMode": -10 }, SIBLING_KNOBS)
-				.fireModeBonus.burst,
+				.fireModes.standard.modifier,
 		).toBe(-10);
 	});
 

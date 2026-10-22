@@ -98,8 +98,10 @@ describe("ConfigPort.profile's widened contract (bead w9sa.8)", () => {
 		// consumer that needed them is RT's own homebrew layer
 		// (src/roguetrader/rules/homebrew.ts#effectiveProfile), which now states
 		// RT's precondition instead of reading them off the shared seam.
-		expect(rtCore.characteristicBase).toBe(25);
-		expect(rtCore.fireModeBonus).toEqual({ burst: 10, full: 20 });
-		expect(rtCore.pushCap).toEqual({ sanctioned: 3, other: 4 });
+		// Bead cmio.2: the constants moved onto the kernel vocabulary members.
+		expect(rtCore.generation.base).toBe(25);
+		expect(rtCore.fireModes.semiAutoBurst.modifier).toBe(10);
+		expect(rtCore.fireModes.fullAutoBurst.modifier).toBe(20);
+		expect(rtCore.psychicPush.caps).toEqual({ sanctioned: 3, other: 4 });
 	});
 });

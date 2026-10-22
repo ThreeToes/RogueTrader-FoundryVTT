@@ -7,6 +7,11 @@
  * so they live here and the schema module re-exports them for compatibility.
  */
 
+import {
+	itemTaxonomyRegistry,
+	requireDeclaredItemType,
+} from "./taxonomy-registry";
+
 export interface EffectData {
 	kind?: string;
 	testKey?: string | null;
@@ -19,37 +24,27 @@ export interface EffectData {
 }
 
 /**
- * Item types whose effects are always live (known, not carried).
- * Talents and psychic powers are "known"; rulebook traits, mutations and
- * madness entries are innate conditions the actor always has.
- */
-const INNATE_EFFECT_TYPES: ReadonlySet<string> = new Set([
-	"talent",
-	"psychicpower",
-	"trait",
-	"mutation",
-	"madnessentry",
-]);
-
-/** Physical item types -> the equip state that makes their effects live. */
-const EQUIP_STATES_FOR_EFFECTS: Readonly<Record<string, readonly string[]>> = {
-	armour: ["worn"],
-	gear: ["carried"],
-	"melee-weapon": ["carried"],
-	"ranged-weapon": ["carried"],
-};
-
-/**
  * Whether an owned item of `itemType` in `equipState` contributes its effects.
- * Innate types are always live; physical types contribute when equipped;
- * unknown types never contribute (opt-in via the table above).
+ * Innate types are always live; physical types contribute when equipped.
+ *
+ * Both liveness tables are the ACTIVE system's registry data
+ * (model/taxonomy-registry.ts, bead cmio.5), not hard-coded RT sets, so a
+ * sibling system supplies its own. A DECLARED type that appears on neither
+ * table contributes nothing — the system author decided that (a skill item's
+ * effects are not funnel contributions). An UNDECLARED (foreign) type throws
+ * a RangeError NAMING the type: the audit's silent-dead failure mode is now
+ * a loud refusal. Blank types stay tolerated — an item without a type has
+ * no live effects, exactly as before.
  */
 export function effectsAreLive(
 	itemType: string | undefined,
 	equipState: string | undefined,
 ): boolean {
-	if (itemType && INNATE_EFFECT_TYPES.has(itemType)) return true;
-	const states = itemType ? EQUIP_STATES_FOR_EFFECTS[itemType] : undefined;
+	if (!itemType) return false;
+	const taxonomy = itemTaxonomyRegistry();
+	requireDeclaredItemType(itemType, taxonomy);
+	if (taxonomy.innateEffectTypes.includes(itemType)) return true;
+	const states = taxonomy.equipStatesForEffects[itemType];
 	return states !== undefined && states.includes(equipState ?? "");
 }
 

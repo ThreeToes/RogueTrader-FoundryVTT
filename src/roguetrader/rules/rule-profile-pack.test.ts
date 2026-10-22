@@ -288,8 +288,10 @@ describe("the snapshot is display-only metadata", () => {
 		// ...and the DELTA is what the rules resolve from.
 		expect(profile.delta).toEqual({ "combat.fireModeBonus.burst": 5 });
 		const effective = packProfileEffective(profile);
-		expect(effective.fireModeBonus.burst).toBe(5);
-		expect(effective.fireModeBonus.full).toBe(rtCore.fireModeBonus.full);
+		expect(effective.fireModes.semiAutoBurst.modifier).toBe(5);
+		expect(effective.fireModes.fullAutoBurst.modifier).toBe(
+			rtCore.fireModes.fullAutoBurst.modifier,
+		);
 		// And it is nowhere else: the parsed delta never grew a snapshot key.
 		expect(Object.keys(profile.delta)).toEqual(["combat.fireModeBonus.burst"]);
 		expect(JSON.stringify(profile.delta)).not.toContain("999");
@@ -466,7 +468,7 @@ describe("refusal sentences carry their parameters", () => {
 const SIBLING_KNOBS: readonly RuleKnob[] = [
 	{
 		key: "combat.standardMode",
-		path: ["fireModeBonus", "burst"],
+		path: ["fireModes", "standard", "modifier"],
 		labelKey: "RULES.COMBAT_STANDARD_MODE",
 		hintKey: "RULES.COMBAT_STANDARD_MODE_HINT",
 		group: "combat",
@@ -589,8 +591,8 @@ describe("a pack's kind belongs to the system that authored it", () => {
 		// The sibling's own knob key merges without the caller naming its
 		// registry — the ACTIVE one is the one in force.
 		expect(
-			packProfileEffective({ delta: { "combat.standardMode": -10 } }).fireModeBonus
-				.burst,
+			packProfileEffective({ delta: { "combat.standardMode": -10 } })
+				.fireModes.standard.modifier,
 		).toBe(-10);
 		// ...and an RT key is thrown out by NAME, never silently applied.
 		expect(() =>

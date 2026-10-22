@@ -157,7 +157,9 @@ describe("collectTalentDamageEffects", () => {
 		const actor = {
 			items: [
 				{
-					type: "weapon",
+					// Bead cmio.5: a DECLARED non-talent type (the "weapon" this test
+					// once named was foreign and is now refused by name).
+					type: "ranged-weapon",
 					system: { effects: [{ kind: "damage-flat", value: 99 }] },
 				},
 				{

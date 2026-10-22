@@ -236,9 +236,18 @@ describe("the profile a DH2 world reads through the shared port", () => {
 		expect("characteristicBase" in profile).toBe(false);
 		expect("pointBuyBudget" in profile).toBe(false);
 		expect("pushCap" in profile).toBe(false);
-		expect("untrainedSkill" in profile).toBe(false);
-		// The one field that SHARES RT's name carries DH2's own value.
-		expect(profile.eliteAdvanceBaseCost).toBe(dh2Core.eliteAdvanceBaseCost);
+		// cmio.2 (approved cmio.1 report): DH2's untrainedPenalty COLLAPSES onto
+		// the kernel's untrainedSkill union — the absence pin above the collapse
+		// era is now the opposite pin.
+		expect(profile.untrainedSkill).toEqual({
+			model: "flat-penalty",
+			penalty: -20,
+		});
+		// The one concept that SHARES RT's field shape is now the kernel union
+		// (cmio.2): DH2 keeps the per-advance semantics.
+		expect(profile.eliteAdvanceCost).toEqual({
+			model: "per-advance",
+		});
 	});
 
 	test("DH2's branding is composed, not copied from RT", () => {

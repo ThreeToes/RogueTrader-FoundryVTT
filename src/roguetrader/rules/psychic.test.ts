@@ -78,8 +78,10 @@ describe("psyker mechanics (bead sa6, Core Rulebook Table 6-1 book p157)", () =>
 	// (presentation/rolls/psychic.ts), so the literal copy is gone and the
 	// guard that replaced it pins the PROFILE as the single representation.
 	test("push caps come from the profile (Table 6-1, book p157)", () => {
-		expect(rtCore.pushCap.sanctioned).toBe(3);
-		expect(rtCore.pushCap.other).toBe(4);
+		// Bead cmio.2: the caps live on the kernel's levels-member PsychicPush.
+		expect(rtCore.psychicPush.model).toBe("levels");
+		expect(rtCore.psychicPush.caps.sanctioned).toBe(3);
+		expect(rtCore.psychicPush.caps.other).toBe(4);
 	});
 
 	test("phenomena roll modifier: +5 per push level, +10 per sustained power", () => {

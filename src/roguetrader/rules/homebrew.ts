@@ -345,10 +345,10 @@ export function activeProfileDelta(
  * away.
  */
 const RT_SYSTEM_PROFILE_FIELDS: readonly string[] = [
-	"fireModeBonus",
-	"pushCap",
+	"fireModes",
+	"psychicPush",
 	"untrainedSkill",
-	"eliteAdvanceBaseCost",
+	"eliteAdvanceCost",
 ];
 
 export function isRtSystemProfile(profile: unknown): profile is SystemProfile {
@@ -380,8 +380,8 @@ export function effectiveProfile(): SystemProfile {
 	// Bead w9sa.8: the config port widens to the kernel profile plus OPTIONAL
 	// system branding, so it no longer PROMISES RT's creation/advancement
 	// constants. This module is RT's OWN homebrew layer and the profile it
-	// returns is read for RT's fireModeBonus / pushCap / untrainedSkill /
-	// eliteAdvanceBaseCost constants by RT's rules and presentation layers, so
+	// returns is read for RT's fireModes / psychicPush / untrainedSkill /
+	// eliteAdvanceCost constants by RT's rules and presentation layers, so
 	// the RT system states its own precondition here instead of letting those
 	// reads resolve to undefined. A sibling system supplies its profile through
 	// the same seam and owns its own homebrew layer.
@@ -389,7 +389,7 @@ export function effectiveProfile(): SystemProfile {
 	// Bead w9sa.8 widens the seam to the kernel profile plus OPTIONAL system
 	// branding, so it no longer PROMISES RT's creation/advancement constants.
 	// This module is RT's OWN homebrew layer, and the profile it returns is read
-	// for RT's fireModeBonus / pushCap / untrainedSkill / eliteAdvanceBaseCost
+	// for RT's fireModes / psychicPush / untrainedSkill / eliteAdvanceCost
 	// constants by RT's rules and presentation layers. Casting there (the
 	// obvious shortcut) would let those read `undefined` and fail at a
 	// distance, so the precondition is checked HERE, loudly, naming exactly
@@ -501,11 +501,14 @@ export const attackContextContributor: TestContributor = (_view, context) => {
 	const profile = effectiveProfile();
 	const mods: Modifier[] = [];
 	if (context.fireMode === "burst") {
+		// Bead cmio.2: RT's unsigned burst bonus is the shared FireModes shape's
+		// signed semiAutoBurst modifier — the same number, +10 (Core Rulebook
+		// p237).
 		mods.push({
 			id: "attack:fire-mode:burst",
 			source: { type: "item", label: "ROLL.FIRE_MODE_BURST" },
 			label: ports.i18n.t("ROLL.FIRE_MODE_BURST"),
-			value: profile.fireModeBonus.burst,
+			value: profile.fireModes.semiAutoBurst.modifier,
 		});
 	}
 	if (context.fireMode === "full") {
@@ -513,7 +516,7 @@ export const attackContextContributor: TestContributor = (_view, context) => {
 			id: "attack:fire-mode:full",
 			source: { type: "item", label: "ROLL.FIRE_MODE_FULL" },
 			label: ports.i18n.t("ROLL.FIRE_MODE_FULL"),
-			value: profile.fireModeBonus.full,
+			value: profile.fireModes.fullAutoBurst.modifier,
 		});
 	}
 	return mods;

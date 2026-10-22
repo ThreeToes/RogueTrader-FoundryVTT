@@ -133,10 +133,18 @@ describe("effectiveProfile (bead wxut.2 seam)", () => {
 	test("a knob-keyed delta merges over the base profile", () => {
 		portsWithHomebrew('{"combat.fireModeBonus.burst":0}');
 		const effective = effectiveProfile();
-		expect(effective.fireModeBonus).toEqual({ burst: 0, full: 20 });
+		// Bead cmio.2: the knob's VALUE lives on the shared FireModes shape now
+		// (the settings key is unchanged, the profile path moved).
+		expect(effective.fireModes).toEqual({
+			...rtCore.fireModes,
+			semiAutoBurst: {
+				...rtCore.fireModes.semiAutoBurst,
+				modifier: 0,
+			},
+		});
 		// Siblings untouched, and the base profile is not mutated.
-		expect(effective.pushCap).toEqual(rtCore.pushCap);
-		expect(rtCore.fireModeBonus).toEqual({ burst: 10, full: 20 });
+		expect(effective.psychicPush).toEqual(rtCore.psychicPush);
+		expect(rtCore.fireModes.semiAutoBurst.modifier).toBe(10);
 	});
 
 	test("an UNKNOWN knob is reported and never applied", () => {
@@ -161,7 +169,7 @@ describe("effectiveProfile (bead wxut.2 seam)", () => {
 		// The bead-9if object branch, verbatim: an id and house values. Not a
 		// knob-keyed delta, so it activates nothing.
 		expect(effectiveProfile()).toBe(rtCore);
-		expect(effectiveProfile().fireModeBonus).toEqual({ burst: 10, full: 20 });
+		expect(effectiveProfile().fireModes).toEqual(rtCore.fireModes);
 		// Not even a half-formed one: an id with no knobs, no knobs with no id.
 		portsWithHomebrew({ id: "house" });
 		expect(effectiveProfile()).toBe(rtCore);
@@ -270,7 +278,10 @@ describe("activeProfileDelta — the provider's profile lookup (bead wxut.3)", (
 		// End to end: settings -> provider lookup -> validated merge.
 		const delta = activeProfileDelta(STORED_PROFILES, "berners");
 		portsWithHomebrew(delta);
-		expect(effectiveProfile().fireModeBonus).toEqual({ burst: 0, full: 20 });
+		expect(effectiveProfile().fireModes).toEqual({
+			...rtCore.fireModes,
+			semiAutoBurst: { ...rtCore.fireModes.semiAutoBurst, modifier: 0 },
+		});
 		// A delta that is not knob-keyed is rejected by validateProfile, so the
 		// lookup alone cannot put a house rule into force.
 		portsWithHomebrew(activeProfileDelta(STORED_PROFILES, "strict"));
@@ -297,8 +308,8 @@ describe("effectiveProfile memoisation (bead qa9k)", () => {
 		portsWithHomebrew('{"combat.fireModeBonus.burst":5}');
 		const second = effectiveProfile();
 		expect(second).not.toBe(first);
-		expect(first.fireModeBonus.burst).toBe(0);
-		expect(second.fireModeBonus.burst).toBe(5);
+		expect(first.fireModes.semiAutoBurst.modifier).toBe(0);
+		expect(second.fireModes.semiAutoBurst.modifier).toBe(5);
 	});
 
 	test("a swapped base profile recomputes too", () => {
@@ -310,9 +321,9 @@ describe("effectiveProfile memoisation (bead qa9k)", () => {
 		portsWithHomebrewBase(stored, sibling);
 		const second = effectiveProfile();
 		expect(second).not.toBe(first);
-		expect(second.fireModeBonus.burst).toBe(0);
+		expect(second.fireModes.semiAutoBurst.modifier).toBe(0);
 		// Neither the base nor the memoised result is mutated by the merge.
-		expect(sibling.fireModeBonus).toEqual({ burst: 10, full: 20 });
+		expect(sibling.fireModes).toEqual(rtCore.fireModes);
 		// The memo holds ONE entry, so swapping back recomputes an equal (but
 		// not identical) profile — correct either way, since the merge is pure.
 		portsWithHomebrewBase(stored, rtCore);
@@ -341,12 +352,17 @@ describe("effectiveProfile memoisation (bead qa9k)", () => {
 });
 
 describe("drift guards — the shipped core values", () => {
-	test("fire-mode bonuses stay the book's +10/+20 (Core Rulebook p237)", () => {
-		expect(rtCore.fireModeBonus).toEqual({ burst: 10, full: 20 });
+	test("fire-mode modifiers stay the book's +10/+20 under the shared shape (Core Rulebook p237)", () => {
+		expect(rtCore.fireModes.standard.modifier).toBe(0);
+		expect(rtCore.fireModes.semiAutoBurst.modifier).toBe(10);
+		expect(rtCore.fireModes.fullAutoBurst.modifier).toBe(20);
 	});
 
 	test("push caps stay Table 6-1's +3/+4 (Core Rulebook p157)", () => {
-		expect(rtCore.pushCap).toEqual({ sanctioned: 3, other: 4 });
+		expect(rtCore.psychicPush).toEqual({
+			model: "levels",
+			caps: { sanctioned: 3, other: 4 },
+		});
 	});
 
 	test("the ammo toggle ships OFF (epic ui4b, book-accurate)", () => {
@@ -355,7 +371,10 @@ describe("drift guards — the shipped core values", () => {
 
 	test("toxin penalty and the other lifted constants stay at book values", () => {
 		expect(rtCore.penaltyPerDamagePoint).toBe(5);
-		expect(rtCore.eliteAdvanceBaseCost).toBe(500);
+		expect(rtCore.eliteAdvanceCost).toEqual({
+			model: "flat-base",
+			baseCost: 500,
+		});
 		expect(rtCore.repairTestModifier).toBe(-20);
 		expect(rtCore.criticals?.maxSeverity).toBe(10);
 	});
@@ -370,10 +389,10 @@ describe("drift guards — the shipped core values", () => {
  * share nothing with RT's, so a seam that still resolves Rogue Trader's knobs
  * cannot pass by accident.
  */
-const SIBLING_KNOBS: readonly RuleKnob[] = [
+	const SIBLING_KNOBS: readonly RuleKnob[] = [
 	{
 		key: "combat.standardMode",
-		path: ["fireModeBonus", "burst"],
+		path: ["fireModes", "standard", "modifier"],
 		labelKey: "RULES.COMBAT_STANDARD_MODE",
 		hintKey: "RULES.COMBAT_STANDARD_MODE_HINT",
 		group: "combat",
@@ -401,7 +420,7 @@ describe("the seam validates and merges against the registry in force", () => {
 	test("a heap of RT house rules still works with nothing registered", () => {
 		resetEffectiveProfileCacheForTests();
 		portsWithHomebrew('{"combat.fireModeBonus.burst":0}');
-		expect(effectiveProfile().fireModeBonus.burst).toBe(0);
+		expect(effectiveProfile().fireModes.semiAutoBurst.modifier).toBe(0);
 	});
 
 	test("a sibling registry makes RT's keys UNKNOWN and its own mergeable", () => {
@@ -419,10 +438,13 @@ describe("the seam validates and merges against the registry in force", () => {
 			console.warn = original;
 		}
 		expect(warnings.join(" ")).toContain("combat.fireModeBonus.burst");
-		// The sibling's own knob key now carries a house rule.
+		// The sibling's own knob key now carries a house rule — it paths into
+		// the shared FireModes shape's standard mode (the sibling's OWN path
+		// data; the sibling fixture mirrors the kernel shape).
 		portsWithHomebrew('{"combat.standardMode":-10}');
-		expect(effectiveProfile().fireModeBonus.burst).toBe(-10);
-		expect(effectiveProfile().fireModeBonus.full).toBe(20);
+		expect(effectiveProfile().fireModes.standard.modifier).toBe(-10);
+		// Sibling leaves of the same container stay at RT's core.
+		expect(effectiveProfile().fireModes.fullAutoBurst.modifier).toBe(20);
 	});
 
 	test("a MODULE registration is validated against the registry in force", () => {
@@ -466,7 +488,7 @@ describe("the seam refuses a profile without RT's rule fields (bead w9sa.8)", ()
 		setPorts(stub);
 		try {
 			expect(() => effectiveProfile()).toThrow(
-				/missing: fireModeBonus, pushCap, untrainedSkill, eliteAdvanceBaseCost/,
+				/missing: fireModes, psychicPush, untrainedSkill, eliteAdvanceCost/,
 			);
 		} finally {
 			resetPorts();

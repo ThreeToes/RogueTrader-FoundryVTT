@@ -18,6 +18,7 @@
 import type { ConfigProfile } from "../ffg/application/ports";
 import { DH2_SYSTEM_ID } from "../ffg/domain/rule-knobs-dark-heresy";
 import type { SystemBranding } from "../ffg/domain/system-profile";
+import type { DarkHeresyProfile } from "../ffg/domain/system-profile-dark-heresy";
 import { dh2Core } from "../ffg/domain/system-profile-dark-heresy";
 import { templateRootFor } from "../ffg/domain/template-root";
 
@@ -54,35 +55,48 @@ export const DARK_HERESY_ROLL_CARD_TEMPLATE = `${templateRootFor(DH2_SYSTEM_ID)}
  */
 export const DARK_HERESY_ROLLTABLES_PACK: string | null = null;
 
-/** The two branding fields, as their own object so the spread stays readable. */
+/**
+ * The DH2 shape of the config port's contract, WITHOUT a cast.
+ *
+ * `ConfigProfile` promises the KERNEL rules profile plus the two optional
+ * branding fields (bead w9sa.8). The kernel's RULE surface — everything the
+ * pure resolvers read (`critOnDouble`, `autoFailRoll`, `autoPassRoll`,
+ * `primitiveArmourDouble`, `righteousFury`, `hitLocations`, ...) — is inherited
+ * from `DarkHeresyProfile` unchanged and now typed exactly as the kernel
+ * declares it (bead cmio.3 closed the four `| undefined` holes). The two
+ * remaining REDEFINED creation-time fields (`startingWounds`, `startingFate`)
+ * are DH2's own union models, which the kernel's shapes cannot express, so
+ * they are omitted from the kernel side and picked back from
+ * `DarkHeresyProfile` — the Omit documents exactly the residual blocker set
+ * instead of hiding it behind an `as`.
+ */
+type DarkHeresyConfigProfile = Omit<
+	ConfigProfile,
+	"startingWounds" | "startingFate"
+> &
+	Pick<DarkHeresyProfile, "startingWounds" | "startingFate">;
+
 const DARK_HERESY_BRANDING: SystemBranding = {
 	messageFlagNamespace: DARK_HERESY_MESSAGE_FLAG_NAMESPACE,
 	rollCardTemplate: DARK_HERESY_ROLL_CARD_TEMPLATE,
 };
 
 /**
- * The sibling's profile as the widened config port accepts it: `dh2Core`'s
- * kernel data plus DH2's branding, and NOT ONE of RT's creation/advancement
- * constants (`characteristicBase`, `pointBuyBudget`, `fireModeBonus`,
- * `pushCap`, `untrainedSkill`, `eliteAdvanceBaseCost`, ...) — which is exactly
- * the shape the old `profile(): SystemProfile` refused (audit finding A1).
+ * The sibling's profile: `dh2Core`'s kernel data plus DH2's branding, and NOT
+ * ONE of RT's creation/advancement constants (`characteristicBase`,
+ * `pointBuyBudget`, `fireModeBonus`, `pushCap`, `untrainedSkill`,
+ * `eliteAdvanceBaseCost`, ...) — which is exactly the shape the old
+ * `profile(): SystemProfile` refused (audit finding A1).
  *
- * THE ONE CAST, AND WHY IT IS HERE: `DarkHeresyProfile` deliberately
- * re-declares the fields the kernel types non-optionally as `T | undefined`
- * (bead w9sa.1 pinning what the book verifies — `critOnDouble`,
- * `autoFailRoll`, `autoPassRoll`, `primitiveArmourDouble`) and re-types
- * `startingWounds`/`startingFate` under DH2's own union models. The widened
- * port promises the KERNEL shape (`RuleProfile & Partial<SystemBranding>`), so
- * the DH2 object is one `as` away from the port it travels through. The cast
- * covers ONLY those annotations: every VALUE is `dh2Core`'s own, spread
- * unmodified, and `src/dark_heresy_2e/bootstrap/index.test.ts` reads each
- * kernel field back off `dh2Core` so the cast cannot hide a restated number.
- *
- * Closing the hole properly is a SHARED-LAYER decision the parent owns: either
- * the port accepts the sibling's `| undefined` unions, or bead w9sa.1's pinning
- * moves to the consumer side. Neither is this bead's call.
+ * No cast: every kernel RULE field is declared at the kernel's own type on
+ * `DarkHeresyProfile`, so the spread satisfies `DarkHeresyConfigProfile`
+ * structurally. The two creation-time fields travel as DH2's own models; the
+ * kernel resolvers never read them (wounds/fate are creation-time data), which
+ * the kernel-driven DH2 test (`src/dark_heresy_2e/kernel.test.ts`) proves by
+ * running `resolveTest`/`locationForHit`/`resolveDamage` against `dh2Core`
+ * directly.
  */
-export const DARK_HERESY_PROFILE: ConfigProfile = {
+export const DARK_HERESY_PROFILE: DarkHeresyConfigProfile = {
 	...dh2Core,
 	...DARK_HERESY_BRANDING,
-} as ConfigProfile;
+};

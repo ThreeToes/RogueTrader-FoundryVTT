@@ -13,7 +13,16 @@
 import { describe, expect, test } from "bun:test";
 
 import type { RuleProfile } from "../../rules-engine/profile";
-
+import type {
+	CharacteristicGeneration,
+	EliteAdvanceCost,
+	PsychicPush,
+	RtAdvanceLadder,
+} from "../../rules-engine/profile-vocabulary";
+import {
+	SCHEME_TIERS,
+	type SchemeTier,
+} from "../../roguetrader/rules/advancement";
 import {
 	DH2_ADVANCE_COST_COLUMNS,
 	DH2_ADVANCE_TIERS,
@@ -76,10 +85,10 @@ describe("dh2Core carries the verified Core Rulebook values", () => {
 	});
 
 	test("1,000 xp to SPEND, nothing pre-spent (printed p78)", () => {
-		expect(dh2Core.creationXp).toBe(1000);
-		expect(dh2Core.preSpentXp).toBe(0);
-		// The inversion is the point: RT pre-spends 4,500.
-		expect(rtCore.preSpentBaseline).toBe(4500);
+		expect(dh2Core.creationXpEconomics.granted).toBe(1000);
+		expect(dh2Core.creationXpEconomics.spentAtCreation).toBe(0);
+		// The inversion is the point: RT pre-spends 4,500 (the ledger's seed).
+		expect(rtCore.creationXpEconomics.spentAtCreation).toBe(4500);
 	});
 
 	test("wounds are a flat home-world value plus 1d5 (printed pp32-43)", () => {
@@ -109,13 +118,29 @@ describe("dh2Core carries the verified Core Rulebook values", () => {
 	test("fire modes are SIGNED, Standard +10 and Full Auto -10 (printed p226)", () => {
 		expect(dh2Core.fireModes.standard.modifier).toBe(10);
 		expect(dh2Core.fireModes.fullAutoBurst.modifier).toBe(-10);
-		// The sign inversion versus RT is the whole reason DH2 keeps its own
-		// field: RT's burst is +10 and full auto is +20.
-		expect(rtCore.fireModeBonus).toEqual({ burst: 10, full: 20 });
+		// The sign inversion versus RT is a VALUE difference under the shared
+		// FireModes shape (bead cmio.2): RT's bursts are +10/+20 modifiers.
+		expect(rtCore.fireModes).toEqual({
+			standard: { modifier: 0, characteristic: "either" },
+			semiAutoBurst: {
+				modifier: 10,
+				characteristic: "ballistic-skill",
+				citation: "Core Rulebook p237",
+			},
+			fullAutoBurst: {
+				modifier: 20,
+				characteristic: "ballistic-skill",
+				citation: "Core Rulebook p237",
+			},
+		});
 	});
 
 	test("untrained skill is a flat -20 penalty (printed p80)", () => {
-		expect(dh2Core.untrainedPenalty).toBe(-20);
+		// DH2e's member of the kernel's UntrainedSkill union (bead cmio.2).
+		expect(dh2Core.untrainedSkill).toEqual({
+			model: "flat-penalty",
+			penalty: -20,
+		});
 		// RT halves the characteristic instead.
 		expect(rtCore.untrainedSkill).toEqual({ model: "half-characteristic" });
 	});
@@ -244,11 +269,14 @@ describe("the four kernel rule fields, verified by D6 against the book", () => {
 	});
 });
 
-describe("what still blocks RuleProfile assignment, now the rule fields are set", () => {
-	test("startingWounds/startingFate are still what block RuleProfile assignment", () => {
-		// @ts-expect-error DH2 redefines startingWounds, so the profile is still
-		// NOT assignable to the kernel's RuleProfile even now that all four rule
-		// fields carry verified values. This is the loud hole D1 designed.
+describe("what still blocks RuleProfile assignment", () => {
+	test("only the redefined creation-time fields block RuleProfile assignment", () => {
+		// @ts-expect-error the kernel's RULE surface now fits (bead cmio.3:
+		// critOnDouble/autoFailRoll/autoPassRoll/primitiveArmourDouble are typed
+		// as the kernel declares them), but DH2 redefines startingWounds and
+		// startingFate under its own union models, so the profile is still NOT
+		// assignable to the kernel's RuleProfile. This is the loud hole D1
+		// designed, and the ONLY residual blocker — a smaller set than before.
 		const asKernel: RuleProfile = dh2Core;
 		expect(asKernel).toBeDefined();
 	});
@@ -298,7 +326,11 @@ describe("psychic PUSH, fire modes and elite advances: resolved book facts", () 
 		// by his new psy rating value... to increase a character's psy rating
 		// from 2 to 3 would cost 600 xp" (printed p90).
 		expect(eliteAdvanceCost.psyRatingAdvance(3)).toBe(600);
-		expect("eliteAdvanceCost" in dh2Core).toBe(false);
+		// Bead cmio.2: the per-advance member is the profile's ELITE advance
+		// cost now, and it carries NO number — the "0 would read as free"
+		// hazard the old shared name hid is gone structurally.
+		expect(dh2Core.eliteAdvanceCost).toEqual({ model: "per-advance" });
+		expect("baseCost" in dh2Core.eliteAdvanceCost).toBe(false);
 	});
 });
 
@@ -333,8 +365,11 @@ describe("the three structural shapes D6 escalated (parent's ruling)", () => {
 		expect(dh2Core.psychicPush.penaltyPerPoint).toBe(10);
 		expect(dh2Core.psychicPush.phenomenaOnDoubles).toBe(true);
 		// RT's shape is a different vocabulary entirely and cannot express
-		// "+2 PR over base", which is why DH2 does not reuse it.
-		expect(rtCore.pushCap).toEqual({ sanctioned: 3, other: 4 });
+		// "+2 PR over base" — pinned at the type level below (the cmio.2 pins).
+		expect(rtCore.psychicPush).toEqual({
+			model: "levels",
+			caps: { sanctioned: 3, other: 4 },
+		});
 	});
 
 	test("Semi-Auto Burst exists and is a Challenging (+0) BS test", () => {
@@ -350,7 +385,84 @@ describe("the three structural shapes D6 escalated (parent's ruling)", () => {
 	test("elite advances carry their own cost; there is no base", () => {
 		// Printed pp88-91: Inquisitor 1,000 / Psyker 300 / Untouchable 300 xp.
 		// Per-advance, so a consumer cannot mistake 0 for "free".
-		expect(dh2Core.eliteAdvanceBaseCost).toBe("per-advance");
-		expect(rtCore.eliteAdvanceBaseCost).toBe(500);
+		// Bead cmio.2: per-advance member vs RT's flat-base one — the models
+		// cannot be confused, and the settings key kept RT's name so stored
+		// worlds' deltas still resolve (the value moved paths only).
+		expect(dh2Core.eliteAdvanceCost).toEqual({ model: "per-advance" });
+		expect(rtCore.eliteAdvanceCost).toEqual({
+			model: "flat-base",
+			baseCost: 500,
+		});
+	});
+});
+
+describe("the shared kernel vocabulary (bead cmio.2) — instantiate, never redeclare", () => {
+	test("each profile instantiates a member of the SAME kernel union", () => {
+		// One declaration (src/rules-engine/profile-vocabulary.ts), two
+		// instantiations: neither profile restates the concept or the type.
+		const dh2Generation: CharacteristicGeneration = dh2Core.generation;
+		const rtGeneration: CharacteristicGeneration = rtCore.generation;
+		const dh2Push: PsychicPush = dh2Core.psychicPush;
+		const rtPush: PsychicPush = rtCore.psychicPush;
+		const dh2Elite: EliteAdvanceCost = dh2Core.eliteAdvanceCost;
+		const rtElite: EliteAdvanceCost = rtCore.eliteAdvanceCost;
+		expect(dh2Generation.model).toBe("roll");
+		expect(rtGeneration.model).toBe("point-buy");
+		expect(dh2Push.model).toBe("rating-over-base");
+		expect(rtPush.model).toBe("levels");
+		expect(dh2Elite.model).toBe("per-advance");
+		expect(rtElite.model).toBe("flat-base");
+	});
+
+	test("cross-reading a member raises a TYPE error (the lying-free pins)", () => {
+		// RT's point-buy member has no dice to misread — reading DH2e's roll
+		// member through RT's profile fails to compile.
+		// @ts-expect-error "dice" does not exist on RT's point-buy generation.
+		const dice = rtCore.generation.dice;
+		// DH2e's rating-over-base member keys its caps on psykER type — RT's
+		// sanctioned/other split is unreachable through DH2e's profile.
+		// @ts-expect-error "sanctioned" does not exist on DH2e's push caps.
+		const sanctioned = dh2Core.psychicPush.caps.sanctioned;
+		// DH2e's per-advance member carries NO number — the "0 would read as
+		// free" hazard is gone structurally.
+		// @ts-expect-error "baseCost" does not exist on DH2e's per-advance cost.
+		const baseCost = dh2Core.eliteAdvanceCost.baseCost;
+		// RT's profile carries the FULL UntrainedSkill union (its knob can
+		// switch models), so a penalty read without narrowing is a compile
+		// error, never an undefined silently folded into a target.
+		// @ts-expect-error "penalty" does not exist on the untrained union.
+		const penalty = rtCore.untrainedSkill.penalty;
+		// All four reads are undefined at runtime — the protection is the
+		// compile error above, which these lines only keep the reads used for.
+		expect(dice).toBeUndefined();
+		expect(sanctioned).toBeUndefined();
+		expect(baseCost).toBeUndefined();
+		expect(penalty).toBeUndefined();
+	});
+
+	test("the system-tagged ladders NEVER map onto each other (cmio.4's seal)", () => {
+		// (a) The arrays differ in length: RT's four tiers vs DH2e's five — so
+		// a positional walk of one over the other always ends differently.
+		expect(SCHEME_TIERS).toHaveLength(4);
+		expect(DH2_ADVANCE_TIERS).toHaveLength(5);
+		expect(SCHEME_TIERS.length).not.toBe(DH2_ADVANCE_TIERS.length);
+		// (b) The colliding NAMES carry different meanings: RT's expert is
+		// tier 4, DH2e's is tier 5 — the index of DH2e's never equals RT's.
+		expect(SCHEME_TIERS.indexOf("expert")).toBe(3);
+		expect(DH2_ADVANCE_TIERS.indexOf("expert")).toBe(4);
+		expect(SCHEME_TIERS.indexOf("expert")).not.toBe(
+			DH2_ADVANCE_TIERS.indexOf("expert"),
+		);
+		// (c) Attempting the mapping fails to compile: DH2e's extra tier does
+		// not even EXIST in RT's ladder type.
+		// @ts-expect-error "proficient" is not a tier of RT's ladder.
+		const tier: SchemeTier = "proficient";
+		// (d) RT's ladder stays the kernel's `rt` member, byte for byte.
+		const ladder: RtAdvanceLadder = { system: "rt", tiers: SCHEME_TIERS };
+		expect([...ladder.tiers]).toEqual([...SCHEME_TIERS]);
+		// The (c) read above only exists to carry the @ts-expect-error pin: its
+		// runtime value is DH2e's tier string, and its meaning is that the
+		// assignment (and any positional read built on it) fails to compile.
+		expect(typeof tier).toBe("string");
 	});
 });

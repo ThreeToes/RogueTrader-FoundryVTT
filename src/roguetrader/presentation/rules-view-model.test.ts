@@ -385,9 +385,9 @@ describe("deltaFromDraft — a field left at the core value is absent", () => {
 		const delta = deltaFromDraft({ "psychic.pushCap.other": 6 });
 		expect(delta).toEqual({ "psychic.pushCap.other": 6 });
 		// The merged profile still carries the core sanctioned cap.
-		expect(effectiveProfileFor(delta).pushCap).toEqual({
-			...rtCore.pushCap,
-			other: 6,
+		expect(effectiveProfileFor(delta).psychicPush).toEqual({
+			model: "levels",
+			caps: { ...rtCore.psychicPush.caps, other: 6 },
 		});
 	});
 });
@@ -602,7 +602,7 @@ describe("the diff panel: core vs effective", () => {
 		expect(table.effectiveDisplay.bands).toBe(1);
 		// ...and the merged profile itself agrees with those two rows.
 		const effective = effectiveProfileFor(delta);
-		expect(effective.fireModeBonus).toEqual({ burst: 0, full: 20 });
+		expect(effective.fireModes.semiAutoBurst.modifier).toBe(0);
 		expect(effective.hitLocations).toEqual({ "01-10": "head" });
 	});
 
@@ -1204,7 +1204,9 @@ describe("the registry is an argument end to end", () => {
 		expect(packExportText([{ id: "a", name: "A", delta: {} }], {
 			profile: "rt-core",
 		})).toContain('"kind": "rogue-trader.rule-profiles"');
-		expect(effectiveProfileFor({ "combat.fireModeBonus.burst": 0 }).fireModeBonus)
-			.toEqual({ burst: 0, full: 20 });
+		expect(
+			effectiveProfileFor({ "combat.fireModeBonus.burst": 0 })
+				.fireModes.semiAutoBurst.modifier,
+		).toBe(0);
 	});
 });

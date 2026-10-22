@@ -134,7 +134,7 @@ describe("module profiles in the effective profile (bead wxut.6)", () => {
 		expect(effective.critOnDouble).toBe(true);
 		expect(effective.criticals?.maxSeverity).toBe(8);
 		// Everything the module did not say stays at the Core Rulebook value.
-		expect(effective.fireModeBonus).toEqual(rtCore.fireModeBonus);
+		expect(effective.fireModes).toEqual(rtCore.fireModes);
 	});
 
 	test("the WORLD wins a knob both a module and a world profile set", () => {
@@ -146,9 +146,15 @@ describe("module profiles in the effective profile (bead wxut.6)", () => {
 		// The GM's own profile sets the SAME knob, and is active.
 		worldProfileInForce("mine", { "combat.fireModeBonus.burst": 15 });
 		const effective = effectiveProfile();
-		expect(effective.fireModeBonus).toEqual({ burst: 15, full: 20 });
+		expect(effective.fireModes).toEqual({
+			...rtCore.fireModes,
+			semiAutoBurst: {
+				...rtCore.fireModes.semiAutoBurst,
+				modifier: 15,
+			},
+		});
 		// The base profile was never either of them.
-		expect(rtCore.fireModeBonus).toEqual({ burst: 10, full: 20 });
+		expect(rtCore.fireModes.semiAutoBurst.modifier).toBe(10);
 	});
 
 	test("a module delta does NOT inherit world-profile values (one merge hop)", () => {

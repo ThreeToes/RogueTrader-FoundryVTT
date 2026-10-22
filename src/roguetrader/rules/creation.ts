@@ -27,12 +27,15 @@ export { DEFAULT_SYSTEM_PROFILE, rtCore };
  *
  * RT profile data (bead yszf) — a sibling system supplies its own
  * SystemProfile to the resolvers; these re-exports keep the RT values
- * working for the sheet layer and tests.
+ * working for the sheet layer and tests. Derived from the profile's
+ * point-buy generation member (bead cmio.2): RT's member of the kernel's
+ * CharacteristicGeneration union, so the constants can never drift from the
+ * values the knobs tune.
  */
-export const CHARACTERISTIC_BASE: number = rtCore.characteristicBase;
+export const CHARACTERISTIC_BASE: number = rtCore.generation.base;
 /** Point-buy budget and per-characteristic cap (p14 "Allocating Points"). */
-export const POINT_BUY_BUDGET: number = rtCore.pointBuyBudget;
-export const POINT_BUY_MAX: number = rtCore.pointBuyMax;
+export const POINT_BUY_BUDGET: number = rtCore.generation.budget;
+export const POINT_BUY_MAX: number = rtCore.generation.cap;
 
 export interface PointBuyValidation {
 	total: number;
@@ -51,12 +54,12 @@ export function validatePointBuy(
 		0,
 	);
 	const overCap = CHARACTERISTIC_KEYS.filter(
-		(key) => (allocated[key] ?? 0) > profile.pointBuyMax,
+		(key) => (allocated[key] ?? 0) > profile.generation.cap,
 	);
 	return {
 		total,
-		remaining: profile.pointBuyBudget - total,
-		valid: total <= profile.pointBuyBudget && overCap.length === 0,
+		remaining: profile.generation.budget - total,
+		valid: total <= profile.generation.budget && overCap.length === 0,
 		overCap,
 	};
 }
@@ -230,7 +233,7 @@ function humanBaseMap(humanBase: number): Record<CharacteristicKey, number> {
  */
 export function speciesOptions(
 	sources: Array<SpeciesSource | undefined> | undefined,
-	humanBase: number = DEFAULT_SYSTEM_PROFILE.characteristicBase,
+	humanBase: number = DEFAULT_SYSTEM_PROFILE.generation.base,
 ): SpeciesOption[] {
 	const human: SpeciesOption = {
 		key: HUMAN_SPECIES_KEY,

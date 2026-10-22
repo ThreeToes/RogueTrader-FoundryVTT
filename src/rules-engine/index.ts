@@ -22,6 +22,27 @@ export {
 export { type Modifier, sumModifiers } from "./modifier";
 export { type RuleProfile, rtCore } from "./profile";
 export {
+	type AdvanceLadder,
+	type CharacteristicGeneration,
+	type CharacteristicGenerationPointBuy,
+	type CharacteristicGenerationRoll,
+	type CreationXpEconomics,
+	type Dh2AdvanceLadder,
+	type EliteAdvanceCost,
+	type EliteAdvanceFlatBase,
+	type EliteAdvancePerAdvance,
+	type FireModeRule,
+	type FireModes,
+	type PsychicPush,
+	type PsychicPushLevels,
+	type PsychicPushRatingOverBase,
+	type RtAdvanceLadder,
+	type StartingFate,
+	type StartingWounds,
+	type UntrainedSkill,
+	type UntrainedSkillFlatPenalty,
+} from "./profile-vocabulary";
+export {
 	applyVoidShields,
 	combinedTarget,
 	componentFunctional,

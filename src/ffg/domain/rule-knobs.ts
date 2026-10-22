@@ -14,7 +14,9 @@
  * A knob is a GM-tunable LEAF of the profile. Its `key` is the name the delta
  * (the stored house-rule JSON) uses — the section-qualified path
  * "combat.fireModeBonus.burst" — and its `path` is where that leaf actually
- * lives on the profile object (["fireModeBonus", "burst"]). The two differ
+ * lives on the profile object (["fireModes", "semiAutoBurst", "modifier"],
+ * since bead cmio.2 moved the value onto the shared FireModes shape while the
+ * settings key stayed stable for stored worlds). The two differ
  * because the knob namespace groups the profile's fields into named sections
  * (test/damage/combat/.../tables) for display, while the profile keeps its own
  * documented flat shape. The entry carries `path` so the mapping is explicit
@@ -70,7 +72,7 @@
  * the pack parser and the settings seam pass theirs through unchanged.
  */
 
-import { rtCore, type SystemProfile } from "./system-profile";
+import { rtCore } from "./system-profile";
 
 /** What a knob value can be at rest. */
 export type KnobValue =
@@ -245,50 +247,54 @@ export const RULE_KNOBS: readonly RuleKnob[] = [
 	},
 	// -- combat -------------------------------------------------------------
 	{
-		// Core Rulebook p237: Semi-Auto Burst = +10 to BS.
+		// Core Rulebook p237: Semi-Auto Burst = +10 to BS. The key is RT's
+		// historical settings key and STAYS (stored worlds' deltas), while the
+		// value lives on the shared signed FireModes shape (bead cmio.2).
 		key: "combat.fireModeBonus.burst",
-		path: ["fireModeBonus", "burst"],
+		path: ["fireModes", "semiAutoBurst", "modifier"],
 		labelKey: "RULES.COMBAT_FIRE_MODE_BONUS_BURST",
 		hintKey: "RULES.COMBAT_FIRE_MODE_BONUS_BURST_HINT",
 		group: "combat",
 		control: "number",
 		hazard: "auto-recomputed",
-		coreValue: rtCore.fireModeBonus.burst,
+		coreValue: rtCore.fireModes.semiAutoBurst.modifier,
 	},
 	{
-		// Core Rulebook p237: Full Auto Burst = +20 to BS.
+		// Core Rulebook p237: Full Auto Burst = +20 to BS. Key stays stable; the
+		// path follows the shared FireModes shape (bead cmio.2).
 		key: "combat.fireModeBonus.full",
-		path: ["fireModeBonus", "full"],
+		path: ["fireModes", "fullAutoBurst", "modifier"],
 		labelKey: "RULES.COMBAT_FIRE_MODE_BONUS_FULL",
 		hintKey: "RULES.COMBAT_FIRE_MODE_BONUS_FULL_HINT",
 		group: "combat",
 		control: "number",
 		hazard: "auto-recomputed",
-		coreValue: rtCore.fireModeBonus.full,
+		coreValue: rtCore.fireModes.fullAutoBurst.modifier,
 	},
 	// -- psychic ------------------------------------------------------------
 	{
 		// Table 6-1, Core Rulebook p157: Push = PR +1..+3 for a sanctioned
-		// psyker.
+		// psyker. Key stays (stored worlds' deltas); the caps live on the
+		// kernel's levels-member PsychicPush (bead cmio.2).
 		key: "psychic.pushCap.sanctioned",
-		path: ["pushCap", "sanctioned"],
+		path: ["psychicPush", "caps", "sanctioned"],
 		labelKey: "RULES.PSYCHIC_PUSH_CAP_SANCTIONED",
 		hintKey: "RULES.PSYCHIC_PUSH_CAP_SANCTIONED_HINT",
 		group: "psychic",
 		control: "number",
 		hazard: "auto-recomputed",
-		coreValue: rtCore.pushCap.sanctioned,
+		coreValue: rtCore.psychicPush.caps.sanctioned,
 	},
 	{
 		// Table 6-1, Core Rulebook p157: renegades/sorcerors push to +4.
 		key: "psychic.pushCap.other",
-		path: ["pushCap", "other"],
+		path: ["psychicPush", "caps", "other"],
 		labelKey: "RULES.PSYCHIC_PUSH_CAP_OTHER",
 		hintKey: "RULES.PSYCHIC_PUSH_CAP_OTHER_HINT",
 		group: "psychic",
 		control: "number",
 		hazard: "auto-recomputed",
-		coreValue: rtCore.pushCap.other,
+		coreValue: rtCore.psychicPush.caps.other,
 	},
 	// -- ammo ---------------------------------------------------------------
 	{
@@ -337,37 +343,40 @@ export const RULE_KNOBS: readonly RuleKnob[] = [
 	},
 	// -- creation -----------------------------------------------------------
 	{
-		// Core Rulebook p14: base characteristic value before allocation.
+		// Core Rulebook p14: base characteristic value before allocation. Key
+		// stays (stored worlds' deltas); the value lives on the kernel's
+		// point-buy generation member (bead cmio.2).
 		key: "creation.characteristicBase",
-		path: ["characteristicBase"],
+		path: ["generation", "base"],
 		labelKey: "RULES.CREATION_CHARACTERISTIC_BASE",
 		hintKey: "RULES.CREATION_CHARACTERISTIC_BASE_HINT",
 		group: "creation",
 		control: "number",
 		hazard: "creation-only",
-		coreValue: rtCore.characteristicBase,
+		coreValue: rtCore.generation.base,
 	},
 	{
-		// Core Rulebook p14 "Allocating Points".
+		// Core Rulebook p14 "Allocating Points". Key stays; path follows the
+		// shared generation union's point-buy member (bead cmio.2).
 		key: "creation.pointBuyBudget",
-		path: ["pointBuyBudget"],
+		path: ["generation", "budget"],
 		labelKey: "RULES.CREATION_POINT_BUY_BUDGET",
 		hintKey: "RULES.CREATION_POINT_BUY_BUDGET_HINT",
 		group: "creation",
 		control: "number",
 		hazard: "creation-only",
-		coreValue: rtCore.pointBuyBudget,
+		coreValue: rtCore.generation.budget,
 	},
 	{
 		// Core Rulebook p14: per-characteristic cap.
 		key: "creation.pointBuyMax",
-		path: ["pointBuyMax"],
+		path: ["generation", "cap"],
 		labelKey: "RULES.CREATION_POINT_BUY_MAX",
 		hintKey: "RULES.CREATION_POINT_BUY_MAX_HINT",
 		group: "creation",
 		control: "number",
 		hazard: "creation-only",
-		coreValue: rtCore.pointBuyMax,
+		coreValue: rtCore.generation.cap,
 	},
 	{
 		// rules/creation.ts step index — the Starting Kit step is the last.
@@ -382,26 +391,31 @@ export const RULE_KNOBS: readonly RuleKnob[] = [
 	},
 	// -- advancement --------------------------------------------------------
 	{
-		// Core Rulebook p13: characters begin with 4,500 xp already spent.
+		// Core Rulebook p13: characters begin with 4,500 xp already spent. Key
+		// stays (stored worlds' deltas); the value lives on the shared creation-
+		// xp economics struct (bead cmio.2) and keeps its LEDGER-SEED semantic.
 		key: "advancement.preSpentBaseline",
-		path: ["preSpentBaseline"],
+		path: ["creationXpEconomics", "spentAtCreation"],
 		labelKey: "RULES.ADVANCEMENT_PRE_SPENT_BASELINE",
 		hintKey: "RULES.ADVANCEMENT_PRE_SPENT_BASELINE_HINT",
 		group: "advancement",
 		control: "number",
 		hazard: "ledger-assuming",
-		coreValue: rtCore.preSpentBaseline,
+		coreValue: rtCore.creationXpEconomics.spentAtCreation,
 	},
 	{
-		// Core Rulebook p39: GM-granted Elite Advance, base 500 xp.
+		// Core Rulebook p39: GM-granted Elite Advance, base 500 xp. Key stays
+		// (the settings key survived the shared-name rename — bead cmio.2 moved
+		// the VALUE to the kernel's EliteAdvanceCost union's flat-base member);
+		// the knob keeps its ledger-assuming hazard class (see rules-app.ts:27).
 		key: "advancement.eliteAdvanceBaseCost",
-		path: ["eliteAdvanceBaseCost"],
+		path: ["eliteAdvanceCost", "baseCost"],
 		labelKey: "RULES.ADVANCEMENT_ELITE_ADVANCE_BASE_COST",
 		hintKey: "RULES.ADVANCEMENT_ELITE_ADVANCE_BASE_COST_HINT",
 		group: "advancement",
 		control: "number",
 		hazard: "ledger-assuming",
-		coreValue: rtCore.eliteAdvanceBaseCost,
+		coreValue: rtCore.eliteAdvanceCost.baseCost,
 	},
 	// -- toxic --------------------------------------------------------------
 	{

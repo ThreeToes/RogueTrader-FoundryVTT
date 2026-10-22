@@ -86,8 +86,6 @@ const INVENTORY: readonly string[] = [
 	"psychic.pushCap.bound",
 	"psychic.pushCap.daemonic",
 	"psychic.pushCap.unbound",
-	// skills
-	"skills.untrainedPenalty",
 	// creation
 	"creation.generationDice",
 	"creation.generationBonus",
@@ -248,11 +246,6 @@ describe("DH2's rule-knob registry", () => {
 			4,
 			"Table 6-1, printed p195: an Unbound psyker pushes up to +4 PR",
 		],
-		[
-			"skills.untrainedPenalty",
-			-20,
-			"printed p80: using a skill without the Known rank carries -20",
-		],
 		["creation.generationDice", 2, "printed p31: roll 2d10 per characteristic"],
 		["creation.generationBonus", 20, "printed p31: add 20 to each roll"],
 		[
@@ -378,8 +371,9 @@ describe("entries deliberately ABSENT from DH2's registry", () => {
 		).toBeUndefined();
 		// Printed pp88-91: each elite advance carries its OWN Experience Cost
 		// (Inquisitor 1,000 / Psyker 300 / Untouchable 300), so the profile
-		// records "per-advance" rather than a number to tune.
-		expect(dh2Core.eliteAdvanceBaseCost).toBe("per-advance");
+		// records the kernel union's per-advance member rather than a number to
+		// tune (bead cmio.2 renamed the shared field to `eliteAdvanceCost`).
+		expect(dh2Core.eliteAdvanceCost).toEqual({ model: "per-advance" });
 		expect(findKnob(RT_KNOBS, "advancement.eliteAdvanceBaseCost")?.coreValue).toBe(
 			500,
 		);
@@ -421,15 +415,24 @@ describe("entries deliberately ABSENT from DH2's registry", () => {
 	});
 
 	test("RT's own untrained-skill knobs are unknown here (DH2 is flat -20)", () => {
+		// Bead cmio.2: the old `skills.untrainedPenalty` knob was DELETED with
+		// the collapse — DH2e's flat penalty is the kernel UntrainedSkill
+		// union's flat-penalty member on `dh2Core.untrainedSkill`, and neither
+		// RT's model-select keys nor a DH2 skills knob exists here. A stored
+		// DH2 delta still carrying the deleted key is refused BY NAME.
+		expect(
+			findKnob(DARK_HERESY_RULE_KNOBS, "skills.untrainedPenalty"),
+		).toBeUndefined();
 		expect(
 			findKnob(DARK_HERESY_RULE_KNOBS, "skills.untrainedSkill.model"),
 		).toBeUndefined();
 		expect(
 			findKnob(DARK_HERESY_RULE_KNOBS, "skills.untrainedSkill.penalty"),
 		).toBeUndefined();
-		expect(knobByKey("skills.untrainedPenalty").path).toEqual([
-			"untrainedPenalty",
-		]);
+		expect(dh2Core.untrainedSkill).toEqual({
+			model: "flat-penalty",
+			penalty: -20,
+		});
 	});
 });
 
@@ -514,7 +517,7 @@ describe("validateProfile / mergeProfile work unchanged against DH2", () => {
 		);
 		// The written leaves are the delta's.
 		expect(merged.fireModes.standard.modifier).toBe(0);
-		expect(merged.creationXp).toBe(500);
+		expect(merged.creationXpEconomics.granted).toBe(500);
 		expect(merged.characteristicAdvanceCost.expert.zero).toBe(500);
 		// Sibling leaves of the same containers stay at core — so a GM tuning
 		// one tier does not have to restate the rest of the matrix.
@@ -525,7 +528,11 @@ describe("validateProfile / mergeProfile work unchanged against DH2", () => {
 		expect(merged.psychicPush.caps).toEqual(dh2Core.psychicPush.caps);
 		// Untouched fields are carried through.
 		expect(merged.id).toBe("dh2-core");
-		expect(merged.untrainedPenalty).toBe(-20);
+		expect(merged.untrainedSkill).toEqual({
+			model: "flat-penalty",
+			penalty: -20,
+		});
+		expect(merged.eliteAdvanceCost).toEqual({ model: "per-advance" });
 	});
 
 	test("dh2Core is never mutated and never aliases the delta", () => {

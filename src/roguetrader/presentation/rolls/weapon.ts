@@ -98,18 +98,19 @@ export const weaponHandler: RollHandler<"weapon"> = {
 	},
 	dialogConfig(_request, prepared) {
 		// Bead hyv: attack-context selectors (fire mode, aim, charge).
-		// Bead 4hwl: the option bonus labels are resolved DATA — the fire-mode
-		// numbers come from the EFFECTIVE profile (core p237 +10/+20, or the
-		// world's house rules — bead wxut.2 replaced resolveFireModeBonus), and
-		// the aim numbers from AIM_BONUS; the template binds them instead of
-		// carrying its own hardcoded literals.
+		// Bead 4hwl + cmio.2: the option bonus labels are resolved DATA — the
+		// fire-mode numbers come from the EFFECTIVE profile's signed shared
+		// FireModes shape (core p237 +10/+20 as the semiAutoBurst/fullAutoBurst
+		// modifiers, or the world's house rules — bead wxut.2 replaced
+		// resolveFireModeBonus), and the aim numbers from AIM_BONUS; the
+		// template binds them instead of carrying its own hardcoded literals.
 		const profile = effectiveProfile();
 		return {
 			attackContext: {
 				ranged: prepared.weapon?.type === "ranged-weapon",
 				melee: prepared.weapon?.type === "melee-weapon",
-				burstBonus: profile.fireModeBonus.burst,
-				fullBonus: profile.fireModeBonus.full,
+				burstBonus: profile.fireModes.semiAutoBurst.modifier,
+				fullBonus: profile.fireModes.fullAutoBurst.modifier,
 				aimHalf: AIM_BONUS.half,
 				aimFull: AIM_BONUS.full,
 			},

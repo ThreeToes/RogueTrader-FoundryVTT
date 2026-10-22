@@ -27,16 +27,20 @@ import {
 const SIBLING: SystemProfile = {
 	// Composition (bead yojf): a sibling profile starts from the RT kernel
 	// data (crit handling, hit locations, vocabulary) and overrides what its
-	// system differs on.
+	// system differs on. It instantiates ITS members of the kernel's shared
+	// unions (bead cmio.2) — here still RT's (point-buy generation, levels
+	// push, flat-base elite cost) with different numbers.
 	...rtCore,
 	id: "ow-core",
-	characteristicBase: 20,
-	pointBuyBudget: 90,
-	pointBuyMax: 15,
+	generation: { model: "point-buy", base: 20, budget: 90, cap: 15 },
 	creatorLastStep: 3,
-	preSpentBaseline: 600,
-	fireModeBonus: { burst: 0, full: 10 },
-	pushCap: { sanctioned: 2, other: 3 },
+	creationXpEconomics: { granted: 1100, spentAtCreation: 600 },
+	fireModes: {
+		standard: { modifier: 0, characteristic: "either" },
+		semiAutoBurst: { modifier: 0, characteristic: "ballistic-skill" },
+		fullAutoBurst: { modifier: 10, characteristic: "ballistic-skill" },
+	},
+	psychicPush: { model: "levels", caps: { sanctioned: 2, other: 3 } },
 	// Bead wxut.2 lifted constants: a sibling tunes these the same way.
 	penaltyPerDamagePoint: 3,
 };
@@ -44,14 +48,42 @@ const SIBLING: SystemProfile = {
 describe("system-profile data", () => {
 	test("rtCore carries the Core Rulebook values as data", () => {
 		expect(rtCore.id).toBe("rt-core");
-		expect(rtCore.characteristicBase).toBe(25);
-		expect(rtCore.pointBuyBudget).toBe(100);
-		expect(rtCore.pointBuyMax).toBe(20);
+		// Bead cmio.2: the point-buy constants live on the kernel's shared
+		// CharacteristicGeneration union's RT member. Same values as ever.
+		expect(rtCore.generation).toEqual({
+			model: "point-buy",
+			base: 25,
+			budget: 100,
+			cap: 20,
+		});
 		// Step 5 (owner rework 2026): the Starting Kit step is the last one.
 		expect(rtCore.creatorLastStep).toBe(5);
-		expect(rtCore.preSpentBaseline).toBe(4500);
-		expect(rtCore.fireModeBonus).toEqual({ burst: 10, full: 20 });
-		expect(rtCore.pushCap).toEqual({ sanctioned: 3, other: 4 });
+		// Bead cmio.2: the creation-xp economics — 5,000 granted, 4,500 already
+		// spent (the ledger's seed). Same seed value as the old baseline.
+		expect(rtCore.creationXpEconomics).toEqual({
+			granted: 5000,
+			spentAtCreation: 4500,
+		});
+		// The shared FireModes shape: RT's Standard Attack is +0 and the bursts
+		// are +10/+20 modifiers (Core Rulebook p237).
+		expect(rtCore.fireModes).toEqual({
+			standard: { modifier: 0, characteristic: "either" },
+			semiAutoBurst: {
+				modifier: 10,
+				characteristic: "ballistic-skill",
+				citation: "Core Rulebook p237",
+			},
+			fullAutoBurst: {
+				modifier: 20,
+				characteristic: "ballistic-skill",
+				citation: "Core Rulebook p237",
+			},
+		});
+		// Table 6-1, p157, as the kernel union's levels member.
+		expect(rtCore.psychicPush).toEqual({
+			model: "levels",
+			caps: { sanctioned: 3, other: 4 },
+		});
 		// Bead tval (Core Rulebook p74 + Dodge example p244): RT Core untrained
 		// skill tests target HALF the governing Characteristic, round down.
 		expect(rtCore.untrainedSkill).toEqual({ model: "half-characteristic" });
@@ -64,7 +96,10 @@ describe("system-profile data", () => {
 		// repairTestModifier is pinned in battlesuit-repair.test.ts instead:
 		// importing that module here would drag this pure profile test through
 		// the Foundry-coupled chain ("foundry is not defined").
-		expect(rtCore.eliteAdvanceBaseCost).toBe(ELITE_ADVANCE_BASE_COST);
+		expect(rtCore.eliteAdvanceCost).toEqual({
+			model: "flat-base",
+			baseCost: ELITE_ADVANCE_BASE_COST,
+		});
 		expect(rtCore.penaltyPerDamagePoint).toBe(TOXIC_PENALTY_PER_DAMAGE_POINT);
 		expect(rtCore.criticals?.maxSeverity).toBe(MAX_CRITICAL_SEVERITY);
 		// The ammo toggle's core value is the book-accurate FALSE (epic ui4b).
@@ -73,9 +108,9 @@ describe("system-profile data", () => {
 
 	test("resolvers default to the RT profile", () => {
 		expect(DEFAULT_SYSTEM_PROFILE).toBe(rtCore);
-		expect(CHARACTERISTIC_BASE).toBe(rtCore.characteristicBase);
-		expect(POINT_BUY_BUDGET).toBe(rtCore.pointBuyBudget);
-		expect(POINT_BUY_MAX).toBe(rtCore.pointBuyMax);
+		expect(CHARACTERISTIC_BASE).toBe(rtCore.generation.base);
+		expect(POINT_BUY_BUDGET).toBe(rtCore.generation.budget);
+		expect(POINT_BUY_MAX).toBe(rtCore.generation.cap);
 	});
 });
 
@@ -132,24 +167,31 @@ describe("composition with the rules-engine RuleProfile (bead yojf)", () => {
 
 describe("profile-parameterized resolvers", () => {
 	test("validatePointBuy honours the profile budget/cap", () => {
-		const rt = validatePointBuy({ ws: rtCore.pointBuyMax, t: 20 });
+		const rtBase = rtCore.generation;
+		const rt = validatePointBuy({ ws: rtBase.cap, t: 20 });
 		expect(rt.valid).toBe(true);
-		expect(rt.remaining).toBe(rtCore.pointBuyBudget - rtCore.pointBuyMax * 2);
+		expect(rt.remaining).toBe(rtBase.budget - rtBase.cap * 2);
 
-		const sibling = validatePointBuy({ ws: rtCore.pointBuyMax }, SIBLING);
+		const siblingsBase = SIBLING.generation;
+		const sibling = validatePointBuy(
+			{ ws: rtBase.cap },
+			SIBLING,
+		);
 		expect(sibling.valid).toBe(false); // 20 > 15 cap
 		expect(sibling.overCap).toEqual(["ws"]);
-		expect(sibling.remaining).toBe(SIBLING.pointBuyBudget - rtCore.pointBuyMax);
+		expect(sibling.remaining).toBe(siblingsBase.budget - rtBase.cap);
 	});
 
 	test("totalSpent honours the profile baseline", () => {
-		expect(totalSpent([], SIBLING)).toBe(SIBLING.preSpentBaseline);
+		expect(totalSpent([], SIBLING)).toBe(
+			SIBLING.creationXpEconomics.spentAtCreation,
+		);
 		expect(
 			totalSpent(
 				[{ type: "talent", key: "", name: "X", cost: 100, rank: 1 }],
 				SIBLING,
 			),
-		).toBe(SIBLING.preSpentBaseline + 100);
+		).toBe(SIBLING.creationXpEconomics.spentAtCreation + 100);
 	});
 
 	// Bead wxut.2 retired the three resolve* helpers: a house rule is now a
@@ -159,22 +201,28 @@ describe("profile-parameterized resolvers", () => {
 	// profile-parameterised in the first place — a sibling profile's values
 	// flow to the consumers that now read their own fields.
 	test("a sibling profile carries its own rule values", () => {
-		expect(SIBLING.fireModeBonus).toEqual({ burst: 0, full: 10 });
-		expect(SIBLING.pushCap).toEqual({ sanctioned: 2, other: 3 });
+		expect(SIBLING.fireModes.semiAutoBurst.modifier).toBe(0);
+		expect(SIBLING.fireModes.fullAutoBurst.modifier).toBe(10);
+		expect(SIBLING.psychicPush).toEqual({
+			model: "levels",
+			caps: { sanctioned: 2, other: 3 },
+		});
 		expect(SIBLING.penaltyPerDamagePoint).toBe(3);
-		expect(rtCore.fireModeBonus).toEqual({ burst: 10, full: 20 });
-		expect(rtCore.pushCap).toEqual({ sanctioned: 3, other: 4 });
+		expect(rtCore.fireModes.semiAutoBurst.modifier).toBe(10);
+		expect(rtCore.fireModes.fullAutoBurst.modifier).toBe(20);
+		expect(rtCore.psychicPush.caps).toEqual({ sanctioned: 3, other: 4 });
 	});
 
 	test("eliteLedgerEntry takes its base cost from the profile", () => {
 		// Bead wxut.2: ELITE_ADVANCE_BASE_COST is profile DATA. The explicit
-		// argument still wins; an omitted one reads the profile.
+		// argument still wins; an omitted one reads the profile's flat-base
+		// member (bead cmio.2).
 		expect(eliteLedgerEntry("skill", "Trade (Miner)").cost).toBe(
-			rtCore.eliteAdvanceBaseCost,
+			rtCore.eliteAdvanceCost.baseCost,
 		);
 		expect(eliteLedgerEntry("skill", "Trade (Miner)", 900).cost).toBe(900);
 		expect(eliteLedgerEntry("skill", "X", undefined, SIBLING).cost).toBe(
-			SIBLING.eliteAdvanceBaseCost,
+			SIBLING.eliteAdvanceCost.baseCost,
 		);
 	});
 

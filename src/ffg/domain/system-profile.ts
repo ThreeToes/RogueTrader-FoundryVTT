@@ -5,7 +5,7 @@
  * Everything that differs between FFG 40k systems must be expressed as
  * profile DATA, never as hardcoded constants inside the pure resolvers.
  * Sibling modules (DH2 starts at 1,000 xp, Only War at 600, etc.) supply
- * their own SystemProfile object and pass it to the resolvers; the pure
+ * their own profile object and pass it to the resolvers; the pure
  * functions default to `rtCore` so existing RT callers need no changes.
  *
  * Lives in domain (not rules) because it is pure profile DATA that every
@@ -16,7 +16,13 @@
  */
 
 import {
+	type CharacteristicGenerationPointBuy,
+	type CreationXpEconomics,
+	type EliteAdvanceFlatBase,
+	type FireModes,
+	type PsychicPushLevels,
 	type RuleProfile,
+	type UntrainedSkill,
 	rtCore as rtCoreRuleProfile,
 } from "../../rules-engine/index";
 import { TEMPLATE_ROOT } from "./template-root";
@@ -63,27 +69,47 @@ export interface SystemBranding {
  * points) AND the creation/advancement constants. A sibling system builds a
  * single profile object and hands it to both the kernel resolvers and the
  * creation/advancement ones — there is no third competing profile type.
+ *
+ * SHARED VOCABULARY (bead cmio.2): every concept both FFG systems share is
+ * typed ONCE in the kernel's `profile-vocabulary.ts`, and RT instantiates its
+ * member of each union — the point-buy generation, the `levels` PsychicPush,
+ * the flat-base EliteAdvanceCost. The member pinning is deliberate: an RT
+ * profile cannot express a shape RT's book does not have (a dh2Core-style
+ * `rating-over-base` push, a per-advance elite cost, a dice roll), so
+ * cross-reading a member is a compile error rather than a silent wrong
+ * answer.
  */
 export interface SystemProfile extends RuleProfile, SystemBranding {
 	/** Profile id, e.g. "rt-core". */
 	id: string;
-	/** Base characteristic value before allocation (RT Core Rulebook p14). */
-	characteristicBase: number;
-	/** Point-buy budget (RT Core Rulebook p14 "Allocating Points"). */
-	pointBuyBudget: number;
-	/** Per-characteristic point-buy cap (RT Core Rulebook p14). */
-	pointBuyMax: number;
+	/**
+	 * Point-buy characteristic generation (Core Rulebook p14): base 25,
+	 * 100-point budget, cap 20 per characteristic. RT's own member of the
+	 * kernel's `CharacteristicGeneration` union; the roll member is DH2e's.
+	 */
+	generation: CharacteristicGenerationPointBuy;
 	/** The character creator's final step index (see rules/creation.ts). */
 	creatorLastStep: number;
-	/** xp considered already spent at character creation (RT Core Rulebook p13). */
-	preSpentBaseline: number;
-	/** Core fire-mode to-hit bonuses on attack tests (Core Rulebook p237). */
-	fireModeBonus: { burst: number; full: number };
 	/**
-	 * Core Psychic Strength Push caps (Table 6-1, Core Rulebook p157):
-	 * sanctioned +3, renegades/sorcerers +4.
+	 * Creation xp economics (Core Rulebook p13): 5,000 granted, 4,500 already
+	 * spent before the first advance is bought. `spentAtCreation` is the
+	 * spent-xp LEDGER's seed value (bead r8mw) — the old
+	 * `preSpentBaseline`'s semantic, now under the shared two-field struct
+	 * DH2e instantiates the other way round (1,000 granted, 0 pre-spent).
 	 */
-	pushCap: { sanctioned: number; other: number };
+	creationXpEconomics: CreationXpEconomics;
+	/**
+	 * Core fire-mode modifiers on attack tests (Core Rulebook p237), SIGNED:
+	 * the Standard Attack adds nothing, a Semi-Auto Burst +10, a Full-Auto
+	 * Burst +20. The shared `FireModes` shape; DH2e's values are its own
+	 * (a -10 Full Auto Burst penalty, printed DH2e p226).
+	 */
+	fireModes: FireModes;
+	/**
+	 * Core Psychic Strength Push caps as the kernel union's `levels` member
+	 * (Table 6-1, Core Rulebook p157): sanctioned +3, renegades/sorcerers +4.
+	 */
+	psychicPush: PsychicPushLevels;
 	/**
 	 * Untrained skill test rule (bead tval, Core Rulebook p74 + Dodge example
 	 * p244): an untrained Basic Skill Test targets HALF the governing
@@ -106,19 +132,20 @@ export interface SystemProfile extends RuleProfile, SystemBranding {
 	 * their characteristic key, so the row is neither folded nor offered/applyable;
 	 * pinned by tests in presentation/rolls/roll-pipeline.test.ts.
 	 */
-	untrainedSkill:
-		| { model: "half-characteristic" }
-		| { model: "flat-penalty"; penalty: number };
+	untrainedSkill: UntrainedSkill;
 	/**
 	 * Elite Advance base cost (Core Rulebook p39): GM-granted, base 500 xp.
-	 * Lifted out of rules/advancement.ts#ELITE_ADVANCE_BASE_COST as profile
-	 * DATA (bead wxut.1); that constant stays the core value and the consumer
-	 * switch happens in a later bead. Domain may not import the rules layer
-	 * (the architecture test), so the value is repeated here and pinned
-	 * against the rules constant by rules/system-profile.test.ts — exactly the
-	 * pushCap arrangement above.
+	 * RT's member of the kernel's `EliteAdvanceCost` union — the RENAME that
+	 * removed the same-name-type-mismatch hazard (DH2e's field used to share
+	 * the name `eliteAdvanceBaseCost` while carrying the literal
+	 * "per-advance"). Lifted out of rules/advancement.ts#ELITE_ADVANCE_BASE_COST
+	 * as profile DATA (bead wxut.1); that constant stays the core value and
+	 * the consumer switch happened in bead wxut.2. Domain may not import the
+	 * rules layer (the architecture test), so the value is repeated here and
+	 * pinned against the rules constant by rules/system-profile.test.ts —
+	 * exactly the push-cap arrangement below.
 	 */
-	eliteAdvanceBaseCost: number;
+	eliteAdvanceCost: EliteAdvanceFlatBase;
 	/**
 	 * Toxic weapon Toughness Test penalty per point of Damage taken from the
 	 * toxic hit (Core Rulebook p117: -5). Lifted from
@@ -145,15 +172,43 @@ export interface SystemProfile extends RuleProfile, SystemBranding {
 export const rtCore: SystemProfile = {
 	...rtCoreRuleProfile,
 	id: "rt-core",
-	characteristicBase: 25,
-	pointBuyBudget: 100,
-	pointBuyMax: 20,
+	generation: {
+		// Core Rulebook p14: base 25, 100-point budget, cap 20 per
+		// characteristic ("Allocating Points").
+		model: "point-buy",
+		base: 25,
+		budget: 100,
+		cap: 20,
+	},
 	creatorLastStep: 5,
-	preSpentBaseline: 4500,
-	fireModeBonus: { burst: 10, full: 20 },
-	// As data: the values psychic.ts#pushCap() resolves (Table 6-1, p157) —
-	// the profile must not depend on the rules layer.
-	pushCap: { sanctioned: 3, other: 4 },
+	creationXpEconomics: {
+		// Core Rulebook p13: 5,000 granted at creation, 4,500 already spent —
+		// the spent-xp ledger's baseline.
+		granted: 5000,
+		spentAtCreation: 4500,
+	},
+	fireModes: {
+		// Core Rulebook p237: the Standard Attack is a straight test (no
+		// modifier); Semi-Auto Burst +10; Full-Auto Burst +20. Signed to match
+		// the shared FireModes shape (DH2e's Full Auto is -10).
+		standard: { modifier: 0, characteristic: "either" },
+		semiAutoBurst: {
+			modifier: 10,
+			characteristic: "ballistic-skill",
+			citation: "Core Rulebook p237",
+		},
+		fullAutoBurst: {
+			modifier: 20,
+			characteristic: "ballistic-skill",
+			citation: "Core Rulebook p237",
+		},
+	},
+	// As data: the values psychic.ts resolves (Table 6-1, p157) — the profile
+	// must not depend on the rules layer. The kernel union's levels member.
+	psychicPush: {
+		model: "levels",
+		caps: { sanctioned: 3, other: 4 },
+	},
 	// As data: the model prepareUntrainedSkill resolves (bead tval, Core
 	// Rulebook p74: untrained Basic Skill Test = HALF the governing
 	// Characteristic, round down; Sidebar "Treating Advanced Skills as Basic
@@ -165,7 +220,7 @@ export const rtCore: SystemProfile = {
 	// Bead wxut.1 lifts of the rules-layer constants (see the field docs above:
 	// domain cannot import the rules layer, so each value is repeated here and
 	// pinned against its rules constant by rules/system-profile.test.ts).
-	eliteAdvanceBaseCost: 500,
+	eliteAdvanceCost: { model: "flat-base", baseCost: 500 },
 	penaltyPerDamagePoint: 5,
 	repairTestModifier: -20,
 	// Book-accurate default (epic ui4b): the manual -1 chip, NOT auto-consume.

@@ -23,7 +23,10 @@ import { sheetContext } from "../context";
 import { crewQualityEffects, CREW_QUALITIES } from "../../rules/ship-crew";
 import {
 	deriveShipStats,
-	hullClassMatches,
+	// Bead qaro: hull-level component exceptions (Secutor "Outfitted for
+	// war", Into the Storm p152) ride through a scoped allowance, not the
+	// plain hull-class test.
+	componentHullAllows,
 	ESSENTIAL_COMPONENT_TYPES,
 	type ShipComponentLike,
 } from "../../rules/ship-systems";
@@ -217,6 +220,8 @@ export class ShipCreator extends CreatorApplication {
 	/** The picked hull's full statline (from the pack doc). */
 	async #hullStatline(): Promise<{
 		hullClass?: string;
+		/** Hull-level component exceptions (bead qaro grammar, ship-systems). */
+		extraHullTypes?: string;
 		dimensions?: string;
 		mass?: string;
 		crew?: string;
@@ -267,6 +272,9 @@ export class ShipCreator extends CreatorApplication {
 		const options = await fetchComponentOptions(shipsDocs);
 		const hull = (await this.#hullStatline()) ?? {};
 		const hullClass = String(hull.hullClass ?? "").toLowerCase();
+		// Bead qaro: the hull's machine-restated component exceptions, if its
+		// book rule grants any ("void-shield:cruisers" for the Secutor).
+		const extraHullTypes = String(hull.extraHullTypes ?? "");
 		// Pick state is stamped onto the option rows (bead mby6 follow-up):
 		// Handlebars #if takes exactly one argument, so the template must not
 		// try `{{#if ../picked.has o.uuid}}` (two tokens + Set methods are
@@ -289,7 +297,13 @@ export class ShipCreator extends CreatorApplication {
 				.filter(
 					(o) =>
 						o.componentType === type &&
-						(!hullClass || hullClassMatches(o.hullTypes, hullClass)),
+						(!hullClass ||
+							componentHullAllows(
+								o.hullTypes,
+								hullClass,
+								type,
+								extraHullTypes,
+							)),
 				)
 				.sort((a, b) => a.name.localeCompare(b.name))
 				.map(stamp);
@@ -323,7 +337,13 @@ export class ShipCreator extends CreatorApplication {
 					.filter(
 						(o) =>
 							o.componentType === type &&
-							(!hullClass || hullClassMatches(o.hullTypes, hullClass)),
+							(!hullClass ||
+								componentHullAllows(
+									o.hullTypes,
+									hullClass,
+									type,
+									extraHullTypes,
+								)),
 					)
 					.sort((a, b) => a.name.localeCompare(b.name))
 					.map(stamp),

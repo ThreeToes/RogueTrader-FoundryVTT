@@ -41,6 +41,12 @@ export class Starship extends foundry.abstract.TypeDataModel<
 	declare supplementalComponents: string[];
 	/** Named complications already rolled for a pre-built vessel (p211). */
 	declare complications: string[];
+	/**
+	 * Hull-level component exceptions (bead qaro), see the schema docblock
+	 * for the grammar. Carried by hulls whose book rules extend their
+	 * component compatibility beyond their hull class.
+	 */
+	declare extraHullTypes: string;
 
 	static override defineSchema() {
 		return {
@@ -103,6 +109,19 @@ export class Starship extends foundry.abstract.TypeDataModel<
 			essentialComponents: new foundry.data.fields.ArrayField(textField()),
 			supplementalComponents: new foundry.data.fields.ArrayField(textField()),
 			complications: new foundry.data.fields.ArrayField(textField()),
+			/**
+			 * Hull-level component exceptions (bead qaro): OPTIONAL comma-
+			 * separated "componentType:tokens" entries granting this hull
+			 * component classes beyond its own hullClass. Machine restatement
+			 * of the book's PROSE, not new book taxonomy — every entry must
+			 * cite the printed page in the book (e.g. the Secutor's
+			 * "Outfitted for war", Into the Storm printed p152, lets it use
+			 * 'cruiser only' Void Shield Components, hence
+			 * "void-shield:cruisers"). A bare entry (no ":") would apply to
+			 * all component types; the tokens use the verbatim hullTypes
+			 * vocabulary consumed by hullClassMatches (ship-systems).
+			 */
+			extraHullTypes: new foundry.data.fields.StringField({ initial: "" }),
 		};
 	}
 }

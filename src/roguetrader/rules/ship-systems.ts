@@ -72,18 +72,75 @@ export type EssentialComponentType = (typeof ESSENTIAL_COMPONENT_TYPES)[number];
  * (Onslaught-class...)" covers frigates); "All Ships"/"All ships" covers
  * everything. Whole-TOKEN matching keeps "Light Cruisers" from matching a
  * cruiser hull (a plain substring test would).
+ *
+ * `extraTokens` (bead qaro) ORs additional hull-class tokens the hull is
+ * allowed to take — book rules can extend a hull's component compatibility
+ * beyond its class (Into the Storm p152, the Secutor's "Outfitted for war"
+ * lets it use 'cruiser only' Void Shield Components). The extra tokens use
+ * the SAME whole-token discipline: a component token matches an allowed
+ * token by case-insensitive equality or prefix, "All Ships" still covers
+ * everything, and "Light Cruisers" still never matches "cruisers" without
+ * an explicit extra token.
  */
 export function hullClassMatches(
 	hullTypes: string,
 	hullClass: string,
+	extraTokens?: string,
 ): boolean {
 	const token = HULL_CLASS_TOKENS[hullClass] ?? hullClass;
 	if (!token) return true;
+	const allowed = [token];
+	for (const raw of (extraTokens ?? "").split(",")) {
+		const extra = raw.trim().toLowerCase();
+		if (extra && !allowed.includes(extra)) allowed.push(extra);
+	}
 	const tokens = (hullTypes ?? "")
 		.split(",")
 		.map((t) => t.trim().toLowerCase());
 	if (tokens.includes("all ships")) return true;
-	return tokens.some((t) => t === token || t.startsWith(token));
+	return tokens.some((t) =>
+		allowed.some((a) => t === a || t.startsWith(a)),
+	);
+}
+
+/**
+ * Whether a ship creator slot may offer a component on the picked hull
+ * (bead qaro): the plain hull-class match, OR the hull's `extraHullTypes`
+ * exception where the component's type is in scope.
+ *
+ * `extraHullTypes` grammar (carried on the hull item; machine restatement
+ * of the book's prose, NOT new book taxonomy — content authors must cite
+ * the printed page):
+ *   "componentType:tokens[, componentType:tokens...]"
+ *   scope = an Essential/supplemental componentType value (e.g.
+ *   "void-shield"); tokens = comma-separated hullTypes-vocabulary hull
+ *   classes the hull may additionally use for THAT component type.
+ * A bare entry without a ":" scope applies to ALL component types (kept
+ * for a future hull whose book rule is hull-wide; none is known — the
+ * Secutor's p152 rule is void-shield-only, so its entry is scoped).
+ *
+ * When no `componentType` is given, only bare entries apply (conservative:
+ * a scoped exception is never taken for an unknown slot type).
+ */
+export function componentHullAllows(
+	hullTypes: string,
+	hullClass: string,
+	componentType?: string,
+	extraHullTypes?: string,
+): boolean {
+	if (hullClassMatches(hullTypes, hullClass)) return true;
+	for (const raw of (extraHullTypes ?? "").split(",")) {
+		const entry = raw.trim();
+		if (!entry) continue;
+		const scoped = /^([^:]+):(.*)$/.exec(entry);
+		const scope = scoped ? scoped[1].trim().toLowerCase() : null;
+		const tokens = scoped ? scoped[2].trim() : entry;
+		if (scope && (!componentType || scope !== componentType.toLowerCase())) {
+			continue;
+		}
+		if (hullClassMatches(hullTypes, hullClass, tokens || undefined)) return true;
+	}
+	return false;
 }
 
 /** Hull-class (ships pack `hullClass` values) → hullTypes token. */

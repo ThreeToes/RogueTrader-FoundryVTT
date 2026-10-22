@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+	componentHullAllows,
 	deriveShipStats,
+	hullClassMatches,
 	parsePowerDraw,
 	parsePowerGenerated,
 	parseSpToken,
@@ -162,5 +164,102 @@ describe("weapon slot validation (bead om4j, loud failures)", () => {
 			"starboard",
 			"keel",
 		]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Hull-class matching + hull-level component exceptions (bead qaro)
+// ---------------------------------------------------------------------------
+
+describe("hullClassMatches (whole-token discipline, bead 9cre)", () => {
+	test("verbatim token families match, cross-class does not", () => {
+		expect(hullClassMatches("Light Cruisers, Cruisers", "light cruiser")).toBe(
+			true,
+		);
+		// Whole-token matching keeps cruiser-sized gear off a light cruiser.
+		expect(hullClassMatches("Cruisers", "light cruiser")).toBe(false);
+		expect(hullClassMatches("Transports, Raiders, Frigates", "frigate")).toBe(
+			true,
+		);
+		expect(hullClassMatches("Ork Raiders, Frigates (Onslaught-class)", "frigate")).toBe(true);
+		expect(hullClassMatches("All Ships", "cruiser")).toBe(true);
+	});
+
+	test("extraTokens OR in additional allowance with the same discipline", () => {
+		expect(hullClassMatches("Cruisers", "light cruiser", "cruisers")).toBe(
+			true,
+		);
+		// An extra allowance the component's tokens don't cover does nothing.
+		expect(hullClassMatches("Cruisers", "transport", "frigates")).toBe(false);
+		// raider hull whose book rule grants cruiser-only gear: "Cruisers"
+		// DOES match (that is what the extra token is for).
+		expect(hullClassMatches("Cruisers", "raider", "cruisers")).toBe(true);
+		// Prefix discipline holds for extra tokens too: a qualified component
+		// token covers the extra class.
+		expect(
+			hullClassMatches(
+				"Frigates (Onslaught-class)",
+				"light cruiser",
+				"frigates",
+			),
+		).toBe(true);
+		expect(hullClassMatches("Cruisers", "frigate", "")).toBe(false);
+	});
+});
+
+describe("componentHullAllows (bead qaro, Secutor exception)", () => {
+	const repulsor = { hullTypes: "Cruisers", type: "void-shield" };
+	// Secutor-class monitor-cruiser hull (Into the Storm p152): hullClass
+	// "light cruiser", book rule "Outfitted for war" lets it use 'cruiser
+	// only' Void Shield Components.
+	const secutorClass = "light cruiser";
+	const secutorExtras = "void-shield:cruisers";
+
+	test("void shields are offered on the Secutor (book p152)", () => {
+		expect(
+			componentHullAllows(
+				repulsor.hullTypes,
+				secutorClass,
+				repulsor.type,
+				secutorExtras,
+			),
+		).toBe(true);
+	});
+
+	test("the exception is scoped: a macrobattery does NOT match", () => {
+		expect(
+			componentHullAllows(
+				"Cruisers",
+				secutorClass,
+				"macrobattery",
+				secutorExtras,
+			),
+		).toBe(false);
+	});
+
+	test("multiple comma-separated scoped entries each honour their scope", () => {
+		const extras = "void-shield:cruisers, lance:battlecruisers, raiders";
+		expect(componentHullAllows("Cruisers", secutorClass, "void-shield", extras)).toBe(true);
+		// battlecruiser maps to the cruiser token family; "raiders" is bare
+		// (all component types).
+		expect(componentHullAllows("Battlecruisers", secutorClass, "lance", extras)).toBe(true);
+		expect(componentHullAllows("Raiders", secutorClass, "macrobattery", extras)).toBe(true);
+		expect(componentHullAllows("Cruisers", secutorClass, "lance", extras)).toBe(false);
+	});
+
+	test("bare (unscoped) entries apply to every component type", () => {
+		expect(componentHullAllows("Cruisers", secutorClass, "macrobattery", "cruisers")).toBe(true);
+	});
+
+	test("scoped entries never fire for an unknown component type", () => {
+		expect(componentHullAllows("Cruisers", secutorClass, undefined, secutorExtras)).toBe(false);
+		expect(componentHullAllows("Cruisers", secutorClass, undefined, "cruisers")).toBe(true);
+	});
+
+	test("empty / missing extraHullTypes behaves as the plain match", () => {
+		expect(componentHullAllows("Cruisers", secutorClass, "void-shield", "")).toBe(false);
+		expect(componentHullAllows("Cruisers", secutorClass, "void-shield", "  ")).toBe(false);
+		// The plain match path is untouched by the extra parsing.
+		expect(componentHullAllows("Light Cruisers, Cruisers", secutorClass, "void-shield", "")).toBe(true);
 	});
 });

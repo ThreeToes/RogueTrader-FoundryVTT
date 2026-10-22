@@ -8,6 +8,16 @@
  * Each handler receives (actor, talent, effect) and returns a pure derived
  * contribution; consumers (rules/derived.ts, sheets) aggregate. Handlers never
  * mutate documents.
+ *
+ * Bead z5nq: the kinds the SYSTEM itself ships are registered ONCE, in
+ * ffg/domain/effects/specs.ts (labelKey + channels + read/toModifier). The
+ * core kinds here used to be registered a SECOND time as "reference
+ * handlers" that reimplemented the spec value semantics — two sources of
+ * truth that could disagree silently (dead code, but latent: tearing/toxic
+ * returned `1` where the spec's read returns `true`; corruption returned the
+ * raw value where the spec stringifies — and run() was invoked by no
+ * production code). Core now ships no handlers: this registry is empty at
+ * import and is filled only by modules that add kinds of their own.
  */
 
 import type { Modifier } from "../../rules-engine/modifier";
@@ -15,6 +25,7 @@ import type { ActorView } from "../../ffg/domain/model/actor";
 import { collectEffects } from "../../ffg/domain/effects";
 import { HandlerRegistry } from "../../ffg/domain/registry";
 import { isWeaponType } from "../data/accessors";
+import { matchQualityEntry, weaponQualities } from "./weapon-qualities";
 
 export interface TalentEffectLike {
 	kind?: string;
@@ -63,104 +74,6 @@ export const talentEffectHandlers = {
 	},
 };
 
-// ---------------------------------------------------------------------------
-// Reference handlers.
-// ---------------------------------------------------------------------------
-
-/** "wounds-max": additive wound levels (Sound Constitution style). */
-talentEffectHandlers.register("wounds-max", (_actor, _talent, effect) => {
-	const value = Number(effect.value ?? 1);
-	return Number.isFinite(value) && value !== 0 ? value : null;
-});
-
-/** "skill-rank": additive skill ladder bonus for the keyed characteristic tests. */
-talentEffectHandlers.register("skill-rank", (_actor, _talent, effect) => {
-	const value = Number(effect.value ?? 0);
-	return Number.isFinite(value) && value !== 0 ? value : null;
-});
-
-// ---------------------------------------------------------------------------
-// Damage-pipeline kinds (bead fjw). These are consumed by the adapter's
-// damage flow via collectTalentDamageEffects below; the reference handlers
-// here just expose the raw values through the registry so the kinds are
-// discoverable (talentEffectHandlers.kinds()) and reusable by modules.
-//
-// VERIFY against prose p95-99: Crushing Blow (S 40) "+2 to damage inflicted
-// in melee"; Crack Shot (BS 40) "+2 to the Damage when his ranged attack
-// causes Critical Damage"; Crippling Strike (WS 50) "+4 Damage" on melee
-// criticals.
-// ---------------------------------------------------------------------------
-talentEffectHandlers.register("damage-flat", (_actor, _talent, effect) => {
-	const value = Number(effect.value ?? 0);
-	return Number.isFinite(value) && value !== 0 ? value : null;
-});
-talentEffectHandlers.register("critical-damage", (_actor, _talent, effect) => {
-	const value = Number(effect.value ?? 0);
-	return Number.isFinite(value) && value !== 0 ? value : null;
-});
-
-// ---------------------------------------------------------------------------
-// Roll-mechanic kinds (bead gci0, Core Rulebook Armoury quality prose):
-//   tearing - "roll one extra die for damage, and the lowest result is
-//             discarded" (the extra die roll happens in the adapter: the
-//             kernel stays number-in/number-out and cannot touch Foundry
-//             dice)
-//   toxic   - target Toughness test at -5 per damage taken; failure = 1d10
-//             Impact with no armour/TB reduction (adapter posts the prompt)
-//   blast   - everyone within the blast radius (rating in metres) is also
-//             hit; roll location/damage individually (adapter posts the
-//             prompt)
-// Handlers here are reference/discovery registrations (kinds() lists them,
-// the effect editor offers them); the adapter consumes them via
-// collectRollMechanicEffects below.
-// ---------------------------------------------------------------------------
-talentEffectHandlers.register("tearing", () => 1);
-talentEffectHandlers.register("toxic", () => 1);
-talentEffectHandlers.register("blast", (_actor, _talent, effect) => {
-	const value = Number(effect.value ?? 0);
-	return Number.isFinite(value) ? value : 0;
-});
-
-// Target-side trait damage kinds (bead zyv1): discovery/registry entries so
-// the effect editor offers them and talentEffectHandlers.kinds() lists them.
-// Consumed from the TARGET's trait items by collectTargetTraitDamageEffects
-// (below) — NOT from talents, whose damage kinds are attacker-side (bead fjw).
-talentEffectHandlers.register("tb-multiplier", (_actor, _talent, effect) => {
-	const value = Number(effect.value ?? 0);
-	return Number.isFinite(value) && value > 0 ? value : null;
-});
-talentEffectHandlers.register("damage-reduction", (_actor, _talent, effect) => {
-	const value = Number(effect.value ?? 0);
-	return Number.isFinite(value) && value !== 0 ? value : null;
-});
-
-// Corruption-on-manifest kind (epic 0hap): the Summon Daemon power prints
-// "1d10+4 Corruption Points" (Edge of the Abyss p83). The adapter rolls the
-// `dice` expression after a successful Focus Power Test; this reference
-// registration makes the kind discoverable to the effect editor.
-talentEffectHandlers.register("corruption", (_actor, _talent, effect) => {
-	const dice = effect.dice?.trim();
-	if (dice) return dice;
-	const value = Number(effect.value ?? 0);
-	return Number.isFinite(value) && value !== 0 ? value : null;
-});
-
-// Sorcery kinds (epic 0hap, Edge of the Abyss pp85-86).
-//   sorcery-rank    - the Sorcerer (1) / Master Sorcerer (2) talents; sets the
-//                     Intelligence-Bonus Psy Rating the caster uses.
-//   grants-technique - the Sorcerer / Sorcerous Power talents grant one
-//                     psychic technique; the interactive pick + castAs flag is
-//                     the psychic picker's job (the reference handler here
-//                     makes the intent expressible and discoverable).
-talentEffectHandlers.register("sorcery-rank", (_actor, _talent, effect) => {
-	const value = Number(effect.value ?? 0);
-	return Number.isFinite(value) && value > 0 ? value : null;
-});
-talentEffectHandlers.register("grants-technique", (_actor, _talent, effect) => {
-	const value = Number(effect.value ?? 1);
-	return Number.isFinite(value) && value > 0 ? value : 1;
-});
-
 /**
  * Highest sorcery rank the actor's talents grant (epic 0hap): 0 = none,
  * 1 = Sorcerer (half Int-Bonus Psy Rating), 2 = Master Sorcerer (full).
@@ -179,7 +92,19 @@ export function collectSorceryRank(view: ActorView): number {
 	return rank;
 }
 
-/** Parsed roll-mechanic inputs for one attack (bead gci0). */
+/**
+ * Parsed roll-mechanic inputs for one attack (bead gci0; registry-shaped by
+ * bead gyei).
+ *
+ * The fields are the mechanics the DAMAGE PIPELINE consumes (adapter.ts
+ * applyRollQualityMechanics + toxicActivates), so they stay closed — but the
+ * values are no longer populated by a per-quality if/else-if chain: the RT
+ * weapon-quality registry (rules/weapon-qualities.ts) populates them, and
+ * both entry routes route through it (the printable `special` strings AND
+ * the effect kinds, which are one-for-one with the quality slugs).
+ * Adding a new roll-changing quality = one registry def (+ a field here only
+ * when it carries a NEW mechanic the pipeline must consume).
+ */
 export interface RollMechanics {
 	tearing: boolean;
 	toxic: boolean;
@@ -187,38 +112,50 @@ export interface RollMechanics {
 	blast: number | null;
 }
 
-/** Parse a weapon's `special` strings into roll-mechanic inputs. */
+/**
+ * Parse a weapon's `special` strings into roll-mechanic inputs (bead gyei:
+ * the old tearing/toxic/blast switch chain is gone — the quality registry in
+ * rules/weapon-qualities.ts answers each entry, so a new roll-changing
+ * quality registers there and needs no edit here).
+ */
 export function parseSpecialMechanics(
 	special: string[] | undefined,
 ): RollMechanics {
 	const out: RollMechanics = { tearing: false, toxic: false, blast: null };
+	const absorb = (parsed: Partial<RollMechanics> | undefined) => {
+		if (!parsed) return;
+		if (parsed.tearing === true) out.tearing = true;
+		if (parsed.toxic === true) out.toxic = true;
+		if (
+			typeof parsed.blast === "number" &&
+			Number.isFinite(parsed.blast)
+		)
+			// SEMANTIC NOTE (bead gyei review, no behaviour change required):
+			// the blast rating absorbs with Math.max across MULTIPLE blast rows,
+			// where the OLD parser was last-wins — a bare "blast" entry reset
+			// the rating to 0. Shipped data never carries two blast rows on one
+			// entry list (one blast row per weapon at most), so the outcomes
+			// coincide; Math.max is the sane merge should data ever differ.
+			// collectRollMechanicEffects' absorb below mirrors this rule.
+			out.blast = Math.max(out.blast ?? 0, parsed.blast);
+	};
 	for (const entry of special ?? []) {
-		const key = entry.trim().toLowerCase();
-		if (key === "tearing") out.tearing = true;
-		else if (key === "toxic") out.toxic = true;
-		else {
-			const blast = /^blast(?:\s*\((\d+)\))?(?:-(\d+))?$/.exec(key);
-			if (blast) {
-				const rating = Number(blast[1] ?? blast[2] ?? 0);
-				out.blast = Number.isFinite(rating) ? rating : 0;
-			} else if (key.startsWith("blast")) {
-				// Loud failure (bead dfb8): variable ratings the book prints as
-				// dice (e.g. Ork Bomb Squig "Blast (1d5)", ITS Table 3-17) cannot
-				// resolve to a static radius. Ignoring them silently would hide a
-				// modifier; warn so the data gets fixed or the engine extended.
-				console.warn(
-					`rogue-trader | unparseable blast quality "${entry}" — no static blast radius applied.`,
-				);
-			}
-		}
+		// Unregistered qualities are inert without a warning; an unparseable
+		// rating on a registered parameterised quality warns and drops loudly
+		// (matchQualityEntry, bead dfb8 semantics kept).
+		const match = matchQualityEntry(entry);
+		if (match) absorb(match.def.mechanics?.(match.rating));
 	}
 	return out;
 }
 
 /**
- * Collect roll-mechanic qualities for an attack (bead gci0): the attacking
- * weapon's `special` strings plus effect-kind contributions (kind "tearing"/
- * "toxic"/"blast", value = blast rating) from talents and the weapon itself.
+ * Collect roll-mechanic qualities for an attack (bead gci0; the effect-kind
+ * walk routes through the RT quality registry since bead gyei, so BOTH the
+ * effect kinds and the weapon's `special` strings resolve from ONE registry
+ * — the specs' roll-mechanic kinds (tearing/toxic/blast) are one-for-one
+ * with the quality slugs).
+ *
  * Pure; the adapter turns the result into dice rolls and card notes.
  */
 export function collectRollMechanicEffects(
@@ -236,10 +173,16 @@ export function collectRollMechanicEffects(
 	},
 ): RollMechanics {
 	const out: RollMechanics = { tearing: false, toxic: false, blast: null };
-	const absorb = (parsed: RollMechanics) => {
-		out.tearing ||= parsed.tearing;
-		out.toxic ||= parsed.toxic;
-		if (parsed.blast !== null)
+	// One absorb for BOTH routes: a registry def's Partial<RollMechanics> output
+	// (same shape parseSpecialMechanics absorbs through matchQualityEntry).
+	const absorb = (parsed: Partial<RollMechanics> | undefined) => {
+		if (!parsed) return;
+		if (parsed.tearing === true) out.tearing = true;
+		if (parsed.toxic === true) out.toxic = true;
+		if (
+			typeof parsed.blast === "number" &&
+			Number.isFinite(parsed.blast)
+		)
 			out.blast = Math.max(out.blast ?? 0, parsed.blast);
 	};
 	if (opts.special?.length) absorb(parseSpecialMechanics(opts.special));
@@ -253,15 +196,19 @@ export function collectRollMechanicEffects(
 		weaponId: opts.weaponId,
 		itemWhere,
 	})) {
-		if (hit.spec.kind === "tearing") out.tearing = true;
-		else if (hit.spec.kind === "toxic") out.toxic = true;
-		else if (hit.spec.kind === "blast") {
+		const def = weaponQualities.def(hit.spec.kind);
+		if (!def?.mechanics) continue;
+		// Rated qualities (blast) read the spec's value; an unrated blast spec
+		// (read missing) reaches no mechanic — an unrated rating can never
+		// apply. Flag qualities never read (they cannot carry one).
+		if (def.rating === "optional") {
 			const rating = hit.spec.read?.(hit.item, hit.effect, {
 				channel: "roll-mechanic",
 			});
-			if (typeof rating === "number") {
-				out.blast = Math.max(out.blast ?? 0, rating);
-			}
+			if (typeof rating !== "number") continue;
+			absorb(def.mechanics(rating));
+		} else {
+			absorb(def.mechanics(null));
 		}
 	}
 	const weapon =

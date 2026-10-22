@@ -8,7 +8,6 @@
 
 import { characteristicLongLabels } from "../../registry";
 import { withAddedEffect, withoutEffectAt } from "../../data/item/effects";
-import { talentEffectHandlers } from "../../rules/talent-effects";
 import { effectKinds } from "../../../ffg/domain/effects";
 
 interface EffectsSheet {
@@ -51,10 +50,10 @@ export const effectActions = {
 /**
  * Dropdown choices for the shared effect editor: `kindChoices` maps kind ->
  * localized label, derived from the registered `EffectSpec`s' `labelKey`
- * (bead ypbx — a new kind needs NO second edit here); kinds known only to a
- * handler (no spec) fall back to the raw slug, as do specs registered without
- * a `labelKey`. `testKeyChoices` maps key -> localized label with "" = all
- * tests. `localize` is optional and defaults to `game.i18n.localize`.
+ * (bead ypbx — a new kind needs NO second edit here); specs registered
+ * without a `labelKey` fall back to the raw slug. `testKeyChoices` maps
+ * key -> localized label with "" = all tests. `localize` is optional and
+ * defaults to `game.i18n.localize`.
  */
 export function effectEditorChoices(
 	localize: (key: string) => string = (key) => game.i18n.localize(key),
@@ -63,13 +62,8 @@ export function effectEditorChoices(
 	testKeyChoices: Record<string, string>;
 } {
 	const kindChoices: Record<string, string> = {};
-	const knownKinds = [
-		...effectKinds.all().map((spec) => spec.kind),
-		...talentEffectHandlers.kinds(),
-	];
-	for (const kind of [...new Set(knownKinds)]) {
-		const labelKey = effectKinds.get(kind)?.labelKey;
-		kindChoices[kind] = labelKey ? localize(labelKey) : kind;
+	for (const spec of effectKinds.all()) {
+		kindChoices[spec.kind] = spec.labelKey ? localize(spec.labelKey) : spec.kind;
 	}
 	const testKeyChoices: Record<string, string> = {
 		"": localize("EFFECTS.ALL_TESTS"),

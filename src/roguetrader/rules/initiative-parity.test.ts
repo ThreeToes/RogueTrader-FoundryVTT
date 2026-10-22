@@ -58,7 +58,7 @@ const { collectInitiativeRows, sumInitiativeRows } = await import(
 const { rollInitiativeAction } = await import("./adapter");
 const { Character } = await import("../data/actor/character");
 const { foundryPorts, setPorts } = await import(
-	"../../ffg/infrastructure/foundry/ports"
+	"../../test-helpers/ports"
 );
 const { TestDialog } = await import("./test-dialog");
 const { runRoll } = await import("../presentation/rolls/orchestrator");

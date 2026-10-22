@@ -103,6 +103,8 @@
 	"EFFECT_KIND.GRANTS_TECHNIQUE": "Przyznaje technikę",
 	"EFFECT_KIND.PEN_FLAT": "Stała penetracja",
 	"EFFECT_KIND.PRIMITIVE_CLEAR": "Unieważnia Prymitywny (Mono)",
+	"EFFECT_KIND.FEAR_IMMUNITY": "Odporny na Strach",
+	"EFFECT_KIND.FEAR_REROLL": "Powtarza niezaliczone Testy Strachu",
 	"PROCEDURE.DEGENERATE_MIND": "Zdegenerowany umysł (cecha 1d10)",
 	"PROCEDURE.MENTAL_REGRESSIVE": "Regresja umysłowa (1d10 na cechę)",
 	"PROCEDURE.RAVAGED_BODY": "Spustoszone ciało (1d5 dodatkowych mutacji)",

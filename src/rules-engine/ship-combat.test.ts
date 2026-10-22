@@ -16,7 +16,9 @@ import {
 	resolveSalvoDamage,
 	salvoWeaponKind,
 	SHIP_CRITICALS,
+	SHIP_WEAPON_KINDS,
 	shipCritical,
+	shipWeaponKindSpec,
 	VENT_FIRE_CREW_DAMAGE,
 } from "./ship-combat";
 
@@ -275,9 +277,10 @@ describe("salvo damage formula composition (bead rhij)", () => {
 	});
 });
 
-// Bead kxbz: the salvo gate — only macrobatteries and lances fire a
+// Bead kxbz, registry per bead p6nx: the salvo gate — classification is
+// data-driven through the kernel registry; only registered kinds fire a
 // salvo; the ordnance types are Extended Actions (bead a413/S9).
-describe("salvo weapon kind (bead kxbz)", () => {
+describe("salvo weapon kind (bead kxbz, registry p6nx)", () => {
 	test("accepts the two salvo componentTypes", () => {
 		expect(salvoWeaponKind("macrobattery", "anything")).toBe("macrobattery");
 		expect(salvoWeaponKind("lance", "anything")).toBe("lance");
@@ -292,9 +295,59 @@ describe("salvo weapon kind (bead kxbz)", () => {
 		expect(salvoWeaponKind("torpedo-tube", "Prow Torpedo Lance")).toBeNull();
 	});
 
-	test("blank componentType keeps the legacy name heuristic", () => {
+	test("blank componentType keeps the LEGACY name heuristic (fallback only)", () => {
 		expect(salvoWeaponKind("", "Sunsear Laser Battery")).toBe("macrobattery");
 		expect(salvoWeaponKind("", "Titanforge Lance")).toBe("lance");
+	});
+
+	// Bead p6nx: a present componentType wins over the legacy regex —
+	// a macrobattery NAMED like a lance is classified by its data field.
+	test("a present componentType wins over the legacy name regex", () => {
+		expect(
+			salvoWeaponKind("macrobattery", "Titanforge Lance"),
+		).toBe("macrobattery");
+		expect(
+			salvoWeaponKind("lance", "Sunsear Laser Battery"),
+		).toBe("lance");
+	});
+});
+
+// Bead p6nx: the kernel ShipWeaponKindSpec registry — each registered kind
+// carries its hit rate and armour rule with a Core Rulebook citation; a
+// kind without citable book behaviour ships WITHOUT a spec (loud miss),
+// never a guessed macrobattery.
+describe("ship weapon kind registry (bead p6nx)", () => {
+	test("both registered kinds carry a citation", () => {
+		for (const kind of ["macrobattery", "lance"] as const) {
+			const spec = shipWeaponKindSpec(kind);
+			expect(spec.id).toBe(kind);
+			expect(spec.citation).toContain("p220");
+		}
+	});
+
+	test("macrobattery hit rate + Armour rule (book p220-221)", () => {
+		const spec = shipWeaponKindSpec("macrobattery");
+		expect(spec.hitsFor(0)).toBe(1);
+		expect(spec.hitsFor(2)).toBe(3);
+		expect(spec.ignoresArmour).toBe(false);
+	});
+
+	test("lance hit rate + Armour rule (book p220)", () => {
+		const spec = shipWeaponKindSpec("lance");
+		expect(spec.hitsFor(2)).toBe(1);
+		expect(spec.hitsFor(3)).toBe(2);
+		expect(spec.hitsFor(6)).toBe(3);
+		expect(spec.ignoresArmour).toBe(true);
+	});
+
+	// The nova cannon / torpedo tube / landing bay behaviours are NOT in the
+	// registry: their mechanics live in the Extended Action / BFK-ordnance
+	// handlers (bead a413/S9), and no citable salvo resolution rule exists in
+	// the repo-extracted data — so salvoWeaponKind misses loudly for them
+	// (tested above) instead of a spec that would guess macrobattery values.
+	test("no spec is registered for kinds without citable book behaviour", () => {
+		const registered = Object.keys(SHIP_WEAPON_KINDS);
+		expect(registered).toEqual(["macrobattery", "lance"]);
 	});
 });
 

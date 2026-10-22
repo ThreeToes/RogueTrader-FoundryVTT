@@ -22,6 +22,7 @@ import {
 	resolveSalvoDamage,
 	salvoWeaponKind,
 	shipCritical,
+	shipWeaponKindSpec,
 	salvoTurnFlagRows,
 	shipLockGate,
 	type ShipBoardingState,
@@ -93,13 +94,17 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 			});
 			return null;
 		}
-		// Salvo gate (bead kxbz): only macrobatteries and lances resolve through
-		// the salvo path — torpedo tubes / nova cannon / landing bays are
-		// Extended Actions and BFK-ordnance territory (bead a413/S9 owns their
-		// mechanics), and their damage cells (the book's "—") cannot compose a
-		// salvo formula at all. Refusing HERE — before the roll — is what keeps
-		// the after() side effects (the silent-running reveal, the target
-		// write) from ever partially applying: no prepare, no roll, no after().
+		// Salvo gate (bead kxbz, registry per bead p6nx): classification reads
+		// item.system.componentType through the kernel registry — only registered
+		// kinds (macrobattery/lance, book p220) resolve through the salvo path —
+		// torpedo tubes / nova cannon / landing bays are Extended Actions and
+		// BFK-ordnance territory (bead a413/S9 owns their mechanics), so the
+		// lookup MISSES for them and the shot is refused loudly (the warn names
+		// the kinds) — never a silent macrobattery guess. The blank
+		// componentType fallback is the kernel's documented legacy regex.
+		// Refusing HERE — before the roll — is what keeps the after() side
+		// effects (the silent-running reveal, the target write) from ever
+		// partially applying: no prepare, no roll, no after().
 		const kind = salvoWeaponKind(
 			weapon.componentType ?? "",
 			`${item.name ?? ""} ${weapon.special ?? ""}`,
@@ -293,7 +298,10 @@ export const shipWeaponHandler: RollHandler<"ship-weapon"> = {
 		const salvo = resolveSalvoDamage({
 			damageTotal,
 			armour: Math.max(0, targetSystem.armour ?? 0),
-			lance: kind === "lance",
+			// Bead p6nx: the armour rule comes from the kind's registry spec (the
+			// lance entry's p220 citation), not a hard-coded lance branch — a new
+			// kind registers its own rule and this line needs no edit.
+			lance: shipWeaponKindSpec(kind).ignoresArmour,
 		});
 		// Hull Integrity + Crew Population/Morale losses (book p221).
 		const crewLoss = crewLossFromHullDamage(salvo.hullDamage);

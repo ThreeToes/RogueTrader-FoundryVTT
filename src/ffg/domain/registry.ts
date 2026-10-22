@@ -52,16 +52,41 @@ export class Registry<V> {
 	}
 }
 
-/** Many handlers per key, run in registration order. */
+/**
+ * Many handlers per key, run in registration order. `on` de-duplicates by
+ * reference (bead 00z5): the SAME handler appended twice is a no-op, so an
+ * idempotent registrar can never double-contribute through a repeat call,
+ * and `off`/`clear` give tests a teardown affordance — a registration made
+ * in one suite cannot leak into the next suite in the same process.
+ */
 export class HandlerRegistry<K extends string, V> {
 	readonly #handlers = new Map<K, V[]>();
 
-	/** Add a handler under a key. Chainable. */
+	/** Add a handler under a key; a reference-identical repeat is a no-op. Chainable. */
 	on(key: K, handler: V): this {
 		const list = this.#handlers.get(key) ?? [];
-		list.push(handler);
-		this.#handlers.set(key, list);
+		if (!list.includes(handler)) {
+			list.push(handler);
+			this.#handlers.set(key, list);
+		}
 		return this;
+	}
+
+	/** Remove one handler from a key. True when it was registered there. */
+	off(key: K, handler: V): boolean {
+		const list = this.#handlers.get(key);
+		if (!list) return false;
+		const index = list.indexOf(handler);
+		if (index === -1) return false;
+		if (list.length === 1) this.#handlers.delete(key);
+		else list.splice(index, 1);
+		return true;
+	}
+
+	/** Drop every handler under one key, or across all keys when omitted. */
+	clear(key?: K): void {
+		if (key === undefined) this.#handlers.clear();
+		else this.#handlers.delete(key);
 	}
 
 	/** Handlers registered under one key. */

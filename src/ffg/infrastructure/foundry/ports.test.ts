@@ -41,8 +41,8 @@ import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { locationForHit, resolveTest } from "../../../rules-engine/index";
 import { messageFlagNamespace, postCard } from "../../application/chat-flags";
 import type { ConfigProfile, DiceResult, Ports } from "../../application/ports";
-import { dh2Core } from "../../domain/system-profile-dark-heresy";
 import { DEFAULT_SYSTEM_PROFILE } from "../../domain/system-profile";
+import { dh2Core } from "../../domain/system-profile-dark-heresy";
 
 afterAll(() => {
 	for (const [key, value] of Object.entries(originalGlobals)) {
@@ -142,7 +142,7 @@ describe("the neutral config port's profile() (bead w9sa.8)", () => {
 			// The two "the system" fields are the only non-kernel data the
 			// shared machinery reads, and they resolve from the sibling's own
 			// values rather than a hardcoded RT namespace.
-			expect(messageFlagNamespace(foundryPorts)).toBe("dark-heresy-2e");
+			expect(messageFlagNamespace(foundryPorts.config)).toBe("dark-heresy-2e");
 			expect(profile.rollCardTemplate).toBe(
 				"systems/dark-heresy-2e/template/chat/roll.hbs",
 			);
@@ -182,7 +182,7 @@ describe("the neutral config port's profile() (bead w9sa.8)", () => {
 			expect(foundryPorts.config.profile().critOnDouble).toBe(false);
 			// The BRANDING half refuses rather than writing chat flags under
 			// `undefined` — the silent bug this repo refuses.
-			expect(() => messageFlagNamespace(foundryPorts)).toThrow(
+			expect(() => messageFlagNamespace(foundryPorts.config)).toThrow(
 				/messageFlagNamespace/,
 			);
 		} finally {
@@ -625,7 +625,7 @@ describe("the chat port attaches rolls to the message (bead wvkd)", () => {
 		};
 		const rolled = await ports.dice.roll("1d100");
 		const message = await postCard(
-			ports,
+			ports.chat,
 			rollingView,
 			"systems/rogue-trader/template/chat/roll.hbs",
 			{ title: "Awareness", roll: rolled.total },
@@ -661,7 +661,7 @@ describe("the chat port attaches rolls to the message (bead wvkd)", () => {
 		};
 		const rolled = await ports.dice.roll("1d100");
 		await postCard(
-			ports,
+			ports.chat,
 			rollingView,
 			"systems/rogue-trader/template/chat/roll.hbs",
 			{ title: "Awareness", roll: rolled.total },
@@ -693,7 +693,7 @@ describe("the chat port attaches rolls to the message (bead wvkd)", () => {
 		};
 		const rolled = await ports.dice.roll("1d100");
 		await postCard(
-			ports,
+			ports.chat,
 			rollingView,
 			"tmpl.hbs",
 			{ roll: rolled.total },
@@ -723,7 +723,7 @@ describe("the chat port attaches rolls to the message (bead wvkd)", () => {
 		expect(rolled.rolls).toBeUndefined();
 
 		const message = await postCard(
-			ports,
+			ports.chat,
 			rollingView,
 			"systems/rogue-trader/template/chat/roll.hbs",
 			{ title: "Awareness", roll: rolled.total },
@@ -756,5 +756,63 @@ describe("the chat port attaches rolls to the message (bead wvkd)", () => {
 		expect(parts).toEqual({ id: "msg-1" });
 		expect("rolls" in rollMessages[0]).toBe(false);
 		expect(rollMessages[0].isRoll).toBe(false);
+	});
+});
+
+// --- canModify: the ONE ownership answer (bead eolv) -----------------------
+//
+// The chat-card actions (apply damage / apply condition) and the creator
+// menus used to hand-roll ownership off the `game` global, so the same access
+// rule answered differently per entry point and a Permissions test double
+// could not control the card buttons. The foundry impl is now the single
+// answer; this pins its contract.
+
+describe("the permissions port's canModify (bead eolv)", () => {
+	const stubbedGame = (globalThis as Record<string, unknown>).game;
+
+	/** One user shape per case, handed to the port through the global. */
+	function withUser(
+		user: unknown,
+		body: (canModify: (actor: unknown) => boolean) => void,
+	): Promise<void> {
+		return (async () => {
+			(globalThis as Record<string, unknown>).game = {
+				...(stubbedGame as Record<string, unknown>),
+				user,
+			};
+			const { foundryPorts } = await import("./ports");
+			body(foundryPorts.permissions.canModify);
+			(globalThis as Record<string, unknown>).game = stubbedGame;
+		})();
+	}
+
+	test("an OWNED document: allow — a GM holds owner, so isOwner folds the GM in", async () => {
+		await withUser({ isGM: true }, (canModify) =>
+			expect(canModify({ isOwner: true })).toBe(true),
+		);
+		await withUser({ isGM: false }, (canModify) =>
+			expect(canModify({ isOwner: true })).toBe(true),
+		);
+	});
+
+	test("an UNOWNED document: refuse, fail closed (no isOwner key counts as no)", async () => {
+		await withUser({ isGM: false }, (canModify) => {
+			expect(canModify({ isOwner: false })).toBe(false);
+			expect(canModify({})).toBe(false);
+			expect(canModify(null)).toBe(false);
+		});
+	});
+
+	test("NO document (creation): the user-level create permission answers", async () => {
+		await withUser({ isGM: true }, (canModify) =>
+			expect(canModify(null)).toBe(true),
+		);
+		await withUser(
+			{ isGM: false, hasPermission: (p: string) => p === "ACTOR_CREATE" },
+			(canModify) => expect(canModify(null)).toBe(true),
+		);
+		await withUser({ isGM: false }, (canModify) =>
+			expect(canModify(null)).toBe(false),
+		);
 	});
 });

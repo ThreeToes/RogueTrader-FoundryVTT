@@ -176,7 +176,15 @@ function damageModifier(
 		id: `${isTalent ? "talent-damage" : "weapon-damage"}:${item.id || item.name}:${kind}:${effect.label ?? ""}:${effect.condition || "any"}`,
 		source: {
 			type: isTalent ? "talent" : "item",
-			label: isTalent ? "SOURCE.FROM_TALENTS" : "SOURCE.FROM_WEAPONS",
+			// Bead j6ko: the sourceLabels table governs the label, exactly as
+			// the funnel's sourceFor does — a non-weapon carrier's own label
+			// wins (an innate "mutation" no longer renders "Weapons");
+			// FROM_WEAPONS stays the fallback, so the weapon shape is
+			// byte-identical.
+			label: isTalent
+				? "SOURCE.FROM_TALENTS"
+				: (itemTaxonomyRegistry().sourceLabels[item.type] ??
+					"SOURCE.FROM_WEAPONS"),
 		},
 		label: effect.label || item.name || "",
 		value: Number(effect.value),
@@ -222,7 +230,15 @@ effectKinds.register({
 		// same-named rows on different traits stay additive (funnel dedupe
 		// lesson).
 		id: `trait-reduction:${item.id || item.name}:${effect.label ?? ""}`,
-		source: { type: "item", label: "SOURCE.FROM_TRAITS" },
+		// Bead j6ko: the same lookup the funnel and the damage channel use —
+		// a non-trait carrier of a damage-reduction row keeps its own label;
+		// FROM_TRAITS stays the fallback so traits are byte-identical.
+		source: {
+			type: "item",
+			label:
+				itemTaxonomyRegistry().sourceLabels[item.type] ??
+				"SOURCE.FROM_TRAITS",
+		},
 		label: effect.label || item.name || "",
 		value: Number(effect.value),
 	}),
@@ -351,4 +367,33 @@ effectKinds.register({
 		const value = Number(effect.value ?? 1);
 		return Number.isFinite(value) && value > 0 ? value : 1;
 	},
+});
+
+// ---------------------------------------------------------------------------
+// Fear-test kinds (bead 4398: Fearless / Unshakeable Faith)
+// ---------------------------------------------------------------------------
+
+/**
+ * "fear-immunity"/"fear-reroll" (bead 4398): talent-consumed Fear-test
+ * mechanics — Fearless is "unaffected by Fear and Pinning" (Core Rulebook
+ * p95) and Unshakeable Faith "may re-roll failed Fear Tests" (p108).
+ * Registration on the roll-mechanic channel keeps both kinds in the ONE
+ * effect vocabulary: the editor dropdown, the effect-row schema `choices`
+ * and rules/fear.ts all read from this spec. No `applies` — the rows are
+ * unconditional (guarded Fear rows like Resistance (Fear) ride the "fear"
+ * flag as test-modifiers instead, and the old raw-items walk ignored
+ * conditions, so staying guard-blind pins the existing behaviour).
+ */
+effectKinds.register({
+	kind: "fear-immunity",
+	labelKey: "EFFECT_KIND.FEAR_IMMUNITY",
+	channels: ["roll-mechanic"],
+	read: () => true,
+});
+
+effectKinds.register({
+	kind: "fear-reroll",
+	labelKey: "EFFECT_KIND.FEAR_REROLL",
+	channels: ["roll-mechanic"],
+	read: () => true,
 });

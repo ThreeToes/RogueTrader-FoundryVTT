@@ -73,6 +73,8 @@
 	"EFFECT_KIND.GRANTS_TECHNIQUE": "Concede técnica",
 	"EFFECT_KIND.PEN_FLAT": "Penetración fija",
 	"EFFECT_KIND.PRIMITIVE_CLEAR": "Cancela Primitiva (Mono)",
+	"EFFECT_KIND.FEAR_IMMUNITY": "Inmune al Miedo",
+	"EFFECT_KIND.FEAR_REROLL": "Repite las Pruebas de Miedo fallidas",
 	"PROCEDURE.DEGENERATE_MIND": "Mente degenerada (rasgo 1d10)",
 	"PROCEDURE.MENTAL_REGRESSIVE": "Regresión mental (1d10 por característica)",
 	"PROCEDURE.RAVAGED_BODY": "Cuerpo devastado (1d5 mutaciones adicionales)",

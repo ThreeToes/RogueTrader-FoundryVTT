@@ -74,6 +74,8 @@
 	"EFFECT_KIND.GRANTS_TECHNIQUE": "Grants technique",
 	"EFFECT_KIND.PEN_FLAT": "Flat penetration",
 	"EFFECT_KIND.PRIMITIVE_CLEAR": "Cancels Primitive (Mono)",
+	"EFFECT_KIND.FEAR_IMMUNITY": "Immune to fear",
+	"EFFECT_KIND.FEAR_REROLL": "Re-rolls failed Fear Tests",
 	"PROCEDURE.DEGENERATE_MIND": "Degenerate Mind (1d10 trait)",
 	"PROCEDURE.MENTAL_REGRESSIVE": "Mental Regressive (per-characteristic 1d10)",
 	"PROCEDURE.RAVAGED_BODY": "Ravaged Body (1d5 further mutations)",

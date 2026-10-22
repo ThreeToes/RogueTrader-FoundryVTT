@@ -1,8 +1,12 @@
 # UI Design Language
 
 Canonical visual conventions for Rogue Trader system UIs. When building or restyling
-any sheet/component, match these tokens. Canonical implementations:
-`css/sheet-gear.css` + `css/sheet-character.css` + `css/chat-roll.css`,
+any sheet/component, match these tokens. Canonical implementations: the shared base `css/sheet-gear.css` (design
+tokens + shared sheet anatomy) plus the per-surface files `css/sheet-career.css`,
+`css/sheet-starship.css`, `css/sheet-npc.css` (bead ophm: the career tables, the
+starship hull/refit/combat surfaces and the GM NPC sheet live in their own
+files, bundled right after the shared base), then `css/sheet-character.css` +
+`css/chat-roll.css` + `css/chat-card.css`,
 concatenated in that order by `utils/css.ts` into
 `release/rogue_trader/css/rogue-trader.css` (plain CSS, no preprocessor).
 
@@ -55,8 +59,17 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
   as `.rogue-trader.sheet .stats-row .stat > label` plus the starship/npc
   stat-grid, npc-chars th, career-table thead th, part-label and chip-label
   selectors.
-- **Group labels** (`h2.skill-group-label`, `h2.inv-group-label`):
-  `--rt-fs-lg`, uppercase, `--rt-muted`, `margin: 8px 0 2px`.
+- **Group labels** (ONE base rule — bead htu1, shared-sheet block of
+  css/sheet-gear.css): `--rt-fs-lg`, uppercase, `--rt-muted`,
+  `margin: 8px 0 2px`. The ONE rule carries every site's original selector:
+  `h2.skill-group-label`, `h2.inv-group-label`, the creator's
+  `.origin-row h2`, the advancement dialog's `h2` / `.rank-group h3`, and
+  the test dialog's `.dialog-group-label` (that window carries neither
+  `.sheet` nor `.rogue-trader`). Modifiers narrow it per site:
+  `.inv-group-header` (margin 0, header row), armour-points (centred), the
+  starship stat-group and slim action-row variants, and the test dialog's
+  strong variant (bold, letter-spacing, 4px top margin — its body is a
+  flex column with gap, so the top margin stacks on the gap).
 - **Chip labels** (stat-footer chips, capacity): `--rt-fs-sm` bold uppercase gold.
 
 ## Layout patterns
@@ -121,6 +134,18 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
   `rof-zero` dash overlay when the value is 0).
 - **Body-part boxes** (armour): bordered rounded rectangles in centered flex rows,
   gold small-caps label over large bold AP number.
+- **Chat cards** (bead 3j3b): the roll-card anatomy (`.roll-summary`, the note
+  lists, doc links, the salvo list) lives in `css/chat-roll.css`; the REST of
+  the chat surface — critical, damage, initiative extras (`roll-analysis`,
+  `unassigned`, dice note, hint), the psychic one-line cards
+  (`power-damage` / `power-corruption` / `phenomena-roll`, which carry no
+  `.chat` root) and the ship cards' `p.critical` alarm notes — is styled in
+  `css/chat-card.css` with the same token semantics: success/failure/alarm
+  inks as the roll cards use them, `--rt-chat-note` note ink,
+  `--rt-warn` amber for phenomena/warning states. Chat push-buttons
+  (`.rt-apply-condition`, `.rt-toxic-test`, `.apply-damage`,
+  `.rt-roll-damage`) mirror the `.rtk-button` base under `.rogue-trader.chat`
+  because chat messages carry no `rt-component` root.
 - **Roll anchors**: `<a class="…-roll"><i class="fa-solid fa-dice-d10"></i></a>`,
   gold, `text-shadow: 0 0 4px currentColor` on hover.
 - **Pips**: 8–9px circle `border: 1px solid #b8860b`, `.lit` fills gold.
@@ -168,7 +193,11 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
   `.window-content { overflow-y: auto }` content scroll rule (core pins window
   content to `overflow: hidden`; a window never scrolls by itself). Per-window
   floors stay in the skin files and beat the fallbacks.
-- Fixed-width inputs: value inputs `3.5em`, bonus `2.5em`, weights `4em`, centered.
+- Fixed-width inputs: value inputs `var(--rt-input-value-w)` (3.5em, defined
+  with the other tokens in the sheet-gear token block — bead y3ze), bonus
+  `2.5em`, weights `4em`, centered. A wider sibling of a tokenised width needs
+  a named modifier class that says WHY (the htu1 modifier pattern); dangling
+  overrides for content that no longer renders are dead CSS — delete them.
 
 ## i18n
 

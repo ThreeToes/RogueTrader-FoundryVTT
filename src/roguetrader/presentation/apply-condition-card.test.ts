@@ -392,19 +392,43 @@ describe("applyConditionFromCard dispatch (bead ronn)", () => {
 		expect(warns).toEqual([]);
 	});
 
-	test("ownership gate: a non-owner non-GM click never writes", async () => {
+	test("ownership gate: a non-owner click never writes, and the refusal is LOUD (bead eolv)", async () => {
 		const { created, warns } = fakeApplyPorts();
 		const victim = { effects: [], isOwner: false };
 		globals.foundry = {
 			...globals.foundry,
 			utils: { fromUuidSync: () => victim },
 		};
-		globals.game = { user: { isGM: false } };
 		await applyConditionFromCard(
 			fakeButton({ condition: "stunned", target: "Actor.victim" }),
 		);
 		expect(created).toEqual([]);
-		expect(warns).toEqual([]); // ownership is checked silently, like apply-damage
-		globals.game = { user: { isGM: true } }; // restore for other tests
+		// bead eolv: the ownership refusal used to be silent, an inconsistency
+		// against the roll pipeline's loud ROLL.NOT_OWNER warn; now the card
+		// path warns too, and through the SAME port (double below).
+		expect(warns).toEqual([
+			{ key: "ROLL.NOT_OWNER", vars: { "actor": "Actor.victim" } },
+		]);
+	});
+
+	test("the port's canModify answer controls the button (Permissions double)", async () => {
+		const { created, warns } = fakeApplyPorts();
+		const victim = { effects: [], isOwner: true };
+		globals.foundry = {
+			...globals.foundry,
+			utils: { fromUuidSync: () => victim },
+		};
+		setPorts({
+			...getPorts(),
+			permissions: {
+				canRoll: () => true,
+				canModify: () => false,
+			},
+		});
+		await applyConditionFromCard(
+			fakeButton({ condition: "stunned", target: "Actor.victim" }),
+		);
+		expect(created).toEqual([]); // the double's refusal controls the button
+		expect(warns.map((w) => w.key)).toContain("ROLL.NOT_OWNER");
 	});
 });

@@ -316,21 +316,12 @@ const TALENT_CONDITIONS = {
 } as const;
 
 /**
- * Acquisition-time affliction procedures (bead xu83). Some mutations print a
- * bespoke one-off procedure that cannot be expressed as a static effect row
- * (Degenerate Mind's 1d10 trait pick; Mental Regressive's per-characteristic
- * d10 table). The mutation item names the procedure in `system.procedure`;
- * rules/afflictions.ts implements it and runs it once when the Item is
- * acquired. Unknown values throw (never silently ignore a printed rule).
+ * Affliction-procedure labels (bead raf3) do NOT live here any more: label
+ * and behaviour ride one HandlerRegistry entry apiece in rules/afflictions.ts
+ * (`afflictionProcedures`), read by data/item/mutation.ts for the schema
+ * `choices`. A label-only registration there is never a printed rule with no
+ * implementation.
  */
-const AFFLICTION_PROCEDURES = {
-	"degenerate-mind": "PROCEDURE.DEGENERATE_MIND",
-	"mental-regressive": "PROCEDURE.MENTAL_REGRESSIVE",
-	// Ravaged Body (Core Rulebook p369) rolls 1d5 further mutations instead of
-	// settling rows on itself, so its handler returns grant names (kam1).
-	"ravaged-body": "PROCEDURE.RAVAGED_BODY",
-} as const;
-
 /**
  * MadnessEntry kinds (bead b76m, former sheet-local KIND_LABEL_KEYS): the
  * affliction vocabulary the `madnessentry` docs take — disorders,
@@ -518,7 +509,6 @@ const ROGUE_TRADER_SEEDS: RegistrySeeds = {
 	talentCategories: TALENT_CATEGORIES,
 	talents: TALENTS,
 	talentConditions: TALENT_CONDITIONS,
-	afflictionProcedures: AFFLICTION_PROCEDURES,
 	madnessEntryKinds: MADNESS_ENTRY_KINDS,
 	equipStates: EQUIP_STATES,
 	careers: CAREERS,
@@ -594,7 +584,6 @@ export const vehicleSystems = RT_REGISTRIES.vehicleSystems;
 export const talentCategories = RT_REGISTRIES.talentCategories;
 export const talents = RT_REGISTRIES.talents;
 export const talentConditions = RT_REGISTRIES.talentConditions;
-export const afflictionProcedures = RT_REGISTRIES.afflictionProcedures;
 export const madnessEntryKinds = RT_REGISTRIES.madnessEntryKinds;
 export const equipStates = RT_REGISTRIES.equipStates;
 export const careers = RT_REGISTRIES.careers;

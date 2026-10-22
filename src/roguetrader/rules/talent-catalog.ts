@@ -2,7 +2,8 @@
  * The warmed talent-doc link catalog (epic 61pk, bead hjve): {key, name, uuid}
  * rows the character creator's talent pick chips (origin-row optionChoice
  * values, e.g. "Jaded") resolve their pack-doc links against, through
- * sheet/pack-doc-links.ts packDocAnchor.
+ * sheet/pack-doc-links.ts packDocAnchor (the pure resolver, hoisted to
+ * src/ffg/application/pack-doc-links.ts by bead rflq).
  *
  * Pure data: the pool + mapping live HERE (the warrant-creator precedent,
  * bead 5rk0 — one shared mapper so the ready warmer and the on-demand fill
@@ -16,11 +17,11 @@
  * degrade to plain text (never an error) — same contract as every warmer.
  */
 
-// The catalog SHAPE is the pack-doc link library's PackDocLike (bead n2b2).
-// sheet/pack-doc-links.ts is pure — rules -> presentation is the recorded
-// inversion allowance (roll-system precedent), and the library stays
-// Foundry-free so the scoped typecheck graph stays clean.
-import type { PackDocLike } from "../sheet/pack-doc-links";
+// The catalog SHAPE is the pack-doc link library's PackDocLike (bead n2b2;
+// hoisted to src/ffg/application by bead rflq — the pure library no longer
+// sits in the sheet layer, so rules imports it from application directly).
+// The library stays Foundry-free so the scoped typecheck graph stays clean.
+import type { PackDocLike } from "../../ffg/application/pack-doc-links";
 import { str } from "../data/pack-fields";
 
 let talentLinkDocs: PackDocLike[] = [];

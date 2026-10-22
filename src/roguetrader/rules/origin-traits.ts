@@ -13,9 +13,11 @@
  */
 
 import { storedOriginPicks, type StoredOrigins } from "./origins";
-import type { TestContributor } from "../../ffg/application/funnel";
+import {
+	contributorPorts,
+	type TestContributor,
+} from "../../ffg/application/funnel";
 import { isCharacterView } from "../../ffg/domain/model/actor";
-import { getPorts } from "../infrastructure/foundry/ports";
 
 export interface OriginTraitDef {
 	name: string;
@@ -111,7 +113,13 @@ export function traitModifierId(def: OriginTraitDef): string {
 // imports the funnel machinery directly still sees the RT contributors
 // without depending on which module happened to load first.
 export const originTraitsContributor: TestContributor = (view, context) => {
-	const defs = getPorts().config.originTraits() as OriginTraitDef[];
+	// Bead x4ly: the ports ride the TestModifierContext (threaded by the
+	// pipeline seams) instead of a global getPorts() read, so a second system
+	// binds its own config here. A context that carries none warns ONCE and
+	// contributes nothing.
+	const ports = contributorPorts(context);
+	if (ports === null) return [];
+	const defs = ports.config.originTraits() as OriginTraitDef[];
 	if (defs.length === 0) return [];
 	// Bead l2wz: the view's system types as the family union; origins are a
 	// character-family field — non-character families carry none (as the

@@ -1,0 +1,147 @@
+/* GM-facing NPC sheet (bead mqdy): horizontal characteristic table +
+   compact skill/combat lists. Design-language tokens throughout. Label
+   typography comes from the shared small-caps label rule (xcte).
+   Split out of css/sheet-gear.css (bead ophm): everything here keys on the
+   .rogue-trader.sheet.npc surface; the npc min-window floor stays in the
+   shared sizing registry in css/sheet-gear.css. */
+.rogue-trader.sheet.npc .npc-identity {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 10px;
+	margin: 4px 0 8px;
+}
+
+.rogue-trader.sheet.npc .npc-identity .identity-field {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 70px;
+}
+
+.rogue-trader.sheet.npc .npc-identity .identity-field.grow {
+	flex: 1 1 140px;
+}
+
+.rogue-trader.sheet.npc .npc-identity input {
+	width: 100%;
+}
+
+.rogue-trader.sheet.npc table.npc-chars {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 4px 0 8px;
+}
+
+.rogue-trader.sheet.npc table.npc-chars th {
+	padding: 2px 4px;
+	text-align: center;
+	border-bottom: 1px solid var(--rt-border);
+}
+
+.rogue-trader.sheet.npc table.npc-chars td {
+	text-align: center;
+	padding: 2px 4px;
+}
+
+.rogue-trader.sheet.npc .npc-char-roll {
+	font-weight: bold;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.npc .npc-char-roll:hover {
+	color: var(--rt-gold);
+	text-shadow: 0 0 4px currentColor;
+}
+
+/* NPC ladder dropdown: small, right-aligned at the end of the shared
+   inventory line (the rt/inv-row name carries flex:1). */
+.rogue-trader.sheet.npc .npc-ladder-select {
+	width: auto;
+	min-width: 0;
+	font-size: var(--rt-fs-md);
+	padding: 0 2px;
+}
+
+/* NPC header (bead mqdy follow-up): compact item-header anatomy — portrait
+   inline, name + wound boxes on the top row, short description underneath as
+   the italic underlined minor input (shared .header.compact rules). */
+.rogue-trader.sheet.npc .npc-name-row {
+	display: flex;
+	align-items: baseline;
+	gap: 14px;
+}
+
+.rogue-trader.sheet.npc .npc-name-row .name-input {
+	flex: 1;
+}
+
+.rogue-trader.sheet.npc .npc-wounds .wound-box {
+	width: 2.5em;
+	text-align: center;
+}
+
+/* NPC inventory tab (owner spec): armour stats left, item list right. */
+.rogue-trader.sheet.npc .npc-inventory-grid {
+	display: flex;
+	gap: 16px;
+	align-items: flex-start;
+}
+
+.rogue-trader.sheet.npc .npc-inventory-left {
+	flex: 0 0 40%;
+	min-width: 0;
+}
+
+.rogue-trader.sheet.npc .npc-inventory-right {
+	flex: 1;
+	min-width: 0;
+}
+
+.rogue-trader.sheet.npc table.npc-armour {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.rogue-trader.sheet.npc table.npc-armour th {
+	text-align: left;
+	font-weight: normal;
+	font-size: var(--rt-fs-md);
+	color: var(--rt-muted);
+	padding: 1px 4px;
+	border-bottom: 1px solid var(--rt-border-soft);
+}
+
+.rogue-trader.sheet.npc table.npc-armour td {
+	text-align: right;
+	padding: 1px 4px;
+	border-bottom: 1px solid var(--rt-border-soft);
+}
+
+.rogue-trader.sheet.npc ul.npc-armour-list,
+.rogue-trader.sheet.npc ul.npc-item-list {
+	list-style: none;
+	margin: 4px 0;
+	padding: 0;
+}
+
+.rogue-trader.sheet.npc ul.npc-armour-list li,
+.rogue-trader.sheet.npc ul.npc-item-list li {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 1px 0;
+}
+
+.rogue-trader.sheet.npc .npc-item-name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.rogue-trader.sheet.npc .npc-item-delete {
+	color: var(--rt-danger);
+	cursor: pointer;
+	padding: 0 2px;
+}

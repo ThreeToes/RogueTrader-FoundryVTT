@@ -446,10 +446,13 @@ const launchTorpedoesRow: ShipRow = {
 		}
 
 		// -- the store decrement (the ONE helper; refuse-when-empty) ----------
+		// Bead x4ly: the notify + items ports are caller-bound from the
+		// port set this handler already holds.
 		const remainingStores = await decrementQuantity(store, {
 			onEmpty: "refuse",
 			shots: salvoSize,
 			weaponName: tube.name ?? "",
+			ports: { notify: getPorts().notify, items: getPorts().items },
 		});
 		if (remainingStores === null) return;
 

@@ -26,7 +26,6 @@ import {
 	sumModifiers,
 	type TestOutcome,
 } from "../../../rules-engine/index";
-import type { ActorView } from "../../domain/model/actor";
 import { postCard } from "../../application/chat-flags";
 import {
 	collectTestModifiers,
@@ -37,6 +36,7 @@ import type {
 	PreparedRoll,
 	RollContext,
 } from "../../application/roll-contract";
+import type { ActorView } from "../../domain/model/actor";
 import { getPorts, localizeLabel } from "../../infrastructure/foundry/ports";
 
 /**
@@ -71,9 +71,18 @@ export function dialogContributors(
 	weapon: { type: string; special?: string[] } | null = null,
 	skillName?: string,
 ): Modifier[] {
+	// Bead x4ly: the contributor ports ride the context, so a system's port-
+	// asking contributors run in the dialog preview too — bound from the
+	// presentation-layer global read, where binding belongs.
 	return mergeModifiers(
 		modifiers,
-		collectTestModifiers(view, { kind, key, weapon, skillName }),
+		collectTestModifiers(view, {
+			kind,
+			key,
+			weapon,
+			skillName,
+			ports: { config: getPorts().config, i18n: getPorts().i18n },
+		}),
 	);
 }
 
@@ -101,6 +110,9 @@ export async function runTest<
 			key: prepared.testKey,
 			weapon: prepared.weapon,
 			...context,
+			// Bead x4ly: the contributor ports ride the context; AFTER the
+			// spread, so a context cannot override the binding.
+			ports: { config: ports.config, i18n: ports.i18n },
 		},
 		modifiers,
 	);
@@ -147,7 +159,7 @@ export async function runTest<
 		);
 	}
 	const message = await postCard(
-		ports,
+		ports.chat,
 		view,
 		// The card template is system branding (bead p7jv): profile DATA, not a
 		// hardcoded RT path — a sibling system points rollCardTemplate at its own.

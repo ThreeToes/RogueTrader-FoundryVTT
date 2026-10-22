@@ -78,15 +78,23 @@ export interface EncumbranceOutcome {
 		| "INVENTORY.STATE_OVER";
 }
 
-/** Table 9-33 lookup for weight and the lifting/over boundary. */
+/**
+ * Table 9-33 lookup for weight and the lifting/over boundary.
+ *
+ * `liftingKg === undefined` means NO LIFTING DATA is available — an explicit
+ * unknown, never inferred by comparing numbers (bead 9j90: the old proxy
+ * `capacity === lifting` made a manual capacity override permanently read
+ * "over" above itself). With lifting known, the book's Table 9-33 boundary
+ * applies (p268): above Lifting Weight the character cannot carry more.
+ */
 export function resolveEncumbrance(
 	weightKg: number,
 	capacityKg: number,
-	liftingKg = 0,
+	liftingKg?: number,
 ): EncumbranceOutcome {
 	const weight = Math.max(0, weightKg);
 	const capacity = Math.max(0, capacityKg);
-	const lifting = Math.max(0, liftingKg);
+	const lifting = liftingKg === undefined ? undefined : Math.max(0, liftingKg);
 	const ratio = capacity > 0 ? weight / capacity : 0;
 	const percent = Math.round(ratio * 100);
 	// Advisory posture: no capacity known (0) can never be encumbered/over.
@@ -95,10 +103,9 @@ export function resolveEncumbrance(
 		state = "ok";
 	} else if (weight <= capacity) {
 		state = "ok";
-	} else if (capacity === lifting || weight > lifting) {
+	} else if (lifting === undefined || weight > lifting) {
 		// No lifting data (or past it): everything above carrying is "over".
-		// Book boundary is still carrying < weight for encumbered; with lifting
-		// known and weight inside it, this branch is not reached.
+		// With lifting known and weight inside it, this branch is not reached.
 		state = "over";
 	} else {
 		state = "encumbered";
@@ -173,6 +180,9 @@ export interface OwnedItemLike {
  * Toughness Bonus (pass sbPlusTb = SB + TB). The caller may pass the manual
  * maxCarriage override as `capacityOverride`; when that is set (> 0) the
  * manual field wins (existing owner decision) and the table is the default.
+ * The Lifting Weight always comes from the table at SB+TB regardless, so the
+ * encumbered band survives a manual override (bead 9j90: the old code set
+ * lifting = override, which collapsed encumbered into "over" above it).
  *
  * The type filter lives here rather than at each call site. Note this counts
  * STOWED items too — owner decision 2026-09-08, bead xhcc, which superseded
@@ -201,8 +211,10 @@ export function actorEncumbrance(
 	}
 	const capacity =
 		capacityOverride > 0 ? capacityOverride : carryingCapacity(sbPlusTb);
-	// Manual-override wins for the OVER boundary too: make lifting track the
-	// capacity in use so the bar's banding stays monotonic.
-	const lifting = capacityOverride > 0 ? capacity : liftingCapacity(sbPlusTb);
+	// Lifting is KNOWN from the table regardless of any manual carrying
+	// override, so "encumbered" between the capacity and the lifting weight
+	// still reports (bead 9j90: never pass an equal proxy — undefined would
+	// mean no lifting data and read "over" above capacity).
+	const lifting = liftingCapacity(sbPlusTb);
 	return resolveEncumbrance(carriedWeight(carried), capacity, lifting);
 }

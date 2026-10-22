@@ -268,7 +268,7 @@ describe("the profile a DH2 world reads through the shared port", () => {
 	test("the shared consumers resolve DH2's values through the port", () => {
 		// The chat-flag namespace and the kernel resolvers take the ACTIVE
 		// profile from the port, so DH2's data reaches them with no edit.
-		expect(messageFlagNamespace(foundryPorts)).toBe("dark-heresy-2e");
+		expect(messageFlagNamespace(foundryPorts.config)).toBe("dark-heresy-2e");
 		const profile = foundryPorts.config.profile();
 		// Table 7-3, read on the REVERSED digits of the roll (20 reads as 02).
 		expect(locationForHit(20, profile)).toBe("head");

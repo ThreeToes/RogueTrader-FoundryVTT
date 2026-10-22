@@ -7,18 +7,18 @@
  * is Foundry-facing by design (chat DOM, ownership, notifications).
  */
 
-import { getPorts } from "../infrastructure/foundry/ports";
 import {
 	type DamageApplyFlag,
 	messageFlagNamespace,
 	readMessageFlag,
 } from "../../ffg/application/chat-flags";
-import { applyDamageWithCriticals, postCriticalCard } from "../rules/criticals";
+import { getPorts } from "../infrastructure/foundry/ports";
 import { rollDamageForCard, rollToxicToughnessTest } from "../rules/adapter";
-import { decrementQuantity } from "../rules/ordnance";
 import { cardSuggestedCondition } from "../rules/conditions";
-import { applyCondition } from "./rolls/fear";
+import { applyDamageWithCriticals, postCriticalCard } from "../rules/criticals";
+import { decrementQuantity } from "../rules/ordnance";
 import { openPackDocUuid } from "../sheet/pack-resolve";
+import { applyCondition } from "./rolls/fear";
 
 /**
  * Apply the wounds shown on a damage chat card to the flagged target
@@ -40,7 +40,7 @@ export async function applyDamageFromCard(
 	// DOM click — a second dispatch while the apply is in flight must not
 	// re-enter. Same posture as applyConditionFromCard.
 	if (button.disabled) return;
-	const data = readMessageFlag(getPorts(), message, "damageApply");
+	const data = readMessageFlag(getPorts().config, message, "damageApply");
 	if (!message || !data) {
 		// Fallback: the button itself carries the outcome (data-target /
 		// data-wounds) - usable even when the message flag is missing, e.g.
@@ -105,9 +105,16 @@ async function applyToTarget(
 		: null;
 	const wounds = target?.system?.wounds;
 	if (!target || !wounds) return;
-	// Only the defender's owner (or a GM) may apply the wounds.
-	const user = game as unknown as { user?: { isGM?: boolean } };
-	if (!target.isOwner && !user.user?.isGM) return;
+	// Only the defender's owner (or a GM, folded into isOwner by the port) may
+	// apply the wounds — the SAME Permissions port the roll pipeline gates on
+	// (bead eolv), and the refusal is LOUD like the port path's, not a silent
+	// no-op that reads like a broken button.
+	if (!getPorts().permissions.canModify(target)) {
+		getPorts().notify.warn("ROLL.NOT_OWNER", {
+			actor: (target as { name?: string }).name ?? (targetUuid || "?"),
+		});
+		return;
+	}
 
 	const effective: DamageApplyFlag = { ...(existing ?? {}) };
 	button.disabled = true;
@@ -115,18 +122,25 @@ async function applyToTarget(
 	// The card carries the damage type + hit location so the right critical
 	// table is used; a card posted before that flag existed falls back to
 	// Impact/Body rather than refusing to apply the damage.
+	// Bead x4ly: the critical machinery's ports (content/config/dice/clock)
+	// are caller-bound — the chat-action site threads its own port set.
+	const ports = getPorts();
 	const outcome = await applyDamageWithCriticals({
 		actor: target,
 		damage: Number(woundsAmount ?? 0),
 		damageType: effective.damageType ?? "Impact",
 		location: effective.location ?? "",
+		content: ports.content,
+		config: ports.config,
+		dice: ports.dice,
+		clock: ports.clock,
 	});
 	if (message) {
 		await message.update({
 			// Namespace from the profile (bead p7jv): RT's value is
 			// "rogue-trader", so the wire format is unchanged.
 			flags: {
-				[messageFlagNamespace(getPorts())]: {
+				[messageFlagNamespace(getPorts().config)]: {
 					damageApply: {
 						...effective,
 						wounds: woundsAmount,
@@ -212,10 +226,16 @@ export async function applyConditionFromCard(
 		});
 		return;
 	}
-	// Only the victim's owner (or a GM) may apply a condition — the same
-	// ownership gate the apply-damage path keeps (bead ncc).
-	const user = game as unknown as { user?: { isGM?: boolean } };
-	if (!target.isOwner && !user.user?.isGM) return;
+	// Only the victim's owner (or a GM, folded into isOwner by the port) may
+	// apply a condition — the SAME Permissions port the apply-damage path
+	// gates on (bead ncc; unified onto the port by bead eolv), and the refusal
+	// is LOUD like the roll pipeline's, not a silent no-op.
+	if (!getPorts().permissions.canModify(target)) {
+		getPorts().notify.warn("ROLL.NOT_OWNER", {
+			actor: (target as { name?: string }).name ?? targetUuid,
+		});
+		return;
+	}
 	button.disabled = true;
 	await applyCondition(target, condition, 0);
 }
@@ -242,7 +262,7 @@ export async function rollDamageButton(
 				update: (u: object) => Promise<void>;
 			})
 		: undefined;
-	const data = readMessageFlag(getPorts(), message, "damageRoll") as
+	const data = readMessageFlag(getPorts().config, message, "damageRoll") as
 		| {
 				attackerUuid?: string;
 				weaponUuid?: string;
@@ -257,7 +277,7 @@ export async function rollDamageButton(
 		// Success only: the rolled marker locks the card against a second roll.
 		await message.update({
 			flags: {
-				[messageFlagNamespace(getPorts())]: {
+				[messageFlagNamespace(getPorts().config)]: {
 					damageRoll: { ...data, rolled: true },
 				},
 			},
@@ -304,7 +324,11 @@ export async function spendOrdnanceFromCard(
 	// Disable BEFORE the helper: a second click while the write is in flight
 	// must not double-spend.
 	button.disabled = true;
-	const next = await decrementQuantity(item, { onEmpty: "clamp" });
+	const ports = getPorts();
+	const next = await decrementQuantity(item, {
+		onEmpty: "clamp",
+		ports: { notify: ports.notify, items: ports.items },
+	});
 	if (next === null) return;
 }
 

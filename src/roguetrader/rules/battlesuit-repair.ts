@@ -16,7 +16,11 @@
  */
 
 import type { Modifier } from "../../rules-engine/modifier";
-import { getPorts } from "../../ffg/infrastructure/foundry/ports";
+import type {
+	ConfigPort,
+	I18n,
+	Notify,
+} from "../../ffg/application/ports";
 import { effectiveProfile } from "./homebrew";
 import { repairBattlesuitCriticals, repairSkillFor } from "./criticals";
 import { rollSkillOutcome } from "./roll-system";
@@ -24,20 +28,25 @@ import { rollSkillOutcome } from "./roll-system";
 /** The book's fixed modifier for the repair Test. */
 export const REPAIR_TEST_MODIFIER = -20;
 
-export async function rollBattlesuitRepair(actor: unknown): Promise<{
+export async function rollBattlesuitRepair(
+	actor: unknown,
+	// Bead x4ly: the notify/i18n/config ports are caller-bound — the sheet
+	// threads its own, a second system binds theirs — not a global read.
+	ports: { notify: Notify; i18n: I18n; config: ConfigPort },
+): Promise<{
 	removed: number;
 	remaining: number;
 	degrees: number;
 } | null> {
 	const skill = repairSkillFor(actor);
 	if (!skill?.id) {
-		getPorts().notify.warn("CRITICAL.REPAIR_NO_SKILL");
+		ports.notify.warn("CRITICAL.REPAIR_NO_SKILL");
 		return null;
 	}
-	const label = getPorts().i18n.t("CRITICAL.REPAIR_MODIFIER");
+	const label = ports.i18n.t("CRITICAL.REPAIR_MODIFIER");
 	// Bead wxut.2: the Hard (-20) is profile DATA read from the effective
 	// profile; REPAIR_TEST_MODIFIER stays the core value and registry source.
-	const effective = effectiveProfile();
+	const effective = effectiveProfile(ports.config);
 	const value = Number.isFinite(effective.repairTestModifier)
 		? effective.repairTestModifier
 		: REPAIR_TEST_MODIFIER;
@@ -60,6 +69,6 @@ export async function rollBattlesuitRepair(actor: unknown): Promise<{
 		actor,
 		degrees,
 	);
-	getPorts().notify.info("CRITICAL.REPAIRED", { count: String(removed) });
+	ports.notify.info("CRITICAL.REPAIRED", { count: String(removed) });
 	return { removed, remaining, degrees };
 }

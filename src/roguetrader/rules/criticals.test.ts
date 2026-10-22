@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { NO_CONTENT_PORT, type ContentPort } from "../../ffg/application/ports";
+import {
+	NO_CONTENT_PORT,
+	type Clock,
+	type ConfigPort,
+	type ContentPort,
+	type Dice,
+} from "../../ffg/application/ports";
+import { rtCore } from "../../ffg/domain/system-profile";
 import {
 	applyDamageWithCriticals,
 	criticalSheetContext,
@@ -11,6 +18,27 @@ import {
 	totalCriticalDamage,
 	wornBattlesuit,
 } from "./criticals";
+
+/**
+ * Bead x4ly: the critical machinery's ports (content/config/dice/clock) are
+ * caller-bound, so these tests thread doubles instead of relying on the
+ * global port set.
+ */
+const clockDouble = (): Clock => ({ round: () => 0 });
+const diceDouble = (): Dice => ({
+	roll: async (formula: string) => ({
+		total: 0,
+		dice: [],
+		terms: [],
+		formula,
+	}),
+});
+const configDouble = (): ConfigPort => ({
+	homebrew: () => null,
+	profile: () => rtCore,
+	originTraits: () => [],
+	packIds: () => ({ rolltables: null }),
+});
 
 /**
  * The Foundry-side helpers of the critical-damage flow (bead ks3k). The dice
@@ -86,8 +114,8 @@ describe("actor critical reading", () => {
 	});
 
 	test("currentRound is 0 when no combat is running", () => {
-		// The Bun test environment has no `game`; the module must not throw.
-		expect(typeof currentRound()).toBe("number");
+		// A clock double pinned at round 0 (no combat): the module must not throw.
+		expect(typeof currentRound(clockDouble())).toBe("number");
 	});
 });
 
@@ -221,6 +249,9 @@ describe("content-optional criticals (epic kof0, phase 3)", () => {
 			excess: 5,
 			tableRoll: 3,
 			content: NO_CONTENT_PORT,
+			config: configDouble(),
+			dice: diceDouble(),
+			clock: clockDouble(),
 		});
 		expect(outcome.manual).toBe(true);
 		expect(outcome.effects).toHaveLength(1);
@@ -238,10 +269,6 @@ describe("content-optional criticals (epic kof0, phase 3)", () => {
 		// Spread for the port's content-optional defaults (bead p7o5 added
 		// documentsOrNull/document); the overrides below shape the table find.
 		...NO_CONTENT_PORT,
-		capabilities: () => ({
-			...NO_CONTENT_PORT.capabilities(),
-			criticalTables: true,
-		}),
 		documents: async () => [],
 		find: async () => ({
 			name: "Impact Critical Effects",
@@ -263,6 +290,9 @@ describe("content-optional criticals (epic kof0, phase 3)", () => {
 			excess: 3,
 			tableRoll: 42,
 			content: GAP_TABLE,
+			config: configDouble(),
+			dice: diceDouble(),
+			clock: clockDouble(),
 		});
 		expect(outcome.warning).toBe("Critical Hit (Impact, Body)");
 		expect(outcome.manual).toBe(true);
@@ -294,6 +324,9 @@ describe("content-optional criticals (epic kof0, phase 3)", () => {
 			location: "body",
 			tableRoll: 42,
 			content: GAP_TABLE,
+			config: configDouble(),
+			dice: diceDouble(),
+			clock: clockDouble(),
 		});
 		expect(outcome.warning).toBe("Critical Hit (Impact, Body)");
 		expect(outcome.excess).toBe(3);
@@ -309,10 +342,6 @@ describe("content-optional criticals (epic kof0, phase 3)", () => {
 	test("with content installed the table text is used", async () => {
 		const content: ContentPort = {
 			...NO_CONTENT_PORT,
-			capabilities: () => ({
-				...NO_CONTENT_PORT.capabilities(),
-				criticalTables: true,
-			}),
 			documents: async () => [],
 			find: async () => ({
 				name: "Impact Critical Effects",
@@ -327,6 +356,9 @@ describe("content-optional criticals (epic kof0, phase 3)", () => {
 			excess: 5,
 			tableRoll: 3,
 			content,
+			config: configDouble(),
+			dice: diceDouble(),
+			clock: clockDouble(),
 		});
 		expect(outcome.manual).toBeUndefined();
 		expect(outcome.effects[0]?.text).toBe("Gut wound");

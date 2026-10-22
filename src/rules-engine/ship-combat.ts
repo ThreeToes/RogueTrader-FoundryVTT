@@ -26,30 +26,83 @@
  *   value (p221).
  */
 
-/** Weapon kinds per Table 8-4 (book p202). */
 import { parseDamageFormula } from "./damage";
 
-/** Weapon kinds per Table 8-4 (book p202). */
+/** Weapon kinds per Table 8-4 (book p202) that resolve through the salvo path. */
 export type ShipWeaponKind = "macrobattery" | "lance";
 
 /**
- * The componentTypes that fire as a salvo (bead kxbz): only Table 8-4's
- * macrobatteries and lances resolve through the salvo path (pp220-221).
- * Torpedo tubes, nova cannon and landing bays are Extended Actions /
- * BFK-ordnance territory — their mechanics are a separate bead — so any
- * other componentType must not reach the salvo kernel at all.
+ * Kernel registry (bead p6nx): each salvo kind carries its OWN hit rate and
+ * armour rule, so a new kind is one registration + the union member — not a
+ * sweep of regex/branch edits across kernel and handler. Book values live in
+ * the `citation`, sourced from repo-verified extraction only; a kind whose
+ * behaviour the book data does not pin simply has NO spec (nova-cannon,
+ * torpedo-tube, landing-bay own their Extended Action / BFK-ordnance
+ * mechanics elsewhere — bead a413/S9), never a guessed macrobattery.
+ */
+export interface ShipWeaponKindSpec {
+	readonly id: ShipWeaponKind;
+	/** Where the hit rate + armour rule come from (Core Rulebook pages). */
+	readonly citation: string;
+	/** Hits scored from degrees of success, before the Strength cap (p220). */
+	readonly hitsFor: (degrees: number) => number;
+	/** Hits bypass target Armour and go straight to Hull Integrity (p220). */
+	readonly ignoresArmour: boolean;
+}
+
+/**
+ * The registered salvo kinds (Core Rulebook p220; Table 8-4 p202). The
+ * macrobattery/lance rates and armour rules were pinned against the book
+ * layout dump (bead cj6k) — the existing kernel tests keep pinning them.
+ */
+export const SHIP_WEAPON_KINDS: Readonly<
+	Record<ShipWeaponKind, ShipWeaponKindSpec>
+> = {
+	macrobattery: {
+		id: "macrobattery",
+		citation:
+			"Core Rulebook p220: 1 hit + 1 per degree of success, capped by Strength; damage is soaked by Armour (p221).",
+		hitsFor: (degrees) => 1 + Math.max(0, degrees),
+		ignoresArmour: false,
+	},
+	lance: {
+		id: "lance",
+		citation:
+			"Core Rulebook p220: 1 hit + 1 per three degrees of success; each hit ignores Armour and goes straight to Hull Integrity.",
+		hitsFor: (degrees) => 1 + Math.floor(Math.max(0, degrees) / 3),
+		ignoresArmour: true,
+	},
+};
+
+/** Look a salvo kind's resolution spec up in the kernel registry (bead p6nx). */
+export function shipWeaponKindSpec(kind: ShipWeaponKind): ShipWeaponKindSpec {
+	return SHIP_WEAPON_KINDS[kind];
+}
+
+/**
+ * The componentTypes that fire as a salvo (bead kxbz, registry per bead
+ * p6nx): classification is DATA-driven — the componentType must be a
+ * registered kind (only Table 8-4's macrobatteries and lances resolve
+ * through the salvo path, pp220-221). Torpedo tubes, nova cannon and
+ * landing bays are Extended Actions / BFK-ordnance territory (bead
+ * a413/S9) and are NOT registered, so any other componentType is a loud
+ * null (the handler refuses with a named-kind warning) — never a guess.
  *
- * A blank componentType keeps the legacy name heuristic so docs authored
- * before the ordnance types existed keep firing (pre-kxbz behaviour);
- * anything else is a loud refusal, never a guess.
+ * A blank componentType keeps the LEGACY name heuristic (regex fallback,
+ * NOT the primary path) so docs authored before the structured field
+ * existed keep firing (pre-kxbz behaviour).
  */
 export function salvoWeaponKind(
 	componentType: string,
 	nameOrSpecial: string,
 ): ShipWeaponKind | null {
-	if (componentType === "macrobattery" || componentType === "lance") {
-		return componentType;
-	}
+	const registered = (Object.keys(SHIP_WEAPON_KINDS) as ShipWeaponKind[]).find(
+		(kind) => kind === componentType,
+	);
+	if (registered) return registered;
+	// Legacy fallback: docs with a blank componentType keep the pre-kxbz
+	// name heuristic; do not extend this regex for new kinds — register a
+	// spec and put the kind in the componentType data instead.
 	if (componentType === "") {
 		return /lance/i.test(nameOrSpecial) ? "lance" : "macrobattery";
 	}
@@ -74,17 +127,20 @@ export function rangeModifier(
 }
 
 /**
- * Hits scored by a successful BS test (book p220): macrobatteries 1 + 1 per
- * degree of success, lances 1 + 1 per three degrees; both capped by the
- * weapon's Strength.
+ * Hits scored by a successful BS test (book p220): the registered kind's
+ * hit rate — macrobatteries 1 + 1 per degree of success, lances 1 + 1 per
+ * three degrees — capped by the weapon's Strength (bead p6nx: the rate
+ * comes from the kind's registry spec, not a branch).
  */
 export function hitsScored(
 	kind: ShipWeaponKind,
 	degrees: number,
 	strength: number,
 ): number {
-	const raw = kind === "lance" ? 1 + Math.floor(degrees / 3) : 1 + degrees;
-	return Math.min(Math.max(0, strength), Math.max(1, raw));
+	return Math.min(
+		Math.max(0, strength),
+		Math.max(1, shipWeaponKindSpec(kind).hitsFor(degrees)),
+	);
 }
 
 /**
@@ -163,7 +219,11 @@ export interface SalvoOutcome {
 
 /**
  * Damage vs Armour (book p221): Armour subtracts from the damage total; the
- * remainder is Hull Integrity loss. Lance hits ignore armour entirely.
+ * remainder is Hull Integrity loss. Armours-ignoring kinds (lance, per the
+ * kind's registry spec) pass `ignoresArmour: true` and go straight to Hull
+ * Integrity (book p220). `ignoresArmour` is the generic flag any ordnance
+ * caller passes; the ship salvo handler reads it from the kind registry
+ * (bead p6nx) rather than hard-coding the lance branch.
  */
 export function resolveSalvoDamage(req: SalvoRequest): SalvoOutcome {
 	if (req.lance) {

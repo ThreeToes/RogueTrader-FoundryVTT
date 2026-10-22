@@ -124,7 +124,7 @@ async function prepareUntrainedSkill(
 	// profile (bead tval), never a hardcoded constant. Bead wxut.2 switched
 	// this read from config.profile() to effectiveProfile(), because
 	// untrainedSkill.model/penalty are GM-tunable registry knobs.
-	const profile = effectiveProfile();
+	const profile = effectiveProfile(ports.config);
 	const untrained = profile.untrainedSkill;
 
 	// Discovery 3 (bead wxut.1): `skills.untrainedSkill.penalty` has NO core
@@ -172,11 +172,22 @@ async function prepareUntrainedSkill(
 		// (an authored row keyed to the surrogate string is, in effect, asking
 		// for the surrogate behaviour).
 		const view = actorView(request.actor);
+		// Bead x4ly (review finding 1): the contributor ports ride BOTH fold
+		// contexts, the same shape every other collection site threads — without
+		// them the origin-traits contributor warns once and contributes nothing,
+		// so a Fel-keyed trait (e.g. Paranoid, −10) silently dropped out of the
+		// halved base and every such roll fired the missing-ports warning.
+		const portsDouble = { config: ports.config, i18n: ports.i18n };
 		const keyed = collectTestModifiers(view, {
 			kind: "skill",
 			key: characteristicKey,
+			ports: portsDouble,
 		});
-		const wild = collectTestModifiers(view, { kind: "skill", key: funnelKey });
+		const wild = collectTestModifiers(view, {
+			kind: "skill",
+			key: funnelKey,
+			ports: portsDouble,
+		});
 		const wildcardIds = new Set(wild.map((mod) => mod.id));
 		const characteristicDelta = keyed
 			.filter((mod) => !wildcardIds.has(mod.id))

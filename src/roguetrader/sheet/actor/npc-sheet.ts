@@ -21,6 +21,7 @@ import { CHAR_SHORTS, LADDER_MAX, LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { isPsykerLike } from "../../rules/psyker";
+import type { ActorView } from "../../../ffg/domain/model/actor";
 import { bodyLocationLabelKey } from "../../rules/labels";
 import { enrichText } from "../rich-text";
 import { itemIdFromTarget } from "../dom";
@@ -121,11 +122,26 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	};
 
 	/** The psychic tab exists only for psykers/navigators (bead m4me rule).
-	 * Shared psyker predicate (bead 73di); this sheet gates ITS tab id (psy). */
+	 * Shared psyker predicate (bead 73di); this sheet gates ITS tab id (psy).
+	 * Bead nyns (review hardening): the view is rebuilt at the TOP of
+	 * _prepareContext and stashed for #contextView, so the context build
+	 * reads the SAME view instead of re-copying the whole inventory
+	 * mid-render. _prepareTabs no longer BUILDS the view — it CONSUMES the
+	 * stash — so the gate cannot go stale even if Foundry's
+	 * _prepareTabs-before-sheet-body ordering ever changes. */
+	#renderView: ActorView | null = null;
+
+	#contextView(): ActorView {
+		return this.#renderView ?? actorView(this.actor);
+	}
+
 	protected override _prepareTabs(
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
-		return gatePsykerTab(this.actor, super._prepareTabs(group), "psy");
+		// Consumes the view rebuilt in _prepareContext; if _prepareTabs ever
+		// ran before that build, #contextView falls back to a fresh view —
+		// never a stale one.
+		return gatePsykerTab(this.#contextView(), super._prepareTabs(group), "psy");
 	}
 
 	/**
@@ -155,6 +171,10 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	async _prepareContext(options: object = {}) {
+		// Bead nyns review hardening: rebuild the view HERE, per render — the
+		// tab gate (which may run inside super) and the body builder below
+		// consume this same stash.
+		this.#renderView = actorView(this.actor);
 		const context = sheetContext(await super._prepareContext(options as never));
 		const system = systemOf(this.actor);
 		context.system = system;
@@ -234,7 +254,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				uuid: compendiumSourceOf(i),
 			})) as never;
 
-		context.isPsyker = isPsykerLike(actorView(this.actor));
+		context.isPsyker = isPsykerLike(this.#contextView());
 		// Shared rich-text partial (bead bef7) renders notes via prose-mirror.
 		context.notesHTML = await enrichText(system.notes ?? "", this.actor);
 		return context;

@@ -206,13 +206,23 @@ export function skillGrantPayload(
 	return { name, type: "skill", system };
 }
 
-/** Ids of previously creator-granted items (provenance flag). */
-export function creatorGrantIds(existing: OwnedItemLike[]): string[] {
+/**
+ * Ids of previously creator-granted items, by provenance flag. The default
+ * reads the character creator's marker (grantedBy "creator", talent/skill
+ * items); the ship and planet creators pass their own provenance slug and
+ * item types so every creator reconciles through ONE filter instead of three
+ * divergent hand-rolled copies.
+ */
+export function creatorGrantIds(
+	existing: OwnedItemLike[],
+	grantedBy: string = GRANTED_BY_CREATOR,
+	types: readonly string[] = ["talent", "skill"],
+): string[] {
 	return existing
 		.filter(
 			(item) =>
-				(item.type === "talent" || item.type === "skill") &&
-				item.system?.grantedBy === GRANTED_BY_CREATOR,
+				(types.includes(item.type ?? "")) &&
+				item.system?.grantedBy === grantedBy,
 		)
 		.map((item) => item.id ?? "")
 		.filter((id) => id.length > 0);

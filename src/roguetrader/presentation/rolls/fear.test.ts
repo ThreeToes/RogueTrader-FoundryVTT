@@ -152,7 +152,7 @@ function setup(answers: Record<string, number[]>) {
 		...foundryPorts,
 		dice,
 		actors,
-		i18n: { t: (key: string) => key } as unknown as Ports["i18n"],
+		i18n: { t: (key: string) => key },
 		chat: {
 			...foundryPorts.chat,
 			post: async (
@@ -165,7 +165,7 @@ function setup(answers: Record<string, number[]>) {
 				posted.push({ template, vars, rolls });
 				return { id: "msg-1" };
 			},
-		} as unknown as Ports["chat"],
+		},
 	});
 	return { actor, updates, rolled, posted };
 }

@@ -9,7 +9,7 @@
  * Foundry-facing (uses the ports); the shots-spent mapping below is pure.
  */
 
-import { getPorts } from "../infrastructure/foundry/ports";
+import type { Items, Notify } from "../../ffg/application/ports";
 
 /** Structural view of a quantity-bearing item document. */
 interface QuantityBearingItem {
@@ -74,7 +74,8 @@ export type DecrementResult = number | null;
 /**
  * Decrement an item's quantity through the items port (loud-failure
  * convention, bead c9s3 — a failed write throws) and announce the spend with
- * CHAT.AMMO_SPENT.
+ * CHAT.AMMO_SPENT. Bead x4ly: the notify + items ports are caller-bound
+ * options instead of a global getPorts() read.
  *
  * Returns the NEW quantity, or `null` when the item was REFUSED on empty
  * semantics (`onEmpty: "refuse"`: not finite or <= 0 — warned, no write) or
@@ -92,6 +93,8 @@ export async function decrementQuantity(
 		shots?: number;
 		/** The weapon name in the ROLL.LAUNCHER_UNLOADED warn (refuse). */
 		weaponName?: string;
+		/** Caller-bound notification + item-write ports (bead x4ly). */
+		ports: { notify: Notify; items: Items };
 	},
 ): Promise<DecrementResult> {
 	const doc = item as
@@ -99,7 +102,8 @@ export async function decrementQuantity(
 				name?: string;
 		  })
 		| null;
-	const ports = getPorts();
+	const notify = options.ports.notify;
+	const items = options.ports.items;
 	const shots = Math.max(1, Number(options.shots ?? 1));
 	const current = Number(doc?.system?.quantity ?? 0);
 	// A non-finite quantity is corrupt bookkeeping — writing NaN through the
@@ -107,7 +111,7 @@ export async function decrementQuantity(
 	// the weapon context; the manual chip historically stayed silent).
 	if (!Number.isFinite(current)) {
 		if (options.onEmpty === "refuse") {
-			ports.notify.warn("ROLL.LAUNCHER_UNLOADED", {
+			notify.warn("ROLL.LAUNCHER_UNLOADED", {
 				weapon: options.weaponName ?? doc?.name ?? "",
 			});
 		}
@@ -115,7 +119,7 @@ export async function decrementQuantity(
 	}
 	if (options.onEmpty === "refuse" && current <= 0) {
 		// Same warn-and-refuse path an unloaded launcher takes (bead 65sq).
-		ports.notify.warn("ROLL.LAUNCHER_UNLOADED", {
+		notify.warn("ROLL.LAUNCHER_UNLOADED", {
 			weapon: options.weaponName ?? doc?.name ?? "",
 		});
 		return null;
@@ -124,8 +128,8 @@ export async function decrementQuantity(
 	// item holds must not start writing negative quantities; the shooter
 	// still sees the 0 remainder on the chip / card.
 	const next = Math.max(0, current - shots);
-	await ports.items.update(item, { system: { quantity: next } });
-	ports.notify.info("CHAT.AMMO_SPENT", {
+	await items.update(item, { system: { quantity: next } });
+	notify.info("CHAT.AMMO_SPENT", {
 		name: doc?.name ?? "",
 		quantity: next,
 	});

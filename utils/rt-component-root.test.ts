@@ -28,8 +28,12 @@ const SHARED_CSS = "css/40k-components.css";
 const CSS_FILES = [
 	"css/40k-components.css",
 	"css/sheet-gear.css",
+	"css/sheet-career.css",
+	"css/sheet-starship.css",
+	"css/sheet-npc.css",
 	"css/sheet-character.css",
 	"css/chat-roll.css",
+	"css/chat-card.css",
 	"css/rules-app.css",
 ];
 
@@ -276,6 +280,9 @@ describe("shared component root (bead cmio.6)", () => {
 		expect(shared).toBeGreaterThan(-1);
 		for (const skin of [
 			"css/sheet-gear.css",
+			"css/sheet-career.css",
+			"css/sheet-starship.css",
+			"css/sheet-npc.css",
 			"css/sheet-character.css",
 			"css/chat-roll.css",
 			"css/rules-app.css",

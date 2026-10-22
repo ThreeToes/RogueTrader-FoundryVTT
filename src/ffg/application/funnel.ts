@@ -8,19 +8,20 @@
  * registers the contributors and runs them over an `ActorView`. New sources
  * never touch sheet or roll code.
  *
- * System-specific contributors (RT origin traits, RT fire-mode homebrew)
- * register themselves from the sibling system module — this file holds only
- * the machinery and the FFG-generic contributors, so it stays system-neutral
- * and Foundry-free (application layer, epic kof0).
+ * System-specific contributors (RT origin traits, RT fire-mode homebrew, RT
+ * weapon qualities) register themselves from their sibling system modules —
+ * this file holds only the machinery and the FFG-generic contributors, so it
+ * stays system-neutral and Foundry-free (application layer, epic kof0).
+ * Bead gyei hoisted the LAST RT book table (the "weapon-qualities"
+ * contribution table) into src/roguetrader/rules/weapon-qualities.ts.
  *
  * Built-in contributors:
  * - "effect": ActiveEffect changes keyed `system.testModifier` become additive
  *   modifiers (change value parsed as a number).
- * - "weapon-qualities": when a test carries a weapon, known qualities map to
- *   fixed contributions (data table below; values are remembered RT core
- *   rules, flagged for verification).
+ * - "item-effects": owned-item effect kinds through the effect engine.
  */
 
+import type { ConfigPort, I18n } from "./ports";
 import type { Modifier } from "../../rules-engine/modifier";
 import type { ActorView } from "../domain/model/actor";
 import type { TestKind } from "../domain/model/test";
@@ -48,6 +49,54 @@ export interface TestModifierContext {
 	 * characteristic — "+20 to Medicae Tests" must not hit every Int test.
 	 */
 	skillName?: string;
+	/**
+	 * The config + i18n ports a system contributor needs (bead x4ly).
+	 *
+	 * Threaded by the presentation seams that build contexts (the roll
+	 * pipeline, the TestDialog re-collection); a context that carries none
+	 * makes a port-asking system contributor contribute nothing — loudly,
+	 * via the warn-ONCE helper — so a second system can bind its OWN config
+	 * port per call instead of the rules layer reaching a global.
+	 */
+	ports?: TestContributorPorts;
+}
+
+/** The narrow port pair a system funnel contributor reads (bead x4ly). */
+export interface TestContributorPorts {
+	config: ConfigPort;
+	i18n: I18n;
+}
+
+/**
+ * Read the contributor ports off a context, warn-ONCE when absent (bead x4ly).
+ *
+ * A system contributor that needs the config or i18n port calls this; when
+ * the caller threaded no ports (an old call site, a bare test) the row would
+ * otherwise vanish SILENTLY — a silent modifier, which is a bug. Loud, but
+ * not spammy: one warning per process covers every later port-less call.
+ * Returns null then; the contributor contributes nothing.
+ */
+let warnedMissingContributorPorts = false;
+export function contributorPorts(
+	context: TestModifierContext,
+): TestContributorPorts | null {
+	if (context.ports) return context.ports;
+	if (!warnedMissingContributorPorts) {
+		warnedMissingContributorPorts = true;
+		console.warn(
+			`[${REGISTRY_NAME}] a system contributor asked for its ports but the TestModifierContext carried none — thread { config, i18n } at the context-building seam; the contribution is dropped.`,
+		);
+	}
+	return null;
+}
+
+/**
+ * Test teardown for the warn-once flag above: a suite that pins the
+ * "missing contributor ports" warning must be able to reset the
+ * one-shot state, or the pin only holds when it happens to run first.
+ */
+export function resetContributorPortsWarningForTests(): void {
+	warnedMissingContributorPorts = false;
 }
 
 export type TestContributor = (
@@ -57,12 +106,46 @@ export type TestContributor = (
 
 const contributors = new HandlerRegistry<string, TestContributor>();
 
+/**
+ * Source-type key storage (bead 00z5): a registering system may namespace
+ * its keys, following the `createRegistries(seed, "ROGUE_TRADER")`
+ * CONFIG-namespace precedent, so two FFG systems registering their own
+ * "attack-context" contributor hold SEPARATE handler lists instead of
+ * silently merging rows (the first-wins-by-module-import-order class).
+ * Un-namespaced keys — the built-ins, a system that has not migrated —
+ * resolve exactly as before.
+ */
+function namespacedKey(system: string | undefined, type: string): string {
+	return system === undefined ? type : `${system}:${type}`;
+}
+
 export const testContributors = {
-	/** Register a contributor for a source type. Repeat adds to that type. */
-	register(type: string, fn: TestContributor): void {
-		contributors.on(type, fn);
+	/**
+	 * Register a contributor for a source type. A reference-identical repeat
+	 * is a no-op (HandlerRegistry.on); `system` namespaces the key (bead 00z5).
+	 */
+	register(type: string, fn: TestContributor, system?: string): void {
+		contributors.on(namespacedKey(system, type), fn);
 	},
-	/** Source types with at least one contributor (newest last). */
+	/**
+	 * Remove one contributor — the teardown affordance tests use so a
+	 * registration in one suite cannot leak into the next suite in the same
+	 * process (bead 00z5). Same `system` form as the registration.
+	 */
+	off(type: string, fn: TestContributor, system?: string): boolean {
+		return contributors.off(namespacedKey(system, type), fn);
+	},
+	/**
+	 * Drop a whole source type (or all types when type is omitted). Pass the
+	 * same form you registered with — a namespaced key is its own storage
+	 * slot, so `clear("t")` never touches "SYSTEM:t".
+	 */
+	clear(type?: string): void {
+		if (type === undefined) contributors.clear();
+		else contributors.clear(type);
+	},
+	/** Storage keys with at least one contributor; namespaced keys carry
+	 * their `SYSTEM:` prefix (newest key last). */
 	types(): string[] {
 		return contributors.keys();
 	},
@@ -70,10 +153,10 @@ export const testContributors = {
 	 * The contributors registered under one source type, in registration
 	 * order (bead 4tx6): lets a system's explicit-registrar compare HANDLES,
 	 * so a foreign module registering the same type key can never satisfy its
-	 * applied-guard by key shape alone.
+	 * applied-guard by key shape alone. Same `system` form as registration.
 	 */
-	contributorsFor(type: string): readonly TestContributor[] {
-		return contributors.for(type);
+	contributorsFor(type: string, system?: string): readonly TestContributor[] {
+		return contributors.for(namespacedKey(system, type));
 	},
 	/**
 	 * Run every registered contributor. Malformed results (a forgotten return,
@@ -84,7 +167,8 @@ export const testContributors = {
 	run(view: ActorView, context: TestModifierContext): Modifier[] {
 		const out: Modifier[] = [];
 		// keys()/for() walks the same handlers as all(), but keeps the source
-		// type so a malformed return can name it in the warning.
+		// type — including its namespace prefix — so a malformed return can
+		// name it in the warning.
 		for (const type of contributors.keys()) {
 			for (const fn of contributors.for(type)) {
 				out.push(
@@ -194,23 +278,6 @@ export function breakdown(
 	return modifiers.map((mod) => ({ label: mod.label, value: mod.value }));
 }
 
-// ---------------------------------------------------------------------------
-// Built-in contributor: weapon qualities -> fixed attack contributions.
-// Data table (extensible); values are remembered RT core rules (VERIFY).
-// ---------------------------------------------------------------------------
-const QUALITY_CONTRIBUTIONS: Record<
-	string,
-	(context: TestModifierContext) => number | null
-> = {
-	// Accurate: VERIFIED book p115-116 (PDF p116): +10 to BS with an Aim
-	// Action, in addition to the aiming bonus.
-	accurate: (context) =>
-		context.aimed && context.kind === "attack" ? 10 : null,
-	// Defensive: VERIFIED book p115 (PDF p116): +15 to Parry but -10 when
-	// used to make attacks. The attack penalty lives here.
-	defensive: (context) => (context.kind === "attack" ? -10 : null),
-};
-
 /**
  * QUALITY.<SLUG> i18n key for a weapon-quality slug (bead dfdv): the funnel
  * stays Foundry-free, so it emits the KEY ("gyro-stabilised" →
@@ -220,27 +287,6 @@ const QUALITY_CONTRIBUTIONS: Record<
 export function qualityLabelKey(quality: string): string {
 	return `QUALITY.${quality.toUpperCase().replace(/-/g, "_")}`;
 }
-
-testContributors.register("weapon-qualities", (_view, context) => {
-	if (context.kind !== "attack" || !context.weapon) return [];
-	const special = context.weapon.special ?? [];
-	const mods: Modifier[] = [];
-	for (const quality of special) {
-		const compute = QUALITY_CONTRIBUTIONS[quality];
-		if (!compute) continue;
-		const value = compute(context);
-		if (value === null || value === 0) continue;
-		// Bead dfdv: the label is the QUALITY.<SLUG> KEY (Foundry-free); the
-		// display seams localize it via localizeLabel.
-		mods.push({
-			id: `quality:${quality}`,
-			source: { type: "item", label: "WEAPON.SPECIAL" },
-			label: qualityLabelKey(quality),
-			value,
-		});
-	}
-	return mods;
-});
 
 // ---------------------------------------------------------------------------
 // Built-in contributor: ActiveEffect changes keyed `system.testModifier`.

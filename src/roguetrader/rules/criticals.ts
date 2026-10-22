@@ -35,8 +35,12 @@ import { ROLLTABLES_PACK } from "../application/packs";
 import { postCard } from "./chat-flags";
 import { bodyLocationLabelKey } from "./labels";
 import { effectiveProfile } from "./homebrew";
-import type { ContentPort } from "../../ffg/application/ports";
-import { getPorts } from "../infrastructure/foundry/ports";
+import {
+	type Clock,
+	type ConfigPort,
+	type ContentPort,
+	type Dice,
+} from "../../ffg/application/ports";
 import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
 
 /** One suffered critical effect; stored on the actor until something clears it. */
@@ -112,12 +116,12 @@ export function wornBattlesuit(actor: unknown): ItemLike | undefined {
 }
 
 /**
- * Current combat round, or 0 when no combat is running. Reads the global
- * defensively: this module is imported at boot (the sheet and the chat handler
- * both pull it in) and unit tests run with no `game` at all.
+ * Current combat round, or 0 when no combat is running. Bead x4ly: the clock
+ * port is caller-bound (the chat-action site threads `getPorts().clock`), not
+ * a global read — the criticals tests pass a clock double directly.
  */
-export function currentRound(): number {
-	return getPorts().clock.round();
+export function currentRound(clock: Clock): number {
+	return clock.round();
 }
 
 /**
@@ -155,7 +159,7 @@ export function totalCriticalDamage(actor: unknown): number {
 /** Find a RollTable in the rolltables pack by name. */
 export async function findCriticalTable(
 	name: string,
-	content: ContentPort = getPorts().content,
+	content: ContentPort,
 ): Promise<TableLike | undefined> {
 	const table = await content.find(ROLLTABLES_PACK, name);
 	// Content-optional: a missing pack is NOT an error. The caller records the
@@ -164,9 +168,9 @@ export async function findCriticalTable(
 	return table ? (table as TableLike) : undefined;
 }
 
-/** Roll a formula through the dice port. */
-async function rollDie(formula: string): Promise<number> {
-	return (await getPorts().dice.roll(formula)).total;
+/** Roll a formula through the caller-bound dice port (bead x4ly). */
+async function rollDie(dice: Dice, formula: string): Promise<number> {
+	return (await dice.roll(formula)).total;
 }
 
 let effectCounter = 0;
@@ -191,8 +195,14 @@ export async function resolveCritical(outcome: {
 	/** Injectable dice for tests. */
 	overrideRoll?: number;
 	tableRoll?: number;
-	/** Content provider (defaults to the Foundry packs). */
-	content?: ContentPort;
+	/** Content provider (bead x4ly: caller-bound, no getPorts default). */
+	content: ContentPort;
+	/** Caller-bound config port (effective-profile read). */
+	config: ConfigPort;
+	/** Caller-bound dice port (the critical rolls). */
+	dice: Dice;
+	/** Caller-bound combat clock (the once-per-Turn override). */
+	clock: Clock;
 }): Promise<CriticalOutcome> {
 	const actor = asActor(outcome.actor);
 	const excess = Math.max(0, outcome.excess);
@@ -207,10 +217,10 @@ export async function resolveCritical(outcome: {
 	const suit = wornBattlesuit(outcome.actor);
 	let useBattlesuitTable = false;
 	if (suit) {
-		const round = currentRound();
+		const round = currentRound(outcome.clock);
 		const stored = Number(actor.system?.criticalOverrideRound ?? 0);
 		if (overrideAppliesThisTurn(stored, round)) {
-			const d10 = outcome.overrideRoll ?? (await rollDie("1d10"));
+			const d10 = outcome.overrideRoll ?? (await rollDie(outcome.dice, "1d10"));
 			result.overrideUsed = true;
 			// 9+ : the Critical Damage stands (core tables). Otherwise the suit
 			// absorbs it and Table 1-5 decides what breaks instead.
@@ -222,7 +232,7 @@ export async function resolveCritical(outcome: {
 	const existing = Number(criticalsOf(actor)[location] ?? 0);
 	// Bead wxut.2: the Critical Damage cap is profile DATA; the kernel
 	// constant stays the core value and registry source.
-	const effective = effectiveProfile();
+	const effective = effectiveProfile(outcome.config);
 	const maxSeverity = Number.isFinite(effective.criticals?.maxSeverity)
 		? (effective.criticals?.maxSeverity ?? MAX_CRITICAL_SEVERITY)
 		: MAX_CRITICAL_SEVERITY;
@@ -250,7 +260,7 @@ export async function resolveCritical(outcome: {
 		});
 		return result;
 	}
-	const roll = outcome.tableRoll ?? (await rollDie(table.formula ?? "1d10"));
+	const roll = outcome.tableRoll ?? (await rollDie(outcome.dice, table.formula ?? "1d10"));
 	const row = selectCriticalResult(roll, Array.from(table.results ?? []));
 	if (!row) {
 		// A roll landing in no row means the installed table has a gap (a
@@ -299,8 +309,14 @@ export async function applyDamageWithCriticals(outcome: {
 	location: string;
 	overrideRoll?: number;
 	tableRoll?: number;
-	/** Content provider (defaults to the Foundry packs). */
-	content?: ContentPort;
+	/** Content provider (bead x4ly: caller-bound, no getPorts default). */
+	content: ContentPort;
+	/** Caller-bound config port (effective-profile read). */
+	config: ConfigPort;
+	/** Caller-bound dice port (the critical rolls). */
+	dice: Dice;
+	/** Caller-bound combat clock (the once-per-Turn override). */
+	clock: Clock;
 }): Promise<CriticalOutcome> {
 	const actor = asActor(outcome.actor);
 	const supportsCriticals =
@@ -329,6 +345,9 @@ export async function applyDamageWithCriticals(outcome: {
 		overrideRoll: outcome.overrideRoll,
 		tableRoll: outcome.tableRoll,
 		content: outcome.content,
+		config: outcome.config,
+		dice: outcome.dice,
+		clock: outcome.clock,
 	});
 	resolved.woundsApplied = applied;
 
@@ -344,7 +363,7 @@ export async function applyDamageWithCriticals(outcome: {
 		update.criticalEffects = [...criticalEffectsOf(actor), ...resolved.effects];
 	}
 	if (resolved.overrideUsed) {
-		update.criticalOverrideRound = currentRound();
+		update.criticalOverrideRound = currentRound(outcome.clock);
 	}
 	await actor.update?.({ system: update });
 	return resolved;

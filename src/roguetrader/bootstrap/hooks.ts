@@ -14,6 +14,7 @@ import {
 	toxicToughnessTestFromCard,
 } from "../presentation/chat-actions";
 import { registerCombatEncounterEndHook } from "../presentation/combat-end";
+import { registerDamageCardStateHook } from "../presentation/damage-card-state";
 import { registerCreatorMenus } from "../presentation/creator-menus";
 import { registerShipTurnBoundaryHook } from "../presentation/ship-turn-boundary";
 import { registerTokenContextMenus } from "../presentation/token-menus";
@@ -180,6 +181,11 @@ export function registerRuntimeHooks(): void {
 	// runs the acting starship's flag expiry + lastTurnLosses rotation
 	// (presentation/ship-turn-boundary).
 	registerShipTurnBoundaryHook();
+	// Consumed damage cards render with the Apply button disabled (t2ei
+	// follow-on): renderChatMessageHTML mirrors the damageApply flag onto the
+	// button at render time, so a re-rendered card stops showing a dead
+	// no-op Apply button baked in by foundry at post time.
+	registerDamageCardStateHook();
 	// Character/ship/planet/warrant creators (epic kof0, phase 5): the
 	// directory context-menu entries live in presentation/creator-menus.ts.
 	registerCreatorMenus();

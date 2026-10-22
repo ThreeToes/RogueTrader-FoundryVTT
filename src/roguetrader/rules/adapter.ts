@@ -1,43 +1,68 @@
-import { equipStateOf, ownedItemResolver, systemOf } from "../data/accessors";
+import { messageFlagNamespace } from "../../ffg/application/chat-flags";
+import type { ActorView } from "../../ffg/domain/model/actor";
+import * as damageDice from "../../ffg/application/damage-dice";
+import type {
+	ConfigPort,
+	Dice,
+	DiceResult,
+	I18n,
+	Ports,
+} from "../../ffg/application/ports";
 import {
+	type AttackProfile,
+} from "../../ffg/domain/model/attack";
+import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
+import { actorView } from "../../ffg/infrastructure/foundry/actor-view";
+import {
+	type DamageRequest,
 	locationForHit,
+	type Modifier,
 	parseDamageFormula,
 	resolveDamage,
-	type DamageRequest,
-	type Modifier,
 } from "../../rules-engine/index";
-import { DamageType, normaliseDamageType } from "../data/item/damage-types";
-import { actorView } from "../../ffg/infrastructure/foundry/actor-view";
-import type { DiceResult, Ports } from "../../ffg/application/ports";
-import { getPorts } from "../infrastructure/foundry/ports";
-import * as damageDice from "../../ffg/application/damage-dice";
+import { equipStateOf, systemOf } from "../data/accessors";
+import {
+	normaliseDamageType,
+	DamageType,
+} from "../data/item/damage-types";
+import { chatCardTitleDoc } from "../presentation/chat-doc-links";
+// Bead x4ly: `documentFromUuid` lives with the wrapper edge (presentation),
+// which is the layer allowed to bind the Foundry resolution port; the adapter
+// consumes it for the fired-ordnance resolution and re-exports it unchanged.
+import { documentFromUuid } from "../presentation/damage-rolls";
+import { postCard } from "./chat-flags";
+import { effectiveProfile } from "./homebrew";
 import { bodyLocationLabelKey, conditionLabel } from "./labels";
+import {
+	decrementQuantity,
+	type FireMode,
+	type RateOfFireLike,
+	shotsForFireMode,
+} from "./ordnance";
 import {
 	applyTearing,
 	collectRollMechanicEffects,
 	collectTalentDamageEffects,
 	collectTargetTraitDamageEffects,
-	targetToughnessMultiplier,
 	type RollMechanics,
 	type TalentDamageCollection,
+	targetToughnessMultiplier,
 } from "./talent-effects";
-import { postCard, type DamageRollFlag } from "./chat-flags";
-import { effectiveProfile } from "./homebrew";
-import { chatCardTitleDoc } from "../presentation/chat-doc-links";
-import {
-	type FireMode,
-	type RateOfFireLike,
-	decrementQuantity,
-	shotsForFireMode,
-} from "./ordnance";
 import { toxicActivates, toxicToughnessPenalty } from "./toxic";
-import { messageFlagNamespace } from "../../ffg/application/chat-flags";
-import {
-	type AttackProfile,
-	attackProfileOf,
-} from "../../ffg/domain/model/attack";
-import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
 
+export type {
+	CharacteristicRollRequest,
+	InitiativeRollRequest,
+	NavigatorRollRequest,
+	PsychicRollRequest,
+	RollKind,
+	RollRequest,
+	RollTestOptions,
+	ShipRepairRollRequest,
+	ShipWeaponRollRequest,
+	SkillRollRequest,
+	WeaponRollRequest,
+} from "./roll-system";
 /**
  * Thin Foundry adapter: the ONLY runtime Foundry-coupled rolling code.
  * Sheets/buttons call these; everything below this layer is pure kernel.
@@ -51,145 +76,39 @@ import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
  * API for the established import paths.
  */
 export {
-	rollTest,
-	rollSkill,
-	rollSkillUntrained,
-	rollWeaponAttack,
-	rollPsychicPower,
-	rollNavigatorPower,
+	performRoll,
+	rollAction,
 	rollFearTest,
-	rollSnapOut,
-	rollShipSalvo,
+	rollInitiativeAction,
+	rollNavigatorPower,
+	rollPsychicPower,
 	rollShipAction,
 	rollShipRepair,
+	rollShipSalvo,
+	rollSkill,
+	rollSkillUntrained,
+	rollSnapOut,
+	rollTest,
 	rollToxicToughnessTest,
-	rollAction,
-	performRoll,
-	rollInitiativeAction,
-} from "./roll-system";
-export type {
-	RollRequest,
-	RollKind,
-	RollTestOptions,
-	CharacteristicRollRequest,
-	SkillRollRequest,
-	WeaponRollRequest,
-	PsychicRollRequest,
-	NavigatorRollRequest,
-	ShipWeaponRollRequest,
-	ShipRepairRollRequest,
-	InitiativeRollRequest,
+	rollWeaponAttack,
 } from "./roll-system";
 
 /**
- * Quick damage roll from the sheet's weapon row: rolls a fresh d100 for the
- * hit location plus the weapon damage and posts the damage card directly
- * (no to-hit test). Carry gating matches rollWeaponAttack.
+ * Foundry-bound damage-roll wrappers (bead x4ly): `rollWeaponDamage`,
+ * `rollDamageForCard` and `documentFromUuid` moved to
+ * `presentation/damage-rolls.ts` — the wrapper edge is where binding the
+ * global `getPorts()` belongs, so the adapter below takes a `Ports` value
+ * instead of reading a global. Re-exported here so every established import
+ * path (sheet/actor/shared-actions.ts, chat-actions.ts) keeps working.
  */
-/**
- * Resolve a uuid stored on a chat flag to a document.
- *
- * fvtt-types types `fromUuidSync`'s parameter as a template-literal UUID union,
- * but a flag carries an arbitrary string, so the cast belongs at this one
- * boundary rather than at each call site.
- */
-function documentFromUuid(uuid: string): unknown {
-	return foundry.utils.fromUuidSync(uuid as never);
-}
-
-export async function rollWeaponDamage(
-	actor: Actor,
-	weaponId: string,
-): Promise<void> {
-	const ports = getPorts();
-	const item = actor.items.get(weaponId);
-	// Bead 6l68: the item gate comes FIRST — attackProfileOf tolerates
-	// null/undefined only as an incidental detail of its signature, and we
-	// do not rely on it. The profile is resolved from a verified item.
-	if (!item) {
-		ports.notify.warn("ROLL.UNKNOWN_ITEM");
-		return;
-	}
-	// Bead kam1: a MUTATION with a printed attack block (Corrosive Bile) is an
-	// attack too, so it resolves through the same profile as a weapon. Bead
-	// 4obp: the launcher's fire profile derives from its LOADED ordnance —
-	// unloaded = unusable and the damage roll below refuses.
-	// Bead huaf/ujtg: the owner resolver doubles as the mod resolver —
-	// attached weapon modifications (pen-flat/primitive-clear) fold in here.
-	const profile = attackProfileOf(
-		item as never,
-		ownedItemResolver(actor),
-		ownedItemResolver(actor) as never,
-	);
-	if (!profile) {
-		ports.notify.warn("ROLL.UNKNOWN_ITEM");
-		return;
-	}
-	// Carry gating matches the to-hit attack gate; innate attacks (mutations)
-	// are part of the body and are never equipped.
-	if (!profile.innate && equipStateOf(item) !== "carried") {
-		ports.notify.warn("ROLL.NOT_CARRIED", { weapon: item.name ?? "" });
-		return;
-	}
-	// Hit location needs a d100; a direct damage roll has no to-hit test, so
-	// the throwaway d100 is rolled INSIDE postWeaponDamage (bead 9b95 F7:
-	// after the consume/refuse gates) — pass null to let it roll.
-	const target = ports.targets.actor() as Actor | null;
-	await postWeaponDamage(actor, (target ?? actor) as Actor, profile, null);
-}
+export {
+	documentFromUuid,
+	rollDamageForCard,
+	rollWeaponDamage,
+} from "../presentation/damage-rolls";
 
 // DamageRollFlag moved to rules/chat-flags.ts (bead mvu2).
-
 /**
- * Damage roll triggered from the to-hit card's button (owner redesign).
- * Consumes the flag data set at attack time; rolls the weapon's damage
- * formula, picks the hit location, resolves vs armour/toughness and
- * posts the damage card with the apply-damage button.
- */
-export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
-	const attacker = data.attackerUuid
-		? (documentFromUuid(data.attackerUuid) as Actor | null)
-		: null;
-	const weapon = data.weaponUuid
-		? (documentFromUuid(data.weaponUuid) as foundry.documents.Item | null)
-		: null;
-	// Bead 4obp: resolve the launcher's loaded ordnance against its owning
-	// actor (embedded weapons carry .actor; unowned items cannot have loaded
-	// ordnance resolved at all).
-	const owner = (weapon as { actor?: foundry.documents.Actor | null } | null)
-		?.actor;
-	// Bead 6l68: the document gates come FIRST — a missing resolvee returns
-	// outright instead of calling attackProfileOf on a null/undefined weapon
-	// and reading its tolerance as the contract.
-	if (!attacker || !weapon) return;
-	// Bead huaf/ujtg: the owner resolver doubles as the mod resolver.
-	const profile = attackProfileOf(
-		weapon as never,
-		owner ? ownedItemResolver(owner) : undefined,
-		owner ? (ownedItemResolver(owner) as never) : undefined,
-	);
-	if (!profile) return;
-	const ports = getPorts();
-	if (profile.unusable) {
-		ports.notify.warn("ROLL.LAUNCHER_UNLOADED", { weapon: profile.name });
-		return;
-	}
-	const target = data.targetUuid
-		? (documentFromUuid(data.targetUuid) as Actor | null)
-		: null;
-	await postWeaponDamage(
-		attacker,
-		(target ?? attacker) as Actor,
-		profile,
-		data.hitRoll ?? 0,
-		data.critical === true,
-		// Bead 9b95 F6: the to-hit dialog's fire mode, stamped onto the flag.
-		data.fireMode,
-		// Bead gqz2: the to-hit dialog's condition flags, stamped onto the
-		// flag so guarded damage rows can fire on the damage channel.
-		data.flags,
-	);
-}
 
 /**
  * Ammo auto-consume funnel application (epic ui4b, bead 65sq): with the
@@ -221,14 +140,16 @@ export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
  * unresolvable RoF) still returns true — the damage rolls as before.
  */
 async function consumeFiredOrdnance(
+	// Bead x4ly: the whole port set is caller-bound (bound once in
+	// postWeaponDamage), not a global getPorts() read.
+	ports: Ports,
 	attacker: Actor,
 	profile: AttackProfile,
 	fireMode: FireMode | null | undefined,
 ): Promise<boolean> {
 	const fired = profile.fired;
 	if (!fired?.uuid) return true;
-	const ports = getPorts();
-	const effective = effectiveProfile();
+	const effective = effectiveProfile(ports.config);
 	if (!effective.ammoAutoConsume) return true;
 	// F5 (bead 9b95): the ownership gate — a non-owner firing skips the
 	// consume (no write, no card death); the damage itself still posts.
@@ -267,6 +188,7 @@ async function consumeFiredOrdnance(
 		onEmpty: "refuse",
 		shots,
 		weaponName: profile.name,
+		ports: { notify: ports.notify, items: ports.items },
 	});
 	if (next === null) return false;
 	// The damage card's usage chip renders straight from profile.fired —
@@ -298,7 +220,7 @@ type DamageTypeLike =
  * surfaced on the card.
  */
 function resolveDamageNotation(
-	ports: Ports,
+	i18n: I18n,
 	profile: AttackProfile,
 ): {
 	damageType: DamageTypeLike;
@@ -318,7 +240,7 @@ function resolveDamageNotation(
 	const damageAlternatives = profile.damageTypes.slice(1).filter(Boolean);
 	const damageTypeAlternatives =
 		damageAlternatives.length > 0
-			? `${ports.i18n.t("CHAT.DAMAGE_TYPE_OR")} ${damageAlternatives.join(" / ")}`
+			? `${i18n.t("CHAT.DAMAGE_TYPE_OR")} ${damageAlternatives.join(" / ")}`
 			: "";
 	return {
 		damageType,
@@ -342,7 +264,8 @@ function resolveDamageNotation(
  * toxicActivates, rules/toxic.ts).
  */
 async function applyRollQualityMechanics(
-	ports: Ports,
+	dice: Dice,
+	i18n: I18n,
 	damageRoll: DiceResult,
 	mechanics: RollMechanics,
 	profile: AttackProfile,
@@ -357,29 +280,29 @@ async function applyRollQualityMechanics(
 		// The DAMAGE die's results only (bead k98i): a mixed formula's other
 		// terms are not damage dice, so Tearing must not discard one of them.
 		const { faces, results: baseResults } = damageDice.tearingBase(damageRoll);
-		const extra = await ports.dice.roll(`1d${faces}`);
+		const extra = await dice.roll(`1d${faces}`);
 		const tearing = applyTearing(baseResults, extra.total, faces);
 		if (tearing.added > 0) {
 			damageTotal += tearing.added;
 		}
 		rolls.push(...(extra.rolls ?? []));
 		qualityNotes.push(
-			ports.i18n.t("CHAT.QUALITY_TEARING", {
+			i18n.t("CHAT.QUALITY_TEARING", {
 				discarded: tearing.discarded,
 			}),
 		);
 	}
 	if (mechanics.blast !== null) {
 		qualityNotes.push(
-			ports.i18n.t("CHAT.QUALITY_BLAST", { rating: mechanics.blast }),
+			i18n.t("CHAT.QUALITY_BLAST", { rating: mechanics.blast }),
 		);
 	}
 	// Printed attack restrictions (bead kam1).
 	if (!profile.parryable) {
-		qualityNotes.push(ports.i18n.t("CHAT.ATTACK_UNPARRYABLE"));
+		qualityNotes.push(i18n.t("CHAT.ATTACK_UNPARRYABLE"));
 	}
 	if (profile.action === "full") {
-		qualityNotes.push(ports.i18n.t("CHAT.ATTACK_FULL_ACTION"));
+		qualityNotes.push(i18n.t("CHAT.ATTACK_FULL_ACTION"));
 	}
 	return { damageTotal, qualityNotes, rolls };
 }
@@ -394,7 +317,7 @@ async function applyRollQualityMechanics(
  * at the call site). The vehicle path (Core Rulebook p218 — 1d5 on the
  * Vehicle Critical Hit Chart INSTEAD of the extra die) is OUT OF SCOPE here.
  */
-async function rollRighteousFuryDice(ports: Ports): Promise<{
+async function rollRighteousFuryDice(dice: Dice): Promise<{
 	added: number;
 	rolls: unknown[];
 }> {
@@ -403,7 +326,7 @@ async function rollRighteousFuryDice(ports: Ports): Promise<{
 	// attach, so Dice So Nice! animates exactly the dice the breakdown shows.
 	const rolls: unknown[] = [];
 	for (;;) {
-		const extra = await ports.dice.roll("1d10");
+		const extra = await dice.roll("1d10");
 		added += extra.total;
 		rolls.push(...(extra.rolls ?? []));
 		// The loop condition rides the natural-10 trigger detector (bead k98i):
@@ -464,10 +387,13 @@ function collectTargetArmour(
 	const naturalToughnessBonus = Math.floor(
 		systemOf(target).effectiveCharacteristicValue("t") / 10,
 	);
-	const traitDamage = collectTargetTraitDamageEffects(actorView(target));
+	// Bead nyns: ONE view for the target per soak step — the trait collection
+	// and the multiplier read the same copy of the read model instead of the
+	// whole inventory being rebuilt for each call.
+	const view = actorView(target);
+	const traitDamage = collectTargetTraitDamageEffects(view);
 	const toughnessBonus =
-		naturalToughnessBonus *
-		targetToughnessMultiplier(actorView(target), traitDamage);
+		naturalToughnessBonus * targetToughnessMultiplier(view, traitDamage);
 	return {
 		armourValue,
 		armourPrimitive,
@@ -484,7 +410,9 @@ function collectTargetArmour(
  * item-sourced talent effects, condition-guarded via flags.
  */
 function collectAttackerTalentDamage(
-	attacker: Actor,
+	// Bead nyns: pure in the view — postWeaponDamage builds ONE attacker view
+	// per damage roll and threads it here (and into collectRollMechanicEffects).
+	attackerView: ActorView,
 	profile: AttackProfile,
 	// Bead gqz2: the to-hit dialog's condition flags (e.g. { charging: true }),
 	// threaded via the damageRoll flag. Without them, guardPasses never saw a
@@ -492,7 +420,7 @@ function collectAttackerTalentDamage(
 	// charging") was silently inert.
 	conditionFlags?: Record<string, boolean>,
 ): TalentDamageCollection {
-	return collectTalentDamageEffects(actorView(attacker), {
+	return collectTalentDamageEffects(attackerView, {
 		attackType: profile.attackType,
 		// Bead 2k5: the attacking weapon's own damage effects apply; note
 		// the item id is needed for per-item matching.
@@ -508,7 +436,8 @@ function collectAttackerTalentDamage(
  * fire twice.
  */
 async function postDamageCard(
-	ports: Ports,
+	config: ConfigPort,
+	i18n: I18n,
 	attacker: Actor,
 	target: Actor,
 	profile: AttackProfile,
@@ -538,7 +467,7 @@ async function postDamageCard(
 	// display-step rewrite only.
 	const damageContributors = card.damageContributors.map((mod) =>
 		mod.condition
-			? { ...mod, condition: ports.i18n.t(conditionLabel(mod.condition)) }
+			? { ...mod, condition: i18n.t(conditionLabel(mod.condition)) }
 			: mod,
 	);
 	await postCard(
@@ -572,7 +501,7 @@ async function postDamageCard(
 						targetUuid: target.uuid,
 						wounds: card.damage.wounds,
 						penalty: toxicToughnessPenalty(card.damage.wounds),
-						prompt: ports.i18n.t("CHAT.TOXIC_PROMPT", {
+						prompt: i18n.t("CHAT.TOXIC_PROMPT", {
 							penalty: toxicToughnessPenalty(card.damage.wounds),
 							wounds: card.damage.wounds,
 						}),
@@ -591,7 +520,7 @@ async function postDamageCard(
 		{
 			// Namespace from the profile (bead p7jv): RT's value is
 			// "rogue-trader", so the wire format is unchanged.
-			[messageFlagNamespace(ports)]: {
+			[messageFlagNamespace(config)]: {
 				damageApply: {
 					wounds: card.damage.wounds,
 					targetUuid: target.uuid,
@@ -624,9 +553,11 @@ async function postDamageCard(
  * Bead d3yc: decomposed into named steps (resolveDamageNotation,
  * applyRollQualityMechanics, collectTargetArmour, collectAttackerTalentDamage,
  * postDamageCard) — a pure restructuring, no behaviour change; `ports` is
- * bound once and reused.
+ * bound once and reused. Bead x4ly: exported for the presentation wrappers
+ * (rules/adapter re-exports their names the other way), which now take the
+ * full port set.
  */
-async function postWeaponDamage(
+export async function postWeaponDamage(
 	attacker: Actor,
 	target: Actor,
 	profile: AttackProfile,
@@ -634,18 +565,23 @@ async function postWeaponDamage(
 	// damage: null — the throwaway 1d100 location die is rolled HERE, below
 	// (bead 9b95 F7) so an exhausted launcher refuses without burning a die.
 	hitRoll: number | null,
-	isCritical = false,
+	// Bead x4ly: required — the ports param cannot legally follow an optional,
+	// and both callers (the presentation wrappers) pass it explicitly.
+	isCritical: boolean,
 	// F6 (bead 9b95): the attack dialog's fire mode, threaded via the
 	// damageRoll flag; absent on the sheet quick-damage path — then the
 	// consume falls back to the launcher's RoF (single-shot-only = 1).
-	fireMode?: FireMode | null,
+	fireMode: FireMode | null | undefined,
 	// Bead gqz2: the to-hit dialog's condition flags, stamped onto the
 	// damageRoll flag by the weapon handler's after-hook; the talent-damage
 	// collector guards its rows on them. Absent on the sheet quick-damage
 	// path (no dialog ran) — unguarded rows apply, guarded ones stay off.
-	conditionFlags?: Record<string, boolean>,
+	conditionFlags: Record<string, boolean> | undefined,
+	// Bead x4ly: the whole port set is caller-bound — the presentation
+	// wrappers bind the global, a second system binds its own — never a
+	// getPorts() read from inside the rules layer.
+	ports: Ports,
 ): Promise<void> {
-	const ports = getPorts();
 	// Bead 4obp: an UNLOADED launcher has no damage of its own (the book
 	// prints "—"; the profile carries damage from the loaded ordnance only).
 	// Warn and refuse — no "—" garbage card, no prompt fallback (owner
@@ -659,14 +595,22 @@ async function postWeaponDamage(
 	// ordnance stamp (bead 4obp) — so the auto-consume write lives at this one
 	// hook. A refusal (toggle ON, quantity exhausted) aborts the damage the
 	// same way an unloaded launcher does.
-	if (!(await consumeFiredOrdnance(attacker, profile, fireMode))) return;
+	if (
+		!(await consumeFiredOrdnance(
+			ports,
+			attacker,
+			profile,
+			fireMode,
+		))
+	)
+		return;
 	// Bead 9b95 F7: the sheet quick-damage path's throwaway 1d100 location
 	// die is rolled only AFTER the consume/refuse gates — an exhausted
 	// launcher refuses without burning a die.
 	const resolvedHitRoll = hitRoll ?? (await ports.dice.roll("1d100")).total;
 	// Step d3yc-1: the notation — suffix strip (bead 6tr), type normalise
 	// and the card's type labels (see resolveDamageNotation).
-	const notation = resolveDamageNotation(ports, profile);
+	const notation = resolveDamageNotation(ports.i18n, profile);
 	const damageRoll = await ports.dice.roll(notation.formula);
 	// Righteous Fury trigger (RT core, VERIFY wording): a natural 10 on a
 	// damage die. The dice port reports the terms, so the kernel need not see
@@ -675,7 +619,10 @@ async function postWeaponDamage(
 	// Roll-mechanic weapon qualities (bead gci0): Tearing rolls one extra
 	// damage die (lowest result discarded — book wording, NOT roll-twice);
 	// Toxic/Blast are post-resolution prompts shown on the card.
-	const mechanics = collectRollMechanicEffects(actorView(attacker), {
+	// Bead nyns: the attacker's view is built ONCE per damage roll and
+	// reused by collectAttackerTalentDamage below.
+	const attackerView = actorView(attacker);
+	const mechanics = collectRollMechanicEffects(attackerView, {
 		weaponId: profile.id ?? undefined,
 		attackType: profile.attackType,
 		// The attacking profile's own qualities: a mutation attack carries
@@ -685,13 +632,17 @@ async function postWeaponDamage(
 	// Step d3yc-2: quality mechanics on the roll — Tearing bumps the total
 	// and Blast/unparryable/full-action become card notes (see
 	// applyRollQualityMechanics).
-	const { damageTotal: rolledDamageTotal, qualityNotes, rolls } =
-		await applyRollQualityMechanics(
-			ports,
-			damageRoll,
-			mechanics,
-			profile,
-		);
+	const {
+		damageTotal: rolledDamageTotal,
+		qualityNotes,
+		rolls,
+	} = await applyRollQualityMechanics(
+		ports.dice,
+		ports.i18n,
+		damageRoll,
+		mechanics,
+		profile,
+	);
 	// Righteous Fury (bead 8ssh) re-resolves with the extra dice folded in,
 	// so the damage total is mutable past this point.
 	let damageTotal = rolledDamageTotal;
@@ -710,7 +661,7 @@ async function postWeaponDamage(
 	// was critical; both are condition-guarded via flags (see
 	// collectAttackerTalentDamage).
 	const talentDamage = collectAttackerTalentDamage(
-		attacker,
+		attackerView,
 		profile,
 		conditionFlags,
 	);
@@ -755,7 +706,7 @@ async function postWeaponDamage(
 		// row, the confirming second attack roll is GM-called (decision 3 —
 		// no auto-confirm is built), and the vehicle path (p218) stays out of
 		// scope (decision 4; see rollRighteousFuryDice).
-		const fury = await rollRighteousFuryDice(ports);
+		const fury = await rollRighteousFuryDice(ports.dice);
 		damageTotal += fury.added;
 		rolls.push(...fury.rolls);
 		damageRequest.roll = damageTotal;
@@ -779,7 +730,7 @@ async function postWeaponDamage(
 	if (toxicActivated) {
 		qualityNotes.push(ports.i18n.t("CHAT.QUALITY_TOXIC"));
 	}
-	await postDamageCard(ports, attacker, target, profile, {
+	await postDamageCard(ports.config, ports.i18n, attacker, target, profile, {
 		damage,
 		location,
 		notation,

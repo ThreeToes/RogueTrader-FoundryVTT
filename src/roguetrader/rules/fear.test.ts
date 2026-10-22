@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { buildActorView } from "../../ffg/domain/model/build";
 import {
 	degreesOfFailure,
 	fearImmune,
@@ -92,37 +93,64 @@ describe("shockOutcome (Table 10-4 p294)", () => {
 	});
 });
 
-describe("fear immunity / reroll effect kinds (bead jpbm)", () => {
-	const talent = (kinds: string[]) => ({
-		name: "T",
-		type: "talent",
-		system: { effects: kinds.map((k) => ({ kind: k })) },
-	});
+describe("fear immunity / reroll effect kinds (bead jpbm, via registry — bead 4398)", () => {
+	// Bead 4398: these read through collectEffects now, so the fixtures are
+	// document-shaped loose input built into the ActorView read model.
+	const talent = (kinds: string[]) =>
+		buildActorView({
+			items: [
+				{ name: "T", type: "talent", system: { effects: kinds.map((kind) => ({ kind })) } },
+				],
+			});
 
 	test("Fearless (fear-immunity) is detected", () => {
-		expect(fearImmune({ items: [talent(["fear-immunity"])] })).toBe(true);
-		expect(fearImmune({ items: [talent(["fear-reroll"])] })).toBe(false);
-		expect(fearImmune({ items: [] })).toBe(false);
+		expect(fearImmune(talent(["fear-immunity"]))).toBe(true);
+		expect(fearImmune(talent(["fear-reroll"]))).toBe(false);
+		expect(fearImmune(buildActorView({ items: [] }))).toBe(false);
 	});
 
 	test("Unshakeable Faith (fear-reroll) is detected; trait rows do not count", () => {
-		expect(fearReroll({ items: [talent(["fear-reroll"])] })).toBe(true);
+		expect(fearReroll(talent(["fear-reroll"]))).toBe(true);
 		expect(
-			fearReroll({
-				items: [
-					{
-						name: "T",
-						type: "trait",
-						system: { effects: [{ kind: "fear-reroll" }] },
-					},
-				],
-			}),
+			fearReroll(
+				buildActorView({
+					items: [
+						{
+							name: "T",
+							type: "trait",
+							system: { effects: [{ kind: "fear-reroll" }] },
+						},
+					],
+				}),
+			),
 		).toBe(false);
 	});
 
 	test("other kinds are inert", () => {
 		expect(
-			fearImmune({ items: [talent(["test-modifier", "damage-flat"])] }),
+			fearImmune(talent(["test-modifier", "damage-flat"])),
+		).toBe(false);
+	});
+
+	// Pinning the behaviour change (bead 4398): the old raw walk counted any
+	// talent regardless of liveness; collectEffects gates on the taxonomy, so
+	// a NON-innate carrier (stowed gear) never contributes even with the kind.
+	test("a non-innate item type does not contribute", () => {
+		expect(
+			fearImmune(
+				buildActorView({
+					items: [
+						{
+							name: "G",
+							type: "gear",
+							system: {
+								equipState: "stowed",
+								effects: [{ kind: "fear-immunity" }],
+							},
+						},
+					],
+				}),
+			),
 		).toBe(false);
 	});
 });

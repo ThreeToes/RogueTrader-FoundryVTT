@@ -187,7 +187,7 @@ export async function rollToxicToughnessTest(
 			toxicToughnessModifier(
 				woundsAfterSoak,
 				getPorts().i18n.t("CHAT.TOXIC_MODIFIER"),
-				effectiveProfile(),
+				effectiveProfile(getPorts().config),
 			),
 		],
 	});

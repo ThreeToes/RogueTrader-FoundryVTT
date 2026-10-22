@@ -10,9 +10,9 @@
      also keys the status-badge colour class), stateLabel (localized
      STATE_* string; OMIT on the Combat roster — its state chips are the
      status display there), cost (the condensed P/G/S/SP string).
-     Status-badge colour code is FIXED here and styled once in the ship
-     section of css/sheet-gear.css: intact = muted, unpowered = muted-deep,
-     damaged = amber warn, destroyed = danger-alarm. --}}
+     Status-badge colour code is FIXED here and styled once in the
+     sc-state block of css/sheet-starship.css: intact = muted,
+     unpowered = muted-deep, damaged = amber warn, destroyed = danger-alarm. --}}
 <div class="inv-row ship-component-row"{{#if id}} data-item-id="{{id}}"{{/if}}>
     <span class="inv-name sc-name" data-action="openItem" data-item-id="{{id}}"
         data-tooltip="{{localize "GEAR.OPEN_SHEET"}}" title="{{name}}">{{name}}</span>

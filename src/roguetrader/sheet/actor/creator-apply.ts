@@ -51,9 +51,10 @@ export interface ApplyableActor {
 export interface CreateOrUpdateOptions {
 	/**
 	 * Ask before overwriting content on the update path. The CONFIRM DIALOG
-	 * EXISTS ONLY at the character-creator call site today — the ship
-	 * creator applies silently (bead w7zm verifier note), so this flag stays
-	 * opt-in per caller instead of a silent blanket change.
+	 * EXISTS ONLY at the character-creator call site today — the ship and
+	 * planet creators apply silently (bead w7zm verifier note; the planet
+	 * joins the shared helper with the ship's silent semantics), so this
+	 * flag stays opt-in per caller instead of a silent blanket change.
 	 */
 	confirmOverwrite?: boolean;
 	/** i18n key for the created actor's fallback name (create path only). */

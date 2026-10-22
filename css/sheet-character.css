@@ -125,12 +125,8 @@
 	justify-content: space-between;
 }
 
-.rogue-trader.sheet.character .skill-group-label {
-	margin: 8px 0 2px;
-	font-size: var(--rt-fs-lg);
-	text-transform: uppercase;
-	color: var(--rt-muted);
-}
+/* (Group-label base lives in the shared-sheet block of sheet-gear.css —
+   bead htu1; it carries the .skill-group-label anatomy too.) */
 
 .rogue-trader.sheet.character .skill-row {
 	display: flex;
@@ -550,12 +546,8 @@
 	margin-bottom: 8px;
 }
 
-.rogue-trader .character-creator .origin-row h2 {
-	margin: 4px 0 2px;
-	font-size: var(--rt-fs-lg);
-	text-transform: uppercase;
-	color: var(--rt-muted);
-}
+/* Group-label base lives in the shared-sheet block of sheet-gear.css (bead
+   htu1) — it carries the .character-creator .origin-row h2 anatomy too. */
 
 /* pick-chips/pick-label/pick-chip styling lives in the global sheet layer
    (sheet-gear.css, bead ah2c). */
@@ -718,18 +710,10 @@
 	font-size: var(--rt-fs-lg);
 }
 
-.rogue-trader .advancement h2 {
-	margin: 6px 0 2px;
-	font-size: var(--rt-fs-lg);
-	text-transform: uppercase;
-	color: var(--rt-muted);
-}
-
-.rogue-trader .advancement .rank-group h3 {
-	margin: 6px 0 2px;
-	font-size: var(--rt-fs-lg);
-	color: var(--rt-muted);
-}
+/* Group-label base lives in the shared-sheet block of sheet-gear.css (bead
+   htu1) — it carries the .advancement h2 and .rank-group h3 anatomy too
+   (the h3 previously missed the uppercase; it now matches the other group
+   labels). */
 
 .rogue-trader .advancement .advancement-rows {
 	list-style: none;
@@ -1062,15 +1046,19 @@
 	white-space: nowrap;
 }
 
-/* Section headings — the group-label treatment (fs-lg, uppercase, muted),
-   previously inherited wrongly from a generic dialog h3 rule. */
+/* Section headings — group-label STRONG modifier (bead htu1): the shared
+   base (sheet-gear.css global shared-sheet block) carries the fs-lg /
+   uppercase / muted anatomy. This site keeps only its deltas: bold +
+   letter-spacing so the dialog's group headings read as headings above
+   interactive rows, and margin-top 4px instead of the base 8px because the
+   dialog body is a flex column with gap: 10px — an 8px top margin would
+   stack on the gap. Note the window is NOT inside .sheet (or
+   .rogue-trader), which is why its selector is in the base's selector list
+   there. */
 .test-dialog-app .test-dialog .dialog-group-label {
-	font-size: var(--rt-fs-lg);
-	font-weight: bold;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--rt-muted);
 	margin: 4px 0 0;
+	font-weight: bold;
+	letter-spacing: 0.05em;
 }
 
 /* Three-stat strip: base · modifiers · target. The strip ANATOMY (label /
@@ -1401,11 +1389,6 @@
 	margin-bottom: 10px;
 }
 
-.rogue-trader.sheet.character .encumbrance-bar .chip-value input {
-	width: 4em;
-	text-align: center;
-}
-
 .rogue-trader.sheet.character .capacity-note {
 	font-size: var(--rt-fs-sm);
 	color: var(--rt-muted);
@@ -1622,6 +1605,10 @@
 	min-width: fit-content;
 }
 
+/* The old encumbrance-bar chip-value override (4em) died with its content:
+   the inventory bar now renders a progress readout (no input) after e2a21f8,
+   so there is no wider sibling — chip-value inputs everywhere take one
+   token width (bead y3ze). */
 .rogue-trader.sheet.character .chip-value {
 	display: flex;
 	align-items: center;
@@ -1629,7 +1616,7 @@
 }
 
 .rogue-trader.sheet.character .chip-value input {
-	width: 3.5em;
+	width: var(--rt-input-value-w);
 	text-align: center;
 }
 

@@ -19,6 +19,7 @@
  */
 import { getPackDocuments } from "../pack-resolve";
 import { grantedClonePayload } from "../clone-doc";
+import { creatorGrantIds, type OwnedItemLike } from "../../rules/grants";
 import {
 	matchRollMap,
 	parseRollMap,
@@ -28,6 +29,7 @@ import {
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { CreatorApplication } from "./creator-application";
+import { type ApplyableActor, createOrUpdateActor } from "./creator-apply";
 import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 /** One draw stage of the world-generation sequence. */
@@ -453,58 +455,36 @@ export class PlanetCreator extends CreatorApplication {
 			);
 		}
 		const systemPayload = { ...this.profile };
-		if (this.targetActor) {
-			const target = this.targetActor as unknown as {
-				update: (data: object) => Promise<unknown>;
-				items: Array<{
-					id?: string;
-					type?: string;
-					system?: { grantedBy?: string };
-				}>;
-				createEmbeddedDocuments: (
-					t: string,
-					data: object[],
-				) => Promise<unknown>;
-				deleteEmbeddedDocuments: (t: string, ids: string[]) => Promise<unknown>;
-				sheet?: { render: (options?: object) => unknown };
-			};
-			// iufv reconcile: wipe previously creator-installed rows; manual
-			// drag-attached rows survive.
-			const stale = target.items
-				.filter(
-					(i) =>
-						i.type === "game-table" && i.system?.grantedBy === "planet-creator",
-				)
-				.map((i) => i.id)
-				.filter((id): id is string => Boolean(id));
-			if (stale.length > 0) {
-				await target.deleteEmbeddedDocuments("Item", stale);
-			}
-			await target.update({
-				name: this.name || this.targetActor.name,
-				system: systemPayload,
-			} as never);
-			if (payloads.length > 0) {
-				await target.createEmbeddedDocuments("Item", payloads);
-			}
-			this.close();
-			target.sheet?.render({});
-			return;
-		}
-		const actor = (await foundry.documents.Actor.create({
-			name: this.name || game.i18n.localize("PLANET_CREATOR.DEFAULT_NAME"),
-			type: "planet",
-			system: systemPayload,
-		} as never)) as unknown as {
-			createEmbeddedDocuments: (t: string, data: object[]) => Promise<unknown>;
-			sheet?: { render: (options?: object) => unknown };
-		};
-		if (!actor) return;
-		if (payloads.length > 0) {
-			await actor.createEmbeddedDocuments("Item", payloads);
-		}
-		this.close();
-		actor.sheet?.render({});
+		// Shared create-vs-update edge (creator-apply.ts, the ship creator's
+		// pattern): fallback name, sheet render and close are the helper's tail.
+		// The planet stays silent like the ship (no confirmOverwrite) — its
+		// UX is unchanged by this refactor (shared-helper bead).
+		await createOrUpdateActor(
+			this.targetActor as unknown as ApplyableActor | null,
+			{ name: this.name, type: "planet", system: systemPayload },
+			async (actor) => {
+				// iufv reconcile: wipe previously creator-installed rows; manual
+				// drag-attached rows survive. Shared creatorGrantIds (was a
+				// hand-rolled twin of the ship's filter). Runs after the system
+				// update now (see the helper's reordering note — disjoint data
+				// trees, not observable).
+				const stale = creatorGrantIds(
+					((actor.items ?? []) as unknown) as OwnedItemLike[],
+					"planet-creator",
+					["game-table"],
+				);
+				if (stale.length > 0) {
+					await actor.deleteEmbeddedDocuments("Item", stale);
+				}
+				if (payloads.length > 0) {
+					await actor.createEmbeddedDocuments("Item", payloads as object[]);
+				}
+			},
+			{
+				fallbackNameKey: "PLANET_CREATOR.DEFAULT_NAME",
+				close: () => this.close(),
+			},
+		);
 	}
 }
 /** Gravity/Orbital option families: filter to the drawn Body's type. */

@@ -98,7 +98,7 @@ afterAll(() => {
 
 import { afterAll, describe, expect, it } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
-import { collectConditionKeys, collectTestModifiers } from "../../../ffg/application/funnel";
+import { collectConditionKeys, collectTestModifiers, resetContributorPortsWarningForTests, type TestContributorPorts } from "../../../ffg/application/funnel";
 import { buildActorView } from "../../../ffg/domain/model/build";
 import {
 	getPorts,
@@ -108,6 +108,7 @@ import {
 	setPorts,
 } from "../../../ffg/infrastructure/foundry/ports";
 import { actorFixture } from "../../../test-helpers/actor-fixture";
+import { rtCore } from "../../../ffg/domain/system-profile";
 import type { ActionEntry } from "../../rules/actions";
 
 // --- Fixtures -------------------------------------------------------------
@@ -335,6 +336,88 @@ describe("skill handler", () => {
 		// "Custom" test-only leak included, so file order cannot flip it).
 		const sum = analysis.reduce((total, mod) => total + mod.value, 0);
 		expect(captured[0].target).toBe(Math.min(100, Math.max(1, 10 + sum)));
+	});
+
+	// --- Bead x4ly review finding 1: the fold threads the contributor ports
+	// --- ---------------------------------------------------------------
+
+	/**
+	 * An origin trait shaped like the shipped Paranoid row (`testKey: "fel"`,
+	 * value −10): a Fel-keyed modifier trait that the origin-traits
+	 * contributor derives from the actor's origin picks. Read-only shape
+	 * mirror of src/packs/rogue_trader/character-options/origin-traits.yaml.
+	 */
+	const paranoidTraitDef = {
+		name: "Paranoid",
+		originKey: "death-world",
+		traitKey: "paranoid",
+		kind: "modifier",
+		testKey: "fel",
+		value: -10,
+		grantKind: "",
+		text: "-10 to Interaction tests in formal surroundings.",
+	};
+
+	it("untrained (x4ly): a Fel-keyed origin trait survives the fold via the threaded ports", async () => {
+		resetSpies();
+		setConfigOverrides({ originTraits: () => [paranoidTraitDef] });
+		// Reset the warn-once flag so the "no missing-ports warning" assertion
+		// holds regardless of where this suite runs in the process, and spy on
+		// console.warn for the duration of the roll (the x4ly warning passes
+		// through it).
+		resetContributorPortsWarningForTests();
+		const originalWarn = console.warn;
+		const warns: string[] = [];
+		console.warn = (...args: unknown[]) => {
+			warns.push(args.map((a) => String(a)).join(" "));
+		};
+		try {
+			const actor = actorFixture({
+				system: { origins: { homeWorld: "death-world" } },
+			}) as never;
+			const prepared = await skillHandler.prepare({
+				kind: "skill",
+				actor,
+				characteristicKey: "fel",
+				label: "Scrutiny",
+			});
+			// fel 30 folded with the Paranoid −10 → effective 20 → floor(20/2) =
+			// 10 (the trait's contribution is INSIDE the halved base, exactly as
+			// the mutation row is in the 3swn fold test above). Before the fix
+			// the context carried no ports, the contributor warned and contributed
+			// nothing, and the target drifted to floor(30/2) = 15.
+			expect(prepared?.baseTarget).toBe(10);
+			expect(prepared?.testKey).toBe("untrained:fel");
+
+			// Direct delta pin: with ports threaded, a collection under the real
+			// key carries the trait row and the wildcard (surrogate) collection
+			// does not — so the keyed-vs-wildcard delta still isolates exactly the
+			// trait, with no double application.
+			const ports = { config: getPorts().config, i18n: getPorts().i18n };
+			const keyed = collectTestModifiers(buildActorView(actor), {
+				kind: "skill",
+				key: "fel",
+				ports,
+			}).filter((mod) => mod.label === "Paranoid");
+			expect(keyed).toHaveLength(1);
+			expect(keyed[0]?.value).toBe(-10);
+			const wild = collectTestModifiers(buildActorView(actor), {
+				kind: "skill",
+				key: "untrained:fel",
+				ports,
+			}).filter((mod) => mod.label === "Paranoid");
+			expect(wild).toHaveLength(0);
+
+			// And the warn-ONCE "contribution is dropped" message never fired for
+			// the fold's own collections (the ports were threaded).
+			expect(
+				warns.some((w) => w.includes("contribution is dropped")),
+			).toBe(false);
+		} finally {
+			console.warn = originalWarn;
+			resetContributorPortsWarningForTests();
+			setConfigOverrides({ originTraits: () => [] }); // restore the neutral default
+		}
 	});
 
 	// --- Bead rbap: condition-guarded, characteristic-keyed rows --------------
@@ -632,13 +715,27 @@ describe("weapon handler", () => {
 
 			// Funnel contributors: fire-mode label localized at build; the
 			// quality contributor emits the QUALITY.<SLUG> KEY and the display
-			// seams (localizeLabel) localize it.
+			// seams (localizeLabel) localize it. Bead x4ly: the fire-mode
+			// contributor binds its ports from the CONTEXT, so the pinned row
+			// threads a port double whose i18n resolves the fake-es dictionary.
+			const rtPorts: TestContributorPorts = {
+				config: {
+					homebrew: () => null,
+					profile: () => rtCore,
+					originTraits: () => [],
+					packIds: () => ({ rolltables: null }),
+				},
+				i18n: {
+					t: (key: string) => fakeEs[key] ?? `untranslated: ${key}`,
+				},
+			};
 			const collected = collectTestModifiers(buildActorView({ items: [] }), {
 				kind: "attack",
 				key: "bs",
 				weapon: { type: "ranged-weapon", special: ["accurate"] },
 				aimed: true,
 				fireMode: "burst",
+				ports: rtPorts,
 			});
 			expect(
 				collected.find((m) => m.id === "attack:fire-mode:burst")?.label,
@@ -1293,6 +1390,26 @@ describe("ship-weapon handler (bead xfta)", () => {
 		} as never);
 		expect(prepared?.kindData?.weaponKind).toBe("lance");
 	});
+
+	// Bead p6nx: classification is DATA-driven — a present componentType
+	// wins over the legacy name regex (the regex is the fallback for blank
+	// docs only, pinned above).
+	it("classifies by componentType, not name (bead p6nx)", async () => {
+		resetSpies();
+		const misnamed = {
+			...lasBattery,
+			id: "sw6",
+			name: "Titanforge Lance Battery",
+			system: { ...lasBattery.system, componentType: "macrobattery" },
+		};
+		const prepared = await shipWeaponHandler.prepare({
+			kind: "ship-weapon",
+			actor: shipFixture([misnamed]),
+			itemId: "sw6",
+			rangeBand: "normal",
+		} as never);
+		expect(prepared?.kindData?.weaponKind).toBe("macrobattery");
+	});
 });
 
 /** A target ship snapshot for salvo-resolution after() runs (armour 18 absorbs everything). */
@@ -1442,6 +1559,32 @@ describe("ship-weapon salvo actor write (bead 6l68: one payload, not two)", () =
 				hullIntegrity: { value: 33 },
 				crewPopulation: 100,
 				crewMorale: 100,
+			},
+		});
+	});
+
+	// Bead p6nx: the lance's armour rule rides the kind's REGISTRY spec,
+	// not a hard-coded lance branch — a lance salvo bypasses Armour and
+	// shields entirely (book p220) while the same damage vs macrobattery
+	// is soaked by the 18 Armour (pinned above).
+	it("resolves the lance armour rule from the kind spec (bead p6nx)", async () => {
+		const lance = {
+			...lasBattery,
+			id: "sw7",
+			name: "Prow Sunstorm Lance",
+			system: { ...lasBattery.system, componentType: "lance" },
+		};
+		// Lance hits (1 + 1 per 3 degrees, p220): 3 degrees = 2 hits, shields
+		// ignored; through 2 hits of "1d10+2" compose "2d10+4" — fake total
+		// 2+4=6, Armour 18 IGNORED → 6 HI lost straight off.
+		const { updates, rolled } = await runSalvo({ degrees: 3 }, lance);
+		expect(rolled).toContain("2d10+4");
+		expect(updates).toHaveLength(1);
+		expect(updates[0]).toEqual({
+			system: {
+				hullIntegrity: { value: 27 },
+				crewPopulation: 94,
+				crewMorale: 94,
 			},
 		});
 	});

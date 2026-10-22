@@ -113,13 +113,6 @@ function resolveEntryActor(element?: HTMLElement): CreatorActor {
 
 /** Register every creator entry on the Actors directory context menu. */
 export function registerCreatorMenus(): void {
-	const user = game.user as unknown as {
-		isGM?: boolean;
-		hasPermission?: (p: string) => boolean;
-	};
-	const canCreateActors = Boolean(
-		user?.isGM || user?.hasPermission?.("ACTOR_CREATE"),
-	);
 	const hooksOn = Hooks as unknown as {
 		on: (name: string, fn: unknown) => void;
 	};
@@ -142,8 +135,11 @@ export function registerCreatorMenus(): void {
 					const candidate = resolveEntryActor(element);
 					const actor = creator.usable(candidate) ? candidate : undefined;
 					// Creating a NEW actor needs the permission; targeting an
-					// existing one (update-in-place) does not.
-					if (!actor && !canCreateActors) {
+					// existing one (update-in-place) does not. The check rides
+					// the Permissions port (bead eolv): canModify(null) is the
+					// port's user-level create-actor answer, so the hand-rolled
+					// game read lives in ONE place (the foundry port impl).
+					if (!actor && !getPorts().permissions.canModify(null)) {
 						getPorts().notify.warn("CREATOR.NO_CREATE_PERMISSION");
 						return;
 					}

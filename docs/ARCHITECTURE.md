@@ -40,6 +40,15 @@ RT rules and Foundry DataModels by design, not hoist debt; the remaining
 shared-layer leftovers (chat-flag namespace sweep, the `build.ts` flag
 inversion) are tracked in the beads tracker.
 
+Pure shared libraries that the rules layer depends on also live in the
+hoisted tree, never in presentation: the pack-doc link resolver
+(`src/ffg/application/pack-doc-links.ts`, bead `foundryvtt-rogue-trader-rflq`)
+is the precedent — the pure row→pack-doc resolvers + anchor helper sit in
+application (rules → application), and the sheet layer re-exports them
+(`sheet/pack-doc-links.ts`) as the presentation seam so sheet-layer importers
+keep their specifiers; the Foundry-coupled open path stays in
+`sheet/pack-resolve.ts`.
+
 **Never allowed below `infrastructure`:** the globals `foundry`, `game`, `CONFIG`,
 `ui`, `Hooks`, `canvas`, or an import from `fvtt-types`. If a rule needs a die, a
 chat card, a compendium, the current target, a translation or a clock, it takes it
@@ -58,8 +67,7 @@ interface Ports {
   notify:      { warn(key, vars?): void; info(key, vars?): void };
   i18n:        { t(key, vars?): string };
   config:      { homebrew(): unknown; originTraits(): unknown[] };
-  content:     { capabilities(): ContentCapabilities;
-                 documents(packId): Promise<unknown[]>;
+  content:     { documents(packId): Promise<unknown[]>;
                  find(packId, name): Promise<ContentTable | null> };
   actors:      { update(actor, patch): Promise<void>;
                  createEffects(actor, data): Promise<void>;
@@ -68,7 +76,7 @@ interface Ports {
 }
 ```
 
-(`content` is the `ContentPort` — capability probe, pack documents, find-by-name.)
+(`content` is the `ContentPort` — pack documents, find-by-name, document-by-uuid.)
 
 Domain and application return **i18n keys**, not localized strings; presentation
 localizes. That is what makes the rules runnable headlessly in tests.
@@ -121,7 +129,7 @@ rather than throwing, and each consumer has a documented fallback:
 | --- | --- |
 | Critical RollTables | kernel still computes severity/location; the critical is recorded and the card says to apply the table effect manually |
 | Psychic Phenomena tables | the roll + total are still posted; the card says to look the result up manually |
-| Origin traits / skill catalog / warrant / origins | contribute nothing; the player sets modifiers/items manually |
+| Origin traits / skill catalog / warrant / origins | `ports.config.originTraits()` resolves empty and `SystemProfile.skillCatalogPack` stays null: they contribute nothing; the player sets modifiers/items manually |
 | Affliction / talent grants | show the name; link only when the pack resolves |
 | Ship / game tables | kernel defaults where the rules allow |
 
@@ -136,14 +144,15 @@ liveness, applicability, and how they become a `Modifier` or a typed payload),
 plus the editor label (`labelKey`). One
 `collectEffects(view, query)` walk serves every consumer. Adding an effect kind is a
 single registration — not a new collector, and not a second edit in the sheet
-layer: the effect editor derives its kind dropdown from
-`effectKinds.all()` + the handler-only kinds (bead ypbx).
+layer: the effect editor derives its kind dropdown from the spec registry
+alone, `effectKinds.all()` (the handler-kind union survives only in the
+schema choices, `data/item/effects.ts`).
 
 ## Adding things
 
 | To add… | You touch |
 | --- | --- |
-| an effect kind | one registration in `src/ffg/domain/effects/specs.ts` (the spec carries its `labelKey`; `registry.ts` is only the generic mechanism). Handler-channel kinds also need their `talentEffectHandlers.register` call |
+| an effect kind | one registration in `src/ffg/domain/effects/specs.ts` (the spec carries its `labelKey`; `registry.ts` is only the generic mechanism) — core kinds register exactly there and nothing else; `talentEffectHandlers.register` is the module-only seam for module-authored kinds |
 | a roll kind | one `RollDefinition` (exhaustive map → compile error if missing) |
 | a new FFG system (DH2, BC…) | a `RuleProfile`/`SystemProfile` + registries + a `bootstrap` wiring — the current `RuleProfile` is far too thin to express another system. The system-neutral layers (`domain`, `application`, `infrastructure/foundry/actor-view`) already live in `src/ffg/`; hoisting the rest (`presentation/rolls`, `rules`, `data`, the Foundry content/ports adapters) is tracked under epic `foundryvtt-rogue-trader-hr6r` and its children |
 | an item type | its DataModel + the `ActorView` builder mapping |

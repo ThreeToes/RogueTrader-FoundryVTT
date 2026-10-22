@@ -18,16 +18,21 @@ import {
 	test,
 } from "bun:test";
 import {
-	setOriginEntries,
-	resolveOrigins,
-	type OriginEntry,
-} from "../../rules/origins";
+	NO_CONTENT_PORT,
+	type Notify,
+	type Ports,
+} from "../../../ffg/application/ports";
+import {
+	foundryPorts,
+	resetPorts,
+	setPorts,
+} from "../../../ffg/infrastructure/foundry/ports";
 import { setGearsetEntries } from "../../rules/gearsets";
 import {
-	setPorts,
-	resetPorts,
-} from "../../../ffg/infrastructure/foundry/ports";
-import type { Ports, Notify } from "../../../ffg/application/ports";
+	type OriginEntry,
+	resolveOrigins,
+	setOriginEntries,
+} from "../../rules/origins";
 
 const originalGlobals: Record<string, unknown> = {};
 for (const key of ["game", "ui", "foundry", "Hooks", "CONFIG"]) {
@@ -430,18 +435,24 @@ describe("applyAcquisition (bead hldm)", () => {
 // --- applyGrantsAndSummary -----------------------------------------------------
 
 describe("applyGrantsAndSummary (bead hldm)", () => {
-	/** The ports fake: the skill-doc fetch resolves the Awareness doc. */
-	const fakePorts = {
+	/**
+	 * The ports fake: the skill-doc fetch resolves the Awareness doc. Built on
+	 * the production base + the no-content port so it is a full `Ports` with no
+	 * cast; only the members the flow touches are overridden.
+	 */
+	const fakePorts: Ports = {
+		...foundryPorts,
 		dice: {
 			roll: async () => ({ total: 0, dice: [], terms: [], formula: "" }),
 		},
 		content: {
+			...NO_CONTENT_PORT,
 			documentsOrNull: async (packId: string) =>
 				packId === "rogue-trader.character-options" ? SKILL_DOCS : [],
 			document: async () => null,
 		},
-		permissions: { can: () => true },
-	} as unknown as Ports;
+		permissions: { canRoll: () => true, canModify: () => true },
+	};
 
 	test("the tail: skill grants and the summary card post (the HTML contract)", async () => {
 		setPorts(fakePorts);

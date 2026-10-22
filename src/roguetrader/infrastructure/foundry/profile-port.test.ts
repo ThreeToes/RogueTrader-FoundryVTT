@@ -128,7 +128,7 @@ describe("config port profile()", () => {
 			// `packBase()` in presentation/rules-app.ts reads exactly this.
 			expect(getPorts().config.profile().id).toBe("dh2-core");
 			// The branding consumers read the sibling's own branding.
-			expect(messageFlagNamespace(getPorts())).toBe("dark-heresy-2e");
+			expect(messageFlagNamespace(getPorts().config)).toBe("dark-heresy-2e");
 		} finally {
 			resetPorts();
 		}

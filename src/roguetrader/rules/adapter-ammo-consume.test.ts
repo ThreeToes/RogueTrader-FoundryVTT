@@ -55,7 +55,7 @@ const documentIndex = new Map<string, unknown>();
 
 const { rollDamageForCard, rollWeaponDamage } = await import("./adapter");
 const { foundryPorts, resetPorts, setPorts } = await import(
-	"../infrastructure/foundry/ports"
+	"../../test-helpers/ports"
 );
 const { actorFixture } = await import("../../test-helpers/actor-fixture");
 

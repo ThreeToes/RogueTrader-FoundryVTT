@@ -1,14 +1,8 @@
 import { Character } from "../../data/actor/character";
 import { prepareDroppedItems } from "./affliction-drop";
-import type { ActionOwnedItem } from "../../rules/actions";
 import { itemIdFromTarget } from "../dom";
-import { equipStateOf, isWeaponType, systemOf } from "../../data/accessors";
+import { equipStateOf, systemOf } from "../../data/accessors";
 import { sheetContext } from "../context";
-import {
-	INVENTORY_EXCLUDED_TYPES,
-	pcInventoryGroups,
-	type PcInventoryItemLike,
-} from "../pc-inventory";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -24,31 +18,30 @@ import {
 	warnPackDocMissing,
 } from "./grant-helpers";
 import { waitForDefaultGrants } from "../default-grants";
-import type { AdvanceLedgerEntry } from "../../rules/advancement";
-import { derivedRank, totalSpent } from "../../rules/advancement";
-import { careers, equipStates, sorceryRanks } from "../../registry";
-import { collectSorceryRank } from "../../rules/talent-effects";
-import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
-import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
-import { isPsykerLike } from "../../rules/psyker";
+// Bead 0c48: the per-tab context builders are the PURE functions in
+// character-context.ts (the creator-context.ts pattern); the sheet keeps
+// orchestration — fetches, actor view, seams — and the calls below.
+import {
+	buildActionsContext,
+	buildBackgroundContext,
+	buildCareerContext,
+	buildCareerLinkContext,
+	buildDerivedContext,
+	buildInventoryContext,
+	buildMadnessContext,
+	buildNotesContext,
+	buildPsychicContext,
+	buildSkillsContext,
+	type CareerDocRow,
+	type SheetI18n,
+	type SheetItemLike,
+} from "./character-context";
 import { criticalSheetContext } from "../../rules/criticals";
 import { rollBattlesuitRepair } from "../../rules/battlesuit-repair";
-import { effectiveSorceryRank } from "../../rules/casting";
-import {
-	effectiveMechanics,
-	originByKey,
-	ORIGIN_ROW_LABEL_KEYS,
-	ORIGIN_ROW_ORDER,
-	storedOriginPicks,
-} from "../../rules/origins";
-import { resolveOriginTraits } from "../../rules/origin-traits";
-import {
-	corruptionTrack,
-	insanityTrack,
-	madnessSheetContext,
-	type MadnessPoints,
-	type OwnedAfflictionLike,
-} from "../../rules/madness";
+import { corruptionTrack, insanityTrack } from "../../rules/madness";
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
+import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
+import type { ActorView } from "../../../ffg/domain/model/actor";
 import type { Modifier } from "../../../rules-engine/modifier";
 import {
 	performRoll,
@@ -57,12 +50,7 @@ import {
 	toggleSustainedPower,
 } from "../../rules/adapter";
 import { missingSkillGrants } from "../../rules/default-skills";
-import { resolveAfflictionGrants } from "../../rules/afflictions";
-import { fatigueThreshold, woundsMax } from "../../rules/derived";
-import { actorEncumbrance } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
-// Bead iktx: the ONE characteristic-label composition seam (labels.ts).
-import { characteristicLabelKey } from "../../rules/labels";
 // Bead q8il: the single-source equippable-type set (sheet/pc-inventory.ts).
 import { PC_EQUIPPABLE_TYPES } from "../pc-inventory";
 import {
@@ -75,34 +63,20 @@ import {
 	startItemRowDrag,
 } from "./shared-actions";
 import { equipToggleState } from "../equip";
-import { armourLocations, weaponRows } from "./view-models";
-import {
-	buildCharacteristicViews,
-	findOwnedSkillForRow,
-	LADDER_MAX,
-	mergeOwnedAndCatalogRows,
-	skillNameKey,
-	type OwnedSkillLike,
-} from "../skills-domain";
+import { findOwnedSkillForRow, LADDER_MAX, skillNameKey } from "../skills-domain";
 import { openDocumentSheet, openPackItemAction } from "../pack-resolve";
 import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
 import { TalentPicker } from "./talent-picker";
-import { combatActionChipAction, actionsChipContext } from "./actions-view";
+import { combatActionChipAction } from "./actions-view";
 import { enrichText } from "../rich-text";
 import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 // (CharacteristicView, MAX_UNNATURAL_STEPS moved to sheet/skills-domain — bead 6l90)
-
-/** Structural row of a career pack document, shared by the career builders. */
-interface CareerDocRow {
-	uuid?: string;
-	system: {
-		key: string;
-		ranks?: Array<{ rank: number; xpLevel: number }>;
-	};
-}
+// (The per-tab context builders moved to sheet/actor/character-context.ts —
+// bead 0c48; the equipStateLabel helper moved beside its only consumer, the
+// inventory builder, in the same file.)
 
 /**
  * In-flight own-skill creations, keyed by actor + skill name (bead bwwg):
@@ -165,7 +139,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static async #onRepairBattlesuit(this: {
 		actor: foundry.documents.Actor;
 	}): Promise<void> {
-		await rollBattlesuitRepair(this.actor);
+		// Bead x4ly: the driver's notify/i18n/config ports are caller-bound.
+		const ports = getPorts();
+		await rollBattlesuitRepair(this.actor, {
+			notify: ports.notify,
+			i18n: ports.i18n,
+			config: ports.config,
+		});
 	}
 
 	/** "Snap out of it" (p296, bead q1ql): success ends the condition. */
@@ -742,11 +722,32 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	 * header psyker checkbox moved onto this tab, so owned powers must be able
 	 * to reveal it for homebrew/GM-granted psykers). Mundane characters never
 	 * see the tab in the nav nor the section.
+	 *
+	 * Bead nyns (review hardening): the view is rebuilt at the TOP of
+	 * _prepareContext (after default skills, before super — the exact point
+	 * the old _prepareTabs build sat at) and stashed for #contextView, so the
+	 * context build reads the SAME view instead of re-copying the whole
+	 * inventory mid-render. _prepareTabs no longer BUILDS the view — it
+	 * CONSUMES the stash — so the gate cannot go stale even if Foundry's
+	 * _prepareTabs-before-sheet-body ordering ever changes.
 	 */
+	#renderView: ActorView | null = null;
+
+	#contextView(): ActorView {
+		return this.#renderView ?? actorView(this.actor);
+	}
+
 	protected override _prepareTabs(
 		group: string,
 	): Record<string, foundry.applications.api.ApplicationV2.Tab> {
-		return gatePsykerTab(this.actor, super._prepareTabs(group), "psychic");
+		// Consumes the view rebuilt in _prepareContext; if _prepareTabs ever
+		// ran before that build, #contextView falls back to a fresh view —
+		// never a stale one.
+		return gatePsykerTab(
+			this.#contextView(),
+			super._prepareTabs(group),
+			"psychic",
+		);
 	}
 
 	/**
@@ -821,11 +822,17 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	/**
 	 * Builds the sheet context tab by tab. Orchestration only: ensure default
 	 * skills -> base context -> the shared per-render career fetch -> one
-	 * builder per tab/section, each documented below. The await order (skill
-	 * catalog, talent pack, rich-text enrichment) is preserved.
+	 * builder CALL per tab/section into ./character-context (bead 0c48, the
+	 * creator-context.ts pattern of pure builders beside the Foundry class).
+	 * The await order (skill catalog, talent pack, rich-text enrichment) is
+	 * preserved, as is the assignment order into the context.
 	 */
 	async _prepareContext(options: { isFirstRender: boolean }) {
 		await this.#ensureDefaultSkills();
+		// Bead nyns review hardening: rebuild the view HERE, per render, after
+		// default skills are in — both the tab gate (which may run inside
+		// super) and the sheet-body builders consume this same stash.
+		this.#renderView = actorView(this.actor);
 		const context = sheetContext(await super._prepareContext(options as never));
 		const system = this.actor.system as Character;
 
@@ -840,528 +847,72 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			"career",
 		)) as unknown as CareerDocRow[];
 
-		this.#careerContext(context, system, careerDocs);
-		await this.#skillsContext(context, system);
-		this.#psychicContext(context, system);
-		this.#inventoryContext(context);
-		await this.#backgroundContext(context, system);
-		this.#derivedContext(context, system);
-		this.#madnessContext(context, system);
-		await this.#notesContext(context, system);
+		// The builders are pure functions (plain inputs): the i18n seam, the
+		// actor view and the owned items are resolved HERE, once, and threaded
+		// through — no game/CONFIG reach the builders themselves.
+		const i18n: SheetI18n = {
+			format: (key, vars) =>
+				game.i18n!.format(key, vars as Record<string, string>),
+			localize: (key) => game.i18n!.localize(key),
+		};
+		const view = this.#contextView();
+		const items = this.actor.items as unknown as SheetItemLike[];
+
+		buildCareerContext(context, system, careerDocs, i18n);
+		buildSkillsContext(
+			context,
+			system,
+			{
+				items,
+				actorType: this.actor.type,
+				catalog: await getSkillCatalog(),
+			},
+			i18n,
+		);
+		await buildActionsContext(context, items, i18n.localize);
+		buildPsychicContext(context, system, { items, view });
+		buildInventoryContext(context, items, i18n);
+		await buildBackgroundContext(context, system, {
+			talentDocs: (await characterOptionDocsOnce(
+				"talent",
+			)) as unknown as Array<{ uuid?: string; name?: string }>,
+			actorContents: (
+				(game.actors ?? []) as unknown as {
+					contents: Array<{
+						type?: string;
+						uuid: string;
+						name?: string;
+						system?: { profitFactor?: number };
+					}>;
+				}
+			).contents,
+			traitDefs: (
+				(
+					CONFIG as unknown as {
+						ROGUE_TRADER?: {
+							originTraits?: { getDefs?: () => unknown[] };
+						};
+					}
+				).ROGUE_TRADER?.originTraits?.getDefs?.() ?? []
+			),
+			view,
+		});
+		buildDerivedContext(context, system, { items, view });
+		buildMadnessContext(context, system, {
+			rows: CharacterSheet.#madnessRows(),
+			items,
+			actor: this.actor,
+		});
+		await buildNotesContext(context, system, {
+			enrich: (text) =>
+				enrichText(text, this.document, { secrets: this.document.isOwner }),
+		});
 		// Career link resolves against the shared careerDocs; kept after the
 		// section builders to preserve the original assignment order.
-		this.#careerLinkContext(context, system, careerDocs);
+		buildCareerLinkContext(context, system, careerDocs);
 
 		return context;
 	}
-
-	/**
-	 * Stats tab: the career picker (bead 0ib), advancement-rank tooltips (bead
-	 * ayw) and the display-only XP pool.
-	 */
-	#careerContext(
-		context: Record<string, unknown>,
-		system: Character,
-		careerDocs: CareerDocRow[],
-	): void {
-		// Career picker (bead 0ib): choices from the careers registry; the
-		// read-only label resolves via the registry so homebrew careers work.
-		context.careerLabel = system.careerKey
-			? (careers.get(system.careerKey) ?? system.careerKey)
-			: "";
-
-		// Advancement (bead ayw): derived rank from the career's xpLevel
-		// thresholds + the ledger, shown as a tooltip hint next to the
-		// stored rank; the Advancement dialog is the purchase path.
-		// Advancement button tooltip: derived-rank hint when available, else
-		// the generic open label (header.hbs must stay parseable — no inline
-		// || expressions with nested quotes, see character-sheet render error).
-		context.advancementTooltip = game.i18n!.localize("ADVANCE.OPEN");
-		if (system.careerKey) {
-			if (careerDocs.length > 0) {
-				const careerDoc = careerDocs.find(
-					(d) => d.system.key === system.careerKey,
-				);
-				const thresholds = (careerDoc?.system.ranks ?? []).map((r) => ({
-					rank: r.rank,
-					xpLevel: r.xpLevel,
-				}));
-				if (thresholds.length > 0) {
-					const derived = derivedRank(
-						thresholds,
-						totalSpent((system.advances ?? []) as AdvanceLedgerEntry[]),
-					);
-					if (derived) {
-						context.rankTooltip = game.i18n!.format("ADVANCE.RANK_HINT", {
-							rank: String(derived),
-						});
-						context.advancementTooltip = context.rankTooltip;
-					}
-				}
-			}
-		}
-
-		// XP (owner cull): spent is DISPLAY-ONLY, derived from the
-		// advancement ledger (totalSpent) — manual editing desynced the pool
-		// from the ledger; the Advancement dialog is the purchase path. The
-		// lifetime total stays editable.
-		context.xpSpent = totalSpent(
-			(system.advances ?? []) as AdvanceLedgerEntry[],
-		);
-		context.xpTotal = system.xp?.total ?? 0;
-	}
-
-	/** Skills tab: characteristic views + the owned/catalog skill ladder rows. */
-	async #skillsContext(
-		context: Record<string, unknown>,
-		system: Character,
-	): Promise<void> {
-		context.characteristics = buildCharacteristicViews(
-			system,
-			// fvtt-types narrow format's vars to Record<string, string>; the
-			// views pass numbers (bonus/mult) like the pre-6l90 inline code.
-			(key, vars) => game.i18n!.format(key, vars as Record<string, string>),
-		);
-
-		const ownedSkills = this.actor.items.filter(
-			(item) => item.type === "skill",
-		);
-		const catalog = await getSkillCatalog();
-		const catalogByChar = new Map<
-			string,
-			Awaited<ReturnType<typeof getSkillCatalog>>
-		>();
-		for (const entry of catalog) {
-			const list = catalogByChar.get(entry.characteristic) ?? [];
-			list.push(entry);
-			catalogByChar.set(entry.characteristic, list);
-		}
-
-		context.skillGroups = Object.keys(
-			(system.characteristics ?? {}) as Record<string, unknown>,
-		).map((key) => {
-			const label = characteristicLabelKey(key);
-			// 6l90: shared merge drops catalog entries owned under differing
-			// casing (t093 semantics) so owned skills never render twice.
-			const skills = mergeOwnedAndCatalogRows(
-				ownedSkills.filter(
-					(item) =>
-						(item.system as unknown as { characteristic: string })
-							.characteristic === key,
-				) as unknown as OwnedSkillLike[],
-				catalogByChar.get(key) ?? [],
-			);
-			return { key, label, skills };
-		});
-
-		context.isPC = this.actor.type === "explorer";
-		// Actions tab (epic moew, bead 9r82): the Table 9-4 book order — the
-		// chip rows come straight from the warmed actions catalog.
-		await this.#actionsContext(context, system);
-	}
-
-	/** Actions tab (epic moew, bead 9r82): the catalog + prerequisite chips. */
-	async #actionsContext(
-		context: Record<string, unknown>,
-		_system: Character,
-	): Promise<void> {
-		context.actions = await actionsChipContext(
-			this.actor.items as unknown as ActionOwnedItem[],
-			(key) => game.i18n!.localize(key),
-		);
-	}
-
-	/** Psychic tab (bead m4me): powers, psyker status, sorcery, navigation. */
-	#psychicContext(context: Record<string, unknown>, system: Character): void {
-		// Psychic tab (bead m4me): owned powers + psyker status; the tab nav
-		// itself is gated in _prepareTabs.
-		context.isPsyker = isPsykerLike(actorView(this.actor));
-		context.psyRating = system.psyRating ?? 0;
-		// Sorcery (epic 0hap): the rank select + the Table 6-1 sanctioned
-		// toggle. Owned Sorcery talents win; the field is the manual fallback.
-		const sorceryRank = effectiveSorceryRank(
-			collectSorceryRank(actorView(this.actor)),
-			system.sorceryRank,
-		);
-		context.sorceryRank = sorceryRank;
-		context.hasSorcery = sorceryRank !== "";
-		context.sanctioned = system.sanctioned !== false;
-		context.sorceryRankChoices = { "": "", ...sorceryRanks.choices };
-		const sustained = new Set(
-			(system.sustainedPowers ?? []).map((p) => p.itemUuid),
-		);
-		context.psychicPowers = this.actor.items
-			.filter((item) => (item.type as string) === "psychicpower")
-			.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
-			.map((item) => {
-				const sys = item.system as unknown as {
-					powerClass?: string;
-					subtype?: string;
-					rating?: number;
-					castAs?: string;
-				};
-				return {
-					id: item.id,
-					uuid: item.uuid,
-					name: item.name,
-					powerClass: sys.powerClass ?? "bound",
-					classLabel: `PSYCHIC_POWER.${(sys.powerClass ?? "bound").toUpperCase()}`,
-					subtype: sys.subtype ?? "focus",
-					subtypeLabel: `PSYCHIC_POWER.${(sys.subtype ?? "focus").toUpperCase()}`,
-					rating: sys.rating ?? 0,
-					// Epic 0hap: sorcerous copies (Intelligence test, Int-Bonus PR)
-					// carry a chip so hybrid casters can see the mode at a glance.
-					sorcerous: sys.castAs === "sorcery",
-					// Bead sa6: sustained-powers affordance (book p157 — the
-					// sustain modifiers flow through rules/psychic.ts).
-					sustained: sustained.has(item.uuid),
-				};
-			});
-		// Navigator powers (bead sa6, Ch. VII): plain characteristic test with
-		// mastery bonus — same tab, distinct section (owner fold-in decision).
-		context.navigatorPowers = this.actor.items
-			.filter((item) => (item.type as string) === "navigatorpower")
-			.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
-			.map((item) => {
-				const sys = item.system as unknown as {
-					mastery?: string;
-				};
-				return {
-					id: item.id,
-					name: item.name,
-					mastery: sys.mastery ?? "novice",
-					masteryLabel: `NAVIGATOR_POWER.${(sys.mastery ?? "novice").toUpperCase()}`,
-				};
-			});
-	}
-
-	/**
-	 * Inventory + combat tabs: grouped gear, armour AP per location and weapon
-	 * rows, plus the talent rows the background tab builds on.
-	 */
-	#inventoryContext(context: Record<string, unknown>): void {
-		// Inventory: all non-skill owned items grouped by family. Weight display
-		// only - aggregation/encumbrance is deliberately NOT calculated here yet.
-		const byType = (types: string[]) =>
-			this.actor.items
-				.filter((item) => types.includes(item.type as string))
-				.map((item) => {
-					const equipState = equipStateOf(item);
-					const type = item.type as string;
-					// Localized label computed here (not via a template concat):
-					// module-registered states resolve through the registry when
-					// present, core states via the lang keys.
-					const stateKey = equipState ?? "stowed";
-					const registryLabel = equipStates.get(stateKey);
-					const label = registryLabel
-						? game.i18n!.localize(registryLabel)
-						: stateKey;
-					return {
-						id: item.id,
-						name: item.name,
-						uuid: item.uuid,
-						weight: (item.system as unknown as { weight?: number }).weight ?? 0,
-						// Gear-base quantity (bead 1sxq) - only the ammunition
-						// group renders it (xN usage count, bead 8uc7).
-						quantity:
-							(item.system as unknown as { quantity?: number }).quantity ?? 0,
-						equipState: stateKey,
-						equipStateLabel: label,
-						equipped: equipState === "carried" || equipState === "worn",
-						// Weapons get the inline attack/damage roll button.
-						isWeapon: isWeaponType(type),
-					};
-				});
-		// Inventory groups (bead packs-pu9): one row pass, then the pure grouping
-		// (the npc-inventory contract — a loud CATCH-ALL, so a dropped item of any
-		// type is rendered; the heirloom special-abilities (Table 1-2) landed
-		// invisibly before this). Weight display only — aggregation/encumbrance
-		// is deliberately NOT calculated here.
-		const inventory = pcInventoryGroups(
-			this.actor.items
-				.filter((item) => !INVENTORY_EXCLUDED_TYPES.has(item.type as string))
-				.map(
-					(item): PcInventoryItemLike => ({
-						id: item.id,
-						name: item.name,
-						uuid: item.uuid,
-						type: item.type as string,
-						weight: (item.system as unknown as { weight?: number }).weight ?? 0,
-						// Gear-base quantity (bead 1sxq) - only the ammunition
-						// group renders it (xN usage count, bead 8uc7).
-						quantity:
-							(item.system as unknown as { quantity?: number }).quantity ?? 0,
-						equipState: equipStateOf(item),
-						// Localized label computed here (not via a template
-						// concat): module-registered states resolve through the
-						// registry when present, core states via the lang keys.
-						equipStateLabel: equipStateLabel(equipStateOf(item)),
-						equipped:
-							equipStateOf(item) === "carried" || equipStateOf(item) === "worn",
-						// Weapons get the inline attack/damage roll button.
-						isWeapon: isWeaponType(item.type as string),
-					}),
-				),
-		);
-
-		// Ammunition group note (bead 8uc7): rows stay draggable (core {type,
-		// uuid}); they show xN quantity in the weight slot and carry NO equip
-		// toggle (the pc-inventory module sets equippable/isAmmunition per row).
-
-		// Armour: highest AP per body location across WORN armour items (bead
-		// yb6 equip-state model: stowed armour contributes nothing, matching
-		// the adapter's wornArmour filter in the damage pipeline).
-		// Shared canonical rows (bead v2ll), adapted to the PC record shape
-		// keyed by loc.
-		context.armourLocations = Object.fromEntries(
-			armourLocations(
-				this.actor.items as unknown as Parameters<typeof armourLocations>[0],
-			).map(({ loc, ap }) => [loc, { ap }]),
-		);
-
-		// Combat tab: weapons from inventory with visible stats (display only;
-		// roll buttons land with the roll-damage adapter work).
-		// Combat tab: shared weapon rows (bead v2ll), PC sorts by name.
-		context.weapons = weaponRows(
-			this.actor.items as unknown as Parameters<typeof weaponRows>[0],
-		).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
-
-		context.inventory = inventory;
-
-		// Consolidated Background tab (bead ay0): origins + career + talents.
-		context.talentRows = byType(["talent"]);
-	}
-
-	/** Background tab: talents, origins, dynasty, origin traits, grants. */
-	async #backgroundContext(
-		context: Record<string, unknown>,
-		system: Character,
-	): Promise<void> {
-		// Compendium link per talent row (bead oaaz): pack uuid by name
-		// (case-insensitive), same careers-pack pattern as careerItemId above.
-		const packDocs = (await characterOptionDocsOnce(
-			"talent",
-		)) as unknown as Array<{
-			uuid?: string;
-			name?: string;
-		}>;
-		const talentRows = context.talentRows as Array<
-			Record<string, unknown> & { name?: string; packUuid?: string }
-		>;
-		if (packDocs.length > 0 && talentRows.length > 0) {
-			const byName = new Map(
-				packDocs
-					.filter((d) => d.name)
-					.map((d) => [d.name!.toLowerCase(), d.uuid ?? ""]),
-			);
-			for (const row of talentRows) {
-				row.packUuid = row.name
-					? (byName.get(row.name.toLowerCase()) ?? "")
-					: "";
-			}
-		}
-
-		// Origins: persisted picks (creator) resolved against the origin chart;
-		// tooltip carries the verbatim book effect text.
-		//
-		// Driven by storedOriginPicks + ORIGIN_ROW_LABEL_KEYS rather than a
-		// hand-written list of the five human fields (bead 58js): a xeno's
-		// species-path picks live in `origins.path`, so a fixed list would omit
-		// them from the sheet as silently as it omitted them from the save.
-		const splitPick = (key: string, variantKey?: string) => {
-			const entry = originByKey(key);
-			if (!entry) return null;
-			const variant = variantKey
-				? entry.variants?.find((v) => v.key === variantKey)
-				: undefined;
-			const mods = effectiveMechanics(entry, variantKey).characteristics ?? [];
-			return {
-				name: variant ? `${entry.name}: ${variant.name}` : entry.name,
-				tooltip: variant?.effect ?? entry.effect ?? "",
-				mods: mods.map(
-					(m) => `${m.value > 0 ? "+" : ""}${m.value} ${m.key.toUpperCase()}`,
-				),
-			};
-		};
-		const storedPicks = storedOriginPicks(system.origins as never);
-		const originRows: Array<{
-			labelKey: string;
-			pick: { name: string; tooltip: string; mods: string[] } | null;
-		}> = ORIGIN_ROW_ORDER.filter((row) => Boolean(storedPicks[row]?.key))
-			.map((row) => ({
-				labelKey: ORIGIN_ROW_LABEL_KEYS[row],
-				pick: splitPick(
-					storedPicks[row]?.key ?? "",
-					storedPicks[row]?.variantKey,
-				),
-			}))
-			.filter((row) => row.pick !== null);
-		context.originRows = originRows;
-		context.hasOrigins = originRows.length > 0;
-
-		// Dynasty link (owner redesign): characters attach to the group's
-		// dynasty actor; PF/SP live there. Picker lists all dynasty actors.
-		context.dynastyUuid = system.dynastyUuid ?? "";
-		context.dynastyOptions = (
-			(game.actors ?? []) as unknown as {
-				contents: Array<{
-					type?: string;
-					uuid: string;
-					name?: string;
-					system?: { profitFactor?: number };
-				}>;
-			}
-		).contents
-			.filter((a) => a.type === "dynasty")
-			.map((a) => ({
-				uuid: a.uuid,
-				name: a.name ?? "",
-				label:
-					a.system?.profitFactor !== undefined
-						? `${a.name} (PF ${a.system.profitFactor})`
-						: (a.name ?? ""),
-				selected: system.dynastyUuid === a.uuid,
-			}));
-
-		// Origin traits (bead tgq9): modifier/grant/note resolution from the
-		// cached pack defs; grants carry claim state, free-skill grants resolve
-		// via the skill picker.
-		const traitDefs =
-			(
-				CONFIG as unknown as {
-					ROGUE_TRADER?: {
-						originTraits?: { getDefs?: () => unknown[] };
-					};
-				}
-			).ROGUE_TRADER?.originTraits?.getDefs?.() ?? [];
-		const traitResolution = resolveOriginTraits(
-			// The STORED shape, both halves: resolveOriginTraits reads it through
-			// storedOriginPicks, so a xeno's path picks contribute their traits.
-			system.origins as never,
-			traitDefs as never,
-		);
-		context.traitModifiers = traitResolution.modifiers.map((t) => ({
-			name: t.def.name,
-			value: t.def.value,
-			testKeyLabel: t.def.testKey ? t.def.testKey.toUpperCase() : "",
-			tooltip: t.def.text,
-		}));
-		context.traitGrants = traitResolution.grants.map((t) => ({
-			key: `${t.def.originKey}.${t.def.traitKey}`,
-			name: t.def.name,
-			claimed: t.claimed,
-			resolvable:
-				t.def.grantKind === "free-skill" ||
-				t.def.grantKind === "extra-common-lore",
-			tooltip: t.def.text,
-		}));
-		context.traitNotes = traitResolution.notes.map((t) => ({
-			name: t.def.name,
-			tooltip: t.def.text,
-		}));
-		context.hasTraits =
-			traitResolution.modifiers.length +
-				traitResolution.grants.length +
-				traitResolution.notes.length >
-			0;
-		// Affliction grants (epic nt8k): traits/talents named by owned
-		// disorders/malignancies/mutations ("traits:Fear", "talents:Iron Jaw").
-		// The chip copies the pack item on click; nothing is auto-granted.
-		context.afflictionGrants = resolveAfflictionGrants(
-			actorView(this.actor),
-		).map((grant) => ({
-			...grant,
-			label: grant.benefit ? `${grant.name} ${grant.benefit}` : grant.name,
-		}));
-	}
-
-	/**
-	 * Career link: the compendium career item behind the actor's careerKey,
-	 * opened via openCareerSheet for the full crunch tables. Diagnostic log
-	 * when the lookup fails (bead qwp6) — pack missing, or key mismatch.
-	 */
-	#careerLinkContext(
-		context: Record<string, unknown>,
-		system: Character,
-		careerDocs: CareerDocRow[],
-	): void {
-		if (careerDocs.length > 0 && system.careerKey) {
-			const careerDoc = careerDocs.find(
-				(d) => d.system.key === system.careerKey,
-			);
-			if (!careerDoc) {
-				console.warn(
-					`rogue-trader | no career doc with system.key "${system.careerKey}" in the character-options pack`,
-				);
-			}
-			context.careerItemId = careerDoc?.uuid ?? "";
-		} else {
-			if (careerDocs.length === 0) {
-				console.warn("rogue-trader | careers pack not registered (game.packs)");
-			}
-			context.careerItemId = "";
-		}
-	}
-
-	/** Combat tab read-outs: encumbrance + the derived (read-only) values. */
-	#derivedContext(context: Record<string, unknown>, system: Character): void {
-		// Core Rulebook p267: capacity keys on the SUM of Strength Bonus and
-		// Toughness Bonus through Table 9-33 — SB+TB here; quantity stacks count
-		// (bead qhkv; bead 1sxq).
-		context.encumbrance = actorEncumbrance(
-			this.actor.items,
-			system.characteristicBonus("s") + system.characteristicBonus("t"),
-		);
-		// Derived values (read-only): definitional + rules-layer, no writeback.
-		context.derived = {
-			...system.movement(),
-			initiative: system.initiativeBonus,
-			woundsMax: woundsMax(actorView(this.actor)),
-			fatigueMax: fatigueThreshold(system),
-		};
-	}
-
-	/** Madness tracks + conditions (epic 1g2t, q1ql): pure helper. */
-	#madnessContext(context: Record<string, unknown>, system: Character): void {
-		// Madness tracks + conditions (epic 1g2t, q1ql): pure helper.
-		Object.assign(
-			context,
-			madnessSheetContext(
-				CharacterSheet.#madnessRows() as never,
-				system as unknown as MadnessPoints,
-				this.actor.items.map((item) => ({
-					id: item.id ?? "",
-					name: item.name ?? "",
-					type: item.type,
-					system: item.system as unknown as OwnedAfflictionLike["system"],
-				})),
-				this.actor as unknown as never,
-			),
-		);
-	}
-
-	/** Notes tab: rich-text description + motivation (owner request). */
-	async #notesContext(
-		context: Record<string, unknown>,
-		system: Character,
-	): Promise<void> {
-		const enrich = (text: string) =>
-			enrichText(text, this.document, { secrets: this.document.isOwner });
-		context.descriptionHTML = await enrich(system.description);
-		// Notes tab: motivation is rich text (owner request; appearance was
-		// culled — the description field covers it).
-		context.motivationHTML = await enrich(system.life?.motivation ?? "");
-	}
-}
-
-/** Localized equip-state label: module-registered states resolve through the
- * registry when present, core states via the lang keys (shared by the
- * inventory rows; the byType talents path keeps its own inline copy). */
-function equipStateLabel(stateKey: string): string {
-	const registryLabel = equipStates.get(stateKey);
-	return registryLabel
-		? game.i18n!.localize(registryLabel)
-		: (stateKey ?? "stowed");
 }
 
 // Affliction drop machinery — the mutation pack resolution, the procedure

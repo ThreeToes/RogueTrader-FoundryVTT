@@ -20,26 +20,6 @@ import type {
 } from "../../ffg/domain/system-profile";
 import type { RuleProfile } from "../../rules-engine/profile";
 
-/** Which content the world has installed (cheap to probe; no doc loading). */
-export interface ContentCapabilities {
-	/** The critical-hit RollTables (core + battlesuit) are installed. */
-	criticalTables: boolean;
-	/** The Psychic Phenomena / Perils tables are installed. */
-	phenomenaTables: boolean;
-	/** Origin-trait definitions are warmed (the funnel contributor). */
-	originTraits: boolean;
-	/** The skill catalog is warmed (createActor grants). */
-	skillCatalog: boolean;
-}
-
-/** The "no compendiums installed" default: everything falls back to manual. */
-export const NO_CONTENT: ContentCapabilities = {
-	criticalTables: false,
-	phenomenaTables: false,
-	originTraits: false,
-	skillCatalog: false,
-};
-
 /** One RollTable-shaped document, as far as the rules read it. */
 export interface ContentTable {
 	name?: string;
@@ -49,8 +29,6 @@ export interface ContentTable {
 
 /** Read-only access to compendium content, tolerant of absence. */
 export interface ContentPort {
-	/** Cheap capability probe (no document loading). */
-	capabilities(): ContentCapabilities;
 	/** Every document in a pack; empty when the pack is absent. */
 	documents(packId: string): Promise<unknown[]>;
 	/**
@@ -75,7 +53,6 @@ export interface ContentPort {
 
 /** The port used when no content provider has been wired (tests, headless). */
 export const NO_CONTENT_PORT: ContentPort = {
-	capabilities: () => NO_CONTENT,
 	documents: async () => [],
 	documentsOrNull: async () => null,
 	find: async () => null,
@@ -211,6 +188,20 @@ export interface Permissions {
 	 * permission model is ever tuned.
 	 */
 	canRoll(actor: unknown): boolean;
+	/**
+	 * May the CURRENT user modify this document (write its data)? The one
+	 * ownership answer for every entry point — sheet rolls, chat-card buttons,
+	 * directory menus (bead eolv): callers MUST ask this instead of reading the
+	 * `game` global and hand-rolling `isOwner || isGM`, so a Permissions test
+	 * double controls all of them and the rule cannot drift per call site.
+	 *
+	 * Implementations must fold the GM case in (same reasoning as `canRoll`).
+	 * A NULL/undefined document means "there is no document yet": the write the
+	 * caller is contemplating is the CREATION of one, so the implementation
+	 * falls back to the user-level create permission (the only actor
+	 * permission that does not sit on a document).
+	 */
+	canModify(actor: unknown): boolean;
 }
 
 /**

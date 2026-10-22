@@ -38,6 +38,7 @@
  */
 
 import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
+import { SYSTEM_ID_FALLBACK } from "../../ffg/domain/system-id";
 import {
 	knobByKey,
 	ruleKnobRegistry,
@@ -273,12 +274,11 @@ interface RulesNotice {
 }
 
 /**
- * The settings namespace: the system id, with the pre-init fallback. Same
- * shape as bootstrap/config.ts#systemId, repeated because presentation may not
- * import bootstrap (the architecture boundary test).
+ * The settings namespace: the system id, with the pre-init fallback. The
+ * fallback is the one shared constant (ffg/domain/system-id.ts, bead 6f99) —
+ * importing bootstrap/config.ts (whose systemId() reads the same global) would
+ * be circular, because config imports this app as its settings-menu type.
  */
-const SYSTEM_ID_FALLBACK = "rogue-trader";
-
 function settingsNs(): string {
 	return game.system?.id ?? SYSTEM_ID_FALLBACK;
 }

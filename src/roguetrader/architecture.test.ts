@@ -136,7 +136,15 @@ function classify(file: string): Layer {
 	return "other";
 }
 
-function collect(dir: string): string[] {
+/**
+ * Walk a directory tree for source files.
+ *
+ * `includeTests` defaults to FALSE: the sibling-id and walk-locality scans use
+ * that default (see their doc comments). The boundary scan opts IN (bead
+ * poq3) — a `*.test.ts` file is source too, and it was the one place a
+ * domain -> application import could hide from this test.
+ */
+function collect(dir: string, includeTests = false): string[] {
 	const out: string[] = [];
 	let entries: string[];
 	try {
@@ -147,8 +155,8 @@ function collect(dir: string): string[] {
 	for (const entry of entries) {
 		const file = path.join(dir, entry);
 		if (statSync(file).isDirectory()) {
-			out.push(...collect(file));
-		} else if (file.endsWith(".ts") && !file.endsWith(".test.ts")) {
+			out.push(...collect(file, includeTests));
+		} else if (file.endsWith(".ts") && (includeTests || !file.endsWith(".test.ts"))) {
 			out.push(file);
 		}
 	}
@@ -230,12 +238,76 @@ function lineAt(source: string, index: number): number {
 	return source.slice(0, index).split("\n").length;
 }
 
+/**
+ * True when `index` sits inside a string literal or comment in `source`, using
+ * the SAME literal/comment rules as blankCommentsAndStrings — the two scanners
+ * cannot be allowed to disagree about a quote.
+ *
+ * importSpecs needs this now that test files are scanned (bead poq3): an
+ * assertion like `.toContain('from "../pack-doc-links"')` quotes an import
+ * statement inside a STRING — prose about an import, not an import — and
+ * without the span check it invents a violation.
+ *
+ * KNOWN HOLE: the scan is a plain character walk — a quote-bearing REGEX
+ * literal in scanned code would desync the string/comment tracking (the
+ * regex's quotes are read as string delimiters). No rule data uses that
+ * shape today; if one lands, the filter mislabels spans it tracks.
+ */
+function insideStringOrComment(source: string, index: number): boolean {
+	let quote: string | null = null;
+	let block = false;
+	let i = 0;
+	while (i < source.length && i < index) {
+		const c = source[i];
+		const d = source[i + 1];
+		if (block) {
+			if (c === "*" && d === "/") {
+				block = false;
+				i += 2;
+			} else i++;
+			continue;
+		}
+		if (quote) {
+			if (c === "\\") {
+				i += 2;
+				continue;
+			}
+			if (c === quote) quote = null;
+			i++;
+			continue;
+		}
+		if (c === "/" && d === "/") {
+			const nl = source.indexOf("\n", i);
+			i = nl === -1 ? source.length : nl + 1;
+			continue;
+		}
+		if (c === "/" && d === "*") {
+			block = true;
+			i += 2;
+			continue;
+		}
+		if (c === "'" || c === '"' || c === "`") {
+			quote = c;
+			i++;
+			continue;
+		}
+		i++;
+	}
+	return block || quote !== null;
+}
+
 function importSpecs(source: string): Array<{ spec: string; line: number }> {
 	const out: Array<{ spec: string; line: number }> = [];
 	const re = /(?:\bfrom|\bimport)\s*\(?\s*["']([^"']+)["']/g;
 	let match = re.exec(source);
 	while (match) {
-		out.push({ spec: match[1], line: lineAt(source, match.index) });
+		// A `from "…"` token inside a string or comment is prose ABOUT an import
+		// (test assertions quote import statements); the specifier regex cannot
+		// tell, so drop matches inside the literals/comments this importSpecs
+		// scan walks.
+		if (!insideStringOrComment(source, match.index)) {
+			out.push({ spec: match[1], line: lineAt(source, match.index) });
+		}
 		match = re.exec(source);
 	}
 	return out;
@@ -256,7 +328,14 @@ export function violationsFor(file: string, source: string): string[] {
 					`${file}:${line} imports "${spec}" (${target}) — ${layer} may not depend on ${target}`,
 				);
 			}
-		} else if (INNER.includes(layer) && !spec.startsWith("bun:")) {
+		} else if (
+			INNER.includes(layer) &&
+			!spec.startsWith("bun:") &&
+			// bead poq3: a test HARNESS inside an inner layer may use node
+			// builtins (reading fixture source files with node:fs is the norm);
+			// the shipped layer source keeps the relative-only rule.
+			!(rel.endsWith(".test.ts") && spec.startsWith("node:"))
+		) {
 			violations.push(
 				`${file}:${line} bare import "${spec}" — ${layer} may only import relative modules`,
 			);
@@ -347,13 +426,68 @@ export function siblingIdViolationsFor(file: string, source: string): string[] {
 	return violations;
 }
 
+/**
+ * Boundary debt in TEST files, pinned when collect() began scanning *.test.ts
+ * (bead poq3). Each entry is a REAL layer inversion in a test file that
+ * predates the scanner covering tests — restructuring those tests is a bead
+ * of its own, so they are PINNED here (counted and visible, not allowlisted
+ * away): a NEW violation in any test file fails the scan, and removing an
+ * entry requires actually fixing the import. Do not extend.
+ *
+ * Keys are violation strings with line numbers stripped (tests shift lines);
+ * the full text is preserved in the scan failure output.
+ */
+function violationKey(violation: string): string {
+	return violation.replace(/:\d+ /, " ");
+}
+
+/**
+ * The pinned test-file boundary debt, sorted. Each entry's reason lives in
+ * the entry's home suite; the debt itself is bead poq3's report to the owner:
+ *
+ * - system-profile-dark-heresy.test.ts: a DOMAIN test imports DH2's advance
+ *   cost tables (SCHEME_TIERS et al) from roguetrader/rules/advancement.
+ * - pack-doc-links.test.ts: an APPLICATION test imports the AdvanceRowLike
+ *   type from roguetrader/rules/advancement ("verbatim from the advancement
+ *   view-model tests").
+ * - system-id.test.ts: a DOMAIN test dynamically imports
+ *   roguetrader/bootstrap/config to pin the load-order fallback.
+ * - foundry/ports.test.ts: an INFRASTRUCTURE test imports resolveCritical /
+ *   currentRound from roguetrader/rules/criticals — infrastructure may not
+ *   depend on rules at all (ALLOWED has no rules for infrastructure).
+ */
+const EXPECTED_TEST_FILE_VIOLATIONS: readonly string[] = [
+	'src/ffg/application/pack-doc-links.test.ts imports "../../roguetrader/rules/advancement" (rules) — application may not depend on rules',
+	'src/ffg/domain/system-id.test.ts imports "../../roguetrader/bootstrap/config" (bootstrap) — domain may not depend on bootstrap',
+	'src/ffg/domain/system-profile-dark-heresy.test.ts imports "../../roguetrader/rules/advancement" (rules) — domain may not depend on rules',
+	'src/roguetrader/infrastructure/foundry/ports.test.ts imports "../../rules/criticals" (rules) — infrastructure may not depend on rules',
+];
+
 describe("architecture boundaries (epic kof0)", () => {
 	test("every layer only depends inward, and inner layers are Foundry-free", () => {
-		const files = LAYER_DIRS.flatMap(([, dir]) => collect(dir));
+		// Test files are INCLUDED (bead poq3): a `*.test.ts` was the one place a
+		// domain -> application import (mergeModifiers) could hide, and any test
+		// file is source the scanner must see. The sibling-id and walk-locality
+		// scans below keep the non-test default — see their doc comments.
+		const files = LAYER_DIRS.flatMap(([, dir]) => collect(dir, true));
 		const violations = files.flatMap((file) =>
 			violationsFor(file, readFileSync(file, "utf8")),
 		);
-		expect(violations).toEqual([]);
+		// Pre-existing test-file inversions are PINNED (see the constant above):
+		// they are reported debt, not allowed — exactly these four may exist.
+		expect(violations.map(violationKey).sort()).toEqual([
+			...EXPECTED_TEST_FILE_VIOLATIONS,
+		]);
+	});
+
+	test("the scanner covers test files (bead poq3)", () => {
+		// The regression this bead closed: the domain effect suite imported
+		// mergeModifiers from the application funnel and no scan saw it.
+		const violations = violationsFor(
+			"src/ffg/domain/x.test.ts",
+			'import { mergeModifiers } from "../../application/funnel";\n',
+		);
+		expect(violations.some((v) => v.includes("may not depend on"))).toBe(true);
 	});
 
 	test("the scanner flags a Foundry import in domain", () => {

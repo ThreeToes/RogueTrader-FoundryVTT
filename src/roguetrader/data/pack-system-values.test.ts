@@ -144,16 +144,21 @@ function readEntries(file: string): {
 
 function choiceSet(field: unknown): Set<string> | undefined {
 	const opts = (field as { opts?: { choices?: unknown } }).opts ?? {};
-	const raw = opts.choices;
+	let raw = opts.choices;
 	if (raw === undefined) return undefined;
+	// Function form (bead dkh9): Foundry evaluates the choices function at
+	// validation time, so the guard must too — a bare function object's keys
+	// would look like an empty choice set.
+	if (typeof raw === "function") raw = (raw as () => unknown)();
 	if (Array.isArray(raw)) return new Set(raw.map(String));
 	return new Set(Object.keys(raw as Record<string, unknown>));
 }
 
 function validChoices(field: unknown): string | undefined {
 	const opts = (field as { opts?: { choices?: unknown } }).opts ?? {};
-	const raw = opts.choices;
+	let raw = opts.choices;
 	if (raw === undefined) return undefined;
+	if (typeof raw === "function") raw = (raw as () => unknown)();
 	if (Array.isArray(raw)) return raw.map(String).join(" | ");
 	return Object.keys(raw as Record<string, unknown>).join(" | ");
 }

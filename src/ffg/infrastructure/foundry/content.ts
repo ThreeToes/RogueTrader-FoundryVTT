@@ -7,18 +7,15 @@
  * is tolerant of absence: a missing pack yields `[]`/`null`, which the rules
  * turn into a manual fallback rather than an error.
  *
- * The RollTables pack id is system DATA, so it comes through the config seam
- * (ports.config.packIds().rolltables) instead of a hard-coded RT constant —
- * the default config reports no rolltables pack and a sibling system overrides
- * it via setConfigOverrides.
+ * Pack ids are CALLER-SUPPLIED data (bead s0yt: there is no `capabilities()`
+ * probe here any more — the adapter is a dumb lookup; whichever caller names a
+ * pack through the rules/app config seam is responsible for knowing its id).
  */
 
 import type {
-	ContentCapabilities,
 	ContentPort,
 	ContentTable,
 } from "../../application/ports";
-import { getPorts } from "./ports";
 
 interface PackLike {
 	getDocuments(): Promise<unknown[]>;
@@ -89,19 +86,6 @@ async function documentsOf(packId: string): Promise<unknown[]> {
 }
 
 export const foundryContent: ContentPort = {
-	capabilities(): ContentCapabilities {
-		const rolltablesId = getPorts().config.packIds().rolltables;
-		const rolltables =
-			rolltablesId !== null && packGet(rolltablesId) !== undefined;
-		return {
-			criticalTables: rolltables,
-			phenomenaTables: rolltables,
-			// Warmed by bootstrap; when absent the funnel contributor degrades to
-			// no modifiers and the player sets them manually.
-			originTraits: false,
-			skillCatalog: false,
-		};
-	},
 	documents(packId: string): Promise<unknown[]> {
 		return documentsOf(packId);
 	},

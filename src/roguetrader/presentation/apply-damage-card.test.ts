@@ -269,4 +269,68 @@ describe("applyDamageFromCard (bead t2ei double-apply)", () => {
 		expect(resolved).toBe(0); // not even the uuid boundary ran
 		expect(counted.appliedToasts).toHaveLength(0);
 	});
+
+	describe("applyDamageFromCard ownership gate (bead eolv)", () => {
+		/** Wire a warn-capturing notify WITHOUT touching permissions. */
+		function warnCapture(): { warns: Array<{ key: string; vars?: unknown }> } {
+			const warns: Array<{ key: string; vars?: unknown }> = [];
+			setPorts({
+				...getPorts(),
+				notify: {
+					...getPorts().notify,
+					warn: (key: string, vars?: unknown) => {
+						warns.push({ key, vars });
+					},
+				},
+			});
+			return { warns };
+		}
+
+		test("a non-owner click applies NOTHING and warns LOUDLY (was a silent no-op)", async () => {
+			const victim = fakeVictim();
+			victim.actor.isOwner = false;
+			globals.foundry = {
+				...globals.foundry,
+				utils: { fromUuidSync: () => victim.actor },
+			};
+			const { warns } = warnCapture();
+			await applyDamageFromCard(
+				fakeButton({ target: "Actor.victim", wounds: "5" }),
+			);
+			expect(victim.updates).toEqual([]); // wounds UNTOUCHED
+			// bead eolv: the refusal used to be silent, answering a different
+			// access rule per entry point — now it matches the roll pipeline's
+			// loud warn.
+			expect(warns).toEqual([
+				{ key: "ROLL.NOT_OWNER", vars: { "actor": "Actor.victim" } },
+			]);
+		});
+
+		test("the Permissions port double controls the button (canModify)", async () => {
+			const victim = fakeVictim();
+			globals.foundry = {
+				...globals.foundry,
+				utils: { fromUuidSync: () => victim.actor },
+			};
+			const warns: string[] = [];
+			setPorts({
+				...getPorts(),
+				permissions: {
+					canRoll: () => true,
+					canModify: () => false, // the double's refusal, not isOwner's
+				},
+				notify: {
+					...getPorts().notify,
+					warn: (key: string) => {
+						warns.push(key);
+					},
+				},
+			});
+			await applyDamageFromCard(
+				fakeButton({ target: "Actor.victim", wounds: "5" }),
+			);
+			expect(victim.updates).toEqual([]);
+			expect(warns).toContain("ROLL.NOT_OWNER");
+		});
+	});
 });

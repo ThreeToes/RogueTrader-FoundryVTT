@@ -157,3 +157,68 @@ describe("creator reconcile (iufv)", () => {
 		});
 	});
 });
+
+describe("generalized creatorGrantIds (shared-helper bead)", () => {
+	const mixed = [
+		{
+			id: "p1",
+			type: "game-table",
+			system: { grantedBy: "planet-creator" },
+		},
+		{
+			id: "p2",
+			type: "skill",
+			system: { grantedBy: "creator" },
+		},
+		{
+			id: "s1",
+			type: "ship-component",
+			system: { grantedBy: "ship-creator" },
+		},
+		{
+			id: "s2",
+			type: "ship-weapon-component",
+			system: { grantedBy: "ship-creator" },
+		},
+		{
+			id: "m1",
+			type: "game-table",
+			name: "Manual Row",
+			system: { grantedBy: undefined }, // manual drag, no flag
+		},
+		{
+			id: "w1",
+			type: "ship-component",
+			system: { grantedBy: "planet-creator" }, // wrong provenance
+			},
+		{ id: "n1" }, // nothing set
+	];
+
+	it("defaults keep the character creator's talent/skill + 'creator' filter", () => {
+		expect(creatorGrantIds(mixed)).toEqual(["p2"]);
+	});
+
+	it("the planet creator's filter: planet-creator provenance, game-table only", () => {
+		expect(creatorGrantIds(mixed, "planet-creator", ["game-table"])).toEqual(
+			["p1"],
+		);
+	});
+
+	it("the ship creator's filter: ship-creator provenance, both ship types", () => {
+		expect(
+			creatorGrantIds(mixed, "ship-creator", [
+				"ship-component",
+				"ship-weapon-component",
+			]),
+		).toEqual(["s1", "s2"]);
+	});
+
+	it("provenance must match exactly (cross-creator flags never collide)", () => {
+		expect(creatorGrantIds(mixed, "creator", ["game-table", "skill"])).toEqual(
+			["p2"],
+		);
+		expect(creatorGrantIds(mixed, "planet-creator", ["ship-component"])).toEqual(
+			["w1"],
+		);
+	});
+});

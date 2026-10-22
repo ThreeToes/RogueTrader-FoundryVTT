@@ -75,6 +75,7 @@ const { foundryPorts, resetPorts, setPorts } = await import(
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 
 import { actorFixture } from "../../../test-helpers/actor-fixture";
+import { rtCore } from "../../../ffg/domain/system-profile";
 
 afterAll(() => {
 	for (const [key, value] of Object.entries(originalGlobals)) {
@@ -453,7 +454,26 @@ describe("ownership gate (bead qiuo)", () => {
 			},
 		]) as unknown as { isOwner: boolean };
 		actor.isOwner = false;
-		const result = await rollBattlesuitRepair(actor);
+		const result = await rollBattlesuitRepair(actor, {
+			// Bead x4ly: the driver's ports are caller-bound; the notify double
+			// stays quiet (the captured warnings ride the setPorts stub above).
+			notify: {
+				warn: () => undefined,
+				info: () => undefined,
+				error: () => undefined,
+			},
+			i18n: {
+				t: (key: string) => key,
+			},
+			// The effective profile is read through this port: RT's own, no
+			// house rules (the Hard (–20) stays at core).
+			config: {
+				homebrew: () => null,
+				profile: () => rtCore,
+				originTraits: () => [],
+				packIds: () => ({ rolltables: null }),
+			},
+		});
 		expect(warnings).toEqual(["ROLL.NOT_OWNER"]);
 		expect(rollCalls).toEqual([]);
 		expect(result).toBeNull();

@@ -123,7 +123,17 @@ export async function runRoll<K extends RollKind>(
 						collectForConditions: (flags: Record<string, boolean>) =>
 							collectTestModifiers(
 								view,
-								{ ...conditionScope, flags },
+								// Bead x4ly: the contributor ports ride the context so
+								// system contributors contribute in the dialog's
+								// condition-toggle re-collection too.
+								{
+									...conditionScope,
+									flags,
+									ports: {
+										config: getPorts().config,
+										i18n: getPorts().i18n,
+									},
+								},
 								modifiers,
 							),
 					}

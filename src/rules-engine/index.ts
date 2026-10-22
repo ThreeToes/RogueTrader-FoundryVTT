@@ -63,9 +63,12 @@ export {
 	SHIP_CRITICALS,
 	type ShipComponentState,
 	type ShipCriticalEntry,
+	SHIP_WEAPON_KINDS,
 	type ShipWeaponKind,
+	type ShipWeaponKindSpec,
 	salvoWeaponKind,
 	shipCritical,
+	shipWeaponKindSpec,
 	VENT_FIRE_CREW_DAMAGE,
 } from "./ship-combat";
 export {

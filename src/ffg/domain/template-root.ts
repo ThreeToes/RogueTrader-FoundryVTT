@@ -34,8 +34,10 @@
  * the class of bug this repo refuses to ship.
  */
 
+import { SYSTEM_ID_FALLBACK } from "./system-id";
+
 /** The Rogue Trader system id, and therefore this project's root. */
-export const DEFAULT_SYSTEM_ID = "rogue-trader";
+export const DEFAULT_SYSTEM_ID = SYSTEM_ID_FALLBACK;
 
 /** Rogue Trader's own template root. */
 export const TEMPLATE_ROOT = `systems/${DEFAULT_SYSTEM_ID}/template/`;

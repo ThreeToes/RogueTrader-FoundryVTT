@@ -1,13 +1,32 @@
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
+import { parse } from "yaml";
 import type { MutationRow } from "../data/item/mutation-roll";
 import { buildActorView } from "../../ffg/domain/model/build";
-import { afflictionProcedures } from "../registry";
 import {
+	afflictionProcedureChoices,
 	afflictionProcedureNames,
+	afflictionProcedures,
 	applyAfflictionProcedure,
 	resolveAfflictionGrants as resolveAfflictionGrantsView,
 	resolveEffectValues,
 } from "./afflictions";
+
+// Pack-driven guard (same shape as rules/origins.test.ts): the mutation pack
+// names procedures in `system.procedure`; CI does not ship compendia, so the
+// coverage assertion is skipped when the pack is absent.
+const MUTATION_PACK = "src/packs/rogue_trader/afflictions/mutations.yaml";
+const packProcedures = existsSync(MUTATION_PACK)
+	? new Set(
+			(
+				parse(readFileSync(MUTATION_PACK, "utf8")) as Array<{
+					system?: { procedure?: string };
+				}>
+			)
+				.map((doc) => doc.system?.procedure ?? "")
+				.filter((procedure) => procedure !== ""),
+	  )
+	: new Set<string>();
 
 // Phase 2: the resolver takes an ActorView. Wrapper keeps the fixtures readable.
 const resolveAfflictionGrants = (items: unknown[]) =>
@@ -287,8 +306,39 @@ describe("applyAfflictionProcedure (beads xu83/kam1)", () => {
 	});
 
 	test("every registered procedure has an implementation (registry drift guard)", () => {
-		expect([...afflictionProcedureNames()].sort()).toEqual(
-			[...afflictionProcedures.keys()].sort(),
-		);
+		// Bead raf3: one handler-carrying registry entry per procedure, so a
+		// key without a handler (or a handler without a label) cannot exist —
+		// but the shape contract still deserves a pin.
+		for (const key of afflictionProcedureNames()) {
+			const entries = afflictionProcedures.for(key);
+			expect(entries).toHaveLength(1);
+			expect(entries[0].labelKey).toMatch(/^PROCEDURE\./);
+			expect(typeof entries[0].run).toBe("function");
+		}
+	});
+
+	test("labels are byte-identical to the pre-raf3 label map (display unchanged)", () => {
+		// The refactor moved the labels onto the handler entries; the schema
+		// `choices` value data/item/mutation.ts builds must not shift one key
+		// or label.
+		expect(afflictionProcedureChoices()).toEqual({
+			"degenerate-mind": "PROCEDURE.DEGENERATE_MIND",
+			"mental-regressive": "PROCEDURE.MENTAL_REGRESSIVE",
+			"ravaged-body": "PROCEDURE.RAVAGED_BODY",
+		});
+	});
+
+	test("REGRESSION: the registry covers every procedure the mutation pack authors", () => {
+		// The mutation pack names procedures in `system.procedure` as plain
+		// strings; a pack value the registry does not carry throws at
+		// acquisition and coerces in schema choices. Same guard shape as the
+		// origin-row coverage test (rules/origins.test.ts).
+		expect(packProcedures.size).toBeGreaterThan(0);
+		for (const procedure of packProcedures) {
+			expect(
+				afflictionProcedures.for(procedure).length,
+				`procedure "${procedure}" has no registry entry`,
+			).toBe(1);
+		}
 	});
 });

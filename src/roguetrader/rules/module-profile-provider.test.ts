@@ -47,7 +47,7 @@ for (const key of ["game", "ui", "foundry"]) {
 (globalThis as Record<string, unknown>).foundry = {};
 
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
-import type { Ports } from "../../ffg/application/ports";
+import type { ConfigPort } from "../../ffg/application/ports";
 
 afterAll(() => {
 	for (const [key, value] of Object.entries(originalGlobals)) {
@@ -60,7 +60,6 @@ afterAll(() => {
 afterEach(() => {
 	resetModuleRuleProfilesForTests();
 	resetEffectiveProfileCacheForTests();
-	resetPorts();
 });
 
 const {
@@ -72,35 +71,33 @@ const {
 	resetModuleRuleProfilesForTests,
 } = await import("./homebrew");
 const { rtCore } = await import("../../ffg/domain/system-profile");
-const { resetPorts, setPorts } = await import(
-	"../../ffg/infrastructure/foundry/ports"
-);
 
-/** A world whose stored profiles are `rows`, with `activeId` in force. */
+/**
+ * A world whose stored profiles are `rows`, with `activeId` in force (bead
+ * x4ly): the ConfigPort DOUBLE is bound as the seam's argument — no `as
+ * unknown as Ports` cast, no setPorts global swap.
+ */
 function worldWith(
 	rows: readonly { id: string; name: string; delta: Record<string, unknown> }[],
 	activeId: string,
-): void {
+): ConfigPort {
 	const stored = JSON.stringify(rows);
-	const stub = {
-		config: {
-			// The provider in bootstrap/config.ts does exactly this lookup: the
-			// ACTIVE profile's delta, or null for core rules.
-			homebrew: () => activeProfileDelta(stored, activeId),
-			profile: () => rtCore,
-			originTraits: () => [],
-			packIds: () => ({ rolltables: null }),
-		},
-	} as unknown as Ports;
-	setPorts(stub);
+	return {
+		// The provider in bootstrap/config.ts does exactly this lookup: the
+		// ACTIVE profile's delta, or null for core rules.
+		homebrew: () => activeProfileDelta(stored, activeId),
+		profile: () => rtCore,
+		originTraits: () => [],
+		packIds: () => ({ rolltables: null }),
+	};
 }
 
 /** A world with one named profile in force. */
 function worldProfileInForce(
 	id: string,
 	delta: Record<string, unknown>,
-): void {
-	worldWith([{ id, name: id, delta }], id);
+): ConfigPort {
+	return worldWith([{ id, name: id, delta }], id);
 }
 
 /** Capture console.warn for the duration of one call (the LOUD rejection). */
@@ -129,8 +126,8 @@ describe("module profiles in the effective profile (bead wxut.6)", () => {
 				delta: { "test.critOnDouble": true, "criticals.maxSeverity": 8 },
 			}),
 		).toBe(true);
-		worldWith([], "lethal-crits");
-		const effective = effectiveProfile();
+		const config = worldWith([], "lethal-crits");
+		const effective = effectiveProfile(config);
 		expect(effective.critOnDouble).toBe(true);
 		expect(effective.criticals?.maxSeverity).toBe(8);
 		// Everything the module did not say stays at the Core Rulebook value.
@@ -144,8 +141,9 @@ describe("module profiles in the effective profile (bead wxut.6)", () => {
 			delta: { "combat.fireModeBonus.burst": 0 },
 		});
 		// The GM's own profile sets the SAME knob, and is active.
-		worldProfileInForce("mine", { "combat.fireModeBonus.burst": 15 });
-		const effective = effectiveProfile();
+		const effective = effectiveProfile(
+			worldProfileInForce("mine", { "combat.fireModeBonus.burst": 15 }),
+		);
 		expect(effective.fireModes).toEqual({
 			...rtCore.fireModes,
 			semiAutoBurst: {
@@ -166,8 +164,10 @@ describe("module profiles in the effective profile (bead wxut.6)", () => {
 			name: "Auto consume",
 			delta: { "ammo.autoConsume": true },
 		});
-		worldProfileInForce("mine", { "test.critOnDouble": false });
-		const effective = effectiveProfile();
+		const config = worldProfileInForce("mine", {
+			"test.critOnDouble": false,
+		});
+		const effective = effectiveProfile(config);
 		expect(effective.ammoAutoConsume).toBe(true);
 		expect(effective.critOnDouble).toBe(false);
 	});
@@ -183,8 +183,10 @@ describe("module profiles in the effective profile (bead wxut.6)", () => {
 			name: "Alt hits",
 			delta: { "tables.hitLocations": moduleTable },
 		});
-		worldProfileInForce("mine", { "tables.hitLocations": worldTable });
-		expect(effectiveProfile().hitLocations).toEqual(worldTable);
+		const config = worldProfileInForce("mine", {
+			"tables.hitLocations": worldTable,
+		});
+		expect(effectiveProfile(config).hitLocations).toEqual(worldTable);
 	});
 
 	test("the module layer survives a BROKEN world profile (it drops only itself)", () => {
@@ -196,38 +198,34 @@ describe("module profiles in the effective profile (bead wxut.6)", () => {
 		// The stored profile is the retired bead-9if object shape: the registry
 		// refuses it by name and the WORLD's house rules are ignored...
 		const warnings = captureWarnings(() => {
-			worldWith([], "");
-			setPorts({
-				config: {
+			expect(
+				effectiveProfile({
 					homebrew: () => ({ id: "house", fireModeBonus: { burst: 0 } }),
 					profile: () => rtCore,
 					originTraits: () => [],
 					packIds: () => ({ rolltables: null }),
-				},
-			} as unknown as Ports);
-			expect(effectiveProfile().criticals?.maxSeverity).toBe(8);
+				}).criticals?.maxSeverity,
+			).toBe(8);
 		});
 		// ...but the module's rules still run, and the refusal was reported.
 		expect(warnings.join("\n")).toContain("ignoring house-rule profile");
 	});
 
 	test("with nothing registered and nothing stored the base profile is returned AS IS", () => {
-		worldWith([], "");
 		// Identity, not just equality: sibling-module swaps and tests rely on it.
-		expect(effectiveProfile()).toBe(rtCore);
+		expect(effectiveProfile(worldWith([], ""))).toBe(rtCore);
 	});
 
 	test("a module that registers nothing leaves core rules alone", () => {
 		// An empty delta is a valid registration that says nothing: the seam's
 		// identity guarantee still holds.
 		registerModuleRuleProfile({ id: "quiet", name: "Quiet", delta: {} });
-		worldWith([], "");
-		expect(effectiveProfile()).toBe(rtCore);
+		expect(effectiveProfile(worldWith([], ""))).toBe(rtCore);
 	});
 
 	test("registering AFTER a roll was memoised changes the next roll (qa9k cache)", () => {
-		worldWith([], "");
-		expect(effectiveProfile()).toBe(rtCore);
+		const config = worldWith([], "");
+		expect(effectiveProfile(config)).toBe(rtCore);
 		registerModuleRuleProfile({
 			id: "lethal-crits",
 			name: "Lethal crits",
@@ -235,7 +233,7 @@ describe("module profiles in the effective profile (bead wxut.6)", () => {
 		});
 		// No cache reset and no Foundry hook: the registry's own version is part
 		// of the memo key, so the module's init is honoured immediately.
-		expect(effectiveProfile().criticals?.maxSeverity).toBe(8);
+		expect(effectiveProfile(worldWith([], "")).criticals?.maxSeverity).toBe(8);
 	});
 });
 
@@ -323,8 +321,8 @@ describe("registerModuleRuleProfile — loud rejection, idempotence (bead wxut.6
 		const registered = registeredModuleRuleProfiles();
 		expect(registered).toHaveLength(1);
 		expect(registered[0]?.name).toBe("Lethal crits (v2)");
-		worldWith([], "lethal-crits");
-		const effective = effectiveProfile();
+		const config = worldWith([], "lethal-crits");
+		const effective = effectiveProfile(config);
 		expect(effective.criticals?.maxSeverity).toBe(6);
 		expect(effective.critOnDouble).toBe(false);
 	});
@@ -348,8 +346,8 @@ describe("registerModuleRuleProfile — loud rejection, idempotence (bead wxut.6
 		// author is told why the new one was refused.
 		expect(warnings[0]).toContain('rule profile "lethal-crits" rejected');
 		expect(registeredModuleRuleProfiles()[0]?.name).toBe("Lethal crits");
-		worldWith([], "lethal-crits");
-		expect(effectiveProfile().criticals?.maxSeverity).toBe(8);
+		const config = worldWith([], "lethal-crits");
+		expect(effectiveProfile(config).criticals?.maxSeverity).toBe(8);
 	});
 
 	test("modules compose in registration order: the later one wins a shared knob", () => {
@@ -363,8 +361,8 @@ describe("registerModuleRuleProfile — loud rejection, idempotence (bead wxut.6
 			name: "B",
 			delta: { "criticals.maxSeverity": 6 },
 		});
-		worldWith([], "");
-		expect(effectiveProfile().criticals?.maxSeverity).toBe(6);
+		const config = worldWith([], "");
+		expect(effectiveProfile(config).criticals?.maxSeverity).toBe(6);
 	});
 
 	test("the registration never mutates the base profile", () => {
@@ -373,8 +371,8 @@ describe("registerModuleRuleProfile — loud rejection, idempotence (bead wxut.6
 			name: "Lethal crits",
 			delta: { "criticals.maxSeverity": 8 },
 		});
-		worldWith([], "lethal-crits");
-		effectiveProfile();
+		const config = worldWith([], "lethal-crits");
+		effectiveProfile(config);
 		expect(rtCore.criticals?.maxSeverity).not.toBe(8);
 	});
 });

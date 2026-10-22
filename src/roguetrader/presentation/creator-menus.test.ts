@@ -39,4 +39,13 @@ describe("creator-menus source guard (bead r5zz)", () => {
 	it("does not use the deprecated `condition` context-menu field", () => {
 		expect(SOURCE).not.toMatch(/\bcondition\??\s*:/);
 	});
+
+	// Bead eolv: the create-permission check rode the `game` global directly
+	// (its own isGM || ACTOR_CREATE hand-roll). It now asks the Permissions
+	// port like every other access rule, so there is ONE implementation.
+	it("routes the create-permission check through the Permissions port", () => {
+		expect(SOURCE).toContain("permissions.canModify(null)");
+		expect(SOURCE).not.toContain("ACTOR_CREATE");
+		expect(SOURCE).not.toContain("isGM");
+	});
 });

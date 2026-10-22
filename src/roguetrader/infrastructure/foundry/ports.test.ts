@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { NO_CONTENT } from "../../../ffg/application/ports";
+import {
+	type Clock,
+	type ConfigPort,
+	type ContentPort,
+	type Dice,
+} from "../../../ffg/application/ports";
+import { rtCore } from "../../../ffg/domain/system-profile";
 import { currentRound, resolveCritical } from "../../rules/criticals";
 import {
 	foundryPorts,
@@ -28,35 +34,46 @@ describe("ports (epic kof0, phase 3)", () => {
 
 	test("dice can be faked so the critical flow runs headlessly", async () => {
 		const rolled: string[] = [];
-		setPorts({
-			...foundryPorts,
-			dice: {
-				roll: async (formula) => {
-					rolled.push(formula);
-					return {
-						total: 3,
-						dice: [{ result: 3, faces: 10 }],
-						terms: [{ class: "Die", faces: 10, results: [3] }],
-						formula,
-					};
-				},
+		const dice: Dice = {
+			roll: async (formula) => {
+				rolled.push(formula);
+				return {
+					total: 3,
+					dice: [{ result: 3, faces: 10 }],
+					terms: [{ class: "Die", faces: 10, results: [3] }],
+					formula,
+				};
 			},
-			content: {
-				capabilities: () => ({ ...NO_CONTENT, criticalTables: true }),
-				documents: async () => [],
-				find: async () => ({
-					name: "Impact Critical Effects",
-					formula: "1d5",
-					results: [{ text: "Gut wound", range: [1, 5] }],
-				}),
-			},
-		});
+		};
+		const content: ContentPort = {
+			documents: async () => [],
+			documentsOrNull: async () => [],
+			find: async () => ({
+				name: "Impact Critical Effects",
+				formula: "1d5",
+				results: [{ text: "Gut wound", range: [1, 5] }],
+			}),
+			document: async () => null,
+		};
+		// Bead x4ly: the caller-bound ports go in via the parameters, no
+		// setPorts swap needed for the critical flow itself.
+		const config: ConfigPort = {
+			homebrew: () => null,
+			profile: () => rtCore,
+			originTraits: () => [],
+			packIds: () => ({ rolltables: null }),
+		};
+		const clock: Clock = { round: () => 0 };
 		// No injected tableRoll: the flow must go through the fake dice.
 		const outcome = await resolveCritical({
 			actor: stubActor,
 			damageType: "Impact",
 			location: "body",
 			excess: 5,
+			content,
+			config,
+			dice,
+			clock,
 		});
 		expect(rolled).toContain("1d5");
 		expect(outcome.effects[0]?.roll).toBe(3);
@@ -64,8 +81,9 @@ describe("ports (epic kof0, phase 3)", () => {
 	});
 
 	test("clock can be faked", () => {
-		setPorts({ ...foundryPorts, clock: { round: () => 7 } });
-		expect(currentRound()).toBe(7);
+		// Bead x4ly: `currentRound` takes its clock as a parameter now.
+		const clock: Clock = { round: () => 7 };
+		expect(currentRound(clock)).toBe(7);
 	});
 
 	test("resetPorts restores the Foundry default", () => {

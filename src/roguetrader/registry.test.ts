@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-	afflictionProcedures,
 	attachRegistriesToConfig,
 	bodyLocations,
 	createRegistries,
@@ -190,13 +189,12 @@ describe("Origin Path row vocabulary (bead rhua)", () => {
 });
 
 describe("registry factory (bead hazf)", () => {
-	test("talentConditions and afflictionProcedures are seeded", () => {
-		// Bead hazf: these registries existed but were never attached to
-		// CONFIG; now they ride the seed table with everything else.
+	test("talentConditions are seeded (affliction procedures moved, bead raf3)", () => {
+		// Bead hazf: talentConditions rode the seed table with everything else.
+		// Bead raf3: afflictionProcedures left the seed table — label and
+		// behaviour now ride ONE HandlerRegistry in rules/afflictions.ts.
 		expect(talentConditions.has("charging")).toBe(true);
 		expect(talentConditions.get("charging")).toMatch(/^CONDITION\./);
-		expect(afflictionProcedures.has("degenerate-mind")).toBe(true);
-		expect(afflictionProcedures.get("degenerate-mind")).toMatch(/^PROCEDURE\./);
 	});
 
 	test("createRegistries builds one EntryRegistry per seed entry", () => {
@@ -236,7 +234,6 @@ describe("registry factory (bead hazf)", () => {
 		const rt = g.CONFIG.ROGUE_TRADER!;
 		expect(rt.qualities).toBe(qualities);
 		expect(rt.talentConditions).toBe(talentConditions);
-		expect(rt.afflictionProcedures).toBe(afflictionProcedures);
 		expect(rt.careers).toBeDefined();
 		delete g.CONFIG;
 	});

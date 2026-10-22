@@ -1,7 +1,6 @@
 import { describe, expect, test, afterEach } from "bun:test";
 import { buildActorView } from "../model/build";
 import { collectEffects, collectEffectModifiers, effectKinds } from "./index";
-import { mergeModifiers } from "../../application/funnel";
 
 // The effect engine (epic kof0, phase 2) is the one walk every consumer uses.
 // These tests pin the collector contract and the extension seam.
@@ -25,6 +24,8 @@ describe("effect engine (epic kof0)", () => {
 			"critical-damage",
 			"tb-multiplier",
 			"damage-reduction",
+			"fear-immunity",
+			"fear-reroll",
 			"tearing",
 			"toxic",
 			"blast",
@@ -161,9 +162,10 @@ describe("effect engine (epic kof0)", () => {
 	});
 
 	// Bead 2040: the id keys on the item's own id (name fallback), so two
-	// DIFFERENT documents sharing a name no longer collapse under
-	// mergeModifiers' first-wins dedupe.
-	test("bead 2040: two same-named items both contribute (additive)", () => {
+	// DIFFERENT documents sharing a name no longer collapse under the
+	// funnel's first-wins dedupe (merge semantics are pinned application-side,
+	// in src/ffg/application/funnel.test.ts).
+	test("bead 2040: two same-named items both contribute (distinct ids)", () => {
 		const medikit = (id: string) => ({
 			id,
 			type: "talent",
@@ -178,10 +180,6 @@ describe("effect engine (epic kof0)", () => {
 		expect(new Set(mods.map((m) => m.id)).size).toBe(2);
 		expect(mods[0]?.id).toBe("talent:a:any:Medikit:any");
 		expect(mods[1]?.id).toBe("talent:b:any:Medikit:any");
-		// The funnel's merge keeps both and they sum.
-		const merged = mergeModifiers([], mods);
-		expect(merged).toHaveLength(2);
-		expect(merged.reduce((sum, m) => sum + m.value, 0)).toBe(10);
 	});
 
 	test("bead 2040: one item's duplicate rows still dedupe", () => {
@@ -202,7 +200,8 @@ describe("effect engine (epic kof0)", () => {
 		});
 		const mods = collectEffectModifiers(view, { channel: "test" });
 		expect(mods).toHaveLength(2);
-		expect(mergeModifiers([], mods)).toHaveLength(1);
+		// One id: the funnel's merge (application suite) collapses these to one.
+		expect(mods[0]?.id).toBe(mods[1]?.id);
 	});
 
 	// Bead gojg: the trait-reduction id keys on the item's own id (name

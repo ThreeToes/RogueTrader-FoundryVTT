@@ -73,6 +73,8 @@
 	"EFFECT_KIND.GRANTS_TECHNIQUE": "Accorde une technique",
 	"EFFECT_KIND.PEN_FLAT": "Pénétration fixe",
 	"EFFECT_KIND.PRIMITIVE_CLEAR": "Annule Primitive (Mono)",
+	"EFFECT_KIND.FEAR_IMMUNITY": "Immunisé à la Peur",
+	"EFFECT_KIND.FEAR_REROLL": "Relance les Tests de Peur ratés",
 	"PROCEDURE.DEGENERATE_MIND": "Esprit dégénéré (trait 1d10)",
 	"PROCEDURE.MENTAL_REGRESSIVE": "Régression mentale (1d10 par caractéristique)",
 	"PROCEDURE.RAVAGED_BODY": "Corps ravagé (1d5 mutations supplémentaires)",

@@ -6,10 +6,11 @@
  * shim + dynamic-import pattern as creator-apply-kit.test.ts.
  */
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
-import type { ContentPort, Ports } from "../../../ffg/application/ports";
+import { NO_CONTENT_PORT, type Ports } from "../../../ffg/application/ports";
 import {
-	setPorts,
+	foundryPorts,
 	resetPorts,
+	setPorts,
 } from "../../../ffg/infrastructure/foundry/ports";
 
 const originalGlobals: Record<string, unknown> = {};
@@ -61,12 +62,14 @@ const SKILL_DOC = {
 	}),
 };
 
-const fakePorts = {
+const fakePorts: Ports = {
+	...foundryPorts,
 	content: {
+		...NO_CONTENT_PORT,
 		documentsOrNull: async () => [SKILL_DOC],
 		document: async () => null,
-	} satisfies Partial<ContentPort>,
-} as unknown as Ports;
+	},
+};
 
 /** A fake `this` (the handler only reads actor + render off the picker). */
 function fakePicker() {
@@ -93,7 +96,11 @@ describe("SkillPicker addCatalog clone (bead foundryvtt-rogue-trader-xynx)", () 
 		const { picker, created } = fakePicker();
 		const addCatalog = SkillPicker.DEFAULT_OPTIONS.actions
 			.addCatalog as unknown as AddCatalogHandler;
-		await addCatalog.call(picker as never, {}, { dataset: { name: "Awareness" } });
+		await addCatalog.call(
+			picker as never,
+			{},
+			{ dataset: { name: "Awareness" } },
+		);
 		expect(created).toHaveLength(1);
 		expect(created[0]).toMatchObject({ name: "Awareness" });
 		expect(created[0]._id).toBeUndefined();

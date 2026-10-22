@@ -8,13 +8,9 @@
  * consume uses; its edge cases are pinned here.
  */
 
-import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import type { Items, Notify } from "../../ffg/application/ports";
 import { decrementQuantity, shotsForFireMode } from "./ordnance";
-import {
-	foundryPorts,
-	resetPorts,
-	setPorts,
-} from "../infrastructure/foundry/ports";
 
 const warnings: Array<[string, Record<string, unknown> | undefined]> = [];
 const infos: Array<[string, Record<string, unknown> | undefined]> = [];
@@ -36,8 +32,7 @@ afterAll(() => {
 	}
 });
 
-afterEach(() => {
-	resetPorts();
+beforeEach(() => {
 	warnings.length = 0;
 	infos.length = 0;
 });
@@ -59,28 +54,39 @@ function itemDoc(quantity: unknown) {
 	return doc;
 }
 
-function wirePorts(): void {
-	setPorts({
-		...foundryPorts,
+/**
+ * Bead x4ly: the notify + items ports are caller-bound options, so the tests
+ * thread doubles recording the same calls the foundryPorts stubs recorded —
+ * no setPorts global swap needed at all.
+ */
+function portDoubles(): { notify: Notify; items: Items } {
+	return {
 		notify: {
-			...foundryPorts.notify,
 			warn: (key: string, vars?: Record<string, unknown>) => {
 				warnings.push([key, vars]);
 			},
 			info: (key: string, vars?: Record<string, unknown>) => {
 				infos.push([key, vars]);
 			},
+			error: () => undefined,
 		},
-	});
+		// Writes through the document's own update — the same contract the
+		// infrastructure items port keeps (loud when the writer is missing).
+		items: {
+			update: async (item: unknown, patch: Record<string, unknown>) => {
+				await (item as { update(patch: object): Promise<void> }).update(patch);
+			},
+		},
+	};
 }
 
 describe("decrementQuantity (bead 9b95 F1)", () => {
 	test("refuse: an empty item warns ROLL.LAUNCHER_UNLOADED and writes nothing", async () => {
-		wirePorts();
 		const doc = itemDoc(0);
 		const result = await decrementQuantity(doc, {
 			onEmpty: "refuse",
 			weaponName: "Missile Launcher",
+			ports: portDoubles(),
 		});
 		expect(result).toBeNull();
 		expect(warnings).toContainEqual([
@@ -91,9 +97,11 @@ describe("decrementQuantity (bead 9b95 F1)", () => {
 	});
 
 	test("refuse: a non-finite (corrupt) quantity warns and writes nothing", async () => {
-		wirePorts();
 		const doc = itemDoc("abc");
-		const result = await decrementQuantity(doc, { onEmpty: "refuse" });
+		const result = await decrementQuantity(doc, {
+			onEmpty: "refuse",
+			ports: portDoubles(),
+		});
 		expect(result).toBeNull();
 		// No weapon name given: the item's own name fills the warn context.
 		expect(warnings).toContainEqual([
@@ -104,9 +112,11 @@ describe("decrementQuantity (bead 9b95 F1)", () => {
 	});
 
 	test("clamp (the manual chip): an empty item books 0 and still announces", async () => {
-		wirePorts();
 		const doc = itemDoc(0);
-		const result = await decrementQuantity(doc, { onEmpty: "clamp" });
+		const result = await decrementQuantity(doc, {
+			onEmpty: "clamp",
+			ports: portDoubles(),
+		});
 		// Today's manual −1 chip behaviour: Math.max(0, -1) = 0, write + info.
 		expect(result).toBe(0);
 		expect(doc.patches).toEqual([{ system: { quantity: 0 } }]);
@@ -117,9 +127,11 @@ describe("decrementQuantity (bead 9b95 F1)", () => {
 	});
 
 	test("clamp: a non-finite (corrupt) quantity is refused SILENTLY, no write", async () => {
-		wirePorts();
 		const doc = itemDoc("abc");
-		const result = await decrementQuantity(doc, { onEmpty: "clamp" });
+		const result = await decrementQuantity(doc, {
+			onEmpty: "clamp",
+			ports: portDoubles(),
+		});
 		expect(result).toBeNull();
 		expect(doc.patches).toEqual([]);
 		expect(warnings).toEqual([]);
@@ -127,11 +139,11 @@ describe("decrementQuantity (bead 9b95 F1)", () => {
 	});
 
 	test("shots > 1 clamps the write at 0 instead of going negative", async () => {
-		wirePorts();
 		const doc = itemDoc(2);
 		const result = await decrementQuantity(doc, {
 			onEmpty: "refuse",
 			shots: 3,
+			ports: portDoubles(),
 		});
 		expect(result).toBe(0);
 		expect(doc.patches).toEqual([{ system: { quantity: 0 } }]);

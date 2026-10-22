@@ -34,6 +34,7 @@ import { CreatorApplication } from "./creator-application";
 import { toggleCollapse } from "./character-creator";
 // Bead w7zm: the shared create-vs-update branching the creators mirror.
 import { createOrUpdateActor, type ApplyableActor } from "./creator-apply";
+import { creatorGrantIds, type OwnedItemLike } from "../../rules/grants";
 // Bead npnn: the shared imperative input wiring helpers (dataset.wired guard).
 import { wireInput, wireSelect } from "../dom-wire";
 import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
@@ -676,21 +677,15 @@ export class ShipCreator extends CreatorApplication {
 			{ name: this.name, type: "starship", system: systemPayload },
 			async (actor) => {
 				// iufv reconcile: wipe previously creator-installed components
-				// (grantedBy: "ship-creator"); manual drops survive. (Previously
-				// this ran before the system update; see the helper's reordering
-				// note — disjoint data trees, not observable.)
-				const items = (actor.items ?? []) as Array<
-					{ id?: string; type?: string; system?: { grantedBy?: string } }
-				>;
-				const stale = items
-					.filter(
-						(i) =>
-							i.system?.grantedBy === "ship-creator" &&
-							(i.type === "ship-component" ||
-								i.type === "ship-weapon-component"),
-					)
-					.map((i) => i.id)
-					.filter((id): id is string => Boolean(id));
+				// (grantedBy: "ship-creator"); manual drops survive. Shared
+				// creatorGrantIds (was an inline twin of the planet creator's
+				// filter). (Previously this ran before the system update; see the
+				// helper's reordering note — disjoint data trees, not observable.)
+				const stale = creatorGrantIds(
+					((actor.items ?? []) as unknown) as OwnedItemLike[],
+					"ship-creator",
+					["ship-component", "ship-weapon-component"],
+				);
 				if (stale.length > 0) {
 					await actor.deleteEmbeddedDocuments("Item", stale);
 				}

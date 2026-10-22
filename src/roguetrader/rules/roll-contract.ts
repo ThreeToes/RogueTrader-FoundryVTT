@@ -15,7 +15,7 @@
  * Types only — no runtime code.
  */
 
-import type { Modifier } from "../../rules-engine/index";
+import type { Modifier, ShipWeaponKind } from "../../rules-engine/index";
 import type {
 	PreparedRoll as GenericPreparedRoll,
 	RollBase as GenericRollBase,
@@ -255,7 +255,8 @@ export interface RollKindData {
 	};
 	/** Ship weapon salvo resolution inputs (bead xfta, book pp220-222). */
 	"ship-weapon": {
-		weaponKind: "macrobattery" | "lance";
+		// Bead p6nx: the kernel registry's kind union, not a local pair literal.
+		weaponKind: ShipWeaponKind;
 		strength: number;
 		damage: string;
 		critRating: number;

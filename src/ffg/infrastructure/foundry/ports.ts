@@ -380,6 +380,27 @@ const permissions: Permissions = {
 		const doc = actor as { isOwner?: unknown } | null | undefined;
 		return doc?.isOwner === true;
 	},
+	/**
+	 * The same fail-closed answer as `canRoll` for an existing document (GM
+	 * folded into `isOwner`); with NO document the write is a CREATION, so the
+	 * user-level create permission applies (bead eolv — the creator menus' own
+	 * hand-rolled `isGM || ACTOR_CREATE` check moved here so it cannot drift).
+	 */
+	canModify(actor) {
+		if (actor == null) {
+			const user = (
+				game as unknown as {
+					user?: {
+						isGM?: boolean;
+						hasPermission?: (permission: string) => boolean;
+					};
+				}
+			).user;
+			return Boolean(user?.isGM || user?.hasPermission?.("ACTOR_CREATE"));
+		}
+		const doc = actor as { isOwner?: unknown };
+		return doc.isOwner === true;
+	},
 };
 
 /**

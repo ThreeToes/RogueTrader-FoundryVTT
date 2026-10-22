@@ -13,8 +13,8 @@
  */
 import { itemIdFromTarget } from "../dom";
 import { performRoll, rollWeaponDamage } from "../../rules/adapter";
-import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { isPsykerLike } from "../../rules/psyker";
+import type { ActorView } from "../../../ffg/domain/model/actor";
 
 /** Open an owned item's sheet (data-item-id on the target). */
 export async function openItemAction(
@@ -103,13 +103,18 @@ export async function rollDamageAction(
  * only for psykers — Navigators count (Core Rulebook p182), anyone with a
  * Psy Rating, or anyone who owns psychic/navigator powers. Each sheet
  * deletes ITS OWN tab id; the psyker predicate is shared here.
+ *
+ * Pure like the post-0c48 builders (bead nyns): the VIEW is resolved once
+ * per render by the sheet's _prepareTabs and passed down — the gate never
+ * builds its own, so the predicate reads the same view the context
+ * builders read instead of re-copying the whole inventory mid-render.
  */
 export function gatePsykerTab(
-	actor: foundry.documents.Actor,
+	view: ActorView,
 	tabs: Record<string, foundry.applications.api.ApplicationV2.Tab>,
 	tabId: string,
 ): Record<string, foundry.applications.api.ApplicationV2.Tab> {
-	if (!isPsykerLike(actorView(actor))) {
+	if (!isPsykerLike(view)) {
 		delete tabs[tabId];
 	}
 	return tabs;

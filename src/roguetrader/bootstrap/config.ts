@@ -9,6 +9,7 @@
  */
 
 import type { ProfileDelta } from "../../ffg/domain/rule-knobs";
+import { SYSTEM_ID_FALLBACK } from "../../ffg/domain/system-id";
 import { RulesApp } from "../presentation/rules-app";
 import { attachRegistriesToConfig } from "../registry";
 import { STATUS_IMG, SYSTEM_STATUSES } from "../rules/conditions";
@@ -24,9 +25,15 @@ import {
 import { talentEffectHandlers } from "../rules/talent-effects";
 import { registerSharedPartials } from "../sheet/partials";
 
-/** The system id, with a fallback for the pre-init window. */
+/**
+ * The system id, with a fallback for the pre-init window. The fallback is the
+ * one shared constant (ffg/domain/system-id.ts, bead 6f99) — bootstrap and
+ * presentation cannot share anything lower in the graph, because this module
+ * imports the rules app (the settings-menu type), so importing it back would
+ * be circular.
+ */
 export function systemId(): string {
-	return game.system?.id ?? "rogue-trader";
+	return game.system?.id ?? SYSTEM_ID_FALLBACK;
 }
 
 /**

@@ -8,21 +8,19 @@
  * Inaccurate cancellation come back as post-dialog rows.
  */
 
-import { attackProfileOf } from "../../../ffg/domain/model/attack";
 import { messageFlagNamespace } from "../../../ffg/application/chat-flags";
+import { attackProfileOf } from "../../../ffg/domain/model/attack";
 import {
 	equipStateOf,
 	ownedItemResolver,
 	systemOf,
 } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
+import { effectiveProfile } from "../../rules/homebrew";
 import type { RollHandler } from "../../rules/roll-contract";
 import { chatCardTitleDoc } from "../chat-doc-links";
 import { escapeDocumentData } from "../roll-prompts";
 import { resolveEvasion } from "./evasion";
-import {
-	effectiveProfile,
-} from "../../rules/homebrew";
 
 /**
  * Aim action bonuses (bead 4hwl seam): the single source for the +10 half /
@@ -104,7 +102,7 @@ export const weaponHandler: RollHandler<"weapon"> = {
 		// modifiers, or the world's house rules — bead wxut.2 replaced
 		// resolveFireModeBonus), and the aim numbers from AIM_BONUS; the
 		// template binds them instead of carrying its own hardcoded literals.
-		const profile = effectiveProfile();
+		const profile = effectiveProfile(getPorts().config);
 		return {
 			attackContext: {
 				ranged: prepared.weapon?.type === "ranged-weapon",
@@ -170,7 +168,7 @@ export const weaponHandler: RollHandler<"weapon"> = {
 				// Namespace from the profile (bead p7jv): RT's value is
 				// "rogue-trader", so the wire format is unchanged.
 				flags: {
-					[messageFlagNamespace(ports)]: {
+					[messageFlagNamespace(ports.config)]: {
 						damageRoll: {
 							attackerUuid: request.actor.uuid,
 							weaponUuid: item?.uuid,
@@ -215,7 +213,11 @@ export const weaponHandler: RollHandler<"weapon"> = {
 							// Bead oeal: the note is posted raw (ports.chat.postHtml)
 							// and rendered on every client — escape the defender's
 							// name like every other document-data interpolation.
-							{ name: escapeDocumentData((target as { name?: string }).name ?? "") },
+							{
+								name: escapeDocumentData(
+									(target as { name?: string }).name ?? "",
+								),
+							},
 						)}</p>`,
 					);
 				} catch (error) {

@@ -5,7 +5,7 @@
  * mechanical hooks stay in `text` until effect kinds exist for them.
  */
 import { textField } from "../fields";
-import { afflictionProcedures } from "../../registry";
+import { afflictionProcedureChoices } from "../../rules/afflictions";
 import { Gear } from "./gear";
 
 /**
@@ -67,11 +67,13 @@ export class Mutation extends Gear {
 			 * Acquisition-time procedure (bead xu83): a printed, one-off roll this
 			 * mutation requires that no static effect row can express (Degenerate
 			 * Mind's 1d10 trait pick; Mental Regressive's per-characteristic
-			 * table). Blank = the authored effects are the whole rule. Validated
-			 * against the registry so a typo fails loudly (rules/afflictions.ts).
+			 * table). Blank = the authored effects are the whole rule. The choices
+			 * come from the unified handler-carrying registry (bead raf3) so label
+			 * and implementation cannot drift; a typo fails loudly
+			 * (rules/afflictions.ts).
 			 */
 			procedure: new foundry.data.fields.StringField({
-				choices: afflictionProcedures.choices,
+				choices: afflictionProcedureChoices(),
 				initial: "",
 				blank: true,
 			}),

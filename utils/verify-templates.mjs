@@ -30,9 +30,14 @@
  * is the point (loud failure, never silent).
  */
 import { readdir, readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { relative, join } from "node:path";
 import Handlebars from "handlebars";
+
+// The pass/fail logic (checks 1, 2, 2b, 3) lives in utils/template-verifier.ts
+// so tests can pin it without the repo (bead m8eu); this script only wires
+// template contents and the sheet-owner lookup into it.
 
 const TEMPLATE_ROOT = "template";
 
@@ -93,20 +98,11 @@ const stubs = {
 
 Handlebars.registerHelper(stubs);
 
-// Static helper-call analysis (bead 7tjo) lives in utils/template-helpers.ts so
-// it can be unit-tested; see that file for why the check is static rather than
-// a deeper render context.
-import { checkHelperCalls } from "./template-helpers";
-
-// ---------------------------------------------------------------------------
-// Static helper-call analysis (bead 7tjo) is imported from
-// utils/template-helpers.ts and run per template in the loop below. It runs
-// INDEPENDENTLY of the render pass, which is the point: the render uses an
-// empty context, so a body inside an `{{#each}}` over an absent list never
-// executes and its errors are invisible to it. `{{#if ../picked.has o.uuid}}`
-// (two params — handlebars' #if requires exactly one) shipped to a live world
-// precisely because verify passed on the non-executing loop.
-// ---------------------------------------------------------------------------
+// Static helper-call analysis (bead 7tjo) lives in utils/template-helpers.ts
+// and is applied inside template-verifier.ts; the pass/fail logic (checks 1,
+// 2, 2b, 3) lives in utils/template-verifier.ts (bead m8eu) so tests can drive
+// it without the repo. The import below: only the wiring stays here.
+import { tabsCheckSync, runRenderChecks } from "./template-verifier";
 
 // Mirror src/roguetrader/sheet/partials.ts (consolidation beads bef7/9v7c/
 // 7c1y/201f): register template/shared/parts/*.hbs as `rt/<name>` partials
@@ -186,85 +182,43 @@ async function walk(dir) {
 }
 
 /**
- * Check 3: data-tab sections must belong to sheets declaring static TABS
- * (or bind tabs.*.cssClass, which implies a proper TABS config upstream).
+ * Check 3 input wiring (bead m8eu): resolve a system template path to the
+ * sheet files whose source references it. Pure logic in template-verifier.ts.
  */
-async function tabsCheck(templates) {
-	const failures = [];
-	for (const file of templates) {
-		const html = await readFile(file, "utf8");
-		if (!/data-tab=/.test(html)) continue;
-		if (/tabs\.[a-zA-Z.]+\.cssClass/.test(html)) continue; // proper binding
-		const rel = relative(TEMPLATE_ROOT, file).replaceAll("\\", "/");
-		const sysPath = `systems/rogue-trader/template/${rel}`;
-		const owners = execSync(
-			`grep -rl "${sysPath}" src/roguetrader/sheet/ || true`,
-		)
-			.toString()
-			.trim()
-			.split("\n")
-			.filter(Boolean);
-		if (owners.length === 0) continue; // not referenced by a sheet (partial)
-		for (const owner of owners) {
-			const src = await readFile(owner, "utf8");
-			if (!/static\s+TABS\s*=/.test(src)) {
-				failures.push(
-					`${rel} -> ${owner}: template uses data-tab sections but the sheet declares no static TABS (body renders display:none under Foundry 14 core CSS).`,
-				);
-			}
-		}
-	}
-	return failures;
+function findSheetOwners(sysPath) {
+	const owners = execSync(`grep -rl "${sysPath}" src/roguetrader/sheet/ || true`)
+		.toString()
+		.trim()
+		.split("\n")
+		.filter(Boolean);
+	return owners.map((owner) => ({ owner, source: readFileSync(owner, "utf8") }));
 }
 
 const templates = await walk(TEMPLATE_ROOT);
-let failures = 0;
+const checked = await Promise.all(
+	templates.map(async (file) => ({
+		rel: relative(TEMPLATE_ROOT, file).replaceAll("\\", "/"),
+		source: await readFile(file, "utf8"),
+	})),
+);
 
-for (const file of templates) {
-	const rel = relative(TEMPLATE_ROOT, file);
-	const source = await readFile(file, "utf8");
-	// 1. Compile.
-	try {
-		Handlebars.compile(source);
-	} catch (error) {
-		failures++;
-		console.error(`✗ compile ${rel}: ${error.message}`);
-		continue;
-	}
-	// 2. Render with stub helpers + empty context.
-	try {
-		const template = Handlebars.compile(source);
-		const html = template(CONTEXT);
-		if (typeof html !== "string") throw new Error("render produced no output");
-	} catch (error) {
-		failures++;
-		console.error(`✗ render  ${rel}: ${error.message}`);
-	}
-	// 2b. Static helper-call check. Deliberately NOT inside the render try:
-	// it must run even when the render passed, because passing is exactly the
-	// failure mode (an unexecuted loop body hides its own errors).
-	try {
-		for (const failure of checkHelperCalls(source, rel)) {
-			failures++;
-			console.error(`✗ helper  ${failure}`);
-		}
-	} catch (error) {
-		// Handlebars.parse throws on syntax errors, which the compile pass
-		// above has already reported; do not double-count them.
-		if (!/Parse error/.test(error.message)) {
-			failures++;
-			console.error(`✗ helper  ${rel}: ${error.message}`);
-		}
-	}
-}
+// Checks 1, 2, 2b (compile / render / static helper calls).
+const failures = [
+	...runRenderChecks(
+		checked,
+		(source) => Handlebars.compile(source),
+		(template, context) => template(context),
+		CONTEXT,
+	),
+	// 3. data-tab / TABS cross-check.
+	...tabsCheckSync(checked, findSheetOwners),
+];
 
-// 3. data-tab / TABS cross-check.
-for (const failure of await tabsCheck(templates)) {
-	failures++;
-	console.error(`✗ tabs    ${failure}`);
+for (const failure of failures) {
+	console.error(`✗ ${failure.prefix}${failure.message}`);
 }
 
 console.log(
-	`verify:templates — ${templates.length} templates checked, ${failures} failure(s)`,
+	`verify:templates — ${templates.length} templates checked, ${failures.length} failure(s)`,
 );
-if (failures > 0) process.exit(1);
+if (failures.length > 0) process.exit(1);

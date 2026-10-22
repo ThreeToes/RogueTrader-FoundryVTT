@@ -45,15 +45,17 @@ describe("background tab affliction delete affordance (bead fjtr)", () => {
 	// Context-side half of the pin (bead chsi): the anchors above read
 	// {{a.id}}, so the sheet must actually PUT an item id on each chip —
 	// #madnessContext's item mapping dropped it once and every chip rendered
-	// data-item-id="" (delete + attack roll both silently no-op'd).
-	test("the character sheet passes item ids into madnessSheetContext", () => {
-		const sheet = readFileSync(
-			"src/roguetrader/sheet/actor/character-sheet.ts",
+	// data-item-id="" (delete + attack roll both silently no-op'd). The
+	// builder moved to character-context.ts (bead 0c48) but the mapping must
+	// survive there.
+	test("the madness builder passes item ids into madnessSheetContext", () => {
+		const builder = readFileSync(
+			"src/roguetrader/sheet/actor/character-context.ts",
 			"utf8",
 		);
-		const start = sheet.indexOf("madnessSheetContext(");
-		const end = sheet.indexOf("this.actor as unknown as never", start);
-		const call = sheet.slice(start, end);
+		const start = builder.indexOf("madnessSheetContext(");
+		const end = builder.indexOf("as unknown as never", start);
+		const call = builder.slice(start, end);
 		expect(start).toBeGreaterThan(-1);
 		expect(end).toBeGreaterThan(start);
 		expect(call).toContain("id: item.id ??");

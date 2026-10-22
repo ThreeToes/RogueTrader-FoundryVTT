@@ -26,6 +26,7 @@
 
 import type { ProfileDelta } from "../../../ffg/domain/rule-knobs";
 import { ruleKnobs } from "../../../ffg/domain/rule-knobs";
+import { SYSTEM_ID_FALLBACK } from "../../../ffg/domain/system-id";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import {
 	ACTIVE_PROFILE_ID_SETTING,
@@ -129,16 +130,12 @@ interface SettingsSurface {
 }
 
 /**
- * The settings namespace: the system id, with the pre-init fallback. Same
- * shape as the rules app's, repeated because the rules app owns its own
- * narrowing and this module must not reach through it.
- */
-const SYSTEM_ID_FALLBACK = "rogue-trader";
-
-/**
  * Read the two rule-profile settings through a narrowed global, so an absent
  * or stripped-down harness degrades to core rules (no indicator) instead of
- * throwing out of a dialog render.
+ * throwing out of a dialog render. The settings namespace is the system id
+ * with the pre-init fallback (ffg/domain/system-id.ts, bead 6f99) — the same
+ * lines rules-app.ts and bootstrap/config.ts read (see template-root.ts for
+ * the sibling-system caveat).
  */
 export function activeTestDialogProfileIndicator(): TestDialogProfileIndicator | null {
 	const globals = globalThis as {

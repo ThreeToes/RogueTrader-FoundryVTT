@@ -16,6 +16,17 @@ describe("effect editor choices (localized dropdowns)", () => {
 		}
 	});
 
+	// Bead z5nq: the editor dropdown derives from the spec registry ONLY — the
+	// old talentEffectHandlers.kinds() merge (whose kind set was a strict
+	// subset of the specs) is gone.
+	test("kind choices come from the spec registry only (no handler merge)", () => {
+		expect(Object.keys(kindChoices).sort()).toEqual(
+			effectKinds.all()
+				.map((spec) => spec.kind)
+				.sort(),
+		);
+	});
+
 	// Owner report: effect kinds were missing translations — kinds registered by
 	// talent-effects (tearing, toxic …) had no label key and degraded to the raw
 	// slug in the dropdown. Guard: every offered kind resolves to a label key

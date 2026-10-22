@@ -2,16 +2,23 @@ import { DamageType } from "./damage-types";
 import { effectsField, type EffectData } from "./effects";
 import { sourceField } from "./source";
 import { psychicDisciplines } from "../../registry";
+import { psychicPowerSubtypeRegistry } from "../../rules/power-resolution";
 import { textField } from "../fields";
 
-/** Psychic power sub-types (RT core, VERIFY against the book when seeding). */
-export const psychicPowerSubtypes = [
-	"focus",
-	"bolt",
-	"barrage",
-	"storm",
-	"zone",
-] as const;
+/**
+ * Psychic power sub-types (bead ilpz): ONE vocabulary source — the power
+ * resolution registry (rules/power-resolution.ts), so a subtype's name,
+ * schema `choices` and resolution behaviour are a single registration.
+ * Core Rulebook Ch. VI seed: focus, bolt, barrage, storm, zone.
+ * `.choices` is read live (not snapshotted) so splat subtypes registered
+ * during module init are included when the schema is built.
+ */
+export const psychicPowerSubtypes = {
+	/** Registered subtype names, in registration order (schema `choices`). */
+	get choices(): string[] {
+		return psychicPowerSubtypeRegistry.keys();
+	},
+} as const;
 
 /** Power class: bound (safe, disciplined) vs unbound (raw, pushable). */
 export const psychicPowerClasses = ["bound", "unbound"] as const;
@@ -60,9 +67,22 @@ export class PsychicPower extends foundry.abstract.TypeDataModel<
 				required: true,
 				nullable: false,
 			}),
-			/** Focus / bolt / barrage / storm / zone. */
+			/**
+			 * Registry-backed subtypes (bead ilpz): focus / bolt / barrage /
+			 * storm / zone — see psychicPowerSubtypes.
+			 */
+			/**
+			 * FUNCTION form (bead dkh9 class, same fix as the effect kinds in
+			 * effects.ts): Foundry caches a DataModel's schema on first access,
+			 * so an eager `psychicPowerSubtypes.choices` PROPERTY read here
+			 * froze the subtype list at first materialisation - a subtype
+			 * registered after that passed the sheet dropdown (which reads the
+			 * registry per render) but was REJECTED at validation. As a
+			 * function, StringField evaluates the choices at validation time,
+			 * so late registrations stay accepted.
+			 */
 			subtype: new foundry.data.fields.StringField({
-				choices: psychicPowerSubtypes,
+				choices: () => psychicPowerSubtypes.choices,
 				initial: "focus",
 				required: true,
 				nullable: false,

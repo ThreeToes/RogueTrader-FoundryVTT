@@ -1,6 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import type { Modifier } from "../../rules-engine/modifier";
 import { buildActorView, type LooseActor } from "../../ffg/domain/model/build";
+import { type TestContributorPorts } from "../../ffg/application/funnel";
+import { rtCore } from "../../ffg/domain/system-profile";
 import {
 	breakdown,
 	collectConditionKeys as collectConditionKeysView,
@@ -22,6 +24,24 @@ const collectConditionKeys = (
 	actor: LooseActor,
 	context: TestModifierContext,
 ) => collectConditionKeysView(buildActorView(actor), context);
+
+// Bead 00z5 teardown: the one-shot test contributors registered below are
+// cleared at suite end, so no later suite in this process inherits them
+// (bun runs every file in ONE process). The one-shot malformed contributors
+// rely on their registration living for this whole file — teardown at
+// afterAll, not per-test.
+afterAll(() => {
+	for (const key of [
+		"test-only",
+		"otpj-valid",
+		"otpj-bare",
+		"otpj-missing",
+		"otpj-shape",
+		"otpj-sourceless",
+	]) {
+		testContributors.clear(key);
+	}
+});
 
 describe("mergeModifiers", () => {
 	test("deduplicates by id, first wins", () => {
@@ -958,17 +978,30 @@ describe("talent contributor", () => {
 	});
 
 	describe("attack-context contributor (bead hyv)", () => {
+		// Bead x4ly: the RT attack-context contributor binds its config + i18n
+		// from the CONTEXT ports now, so a test pinning its rows threads a port
+		// double: an rtCore config (core fire-mode values) and an identity i18n.
+		const rtPorts: TestContributorPorts = {
+			config: {
+				homebrew: () => null,
+				profile: () => rtCore,
+				originTraits: () => [],
+				packIds: () => ({ rolltables: null }),
+			},
+			i18n: { t: (key: string) => key },
+		};
+
 		test("semi-auto burst adds +10, full auto +20 on attack tests", () => {
 			const burst = collectTestModifiers(
 				{},
-				{ kind: "attack", key: "bs", fireMode: "burst" },
+				{ kind: "attack", key: "bs", fireMode: "burst", ports: rtPorts },
 			);
 			expect(burst.find((m) => m.id === "attack:fire-mode:burst")?.value).toBe(
 				10,
 			);
 			const full = collectTestModifiers(
 				{},
-				{ kind: "attack", key: "bs", fireMode: "full" },
+				{ kind: "attack", key: "bs", fireMode: "full", ports: rtPorts },
 			);
 			expect(full.find((m) => m.id === "attack:fire-mode:full")?.value).toBe(
 				20,
@@ -978,7 +1011,7 @@ describe("talent contributor", () => {
 		test("fire-mode modifiers never apply to non-attack tests", () => {
 			const mods = collectTestModifiers(
 				{},
-				{ kind: "characteristic", key: "bs", fireMode: "full" },
+				{ kind: "characteristic", key: "bs", fireMode: "full", ports: rtPorts },
 			);
 			expect(
 				mods.find((m) => m.id.startsWith("attack:fire-mode")),

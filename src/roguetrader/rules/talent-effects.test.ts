@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { buildActorView, type LooseActor } from "../../ffg/domain/model/build";
+import { effectKinds } from "../../ffg/domain/effects";
 import {
 	applyTearing,
 	collectRollMechanicEffects as collectRollMechanicEffectsView,
@@ -201,25 +202,24 @@ describe("collectTalentDamageEffects", () => {
 	});
 });
 
+// Bead z5nq: single source of truth — core kinds live ONLY in the effect-kind
+// spec registry (ffg/domain/effects/specs.ts). The handler registry in this
+// module is the MODULE extension seam and ships no built-in handlers (the old
+// "reference handlers" duplicated each spec's value semantics and run() was
+// invoked by no production code).
 describe("talent effect registry kinds (bead fjw)", () => {
-	test("damage-flat and critical-damage kinds are registered", () => {
-		const kinds = talentEffectHandlers.kinds();
-		expect(kinds).toContain("damage-flat");
-		expect(kinds).toContain("critical-damage");
+	test("damage-flat and critical-damage are registered once, in the spec registry", () => {
+		for (const kind of ["damage-flat", "critical-damage"]) {
+			expect(effectKinds.get(kind)?.labelKey, kind).toBeDefined();
+			expect(
+				talentEffectHandlers.kinds(),
+				`${kind} has no reference handler`,
+			).not.toContain(kind);
+		}
 	});
 
-	test("handlers return the effect value", () => {
-		const talent = { name: "Crushing Blow", system: { effects: [] } };
-		const [flat] = talentEffectHandlers.run({}, talent, {
-			kind: "damage-flat",
-			value: 2,
-		});
-		expect(flat).toBe(2);
-		const [crit] = talentEffectHandlers.run({}, talent, {
-			kind: "critical-damage",
-			value: 4,
-		});
-		expect(crit).toBe(4);
+	test("the system ships no built-in handlers (single registration)", () => {
+		expect(talentEffectHandlers.kinds()).toEqual([]);
 	});
 });
 // Bead 2k5: the attacking weapon's own damage effects apply; gear/armour
@@ -391,11 +391,12 @@ describe("applyTearing", () => {
 	});
 });
 
+// Bead gci0/z5nq: the roll-mechanic kinds are discovered through the SPEC
+// registry (labelKey + read), not through handler registrations.
 describe("roll-mechanic kinds are discoverable (bead gci0)", () => {
-	test("kinds() includes tearing, toxic and blast", () => {
-		const kinds = talentEffectHandlers.kinds();
+	test("tearing, toxic and blast resolve from the spec registry", () => {
 		for (const kind of ["tearing", "toxic", "blast"]) {
-			expect(kinds.includes(kind)).toBe(true);
+			expect(effectKinds.get(kind)?.labelKey, kind).toBeDefined();
 		}
 	});
 });

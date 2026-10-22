@@ -106,7 +106,7 @@ async function copyStaticFiles(target: SystemTarget) {
  * the document verbatim (string splice, not a JSON round-trip, so formatting
  * and field order of the committed manifest survive the copy).
  */
-function packManifest(
+export function packManifest(
 	source: string,
 	packs: Array<Record<string, unknown>> | null,
 	requiresPacks: boolean,
@@ -171,9 +171,16 @@ async function watchMode() {
 	}
 }
 
-const isWatch = process.argv.includes("--watch");
-if (isWatch) {
-	await watchMode();
-} else {
-	await build();
+// Only the `bun run build` driver executes the build; importing this module
+// (e.g. utils/pack-manifest.test.ts importing packManifest) must stay
+// side-effect-free — bundlePacks rm's and rebuilds the packs/<pack> LevelDB
+// dirs, which a bare import must never trigger (bead 3b3t). Same guard as
+// utils/compendia.ts.
+if (import.meta.main) {
+	const isWatch = process.argv.includes("--watch");
+	if (isWatch) {
+		await watchMode();
+	} else {
+		await build();
+	}
 }

@@ -19,6 +19,24 @@
  * global; only the i18n port needs a stub for the modifier labels.
  */
 
+import type { TestContributor } from "../../ffg/application/funnel";
+import { rtCore } from "../../ffg/domain/system-profile";
+import type { TestContributorPorts } from "../../ffg/application/funnel";
+
+/**
+ * Bead x4ly: the RT attack-context contributor binds its config + i18n from
+ * the CONTEXT ports, so a test pinning its rows threads a port double.
+ */
+const rtPorts: TestContributorPorts = {
+	config: {
+		homebrew: () => null,
+		profile: () => rtCore,
+		originTraits: () => [],
+		packIds: () => ({ rolltables: null }),
+	},
+	i18n: { t: (key: string) => key },
+};
+
 const originalGame = (globalThis as Record<string, unknown>).game;
 (globalThis as Record<string, unknown>).game = {
 	i18n: {
@@ -36,12 +54,17 @@ const { collectTestModifiers, testContributors } = await import(
 // (fictional) foreign module registers its own contributors under the SAME
 // type keys the RT registrar owns. With the old keys-based applied-guard this
 // made the RT registrar skip itself — the RT rows would silently vanish (the
-// missing-row class bead i4b0 exists to kill). With the identity-based guard
-// the RT fns append BESIDE them, never get substituted for. The stubs return
-// empty arrays so they contribute no rows to the assertions below or to any
-// later suite in this process.
-testContributors.register("attack-context", () => []);
-testContributors.register("origin-traits", () => []);
+// missing-row class bead i4b0 exists to kill). With reference de-dupe (bead
+// 00z5) the RT fns append BESIDE them, never get substituted for, and the
+// namespaced RT keys hold a separate list entirely. The stubs are kept as
+// handles so afterAll can off them — a suite registration must not leak into
+// the next suite in this process.
+const foreignStubs: ReadonlyArray<readonly [string, TestContributor]> = [
+	["attack-context", () => []],
+	["origin-traits", () => []],
+	["weapon-qualities", () => []],
+];
+for (const [type, fn] of foreignStubs) testContributors.register(type, fn);
 // The view builder from the domain layer — loose objects in, ActorView out.
 const { buildActorView } = await import("../../ffg/domain/model/build");
 // The RT pipeline shim — WITHOUT the rules/funnel side-effect shim in the
@@ -51,11 +74,13 @@ await import("../presentation/rolls/pipeline");
 const {
 	registerRtFunnelContributors,
 	RT_FUNNEL_CONTRIBUTOR_TYPES,
+	RT_FUNNEL_NAMESPACE,
 } = await import("./funnel-registration");
 // The exact RT contributor handles, for the identity-based guard assertions
 // (bead 4tx6).
 const { attackContextContributor } = await import("./homebrew");
 const { originTraitsContributor } = await import("./origin-traits");
+const { weaponQualitiesContributor } = await import("./weapon-qualities");
 
 import { afterAll, describe, expect, test } from "bun:test";
 
@@ -65,6 +90,9 @@ afterAll(() => {
 	} else {
 		(globalThis as Record<string, unknown>).game = originalGame;
 	}
+	// Bead 00z5 teardown: everything this file registered — the foreign
+	// stubs (bare keys) and nothing else — leaves the registry via off.
+	for (const [type, fn] of foreignStubs) testContributors.off(type, fn);
 });
 
 const view = () => buildActorView({});
@@ -77,25 +105,27 @@ describe("registerRtFunnelContributors (bead i4b0)", () => {
 	test("the fire-mode row is present on a bare pipeline import (no shim)", () => {
 		const mods = collectTestModifiers(
 			view(),
-			{ kind: "attack", key: "bs", fireMode: "burst" },
+			{ kind: "attack", key: "bs", fireMode: "burst", ports: rtPorts },
 		);
 		expect(mods.find((m) => m.id === "attack:fire-mode:burst")?.value).toBe(
 			10,
 		);
 		const full = collectTestModifiers(
 			view(),
-			{ kind: "attack", key: "bs", fireMode: "full" },
+			{ kind: "attack", key: "bs", fireMode: "full", ports: rtPorts },
 		);
 		expect(full.find((m) => m.id === "attack:fire-mode:full")?.value).toBe(
 			20,
 		);
 	});
 
+	// Bead 00z5: RT's registrations live under the RT namespace, so the raw
+	// storage keys carry the RT_FUNNEL_NAMESPACE prefix.
 	test("both RT contributor source types are registered", () => {
 		registerRtFunnelContributors();
 		const types = new Set(testContributors.types());
 		for (const type of RT_FUNNEL_CONTRIBUTOR_TYPES) {
-			expect(types.has(type)).toBe(true);
+			expect(types.has(`${RT_FUNNEL_NAMESPACE}:${type}`)).toBe(true);
 		}
 	});
 
@@ -103,23 +133,34 @@ describe("registerRtFunnelContributors (bead i4b0)", () => {
 		registerRtFunnelContributors();
 		const mods = collectTestModifiers(
 			view(),
-			{ kind: "attack", key: "bs", fireMode: "burst" },
+			{ kind: "attack", key: "bs", fireMode: "burst", ports: rtPorts },
 		);
 		expect(
 			mods.filter((m) => m.id === "attack:fire-mode:burst"),
 		).toHaveLength(1);
 	});
 
-	// Bead 4tx6: the applied-guard is IDENTITY-based. A foreign module's
-	// contributors under the same type keys (stubbed in at the top of this
-	// file) must never satisfy the RT registration — the exact RT handles
-	// must be registered beside them, each exactly once.
+	// Bead 4tx6 + 00z5: the registration is reference-deduped AND namespaced.
+	// A foreign module's contributors under the same (bare) type keys —
+	// stubbed in at the top of this file — live in a separate list from RT's
+	// namespaced one; the exact RT handles sit beside them, each exactly once.
 	test("a foreign registration of the same type keys does not satisfy the guard", () => {
 		registerRtFunnelContributors();
-		const attackHandlers = testContributors.contributorsFor("attack-context");
-		const originHandlers = testContributors.contributorsFor("origin-traits");
+		const attackHandlers = testContributors.contributorsFor(
+			"attack-context",
+			RT_FUNNEL_NAMESPACE,
+		);
+		const originHandlers = testContributors.contributorsFor(
+			"origin-traits",
+			RT_FUNNEL_NAMESPACE,
+		);
+		const qualityHandlers = testContributors.contributorsFor(
+			"weapon-qualities",
+			RT_FUNNEL_NAMESPACE,
+		);
 		expect(attackHandlers).toContain(attackContextContributor);
 		expect(originHandlers).toContain(originTraitsContributor);
+		expect(qualityHandlers).toContain(weaponQualitiesContributor);
 		// No duplicate RT registration on the repeat call (or on the shim's
 		// module-load call earlier in the graph).
 		expect(
@@ -127,6 +168,9 @@ describe("registerRtFunnelContributors (bead i4b0)", () => {
 		).toHaveLength(1);
 		expect(
 			originHandlers.filter((fn) => fn === originTraitsContributor),
+		).toHaveLength(1);
+		expect(
+			qualityHandlers.filter((fn) => fn === weaponQualitiesContributor),
 		).toHaveLength(1);
 	});
 });

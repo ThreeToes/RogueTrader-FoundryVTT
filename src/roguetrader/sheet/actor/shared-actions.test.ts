@@ -75,6 +75,41 @@ describe("shared roll actions wiring (bead z4df)", () => {
 		expect(npcActions.rollNpcSkill).toBe(shared.rollSkillAction);
 	});
 
+	// Bead nyns: the psyker gate is now PURE over the passed view (the
+	// 0c48 builder pattern) — the sheets resolve ONE view per render in
+	// _prepareTabs and thread it here; the gate never builds its own. Pin
+	// the tab-gate behaviour against a buildActorView fixture: a psyker
+	// keeps ITS OWN tab, a mundanic actor loses it, and the sheet's other
+	// tabs are never touched.
+	test("gatePsykerTab deletes only the sheet's own tab id for a non-psyker (bead nyns)", async () => {
+		const shared = (await import("./shared-actions")) as unknown as {
+			gatePsykerTab: (
+				view: unknown,
+				tabs: Record<string, { id: string }>,
+				tabId: string,
+			) => Record<string, { id: string }>;
+		};
+		const { buildActorView } = await import(
+			"../../../ffg/domain/model/build"
+		);
+		const tabs = () => ({
+			data: { id: "data" },
+			psychic: { id: "psychic" },
+		});
+		const psyker = shared.gatePsykerTab(
+			buildActorView({ type: "npc", system: { psyker: true } }),
+			tabs(),
+			"psychic",
+		);
+		expect(Object.keys(psyker)).toContain("psychic");
+		const mundane = shared.gatePsykerTab(
+			buildActorView({ type: "npc", system: {} }),
+			tabs(),
+			"psychic",
+		);
+		expect(Object.keys(mundane)).toEqual(["data"]);
+	});
+
 	// Bead gyuj: rollSkillAction reads the enclosing row's data-item-id
 	// (the shared itemIdFromTarget vocabulary), so the template's <li>
 	// must keep the attribute — removing it silently no-ops every skill

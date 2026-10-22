@@ -6,10 +6,11 @@
  * dynamic-import pattern as creator-apply-kit.test.ts.
  */
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
-import type { ContentPort, Ports } from "../../../ffg/application/ports";
+import { NO_CONTENT_PORT } from "../../../ffg/application/ports";
 import {
-	setPorts,
+	foundryPorts,
 	resetPorts,
+	setPorts,
 } from "../../../ffg/infrastructure/foundry/ports";
 
 const originalGlobals: Record<string, unknown> = {};
@@ -82,14 +83,18 @@ type AddPowerHandler = (
 describe("PsychicPicker addPower clone (bead foundryvtt-rogue-trader-xynx)", () => {
 	test("the granted power clone carries no _id", async () => {
 		const asked: string[] = [];
+		// Full Ports via the production base: only the content port's document
+		// lookup is exercised, so only it is overridden — no cast needed.
 		setPorts({
+			...foundryPorts,
 			content: {
+				...NO_CONTENT_PORT,
 				document: async (uuid: string) => {
 					asked.push(uuid);
 					return POWER_DOC;
 				},
-			} satisfies Partial<ContentPort>,
-		} as unknown as Ports);
+			},
+		});
 		const { picker, created } = fakePicker();
 		const addPower = PsychicPicker.DEFAULT_OPTIONS.actions
 			.addPower as unknown as AddPowerHandler;

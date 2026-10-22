@@ -16,8 +16,8 @@
  *   - the merge is memoised on the raw stored value, so a roll reads the
  *     settings ONCE instead of re-parsing the profile every attack (qa9k).
  *
- * Foundry is stubbed only as far as getPorts() needs (the ports module reads
- * CONFIG at call time, not at import time).
+ * Bead x4ly: the profile is read through a caller-bound ConfigPort — these
+ * tests bind ConfigPort doubles; no Foundry port swap needed at all.
  */
 import { afterEach, describe, expect, test } from "bun:test";
 import { rtCore } from "../../ffg/domain/system-profile";
@@ -27,7 +27,7 @@ import {
 	type RuleKnob,
 	type RuleKnobRegistry,
 } from "../../ffg/domain/rule-knobs";
-import { resetPorts, setPorts } from "../../ffg/infrastructure/foundry/ports";
+import type { ConfigPort } from "../../ffg/application/ports";
 import {
 	activeProfileDelta,
 	effectiveProfile,
@@ -38,47 +38,35 @@ import {
 	resetEffectiveProfileCacheForTests,
 	resetModuleRuleProfilesForTests,
 } from "./homebrew";
-import type { Ports } from "../../ffg/application/ports";
 
-// The ports are process-global and every scenario below swaps in a stub, so
-// restore the default between tests exactly as the other port-swapping suites
-// do (adapter-ammo-consume.test.ts, actions.test.ts). Scoped to the FILE, not
-// a describe block: bun runs every suite in one process and a leaked stub
-// breaks unrelated suites that run later.
+// Bead x4ly: `effectiveProfile` takes its ConfigPort as a parameter, so these
+// tests bind a ConfigPort DOUBLE directly — no `as unknown as Ports` cast and
+// no setPorts global swap. The rules layer no longer reads a global.
 afterEach(() => {
-	resetPorts();
 	// A leaked registry would quietly retune the suites that run after this
 	// one (bun runs them all in one process).
 	resetRuleKnobRegistryForTests();
 });
 
-/** A ports double whose config seam answers with the given stored value. */
-function portsWithHomebrew(stored: unknown): void {
-	const stub = {
-		config: {
-			homebrew: () => stored,
-			profile: () => rtCore,
-			originTraits: () => [],
-			packIds: () => ({ rolltables: null }),
-		},
-	} as unknown as Ports;
-	setPorts(stub);
+/** A ConfigPort double whose homebrew seam answers with the given value. */
+function configWithHomebrew(stored: unknown): ConfigPort {
+	return {
+		homebrew: () => stored,
+		profile: () => rtCore,
+		originTraits: () => [],
+		packIds: () => ({ rolltables: null }),
+	};
 }
 
-/**
- * `portsWithHomebrew`, but the base profile is swapped — the OTHER half of
- * `effectiveProfile`'s memo key (bead qa9k).
- */
-function portsWithHomebrewBase(stored: unknown, base: unknown): void {
-	const stub = {
-		config: {
-			homebrew: () => stored,
-			profile: () => base,
-			originTraits: () => [],
-			packIds: () => ({ rolltables: null }),
-		},
-	} as unknown as Ports;
-	setPorts(stub);
+/** `configWithHomebrew`, but the base profile is swapped — the OTHER half of
+ * `effectiveProfile`'s memo key (bead qa9k). */
+function configWithHomebrewBase(stored: unknown, base: unknown): ConfigPort {
+	return {
+		homebrew: () => stored,
+		profile: () => base as never,
+		originTraits: () => [],
+		packIds: () => ({ rolltables: null }),
+	};
 }
 
 /** A stored `ruleProfiles` list, as the provider would read it from settings. */
@@ -123,16 +111,13 @@ describe("parseStoredDelta (storage decoding only)", () => {
 
 describe("effectiveProfile (bead wxut.2 seam)", () => {
 	test("with no house rules the base profile is returned AS IS", () => {
-		portsWithHomebrew("");
 		// Identity, not just equality: sibling-module swaps and tests rely on it.
-		expect(effectiveProfile()).toBe(rtCore);
-		portsWithHomebrew(null);
-		expect(effectiveProfile()).toBe(rtCore);
+		expect(effectiveProfile(configWithHomebrew(""))).toBe(rtCore);
+		expect(effectiveProfile(configWithHomebrew(null))).toBe(rtCore);
 	});
 
 	test("a knob-keyed delta merges over the base profile", () => {
-		portsWithHomebrew('{"combat.fireModeBonus.burst":0}');
-		const effective = effectiveProfile();
+		const effective = effectiveProfile(configWithHomebrew('{"combat.fireModeBonus.burst":0}'));
 		// Bead cmio.2: the knob's VALUE lives on the shared FireModes shape now
 		// (the settings key is unchanged, the profile path moved).
 		expect(effective.fireModes).toEqual({
@@ -148,16 +133,16 @@ describe("effectiveProfile (bead wxut.2 seam)", () => {
 	});
 
 	test("an UNKNOWN knob is reported and never applied", () => {
-		portsWithHomebrew('{"fireModeBonus":{"burst":0,"full":10}}');
 		// The legacy (bead 9if) object shape is not knob-keyed, so it is
 		// rejected by name rather than silently ignored.
-		const effective = effectiveProfile();
+		const effective = effectiveProfile(
+			configWithHomebrew('{"fireModeBonus":{"burst":0,"full":10}}'),
+		);
 		expect(effective).toBe(rtCore);
 	});
 
 	test("an empty delta leaves core rules in place", () => {
-		portsWithHomebrew("{}");
-		expect(effectiveProfile()).toBe(rtCore);
+		expect(effectiveProfile(configWithHomebrew("{}"))).toBe(rtCore);
 	});
 
 	// Bead 083c ·2: bead 9if's parser accepted ANY object on its object
@@ -165,18 +150,14 @@ describe("effectiveProfile (bead wxut.2 seam)", () => {
 	// value could ride straight into the rules. The knob-keyed delta is the
 	// only shape that activates a rule now.
 	test("a MALFORMED object-shaped stored value cannot activate a rule (083c ·2)", () => {
-		portsWithHomebrew({ id: "house", fireModeBonus: { burst: 0, full: 10 } });
 		// The bead-9if object branch, verbatim: an id and house values. Not a
 		// knob-keyed delta, so it activates nothing.
-		expect(effectiveProfile()).toBe(rtCore);
-		expect(effectiveProfile().fireModes).toEqual(rtCore.fireModes);
+		expect(effectiveProfile(configWithHomebrew({ id: "house", fireModeBonus: { burst: 0, full: 10 } }))).toBe(rtCore);
+		expect(effectiveProfile(configWithHomebrew({ id: "house", fireModeBonus: { burst: 0, full: 10 } })).fireModes).toEqual(rtCore.fireModes);
 		// Not even a half-formed one: an id with no knobs, no knobs with no id.
-		portsWithHomebrew({ id: "house" });
-		expect(effectiveProfile()).toBe(rtCore);
-		portsWithHomebrew({ fireModeBonus: { burst: 0, full: 10 } });
-		expect(effectiveProfile()).toBe(rtCore);
-		portsWithHomebrew([{ id: "house", delta: { "ammo.autoConsume": true } }]);
-		expect(effectiveProfile()).toBe(rtCore);
+		expect(effectiveProfile(configWithHomebrew({ id: "house" }))).toBe(rtCore);
+		expect(effectiveProfile(configWithHomebrew({ fireModeBonus: { burst: 0, full: 10 } }))).toBe(rtCore);
+		expect(effectiveProfile(configWithHomebrew([{ id: "house", delta: { "ammo.autoConsume": true } }]))).toBe(rtCore);
 	});
 
 	test("the settings key is the legacy homebrewProfile key", () => {
@@ -277,15 +258,17 @@ describe("activeProfileDelta — the provider's profile lookup (bead wxut.3)", (
 	test("the delta the provider hands the seam is what the seam merges", () => {
 		// End to end: settings -> provider lookup -> validated merge.
 		const delta = activeProfileDelta(STORED_PROFILES, "berners");
-		portsWithHomebrew(delta);
-		expect(effectiveProfile().fireModes).toEqual({
+		expect(effectiveProfile(configWithHomebrew(delta)).fireModes).toEqual({
 			...rtCore.fireModes,
 			semiAutoBurst: { ...rtCore.fireModes.semiAutoBurst, modifier: 0 },
 		});
 		// A delta that is not knob-keyed is rejected by validateProfile, so the
 		// lookup alone cannot put a house rule into force.
-		portsWithHomebrew(activeProfileDelta(STORED_PROFILES, "strict"));
-		expect(effectiveProfile().ammoAutoConsume).toBe(true);
+		expect(
+			effectiveProfile(
+				configWithHomebrew(activeProfileDelta(STORED_PROFILES, "strict")),
+			).ammoAutoConsume,
+		).toBe(true);
 	});
 });
 
@@ -295,18 +278,16 @@ describe("effectiveProfile memoisation (bead qa9k)", () => {
 	test("two identical reads return the SAME object", () => {
 		// The memo is process-global, so drop it for a deterministic read.
 		resetEffectiveProfileCacheForTests();
-		portsWithHomebrew('{"combat.fireModeBonus.burst":0}');
-		const first = effectiveProfile();
-		const second = effectiveProfile();
+		const config = configWithHomebrew('{"combat.fireModeBonus.burst":0}');
+		const first = effectiveProfile(config);
+		const second = effectiveProfile(config);
 		expect(second).toBe(first);
 	});
 
 	test("a changed stored value recomputes", () => {
 		resetEffectiveProfileCacheForTests();
-		portsWithHomebrew('{"combat.fireModeBonus.burst":0}');
-		const first = effectiveProfile();
-		portsWithHomebrew('{"combat.fireModeBonus.burst":5}');
-		const second = effectiveProfile();
+		const first = effectiveProfile(configWithHomebrew('{"combat.fireModeBonus.burst":0}'));
+		const second = effectiveProfile(configWithHomebrew('{"combat.fireModeBonus.burst":5}'));
 		expect(second).not.toBe(first);
 		expect(first.fireModes.semiAutoBurst.modifier).toBe(0);
 		expect(second.fireModes.semiAutoBurst.modifier).toBe(5);
@@ -315,19 +296,16 @@ describe("effectiveProfile memoisation (bead qa9k)", () => {
 	test("a swapped base profile recomputes too", () => {
 		resetEffectiveProfileCacheForTests();
 		const stored = '{"combat.fireModeBonus.burst":0}';
-		portsWithHomebrew(stored);
-		const first = effectiveProfile();
+		const first = effectiveProfile(configWithHomebrew(stored));
 		const sibling = { ...rtCore, id: "sibling-core" };
-		portsWithHomebrewBase(stored, sibling);
-		const second = effectiveProfile();
+		const second = effectiveProfile(configWithHomebrewBase(stored, sibling));
 		expect(second).not.toBe(first);
 		expect(second.fireModes.semiAutoBurst.modifier).toBe(0);
 		// Neither the base nor the memoised result is mutated by the merge.
 		expect(sibling.fireModes).toEqual(rtCore.fireModes);
 		// The memo holds ONE entry, so swapping back recomputes an equal (but
 		// not identical) profile — correct either way, since the merge is pure.
-		portsWithHomebrewBase(stored, rtCore);
-		expect(effectiveProfile()).toEqual(first);
+		expect(effectiveProfile(configWithHomebrewBase(stored, rtCore))).toEqual(first);
 	});
 
 	test("an inert profile is reported ONCE, not once per roll (qa9k)", () => {
@@ -338,10 +316,12 @@ describe("effectiveProfile memoisation (bead qa9k)", () => {
 		const original = console.warn;
 		console.warn = (...args: unknown[]) => warnings.push(args);
 		try {
-			portsWithHomebrew("not json");
-			for (let roll = 0; roll < 25; roll++) effectiveProfile();
-			portsWithHomebrew('{"fireModeBonus":{"burst":0,"full":10}}');
-			for (let roll = 0; roll < 25; roll++) effectiveProfile();
+			for (let roll = 0; roll < 25; roll++)
+				effectiveProfile(configWithHomebrew("not json"));
+			for (let roll = 0; roll < 25; roll++)
+				effectiveProfile(
+					configWithHomebrew('{"fireModeBonus":{"burst":0,"full":10}}'),
+				);
 		} finally {
 			console.warn = original;
 		}
@@ -419,21 +399,21 @@ const SIBLING_REGISTRY: RuleKnobRegistry = {
 describe("the seam validates and merges against the registry in force", () => {
 	test("a heap of RT house rules still works with nothing registered", () => {
 		resetEffectiveProfileCacheForTests();
-		portsWithHomebrew('{"combat.fireModeBonus.burst":0}');
-		expect(effectiveProfile().fireModes.semiAutoBurst.modifier).toBe(0);
+		expect(
+			effectiveProfile(configWithHomebrew('{"combat.fireModeBonus.burst":0}')).fireModes.semiAutoBurst.modifier,
+		).toBe(0);
 	});
 
 	test("a sibling registry makes RT's keys UNKNOWN and its own mergeable", () => {
 		registerRuleKnobRegistry(SIBLING_REGISTRY);
 		resetEffectiveProfileCacheForTests();
-		portsWithHomebrew('{"combat.fireModeBonus.burst":0}');
 		// RT's knob is not in the registry in force: reported once, never
 		// applied, and the base profile comes back AS IS.
 		const warnings: unknown[] = [];
 		const original = console.warn;
 		console.warn = (...args: unknown[]) => warnings.push(args);
 		try {
-			expect(effectiveProfile()).toBe(rtCore);
+			expect(effectiveProfile(configWithHomebrew('{"combat.fireModeBonus.burst":0}'))).toBe(rtCore);
 		} finally {
 			console.warn = original;
 		}
@@ -441,10 +421,9 @@ describe("the seam validates and merges against the registry in force", () => {
 		// The sibling's own knob key now carries a house rule — it paths into
 		// the shared FireModes shape's standard mode (the sibling's OWN path
 		// data; the sibling fixture mirrors the kernel shape).
-		portsWithHomebrew('{"combat.standardMode":-10}');
-		expect(effectiveProfile().fireModes.standard.modifier).toBe(-10);
+		expect(effectiveProfile(configWithHomebrew('{"combat.standardMode":-10}')).fireModes.standard.modifier).toBe(-10);
 		// Sibling leaves of the same container stay at RT's core.
-		expect(effectiveProfile().fireModes.fullAutoBurst.modifier).toBe(20);
+		expect(effectiveProfile(configWithHomebrew('{"combat.standardMode":-10}')).fireModes.fullAutoBurst.modifier).toBe(20);
 	});
 
 	test("a MODULE registration is validated against the registry in force", () => {
@@ -474,25 +453,19 @@ describe("the seam refuses a profile without RT's rule fields (bead w9sa.8)", ()
 		// RT's own constants are no longer guaranteed by the type. RT's rules
 		// read them, so the seam states the precondition instead of casting and
 		// producing NaN three layers away.
-		const stub = {
-			config: {
-				homebrew: () => null,
-				profile: () => ({
-					id: "dh2-core",
-					messageFlagNamespace: "dark-heresy-2e",
-				}),
-				originTraits: () => [],
-				packIds: () => ({ rolltables: null }),
-			},
-		} as unknown as Ports;
-		setPorts(stub);
-		try {
-			expect(() => effectiveProfile()).toThrow(
-				/missing: fireModes, psychicPush, untrainedSkill, eliteAdvanceCost/,
-			);
-		} finally {
-			resetPorts();
-		}
+		const config: ConfigPort = {
+			homebrew: () => null,
+			profile: () => ({
+				id: "dh2-core",
+				messageFlagNamespace: "dark-heresy-2e",
+				rollCardTemplate: "",
+			}) as never,
+			originTraits: () => [],
+			packIds: () => ({ rolltables: null }),
+		};
+		expect(() => effectiveProfile(config)).toThrow(
+			/missing: fireModes, psychicPush, untrainedSkill, eliteAdvanceCost/,
+		);
 	});
 
 	test("a full RT profile passes the guard unchanged", () => {

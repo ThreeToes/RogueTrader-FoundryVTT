@@ -15,12 +15,13 @@
  *
  * The module is application-layer and Foundry-free: per the architecture
  * boundary (src/roguetrader/architecture.test.ts) application may not import
- * infrastructure's getPorts(), so every function takes the `Ports` value as a
- * parameter instead. Callers at the rules/presentation layers wire it with
- * getPorts().
+ * infrastructure's getPorts(), so every function takes the narrow port it
+ * needs (`ConfigPort` for the namespace/flag reader, `Chat` for the poster)
+ * as a parameter instead. Callers at the rules/presentation layers wire it
+ * with getPorts().
  */
 
-import type { Ports } from "./ports";
+import type { Chat, ConfigPort } from "./ports";
 
 // ---------------------------------------------------------------------------
 // Flag shapes (FFG-generic)
@@ -98,8 +99,8 @@ export type MessageFlags<N extends string = string> = {
 // ---------------------------------------------------------------------------
 
 /** The active chat-flag namespace, from the config port's profile. */
-export function messageFlagNamespace(ports: Ports): string {
-	const namespace = ports.config.profile().messageFlagNamespace;
+export function messageFlagNamespace(ports: ConfigPort): string {
+	const namespace = ports.profile().messageFlagNamespace;
 	// Bead w9sa.8: the port widens to the kernel profile plus OPTIONAL system
 	// branding, so a system that has not branded yet leaves this undefined. The
 	// flag machinery has no neutral namespace to fall back on — stamping flags
@@ -115,7 +116,7 @@ export function messageFlagNamespace(ports: Ports): string {
 
 /** Extract a system flag off a chat message (or flag payload). */
 export function readMessageFlag<T extends keyof MessageFlagPayload>(
-	ports: Ports,
+	ports: ConfigPort,
 	message: { flags?: Record<string, Record<string, unknown>> } | undefined,
 	flag: T,
 ): MessageFlagPayload[T] | undefined {
@@ -130,16 +131,16 @@ export function readMessageFlag<T extends keyof MessageFlagPayload>(
  * speaker + flags. The single shared tail of every roll pipeline.
  *
  * `rolls` (bead wvkd) is the evaluated dice the card reports, carried through
- * to `ports.chat.post` so the message becomes roll-type and Dice So Nice!
+ * to `Chat.post` so the message becomes roll-type and Dice So Nice!
  * animates it. Optional: a card with no dice to animate still posts.
  */
 export async function postCard(
-	ports: Ports,
+	chat: Chat,
 	actor: { uuid?: string },
 	template: string,
 	vars: Record<string, unknown>,
 	flags?: MessageFlags,
 	rolls?: readonly unknown[],
 ): Promise<{ id?: string } | undefined> {
-	return ports.chat.post(actor, template, vars, flags, rolls);
+	return chat.post(actor, template, vars, flags, rolls);
 }

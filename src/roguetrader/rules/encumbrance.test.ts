@@ -58,6 +58,12 @@ describe("resolveEncumbrance (book states, p268)", () => {
 		expect(out.percent).toBe(120);
 	});
 
+	test("no lifting data is an explicit undefined, not a 0 proxy (bead 9j90)", () => {
+		// capacity === lifting must no longer imply "no lifting data"; explicit
+		// lifting 0 at capacity 56 means weight > 0 is past the lifting weight.
+		expect(resolveEncumbrance(57, 56, 0).state).toBe("over");
+	});
+
 	test("no capacity: ok with ratio 0 (advisory, never a gate)", () => {
 		const out = resolveEncumbrance(50, 0);
 		expect(out.state).toBe("ok");
@@ -161,8 +167,15 @@ describe("actorEncumbrance", () => {
 	test("manual capacity override wins over the table default", () => {
 		const out = actorEncumbrance([item(40)], 4 + 4, 30);
 		expect(out.capacity).toBe(30);
-		expect(out.state).toBe("over"); // above the manual cap the taker set
+		expect(out.state).toBe("encumbered"); // 40 > 30 but within lifting 112
 		expect(actorEncumbrance([item(25)], 4 + 4, 30).state).toBe("ok");
+	});
+
+	test("manual override keeps the encumbered band up to the table lifting (bead 9j90)", () => {
+		// Override 30 kg, lifting 112: encumbered between them, over above.
+		expect(actorEncumbrance([item(31)], 4 + 4, 30).state).toBe("encumbered");
+		expect(actorEncumbrance([item(112)], 4 + 4, 30).state).toBe("encumbered");
+		expect(actorEncumbrance([item(112.1)], 4 + 4, 30).state).toBe("over");
 	});
 
 	test("override 0 falls back to the table", () => {

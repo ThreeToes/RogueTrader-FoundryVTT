@@ -150,7 +150,9 @@ export const fearHandler: RollHandler<"fear"> = {
 			ports.notify.warn("ROLL.UNKNOWN_CHARACTERISTIC", { key: "wp" });
 			return null;
 		}
-		const immune = fearImmune(actor);
+		// Bead 4398: these read through the effect-kind registry now, so the
+		// Foundry actor is snapshotted into the read model first.
+		const immune = fearImmune(actorView(actor));
 		const sourceLabel = request.sourceName
 			? ` — ${ports.i18n.t("FEAR.SOURCE_PREFIX")} ${request.sourceName}`
 			: "";
@@ -193,9 +195,13 @@ export const fearHandler: RollHandler<"fear"> = {
 		// Unshakeable Faith (book p108: "may re-roll failed Fear Tests"): one
 		// automatic re-roll with the SAME modifier set, visibly noted; the
 		// re-roll's own outcome replaces the original (no second re-roll).
-		if (!outcome.success && !rerolled && fearReroll(request.actor)) {
+		// Bead nyns: ONE view for the after-hook — the re-roll gate and the
+		// rerun read the same snapshot instead of rebuilding the inventory into
+		// two views inside this one call chain.
+		const view = actorView(request.actor);
+		if (!outcome.success && !rerolled && fearReroll(view)) {
 			const reroll = await runTest(
-				actorView(request.actor),
+				view,
 				{
 					...prepared,
 					title: `${prepared.title} — ${ports.i18n.t("FEAR.REROLL_NOTE")}`,

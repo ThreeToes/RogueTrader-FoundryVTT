@@ -223,8 +223,11 @@ to confirm every call site supplies them.
 
 Session-earned map of where things live (beads fjw/yb6/r1k/bpd/ay0/g7k/tfk/9if):
 
-- **Effect kinds**: registry + handlers = `src/roguetrader/rules/talent-effects.ts`
-  (`talentEffectHandlers` seam, CONFIG-attached in `bootstrap/config.ts`); test-modifier
+- **Effect kinds**: core specs = `src/ffg/domain/effects/specs.ts` (every kind
+  the system ships registers ONCE there, with `labelKey` + channels + read);
+  module seam = `src/roguetrader/rules/talent-effects.ts` (`talentEffectHandlers`,
+  empty at core, CONFIG-attached in `bootstrap/config.ts` for module-authored
+  kinds); test-modifier
   collection = `rules/funnel.ts` (`collectTestModifiers`, contributor registry
   `testContributors`); damage pipeline = `rules/adapter.ts` +
   `collectTalentDamageEffects` (weapon-scoped since 2k5: the attacking weapon's
@@ -234,10 +237,12 @@ Session-earned map of where things live (beads fjw/yb6/r1k/bpd/ay0/g7k/tfk/9if):
   `SHARED_PARTIALS` in `src/roguetrader/sheet/partials.ts`), invoked from the
   five item data-tab templates (`data.hbs` / `armour-data.hbs` /
   `weapon-data.hbs` / `parts/talent-content.hbs` / `parts/trait-content.hbs`),
-  driven by `sheet/item/effect-actions.ts` (kind dropdowns from
-  `talentEffectHandlers.kinds()`).
-  **Rule of thumb**: new effect kind = register handler + (if roll-mechanic)
-  kernel/adapter support — never data-only.
+  driven by `sheet/item/effect-actions.ts` (kind dropdown from
+  `effectKinds.all()` — the spec registry alone; the handler-kind union
+  survives only in the schema choices, `data/item/effects.ts`).
+  **Rule of thumb**: new effect kind = one `effectKinds.register(...)` in
+  `specs.ts` + (if roll-mechanic) kernel/adapter support — never data-only
+  (`talentEffectHandlers.register` is the module-only seam, not a core step).
 - **Advancement** (g7k/ayw/clng): pure engine = `rules/advancement.ts` (ledger,
   derived rank, Table 2-2 thresholds, PRE_SPENT_BASELINE 4500); ledger on
   `Character.system.advances`; dialog = `sheet/actor/advancement-dialog.ts`

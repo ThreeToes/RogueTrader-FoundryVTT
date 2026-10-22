@@ -65,12 +65,9 @@ const {
 	resetModuleRuleProfilesForTests,
 } = await import("../rules/homebrew");
 const { rtCore } = await import("../../ffg/domain/system-profile");
-const { resetPorts, setPorts } = await import(
-	"../infrastructure/foundry/ports"
-);
 
 import { afterAll, afterEach, expect, test } from "bun:test";
-import type { Ports } from "../../ffg/application/ports";
+import type { ConfigPort } from "../../ffg/application/ports";
 
 /** The namespace exactly as `bootstrap/config.ts` leaves it after one init. */
 function registeredConfig(): Record<string, unknown> {
@@ -88,7 +85,6 @@ afterAll(() => {
 afterEach(() => {
 	resetModuleRuleProfilesForTests();
 	resetEffectiveProfileCacheForTests();
-	resetPorts();
 });
 
 test("init attaches registerRuleProfile beside the other extension points", () => {
@@ -113,17 +109,17 @@ test("a module registers through the namespace and the rules run its delta", () 
 			delta: { "test.critOnDouble": true, "criticals.maxSeverity": 8 },
 		}),
 	).toBe(true);
-	// The provider reads the two settings through the port; the world has no
-	// stored profile, so the module layer is the whole house rule.
-	setPorts({
-		config: {
-			homebrew: () => null,
-			profile: () => rtCore,
-			originTraits: () => [],
-			packIds: () => ({ rolltables: null }),
-		},
-	} as unknown as Ports);
-	const effective = effectiveProfile();
+	// The provider reads the two settings through the config port; the world
+	// has no stored profile, so the module layer is the whole house rule.
+	// Bead x4ly: the ConfigPort double is bound as the seam's argument —
+	// no `as unknown as Ports` cast, no setPorts global swap.
+	const config: ConfigPort = {
+		homebrew: () => null,
+		profile: () => rtCore,
+		originTraits: () => [],
+		packIds: () => ({ rolltables: null }),
+	};
+	const effective = effectiveProfile(config);
 	expect(effective.critOnDouble).toBe(true);
 	expect(effective.criticals?.maxSeverity).toBe(8);
 	// The app's read half sees exactly what the seam merged.

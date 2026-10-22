@@ -49,7 +49,7 @@ import {
 	ruleKnobs,
 	validateProfile,
 } from "../../ffg/domain/rule-knobs";
-
+import type { ConfigPort } from "../../ffg/application/ports";
 /**
  * The registry the rules validate and merge against (bead w9sa.2).
  *
@@ -66,8 +66,10 @@ function registryInForce(): readonly RuleKnob[] {
 	return ruleKnobs();
 }
 import type { Modifier } from "../../rules-engine/modifier";
-import type { TestContributor } from "../../ffg/application/funnel";
-import { getPorts } from "../infrastructure/foundry/ports";
+import {
+	contributorPorts,
+	type TestContributor,
+} from "../../ffg/application/funnel";
 
 /**
  * Decode the stored setting value into a delta candidate.
@@ -320,7 +322,10 @@ export function activeProfileDelta(
  *
  * Returns the base profile OBJECT ITSELF when there is nothing to merge, so
  * identity checks against the profile (sibling-module swaps, tests) keep
- * working. Reads `ports.config.homebrew()` — the seam READ; the provider that
+ * working. Takes the system's `ConfigPort` (bead x4ly): the caller binds it —
+ * RT's presentation threads the port it already holds, and a second system
+ * binds its own — instead of this rules module reading the global `getPorts()`.
+ * The provider that 
  * fills it is attached at init by `bootstrap/config.ts`. The MODULE layer comes
  * from the registry below (bead wxut.6): a module registers at its own init,
  * which is not a settings read, so it is composed here rather than in the
@@ -375,8 +380,7 @@ function requireRtSystemProfile(profile: unknown): SystemProfile {
 	);
 }
 
-export function effectiveProfile(): SystemProfile {
-	const ports = getPorts();
+export function effectiveProfile(config: ConfigPort): SystemProfile {
 	// Bead w9sa.8: the config port widens to the kernel profile plus OPTIONAL
 	// system branding, so it no longer PROMISES RT's creation/advancement
 	// constants. This module is RT's OWN homebrew layer and the profile it
@@ -385,7 +389,7 @@ export function effectiveProfile(): SystemProfile {
 	// the RT system states its own precondition here instead of letting those
 	// reads resolve to undefined. A sibling system supplies its profile through
 	// the same seam and owns its own homebrew layer.
-	const widened = ports.config.profile();
+	const widened = config.profile();
 	// Bead w9sa.8 widens the seam to the kernel profile plus OPTIONAL system
 	// branding, so it no longer PROMISES RT's creation/advancement constants.
 	// This module is RT's OWN homebrew layer, and the profile it returns is read
@@ -396,7 +400,7 @@ export function effectiveProfile(): SystemProfile {
 	// what is missing. A sibling system supplying its own profile through the
 	// same seam owns its own homebrew layer and never reaches this code.
 	const base = requireRtSystemProfile(widened);
-	const stored = ports.config.homebrew();
+	const stored = config.homebrew();
 	// Part of the memo key (bead w9sa.2): the registry decides which knobs a
 	// delta HAS, so swapping it must invalidate the cached profile.
 	const registration: RuleKnobRegistry = ruleKnobRegistry();
@@ -496,9 +500,12 @@ export const attackContextContributor: TestContributor = (_view, context) => {
 	if (context.kind !== "attack") return [];
 	// Bead dfdv: Modifier.label is documented as a localized label, so the
 	// contributor resolves its keys through the i18n port (same keys the
-	// sibling weapon contributor and lang/en.json use).
-	const ports = getPorts();
-	const profile = effectiveProfile();
+	// sibling weapon contributor and lang/en.json use). Bead x4ly: the ports
+	// ride the context — threaded by the pipeline seams — instead of a global
+	// getPorts() read, so a second system binds its own config + i18n here.
+	const ports = contributorPorts(context);
+	if (ports === null) return [];
+	const profile = effectiveProfile(ports.config);
 	const mods: Modifier[] = [];
 	if (context.fireMode === "burst") {
 		// Bead cmio.2: RT's unsigned burst bonus is the shared FireModes shape's

@@ -17,6 +17,8 @@
  * - "Snap out of it": Willpower Test at the beginning of his next Turn
  *   (p296).
  */
+import { collectEffects } from "../../ffg/domain/effects";
+import type { ActorView } from "../../ffg/domain/model/actor";
 import type { Modifier } from "../../rules-engine/modifier";
 
 /** Table 10-3 ladder: the test modifier for a given Fear rating. */
@@ -124,44 +126,36 @@ export function shockOutcome(shockRoll: number): ShockRow {
 	return SHOCK_TABLE[SHOCK_TABLE.length - 1];
 }
 
-/** ItemLike shape for the innate-item effect readers below. */
-interface FearItemLike {
-	name?: string;
-	type?: string;
-	system?: {
-		effects?: Array<{ kind?: string; value?: number }>;
-	};
-}
-
 /**
- * Whether ANY owned talent carries the given fear effect kind (bead jpbm).
- * Talents and traits are both innate/known items, but the fear-immunity and
- * fear-reroll kinds are talent-consumed (book: Fearless/Unshakeable Faith
- * are talents); traits do not carry them.
+ * Whether ANY owned talent carries the given fear effect kind (bead jpbm;
+ * collected through the ONE effect walk, not a second items walk — bead
+ * 4398). Talents and traits are both innate/known items, but the
+ * fear-immunity and fear-reroll kinds are talent-consumed (book:
+ * Fearless/Unshakeable Faith are talents); traits do not carry them.
+ * Registry specs carry no `applies`, so the rows are collected
+ * guard-blind, exactly as the old raw walk behaved.
  */
-function hasTalentFearEffect(actor: unknown, kind: string): boolean {
-	const items = (actor as { items?: FearItemLike[] }).items ?? [];
-	return items.some((item) =>
-		item.type === "talent"
-			? (item.system?.effects ?? []).some((e) => e.kind === kind)
-			: false,
-	);
+function hasTalentFearEffect(view: ActorView, kind: string): boolean {
+	return collectEffects(view, {
+		channel: "roll-mechanic",
+		itemWhere: (item) => item.type === "talent",
+	}).some((hit) => hit.spec.kind === kind);
 }
 
 /**
  * Whether the actor is immune to Fear (bead jpbm): a talent effect with kind
  * "fear-immunity" (e.g. the Fearless talent).
  */
-export function fearImmune(actor: unknown): boolean {
-	return hasTalentFearEffect(actor, "fear-immunity");
+export function fearImmune(view: ActorView): boolean {
+	return hasTalentFearEffect(view, "fear-immunity");
 }
 
 /**
  * Whether the actor may re-roll failed Fear Tests (Unshakeable Faith, book
  * p108: "may re-roll failed Fear Tests"): kind "fear-reroll".
  */
-export function fearReroll(actor: unknown): boolean {
-	return hasTalentFearEffect(actor, "fear-reroll");
+export function fearReroll(view: ActorView): boolean {
+	return hasTalentFearEffect(view, "fear-reroll");
 }
 
 /**

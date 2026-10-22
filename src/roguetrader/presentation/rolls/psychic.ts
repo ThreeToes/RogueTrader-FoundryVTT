@@ -101,7 +101,7 @@ export const psychicHandler: RollHandler<"psychic"> = {
 		// the kernel union's "levels" member — the profile field is RT's own
 		// member of that union, and DH2e's rating-over-base member is not
 		// readable through this type (a compile error, never a split read).
-		const profile = effectiveProfile();
+		const profile = effectiveProfile(ports.config);
 		const push = profile.psychicPush;
 		const rawCap = casting.sanctioned
 			? push.caps.sanctioned

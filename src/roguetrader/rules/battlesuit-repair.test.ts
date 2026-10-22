@@ -53,13 +53,19 @@ const {
 	foundryPorts,
 	setPorts,
 	resetPorts,
-} = await import("../../ffg/infrastructure/foundry/ports");
+} = await import("../../test-helpers/ports");
+const { rtCore } = await import("../../ffg/domain/system-profile");
 const { NO_CONTENT_PORT } = await import(
 	"../../ffg/application/ports"
 );
 const { actorFixture } = await import("../../test-helpers/actor-fixture");
 
-import type { Ports } from "../../ffg/application/ports";
+import type {
+	ConfigPort,
+	I18n,
+	Notify,
+	Ports,
+} from "../../ffg/application/ports";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 
 afterAll(() => {
@@ -87,6 +93,47 @@ const techUseSkill = {
 	uuid: "Item.tu1",
 	system: { characteristic: "int", ladder: 1 },
 };
+
+/**
+ * Bead x4ly: the driver's notify/i18n/config ports are caller-bound, so these
+ * doubles are threaded straight into `rollBattlesuitRepair` (the setPorts
+ * swap stays only for the roll pipeline the driver re-enters through
+ * rollSkillOutcome → performRoll → runTest, which still reads the global).
+ *
+ * `repairBattlesuitCriticals` in criticals.test.ts covers the actor-write path;
+ * these keep the driver-level assertions (tCalls/warnings/infos) pinned to the
+ * PORT-bound stubs.
+ */
+type RepairPorts = {
+	notify: Notify;
+	i18n: I18n;
+	config: ConfigPort;
+};
+function repairPorts(): RepairPorts {
+	return {
+		notify: {
+			warn: (key: string) => {
+				warnings.push(key);
+			},
+			info: (key: string) => {
+				infos.push(key);
+			},
+			error: () => undefined,
+		},
+		i18n: {
+			t: (key: string) => {
+				tCalls.push(key);
+				return `[i18n] ${key}`;
+			},
+		},
+		config: {
+			homebrew: () => null,
+			profile: () => rtCore,
+			originTraits: () => [],
+			packIds: () => ({ rolltables: null }),
+		},
+	};
+}
 
 function setup() {
 	setPorts({
@@ -142,7 +189,7 @@ describe("rollBattlesuitRepair (bead ks3k / Tau Character Guide p31)", () => {
 			items: [techUseSkill],
 			writable: true,
 		});
-		const result = await rollBattlesuitRepair(actor);
+		const result = await rollBattlesuitRepair(actor, repairPorts());
 		if (!result) throw new Error("repair returned null in the fixture");
 		// The dice rolled and a card went out.
 		expect(rollCalls).toEqual(["1d100"]);
@@ -191,7 +238,7 @@ describe("rollBattlesuitRepair (bead ks3k / Tau Character Guide p31)", () => {
 				text: "A real wound.",
 			},
 		];
-		const result = await rollBattlesuitRepair(actor);
+		const result = await rollBattlesuitRepair(actor, repairPorts());
 		// The stubbed d100 is 10 and the Hard (−20) is in the funnel
 		// (asserted above), so target 55 − 20 = 35 → 25 margin → 3 Degrees
 		// of Success. 1 + degrees effects removable, but only the battlesuit
@@ -204,6 +251,7 @@ describe("rollBattlesuitRepair (bead ks3k / Tau Character Guide p31)", () => {
 		setup();
 		const result = await rollBattlesuitRepair(
 			actorFixture({ items: [], writable: true }),
+			repairPorts(),
 		);
 		expect(warnings).toEqual(["CRITICAL.REPAIR_NO_SKILL"]);
 		expect(result).toBeNull();

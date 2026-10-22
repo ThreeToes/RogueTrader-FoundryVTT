@@ -19,11 +19,12 @@ import { warnPackDocMissing } from "./actor/grant-helpers";
 
 /**
  * The OPEN layer of the pack-doc link library (epic 61pk, bead n2b2):
- * this module pairs the pure resolvers/anchor helper (sheet/pack-doc-links.ts,
- * Foundry-free) with the Foundry-coupled open path below — one import point
- * for adopters, no duplicated resolver definitions. Adopters that need only
- * resolution (no opening, e.g. pure view models) import pack-doc-links
- * directly; adopters that open sheets import here.
+ * this module pairs the pure resolvers/anchor helper (the library, hoisted to
+ * src/ffg/application/pack-doc-links.ts by bead rflq — Foundry-free) with the
+ * Foundry-coupled open path below — one import point for adopters, no
+ * duplicated resolver definitions. Adopters that need only resolution (no
+ * opening, e.g. pure view models) import the sheet/pack-doc-links re-export
+ * shim directly; adopters that open sheets import here.
  */
 export {
 	type DocLinkRowLike,

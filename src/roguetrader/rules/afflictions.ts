@@ -20,6 +20,7 @@
 import type { ActorView } from "../../ffg/domain/model/actor";
 import { collectEffects } from "../../ffg/domain/effects";
 import type { EffectData } from "../../ffg/domain/model/effect";
+import { HandlerRegistry } from "../../ffg/domain/registry";
 import { type MutationRow, rollRavagedBody } from "../data/item/mutation-roll";
 
 /** One trait/talent/skill grant carried by an owned affliction. */
@@ -194,18 +195,62 @@ async function mentalRegressive(
 	return { effects: out, grants: [] };
 }
 
-const AFFLICTION_PROCEDURE_HANDLERS: Record<
+/**
+ * One registry entry per affliction procedure (bead raf3): label AND behaviour
+ * together, replacing the old split where the label-only EntryRegistry lived
+ * in registry.ts while this module kept a plain Record of handlers — two maps
+ * with no guard asserting key parity.
+ *
+ * This is a HandlerRegistry (the domain idiom, bead 00z5: reference de-dupe
+ * plus off/clear) rather than an EntryRegistry, so modules extending the
+ * vocabulary must supply a handler — a label-only registration would be a
+ * printed rule with no implementation, which the old shape allowed to drift.
+ * Packs name procedures in `system.procedure` as plain strings; the keys here
+ * are the pack-data vocabulary and must never be renamed.
+ */
+export interface AfflictionProcedure {
+	/** i18n label key (PROCEDURE.*) for the schema `choices` display. */
+	labelKey: string;
+	/** Run the acquisition-time roll exactly once. */
+	run: (context: ProcedureContext) => Promise<ProcedureOutcome>;
+}
+
+export const afflictionProcedures = new HandlerRegistry<
 	string,
-	(context: ProcedureContext) => Promise<ProcedureOutcome>
-> = {
-	"degenerate-mind": degenerateMind,
-	"mental-regressive": mentalRegressive,
-	"ravaged-body": ravagedBody,
-};
+	AfflictionProcedure
+>()
+	.on("degenerate-mind", {
+		labelKey: "PROCEDURE.DEGENERATE_MIND",
+		run: degenerateMind,
+	})
+	.on("mental-regressive", {
+		labelKey: "PROCEDURE.MENTAL_REGRESSIVE",
+		run: mentalRegressive,
+	})
+	// Ravaged Body (Core Rulebook p369) rolls 1d5 further mutations instead of
+	// settling rows on itself, so its handler returns grant names (kam1).
+	.on("ravaged-body", {
+		labelKey: "PROCEDURE.RAVAGED_BODY",
+		run: ravagedBody,
+	});
+
+/**
+ * The schema `choices` shape for `Mutation.system.procedure`: procedure key
+ * -> i18n label key. Evaluated at DataModel schema build time (init), so
+ * module registrations made during init are captured like any other seed.
+ */
+export function afflictionProcedureChoices(): Record<string, string> {
+	return Object.fromEntries(
+		afflictionProcedures.keys().map((key) => [
+			key,
+			afflictionProcedures.for(key)[0].labelKey,
+		]),
+	);
+}
 
 /** Procedure keys with an implementation (test hook). */
 export function afflictionProcedureNames(): string[] {
-	return Object.keys(AFFLICTION_PROCEDURE_HANDLERS);
+	return afflictionProcedures.keys();
 }
 
 /**
@@ -221,11 +266,11 @@ export async function applyAfflictionProcedure(
 ): Promise<ProcedureOutcome> {
 	const key = (procedure ?? "").trim();
 	if (!key) return { effects: [], grants: [] };
-	const handler = AFFLICTION_PROCEDURE_HANDLERS[key];
-	if (!handler) {
+	const entry = afflictionProcedures.for(key)[0];
+	if (!entry) {
 		throw new Error(`Unknown affliction procedure "${key}"`);
 	}
-	return handler(context);
+	return entry.run(context);
 }
 export async function resolveEffectValues(
 	effects: EffectData[] | undefined,

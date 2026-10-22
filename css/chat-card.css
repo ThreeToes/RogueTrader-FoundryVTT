@@ -1,0 +1,292 @@
+/* Chat cards: the non-roll chat surface (bead 3j3b).
+   chat-roll.css styles the roll-card anatomy; this file covers the rest —
+   critical, damage, initiative extras, the psychic one-line cards, the ship
+   cards' alarm notes — with the same token vocabulary (success/failure/alarm
+   ink semantics, --rt-chat-note note anatomy). Token colour, emphasis and
+   spacing only; no template surgery, no layout redesign. Loaded after
+   chat-roll.css so any per-card refinement keeps winning. */
+
+/* ---- Shared chat push-button anatomy ----
+   Chat messages carry no rt-component root, so the .rtk-button base in
+   40k-components.css never fires here; the chat action buttons mirror it
+   (1px border token, radius, fs-md, background: none). rt-ammo-decrement
+   keeps its own compact rule in chat-roll.css. */
+.rogue-trader.chat .rt-apply-condition,
+.rogue-trader.chat .rt-toxic-test,
+.rogue-trader.chat .apply-damage,
+.rogue-trader.chat .rt-roll-damage {
+	border: 1px solid var(--rt-border-strong);
+	border-radius: var(--rt-radius);
+	padding: 1px 8px;
+	font-size: var(--rt-fs-md);
+	background: none;
+	cursor: pointer;
+}
+
+.rogue-trader.chat .rt-apply-condition:hover,
+.rogue-trader.chat .rt-toxic-test:hover,
+.rogue-trader.chat .apply-damage:hover,
+.rogue-trader.chat .rt-roll-damage:hover {
+	color: var(--rt-gold-soft);
+}
+
+/* A consumed damage card: the render hook (presentation/
+   damage-card-state.ts) flips the Apply button disabled from the
+   damageApply flag, so a re-rendered card stops advertising a click that is
+   a silently ignored no-op. Same greyed treatment as the sheet disabled
+   chips (sheet-starship.css). */
+.rogue-trader.chat .apply-damage:disabled {
+	color: var(--rt-muted);
+	border-color: var(--rt-border);
+	background: none;
+	cursor: not-allowed;
+}
+
+.rogue-trader.chat .apply-damage:hover:disabled {
+	color: var(--rt-muted);
+}
+
+/* The .centerBtn strip holds the one-click apply/test buttons on the roll,
+   damage and critical cards — its own name is the layout. */
+.rogue-trader.chat .centerBtn {
+	text-align: center;
+	margin: 4px 0 2px;
+}
+
+/* ---- Critical card (root .rogue-trader.chat.critical) ---- */
+.rogue-trader.chat.critical .critical-body {
+	margin-top: 4px;
+}
+
+.rogue-trader.chat.critical p.critical-damage-taken {
+	margin: 4px 0;
+	font-size: var(--rt-fs-lg);
+}
+
+.rogue-trader.chat.critical .wounds-applied {
+	font-weight: bold;
+}
+
+/* The excess that ran past 0 Wounds is what became Critical Damage — the
+   alarm ink, same semantics as the roll cards' failure value. */
+.rogue-trader.chat.critical .critical-excess {
+	font-weight: bold;
+	color: var(--rt-danger-alarm);
+}
+
+/* The shared book-location/type tags (critical + damage cards). */
+.rogue-trader.chat .location-label,
+.rogue-trader.chat .damage-type {
+	color: var(--rt-muted);
+}
+
+/* The battlesuit override note — the j8jg note anatomy, informational. */
+.rogue-trader.chat.critical p.critical-override {
+	margin: 4px 0 0;
+	font-size: var(--rt-fs-lg);
+	color: var(--rt-chat-note);
+	font-style: italic;
+}
+
+.rogue-trader.chat.critical p.critical-warning {
+	margin: 4px 0 0;
+	font-size: var(--rt-fs-lg);
+	color: var(--rt-warn);
+	font-weight: bold;
+}
+
+.rogue-trader.chat.critical ul.critical-effects {
+	margin: 6px 0 0;
+	padding-left: 1.2em;
+}
+
+.rogue-trader.chat.critical li.critical-effect {
+	margin-bottom: 4px;
+}
+
+/* Gold small-caps source label over muted roll + amber severity on each
+   row; the effect text itself is note ink. */
+.rogue-trader.chat.critical .critical-source {
+	color: var(--rt-gold);
+	font-size: var(--rt-fs-sm);
+	font-weight: bold;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+.rogue-trader.chat.critical .critical-roll {
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+}
+
+.rogue-trader.chat.critical .critical-severity {
+	color: var(--rt-warn);
+	font-size: var(--rt-fs-sm);
+	font-weight: bold;
+}
+
+.rogue-trader.chat.critical p.critical-text {
+	margin: 2px 0 0;
+	font-size: var(--rt-fs-lg);
+	color: var(--rt-chat-note);
+}
+
+.rogue-trader.chat.critical .condition-suggest {
+	margin-top: 6px;
+}
+
+/* ---- Damage card (root .rogue-trader.chat.damage) ----
+   .modifier-breakdown/.quality-notes/.ordnance-usage and their children are
+   already in chat-roll.css. */
+.rogue-trader.chat.damage .damage-body {
+	margin-top: 4px;
+}
+
+.rogue-trader.chat.damage p.damage-location {
+	margin: 4px 0;
+}
+
+/* The alternatives hint tag — same subdued dotted-link treatment as the
+   adv-doc-link, with a help cursor (it carries a data-tooltip). */
+.rogue-trader.chat.damage .damage-type-alternatives {
+	color: var(--rt-muted);
+	cursor: help;
+	text-decoration: underline dotted;
+	text-underline-offset: 2px;
+}
+
+.rogue-trader.chat.damage .damage-total {
+	font-weight: bold;
+}
+
+/* The wounds the target actually loses — the alarm value of this card. */
+.rogue-trader.chat.damage .damage-wounds {
+	color: var(--rt-danger-alarm);
+}
+
+.rogue-trader.chat.damage p.righteous-fury {
+	margin: 4px 0 0;
+	color: var(--rt-danger-alarm);
+	font-weight: bold;
+}
+
+.rogue-trader.chat.damage .fired-name {
+	font-style: italic;
+}
+
+/* Toxic quality prompt — note ink; the test button rides the shared chat
+   push-button anatomy above. */
+.rogue-trader.chat.damage .toxic-prompt {
+	margin-top: 4px;
+}
+
+.rogue-trader.chat.damage p.toxic-note {
+	margin: 0 0 2px;
+	font-size: var(--rt-fs-lg);
+	color: var(--rt-chat-note);
+}
+
+.rogue-trader.chat.damage p.damage-miss {
+	margin: 4px 0 0;
+	font-size: var(--rt-fs-lg);
+	color: var(--rt-muted);
+	font-style: italic;
+}
+
+/* The apply-hint note — same three-declaration note anatomy as the j8jg
+   list in chat-roll.css (kept here so chat-roll.css stays untouched). */
+.rogue-trader.chat.damage p.damage-note {
+	margin: 4px 0 0;
+	font-size: var(--rt-fs-lg);
+	color: var(--rt-chat-note);
+}
+
+/* ---- Initiative card (root .rogue-trader.chat.roll initiative) ----
+   The card is a .chat.roll root, so chat-roll.css already supplies the
+   roll-summary/target/result, note and boarding-banner anatomy; these are
+   the card's own extras. */
+.rogue-trader.chat.initiative h3.title {
+	margin: 0 0 6px;
+	color: var(--rt-gold);
+}
+
+/* The target label is a bare <label> element here, not a .label span. */
+.rogue-trader.chat.initiative .roll-target label {
+	font-size: var(--rt-fs-md);
+	color: var(--rt-muted);
+}
+
+/* Source row showing the die + d10 note under the value. */
+.rogue-trader.chat .roll-dice-note {
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-muted);
+}
+
+/* Unassigned = the actor is not in the combat tracker: muted, not alarm. */
+.rogue-trader.chat .roll-result.unassigned .value {
+	color: var(--rt-muted);
+}
+
+.rogue-trader.chat .roll-analysis {
+	margin-top: 6px;
+}
+
+/* Same note anatomy as chat-roll.css's modifier-breakdown list, as a
+   label/value row per contributor; negatives take the deep danger ink. */
+.rogue-trader.chat .analysis-row {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	font-size: var(--rt-fs-lg);
+	color: var(--rt-chat-note);
+}
+
+.rogue-trader.chat .analysis-row .value {
+	font-weight: bold;
+}
+
+.rogue-trader.chat .analysis-row.negative .value {
+	color: var(--rt-danger-deep);
+}
+
+.rogue-trader.chat.initiative p.hint {
+	margin: 4px 0 0;
+	font-size: var(--rt-fs-lg);
+	color: var(--rt-muted);
+	font-style: italic;
+}
+
+/* ---- Psychic one-line cards (bead 3j3b) ----
+   These three templates carry no .chat root — they key on their own root
+   class (power-damage, power-corruption, phenomena-roll). */
+.rogue-trader.power-corruption p,
+.rogue-trader.power-damage p,
+.rogue-trader.phenomena-roll p {
+	margin: 0 0 2px;
+}
+
+.rogue-trader.power-corruption strong,
+.rogue-trader.power-damage strong {
+	color: var(--rt-danger-alarm);
+}
+
+.rogue-trader.power-damage h3 {
+	margin: 0 0 2px;
+	color: var(--rt-gold);
+	font-size: var(--rt-fs-lg);
+}
+
+/* The phenomena occurrence is the amber warning state. */
+.rogue-trader.phenomena-roll h3 {
+	margin: 0 0 2px;
+	color: var(--rt-warn);
+	font-size: var(--rt-fs-lg);
+}
+
+/* ---- Ship cards' critical note (salvo / ordnance / rout) ----
+   The ⚠ alarm ink, same semantics as the boarding banner in chat-roll.css. */
+.rogue-trader.chat p.critical {
+	margin: 4px 0;
+	color: var(--rt-danger-alarm);
+	font-weight: bold;
+}

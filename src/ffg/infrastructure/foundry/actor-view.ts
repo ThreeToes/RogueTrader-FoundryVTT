@@ -8,6 +8,7 @@
  * Built once per rules operation (per roll) — cheap and always fresh.
  */
 
+import { messageFlagNamespace } from "../../../ffg/application/chat-flags";
 import type {
 	ActorSystemView,
 	ActorView,
@@ -20,7 +21,6 @@ import type {
 	VehicleSystemView,
 } from "../../../ffg/domain/model/actor";
 import type { LooseActor } from "../../../ffg/domain/model/build";
-import { messageFlagNamespace } from "../../../ffg/application/chat-flags";
 import { buildActorView } from "../../../ffg/domain/model/build";
 import { getPorts } from "./ports";
 
@@ -52,7 +52,7 @@ export function actorView(
 	// here (this is the infrastructure layer that owns the ports), passed in so
 	// the domain mapping never hardcodes a system id.
 	const loose = actor as LooseActor;
-	const options = { flagNamespace: messageFlagNamespace(getPorts()) };
+	const options = { flagNamespace: messageFlagNamespace(getPorts().config) };
 	// Per-actor.type discrimination (bead l2wz): each family instantiates the
 	// family's system view, so a ship never claims character fields and a
 	// character never claims ship fields. The type strings mirror the registry

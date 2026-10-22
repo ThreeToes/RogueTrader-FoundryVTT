@@ -21,7 +21,7 @@ import { nested, packSystem, str } from "../data/pack-fields";
 import {
 	type PackDocAnchor,
 	OPEN_PACK_DOC_ACTION,
-} from "../sheet/pack-doc-links";
+} from "../../ffg/application/pack-doc-links";
 import { TEMPLATE_ROOT } from "../../ffg/domain/template-root";
 
 // ------------------------------------------------------------------ the catalog

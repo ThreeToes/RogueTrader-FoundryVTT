@@ -11,9 +11,14 @@
  * weapons, or the Swift Attack or Lightning Attack talent."
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { resetPorts, setPorts } from "../../ffg/infrastructure/foundry/ports";
-import type { Ports } from "../../ffg/application/ports";
 import {
+	foundryPorts,
+	resetPorts,
+	setPorts,
+} from "../../test-helpers/ports";
+import {
+	ACTION_LOOKUP_TEMPLATE,
+	type ActionEntry,
 	actionAvailable,
 	actionCapabilities,
 	actionCostParts,
@@ -21,13 +26,11 @@ import {
 	actionEntryFromDoc,
 	actionLookupCardVars,
 	actionRollCardVars,
-	prereqKind,
-	setActionCatalog,
 	ensureActionCatalog,
 	getActionCatalog,
 	postActionLookupCard,
-	ACTION_LOOKUP_TEMPLATE,
-	type ActionEntry,
+	prereqKind,
+	setActionCatalog,
 } from "./actions";
 
 /**
@@ -332,8 +335,11 @@ describe("the lookup card (lookup dispatch, fake ports)", () => {
 
 	test("postActionLookupCard posts the lookup template through the chat port", async () => {
 		const posted: Array<{ template: string; vars: unknown }> = [];
+		// Full Ports via the production base; only the chat post is exercised.
 		setPorts({
+			...foundryPorts,
 			chat: {
+				...foundryPorts.chat,
 				async post(
 					_actor: unknown,
 					template: string,
@@ -343,7 +349,7 @@ describe("the lookup card (lookup dispatch, fake ports)", () => {
 					return { id: "one" };
 				},
 			},
-		} as unknown as Ports);
+		});
 		await postActionLookupCard({
 			actor: { uuid: "Actor.abc" },
 			entry: entry("Aim"),

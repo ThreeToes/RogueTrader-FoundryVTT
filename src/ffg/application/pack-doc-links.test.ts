@@ -7,6 +7,9 @@
  * Plus the library additions: docLinkUuid's type-scoping, packDocAnchor's
  * anchor payload, and the adoption guard that the advancement consumers
  * import from the library (no local copies may return).
+ *
+ * The library lives in the application layer as of bead rflq; the adoption
+ * guard additionally pins the sheet shim as a pure re-export over it.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -19,7 +22,7 @@ import {
 	OPEN_PACK_DOC_ACTION,
 	type PackDocLike,
 } from "./pack-doc-links";
-import type { AdvanceRowLike } from "../rules/advancement";
+import type { AdvanceRowLike } from "../../roguetrader/rules/advancement";
 
 /** Row builder, verbatim from the advancement view-model tests (the spec). */
 const row = (over: Partial<AdvanceRowLike> = {}): AdvanceRowLike => ({
@@ -207,7 +210,7 @@ describe("pack-doc links — packDocAnchor (the one-helper-call adoption surface
 
 // ---------------------------------------------------------------- adoption guard
 
-describe("pack-doc links — library adoption guard (bead n2b2)", () => {
+describe("pack-doc links — library adoption guard (bead n2b2; rflq layering)", () => {
 	const view = readFileSync(
 		"src/roguetrader/sheet/actor/advancement-view-model.ts",
 		"utf8",
@@ -255,7 +258,7 @@ describe("pack-doc links — library adoption guard (bead n2b2)", () => {
 
 	test("the library module stays Foundry-free (no open path duplicated into it)", () => {
 		const library = readFileSync(
-			"src/roguetrader/sheet/pack-doc-links.ts",
+			"src/ffg/application/pack-doc-links.ts",
 			"utf8",
 		);
 		// Definitions only — the doc comment may reference the open path.
@@ -264,5 +267,15 @@ describe("pack-doc links — library adoption guard (bead n2b2)", () => {
 		);
 		expect(library).not.toContain("getPorts");
 		expect(library).not.toContain("game.");
+	});
+
+	test("the sheet shim is a pure re-export over the application library (bead rflq)", () => {
+		const shim = readFileSync(
+			"src/roguetrader/sheet/pack-doc-links.ts",
+			"utf8",
+		);
+		expect(shim).toContain('from "../../ffg/application/pack-doc-links"');
+		// A local definition in the shim would fork the library surface.
+		expect(shim).not.toMatch(/export (async )?function |export const |export interface /);
 	});
 });

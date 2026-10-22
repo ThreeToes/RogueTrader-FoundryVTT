@@ -49,7 +49,7 @@ const { shipDetectionBonus, shipBoarded } = await import(
 	"../presentation/rolls/initiative"
 );
 const { foundryPorts, resetPorts, setPorts } = await import(
-	"../../ffg/infrastructure/foundry/ports"
+	"../../test-helpers/ports"
 );
 const { TestDialog } = await import("./test-dialog");
 

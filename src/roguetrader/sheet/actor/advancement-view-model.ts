@@ -354,6 +354,39 @@ export function buildAdvancementViewModel(
 	const progress: RankProgress = rankProgress(thresholds, spent);
 	const nameByKey = nameByKeyFromDocs(input.skillDocs, input.talentDocs);
 
+	// Bead nfe6: the ledger is indexed ONCE (O(rows + ledger), not the old
+	// O(rows x ledger) per-row filter/findIndex) into:
+	// - purchasesByKey — purchase counts, keyed type|key|rank;
+	// - characteristicPurchases — characteristic counts per characteristic key;
+	// - ledgerExactIndex — FIRST matching entry (the findIndex result this
+	//   replicates) keyed type|rank|key, for rows with a truthy key;
+	// - ledgerNameIndex — FIRST matching entry keyed type|rank|name, for
+	//   keyless rows (their match condition ignores the entry's key entirely,
+	//   so keyed entries are indexed here too).
+	// The typeof tag on rank keeps string/number ranks un-matched, exactly
+	// like the === comparisons this replaces.
+	const rankTag = (rank: number | string) => `${typeof rank}:${String(rank)}`;
+	const purchasesByKey = new Map<string, number>();
+	const characteristicPurchases = new Map<string, number>();
+	const ledgerExactIndex = new Map<string, number>();
+	const ledgerNameIndex = new Map<string, number>();
+	for (let index = 0; index < ledger.length; index += 1) {
+		const entry = ledger[index];
+		const rankPart = rankTag(entry.rank);
+		const purchaseKey = `${entry.type}|${String(entry.key)}|${rankPart}`;
+		purchasesByKey.set(purchaseKey, (purchasesByKey.get(purchaseKey) ?? 0) + 1);
+		if (entry.type === "characteristic" && entry.characteristic) {
+			characteristicPurchases.set(
+				entry.characteristic,
+				(characteristicPurchases.get(entry.characteristic) ?? 0) + 1,
+			);
+		}
+		const exactKey = `${entry.type}|${rankPart}|${String(entry.key)}`;
+		if (!ledgerExactIndex.has(exactKey)) ledgerExactIndex.set(exactKey, index);
+		const nameKey = `${entry.type}|${rankPart}|${String(entry.name)}`;
+		if (!ledgerNameIndex.has(nameKey)) ledgerNameIndex.set(nameKey, index);
+	}
+
 	// Characteristic scheme rows: next tier per characteristic; the ledger
 	// counts prior +5 purchases. Uppercased tier lang keys are computed here
 	// because the pack tiers are lowercase ("simple") and the lang keys are
@@ -362,10 +395,7 @@ export function buildAdvancementViewModel(
 	const characteristicRows: AdvancementCharacteristicVM[] =
 		CHARACTERISTIC_KEYS.map((key) => {
 			const scheme = input.career?.characteristicAdvances?.[key];
-			const purchased = ledger.filter(
-				(entry) =>
-					entry.type === "characteristic" && entry.characteristic === key,
-			).length;
+			const purchased = characteristicPurchases.get(key) ?? 0;
 			const next = scheme ? characteristicNextAdvance(scheme, purchased) : null;
 			return {
 				key,
@@ -395,8 +425,11 @@ export function buildAdvancementViewModel(
 		// Name-key resolution (dialog parity): verbatim name, else the pack
 		// name by key, else the raw key (careers carry 2.7k key-only rows).
 		const resolvedName = row.name || nameByKey[row.key] || row.key;
+		// Joined once (bead nfe6): the same text feeds the prereq evaluator AND
+		// the display field (it used to be computed twice per row).
+		const prereqText = prerequisites.filter(Boolean).join(", ");
 		const { unmet } = evaluatePrerequisites(
-			parsePrerequisites(prerequisites.filter(Boolean).join(", ")),
+			parsePrerequisites(prereqText),
 			prereqSnapshot,
 		);
 		return {
@@ -404,25 +437,23 @@ export function buildAdvancementViewModel(
 			prerequisites,
 			displayName: resolvedName,
 			name: resolvedName, // template compatibility: rendered + data-name
-			purchased: ledger.filter(
-				(entry) =>
-					entry.type === row.type &&
-					entry.key === row.key &&
-					entry.rank === row.rank,
-			).length,
+			purchased:
+				purchasesByKey.get(
+					`${row.type}|${String(row.key)}|${rankTag(row.rank)}`,
+				) ?? 0,
 			remaining: multiplierRemaining(row, ledger),
 			affordable: row.cost <= pool,
-			prereqText: prerequisites.filter(Boolean).join(", "),
+			prereqText,
 			prereqList: prerequisites.join("|"),
 			unmetPrereqs: unmet,
 			sourceName: (row as { sourceName?: string }).sourceName,
-			ledgerIndex: ledger.findIndex(
-				(entry) =>
-					entry.type === row.type &&
-					entry.rank === row.rank &&
-					((row.key && entry.key === row.key) ||
-						(!row.key && entry.name === row.name)),
-			),
+			ledgerIndex: row.key
+				? (ledgerExactIndex.get(
+						`${row.type}|${rankTag(row.rank)}|${String(row.key)}`,
+					) ?? -1)
+				: (ledgerNameIndex.get(
+						`${row.type}|${rankTag(row.rank)}|${String(row.name)}`,
+					) ?? -1),
 			benefitTooltip:
 				row.type === "talent" ? benefitTooltip(row, input.talentDocs) : "",
 			uuid: docLinkUuid(row, input.skillDocs, input.talentDocs),

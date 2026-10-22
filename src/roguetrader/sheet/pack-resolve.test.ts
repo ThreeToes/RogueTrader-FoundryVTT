@@ -23,7 +23,14 @@ import {
 	resetPorts,
 	setPorts,
 } from "../infrastructure/foundry/ports";
-import { getPackDocuments, resolvePackDocument } from "./pack-resolve";
+import {
+	// Bead pwbr: the memoized fetch layer the per-render call sites route
+	// through, now serving the per-render sheet sites too.
+	characterOptionDocsOnce,
+	getPackDocuments,
+	packDocsOnce,
+	resolvePackDocument,
+} from "./pack-resolve";
 
 const originalWarn = console.warn;
 let warned = 0;
@@ -98,5 +105,71 @@ describe("getPackDocuments reads the ContentPort (bead p7o5)", () => {
 		expect(await getPackDocuments("rogue-trader.missing")).toEqual([]);
 		console.warn = originalWarn;
 		expect(warned).toBe(1);
+	});
+});
+
+describe("packDocsOnce / characterOptionDocsOnce (bead pwbr)", () => {
+	test("characterOptionDocsOnce filters one type and fetches the pack ONCE across awaited calls", async () => {
+		const fetched: string[] = [];
+		setPorts({
+			...foundryPorts,
+			content: {
+				...NO_CONTENT_PORT,
+				documentsOrNull: async (packId: string) => {
+					fetched.push(packId);
+					return [
+						{ type: "pwbr-talent", name: "Smite" },
+						{ type: "skill", name: "Awareness" },
+						{ type: "pwbr-talent", name: "Warp Speed" },
+					];
+				},
+			},
+		});
+		const talents = (await characterOptionDocsOnce("pwbr-talent")) as Array<{
+			name?: string;
+		}>;
+		// Same type twice -> the memoized fetch serves BOTH callers.
+		const again = await characterOptionDocsOnce("pwbr-talent");
+		expect(talents.map((d) => d.name)).toEqual(["Smite", "Warp Speed"]);
+		expect(again).toEqual(talents);
+		expect(fetched).toEqual(["rogue-trader.character-options"]);
+	});
+
+	test("a REJECTED memoized fetch is evicted, so the next caller retries", async () => {
+		let attempt = 0;
+		setPorts({
+			...foundryPorts,
+			content: {
+				...NO_CONTENT_PORT,
+				documentsOrNull: async () => {
+					attempt += 1;
+					if (attempt === 1) throw new Error("pack boom");
+					return [{ type: "pwbr-retry", name: "Dodge" }];
+				},
+			},
+		});
+		await expect(characterOptionDocsOnce("pwbr-retry")).rejects.toThrow(
+			"pack boom",
+		);
+		expect(await characterOptionDocsOnce("pwbr-retry")).toEqual([
+			{ type: "pwbr-retry", name: "Dodge" },
+		]);
+		expect(attempt).toBe(2);
+	});
+
+	test("packDocsOnce dedupes concurrent and sequential loads under one key", async () => {
+		let loads = 0;
+		const load = async () => {
+			loads += 1;
+			return [{ n: loads }];
+		};
+		const [a, b] = await Promise.all([
+			packDocsOnce("pwbr-key", load),
+			packDocsOnce("pwbr-key", load),
+		]);
+		const c = await packDocsOnce("pwbr-key", load);
+		expect(loads).toBe(1);
+		expect(a).toEqual(b);
+		expect(c).toEqual(a);
 	});
 });

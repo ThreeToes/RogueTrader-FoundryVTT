@@ -249,7 +249,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 				{
 					id: "w1",
 					name: "Lasgun",
-					classLabel: "WEAPON.CLASS_BASIC",
+					classLabel: "CLASS.BASIC",
 					damage: "1d10+3",
 					penetration: 0,
 					isRanged: true,
@@ -271,7 +271,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		const html = render({
 			id: "w1",
 			name: "Lasgun",
-			classLabel: "WEAPON.CLASS_BASIC",
+			classLabel: "CLASS.BASIC",
 			damage: "1d10+3",
 			penetration: 0,
 			isRanged: false,
@@ -409,7 +409,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		const withUuid = render({
 			id: "w1",
 			name: "Lasgun",
-			classLabel: "WEAPON.CLASS_BASIC",
+			classLabel: "CLASS.BASIC",
 			damage: "1d10+3",
 			penetration: 0,
 			isRanged: false,
@@ -421,7 +421,7 @@ describe("template partial-block scope (in-world ship-sheet crash)", () => {
 		const withoutUuid = render({
 			id: "w2",
 			name: "Sword",
-			classLabel: "WEAPON.CLASS_BASIC",
+			classLabel: "CLASS.BASIC",
 			damage: "1d10",
 			penetration: 0,
 			isRanged: false,

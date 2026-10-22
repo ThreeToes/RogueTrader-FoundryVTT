@@ -1321,7 +1321,8 @@
 .rogue-trader .talent-picker .catalog {
 	flex: 1 1 auto;
 	min-height: 0;
-	max-height: 380px;
+	/* No max-height cap: these windows are resizable (hxv6), so the catalog
+	   must grow with the window and scroll only when it runs out of room. */
 	overflow-y: auto;
 	padding-right: 4px;
 }

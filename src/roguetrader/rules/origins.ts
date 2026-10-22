@@ -21,37 +21,30 @@
  * surfaced to the player at the end of the creator — never silently dropped.
  */
 
+import { ChartPool } from "../../ffg/domain/model/chart";
 import type { CharacteristicKey } from "../data/actor/character";
 import {
 	nested,
 	num,
 	optionalStr,
-	str,
 	type PackSystem,
+	str,
 } from "../data/pack-fields";
-import { ChartPool } from "../../ffg/domain/model/chart";
+// Bead rhua: the row vocabulary (type + constants + choices) moved to the
+// registry — the seam every sibling DataModel sources its schema enums from
+// — so data/item/origin.ts no longer pulls the RULES layer for its schema.
+// The re-exports below keep every existing importer (sheets, migrations,
+// tests) compiling unchanged; the rules machinery (adjacency, pool,
+// resolution) stays here.
+import { ORIGIN_ROW_ORDER, type OriginRow } from "../registry";
 
-export type OriginRow =
-	| "home-world"
-	| "birthright"
-	| "lure"
-	| "trials"
-	| "motivation"
-	// Into the Storm p28: Lineage is a SIXTH human row, chosen freely after
-	// the other five (bead b03f).
-	| "lineage"
-	// Non-human path rows (bead ghmn). Xenos do NOT use the Origin Path: Into
-	// the Storm p48 says "Kroot characters do not use the Origin Path (except at
-	// the GM's discretion)", and p49 replaces it with a single Kindred choice.
-	// So a species' path is whatever rows ITS OWN entries declare.
-	| "kindred"
-	// Ork path (Into the Storm p61-62, "ORK ORIGINS"): Da Klan and Orky
-	// Know-Wotz, one choice from each.
-	| "klan"
-	| "know-wotz"
-	// Tau path (Tau Character Guide p7-8): "A Tau Explorer must choose from one of
-	// the six following Classified Competencies at character creation."
-	| "competence";
+export type { OriginRow } from "../registry";
+export {
+	ORIGIN_ROW_ORDER,
+	ORIGIN_ROWS,
+	originRowChoices,
+	XENO_ORIGIN_ROWS,
+} from "../registry";
 
 /** Characteristic modifier: signed delta applied to the base roll. */
 export interface CharMod {
@@ -143,56 +136,6 @@ export interface OriginEntry {
 	 * degrades to plain text (never an error).
 	 */
 	uuid?: string;
-}
-
-/** Chart row order, top (Home World) to bottom (Motivation then Lineage). */
-export const ORIGIN_ROWS: OriginRow[] = [
-	"home-world",
-	"birthright",
-	"lure",
-	"trials",
-	"motivation",
-	"lineage",
-];
-
-/**
- * Rows that belong to a non-human path (bead ghmn). Kept separate from
- * ORIGIN_ROWS so the human chart's five rows stay exactly five, and appended to
- * ROW_ORDER only for ordering purposes.
- */
-export const XENO_ORIGIN_ROWS: OriginRow[] = [
-	"kindred",
-	"klan",
-	"know-wotz",
-	"competence",
-];
-
-/**
- * Canonical row order across every path (human first, then xeno rows).
- *
- * THIS IS THE VOCABULARY EVERY ROW-AWARE FIELD MUST USE. `ORIGIN_ROWS` is the
- * HUMAN path only — using it as a whole-chart vocabulary is the bug that made
- * every xeno entry collapse onto Home World (2026-09-20): the `row` DataModel
- * field's `choices` was built from `ORIGIN_ROWS`, so Foundry coerced the four
- * xeno rows to the field's initial and the human chart rendered all 35 entries.
- */
-export const ORIGIN_ROW_ORDER: OriginRow[] = [
-	...ORIGIN_ROWS,
-	...XENO_ORIGIN_ROWS,
-];
-
-/**
- * The `choices` vocabulary for the `row` DataModel field: EVERY path's rows.
- *
- * Shared with data/item/origin.ts and with the tests ON PURPOSE. Building the
- * list inline from `ORIGIN_ROWS` is what broke the creator (2026-09-20): a
- * `choices` list narrower than the data silently coerces every
- * out-of-vocabulary value to the field's `initial`, so all four xeno rows
- * became "home-world" and the human chart rendered all 35 entries. The test
- * asserts this vocabulary covers every row the pack actually uses.
- */
-export function originRowChoices(): Record<string, string> {
-	return Object.fromEntries(ORIGIN_ROW_ORDER.map((row) => [row, row]));
 }
 
 export const ORIGIN_ROW_LABEL_KEYS: Record<OriginRow, string> = {

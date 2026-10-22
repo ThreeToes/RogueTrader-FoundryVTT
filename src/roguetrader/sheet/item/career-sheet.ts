@@ -4,7 +4,13 @@ import { careers } from "../../registry";
 // Bead iktx: the ONE characteristic-label composition seam (labels.ts).
 import { characteristicLabelKey } from "../../rules/labels";
 import { itemDataContext, sheetContext } from "../context";
-import { OPEN_PACK_DOC_ACTION, openPackDocUuid } from "../pack-resolve";
+import {
+	CHARACTER_OPTIONS_PACK,
+	getPackDocuments,
+	OPEN_PACK_DOC_ACTION,
+	openPackDocUuid,
+	packDocsOnce,
+} from "../pack-resolve";
 import { itemSheetOptions } from "../sheet-options";
 import { ITEM_DESCRIPTION_TABS } from "../tabs";
 
@@ -23,12 +29,6 @@ interface AdvanceRow {
 	uuid: string;
 }
 
-interface PackIndexEntry {
-	name?: string;
-	uuid: string;
-	type?: string;
-}
-
 /** slug() matching the emit script's key convention. */
 function slugify(name: string): string {
 	return name
@@ -38,27 +38,35 @@ function slugify(name: string): string {
 }
 
 /**
- * Key -> {uuid, name} for the skills/talents packs, so advance rows link to
- * their source items. Built from the pack indexes (no doc loads).
+ * Key -> {uuid, name} for the skills/talents pack, so advance rows link to
+ * their source items.
+ *
+ * Bead mg87: this used to read `game.packs` + `pack.index.values()` directly,
+ * in violation of the ContentPort rule (the game.packs lookup lives in ONE
+ * place, the foundry content adapter) and hard-coding the RT pack id against
+ * a swapped NO_CONTENT_PORT/fake. It now fetches through the sheet-side pack
+ * path — pack-resolve's getPackDocuments wraps
+ * getPorts().content.documentsOrNull and warns ONCE loudly when the pack is
+ * missing; a missing pack degrades to rows without doc links, never an
+ * error — memoized via the shared session cache. Exported for the headless
+ * port-stub test (career-sheet.test.ts).
  */
-function keyIndexMap(): Map<string, { uuid: string; name: string }> {
+export async function keyIndexMap(): Promise<
+	Map<string, { uuid: string; name: string }>
+> {
 	const map = new Map<string, { uuid: string; name: string }>();
-	const packs = game.packs as unknown as Map<
-		string,
-		{ index: Map<string, PackIndexEntry> }
-	>;
 	// One merged pack holds both types (bead 4tj1); keep only talent/skill
-	// index entries so advance rows link to the right source items.
-	const pack = packs.get("rogue-trader.character-options");
-	if (pack) {
-		for (const entry of pack.index.values()) {
-			if (!entry.name) continue;
-			if (entry.type !== "talent" && entry.type !== "skill") continue;
-			map.set(slugify(entry.name), {
-				uuid: entry.uuid,
-				name: entry.name,
-			});
-		}
+	// docs so advance rows link to the right source items.
+	const docs = (await packDocsOnce("character-options:advance-links", () =>
+		getPackDocuments(CHARACTER_OPTIONS_PACK),
+	)) as Array<{ name?: string; uuid?: string; type?: string }>;
+	for (const doc of docs) {
+		if (!doc.name) continue;
+		if (doc.type !== "talent" && doc.type !== "skill") continue;
+		map.set(slugify(doc.name), {
+			uuid: doc.uuid ?? "",
+			name: doc.name,
+		});
 	}
 	return map;
 }
@@ -126,7 +134,7 @@ export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.tabs = this._prepareTabs("primary");
 		const system = this.document.system as CareerLike;
 		context.careerChoices = Object.fromEntries(careers.entries());
-		const indexByKey = keyIndexMap();
+		const indexByKey = await keyIndexMap();
 		context.charAdvanceRows = Object.entries(
 			system.characteristicAdvances ?? {},
 		).map(([char, costs]) => ({

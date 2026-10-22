@@ -1,4 +1,8 @@
-import { originRowChoices } from "../../rules/origins";
+// Bead rhua: the row vocabulary lives in the registry (the data seam every
+// sibling DataModel sources its schema enums from); rules/origins.ts
+// re-exports it for the rules machinery. Importing the REGISTRY keeps the
+// data -> rules inversion out of the schema.
+import { originRowChoices } from "../../registry";
 import { CHARACTERISTIC_KEYS } from "../actor/character";
 import { textField } from "../fields";
 import { Gear } from "./gear";

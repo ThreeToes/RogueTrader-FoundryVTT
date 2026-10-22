@@ -3,6 +3,7 @@ import {
 	StubArrayField,
 	StubField,
 } from "../../../test-helpers/foundry-schema-stub";
+import { ORIGIN_ROW_ORDER, originRowChoices } from "../../registry";
 
 await import("../../../test-helpers/foundry-schema-stub");
 
@@ -16,6 +17,20 @@ const { Origin } = await import("./origin");
 // shapes validate against this schema and normalise identically; runtime
 // readers go through rules/origins.ts's replacedKeys.
 describe("Origin data model", () => {
+	// Bead rhua: the row field's `choices` vocabulary comes from the REGISTRY
+	// (the data seam every sibling model sources its enums from), not the rules
+	// layer — and it must be the WHOLE chart vocabulary, the documented
+	// 2026-09-20 coercion bug's containment.
+	test("the row field's choices carry the registry row vocabulary", () => {
+		const schema = Origin.defineSchema() as unknown as Record<string, unknown>;
+		const row = schema.row as StubField;
+		expect(row.opts.choices).toEqual(originRowChoices());
+		// Human five first, xeno rows APPENDED (never substituted).
+		expect(Object.keys(row.opts.choices as Record<string, string>)).toEqual(
+			ORIGIN_ROW_ORDER,
+		);
+	});
+
 	test("replaces is an array-of-string field, not a bare string", () => {
 		const schema = Origin.defineSchema() as unknown as Record<string, unknown>;
 		const replaces = schema.replaces as StubArrayField;

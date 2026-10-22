@@ -56,7 +56,20 @@ import { systemOf } from "../../data/accessors";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
-import { getPackDocuments } from "../pack-resolve";
+import { getPackDocuments, packDocsOnce } from "../pack-resolve";
+
+/** The ships concept pack id (manifest-packs.yaml). */
+const SHIPS_PACK = "rogue-trader.ships";
+
+/**
+ * Memoized ships-pack fetch (bead pwbr): the ships pack was re-fetched on
+ * every render (complication lookups) and every complication roll; the pack
+ * does not change mid-session, so one session promise serves all callers
+ * (the packDocsOnce semantics — a rejected fetch is evicted and retried).
+ */
+function shipsPackDocs(): Promise<unknown[]> {
+	return packDocsOnce(SHIPS_PACK, () => getPackDocuments(SHIPS_PACK));
+}
 
 /** Component state → localized SHIP_COMBAT.STATE_* label (bead uc08).
     Unknown states fall back to the raw key so corruption is loud. */
@@ -228,7 +241,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// compendium effect — the effect ONLY when the ships pack provides
 		// it, never fabricated (owner round 6). The pack is fetched ONCE per
 		// render (bead yi5t) and shared by both complication lookups.
-		const shipsDocs = (await getPackDocuments("rogue-trader.ships")) as Array<{
+		const shipsDocs = (await shipsPackDocs()) as Array<{
 			type?: string;
 			name?: string;
 			system?: { kind?: string; effect?: string };
@@ -947,7 +960,7 @@ export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 	async #rollComplication(kind: string, field: string): Promise<void> {
 		const result = (await getPorts().dice.roll("1d10")).total ?? 1;
-		const docs = (await getPackDocuments("rogue-trader.ships")) as Array<{
+		const docs = (await shipsPackDocs()) as Array<{
 			type?: string;
 			name?: string;
 			system?: { kind?: string; roll?: number };

@@ -11,12 +11,12 @@
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import {
 	WEAPON_CLASSES,
-	weaponTrainingCoverage,
 	type WeaponTrainingCoverage,
+	weaponTrainingCoverage,
 } from "../../rules/acquisition";
+import { readRtFlag } from "../../rules/chat-flags";
 import { type SpeciesOption, speciesOptions } from "../../rules/creation";
 import { resolveOrigins } from "../../rules/origins";
-import { readRtFlag } from "../../rules/chat-flags";
 import {
 	getTalentLinkDocs,
 	setTalentLinkDocs,
@@ -27,6 +27,7 @@ import {
 	getCharacterOptionDocs,
 	getPackDocuments,
 	type PackDocLike,
+	packDocsOnce,
 } from "../pack-resolve";
 import {
 	type AcqDocLike,
@@ -138,7 +139,9 @@ export async function weaponTrainingCoverageFor(
 		};
 	}
 	const talentNames = [...(resolveOrigins(state.picks).talents ?? [])];
-	const docs = (await getCharacterOptionDocs("career")) as unknown as Array<{
+	// Bead pwbr: the cached careerDocs loader (session cache above) — the old
+	// direct getCharacterOptionDocs call re-fetched the whole pack per render.
+	const docs = (await careerDocs()) as unknown as Array<{
 		name?: string;
 		system?: { key?: string; startingTalents?: string[] };
 	}>;
@@ -178,18 +181,68 @@ export async function startingAcquisitions(
 ): Promise<AcqOption[]> {
 	payloads.clear();
 	const coverage = await weaponTrainingCoverageFor(state);
-	const docs = (await getPackDocuments(
-		"rogue-trader.equipment",
+	const selectedKey = state.acquisition?.key ?? "";
+	// Bead opur: the creator re-renders on every allocation/pick/roll, and the
+	// old path re-fetched the equipment pack AND deep-copied every qualifying
+	// doc via doc.toObject() PER RENDER. Both are now cached:
+	// - the docs fetch through packDocsOnce (one session promise);
+	// - the built chips + payload map keyed by every input the build depends
+	//   on: the weapon-training coverage (career/origin talents) and the
+	//   selected chip (the `selected` flag). The single-slot cache is enough —
+	//   the creator is the only caller and re-renders step one state at a time.
+	const covSig = coverageSignature(coverage);
+	if (
+		acquisitionBuildCache &&
+		acquisitionBuildCache.covSig === covSig &&
+		acquisitionBuildCache.selectedKey === selectedKey
+	) {
+		for (const [key, payload] of acquisitionBuildCache.payloads) {
+			payloads.set(key, payload);
+		}
+		return acquisitionBuildCache.options;
+	}
+	const docs = (await packDocsOnce("creator-packs:equipment", () =>
+		getPackDocuments("rogue-trader.equipment"),
 	)) as unknown as AcqDocLike[];
 	const { options, payloads: built } = buildAcquisitions(
 		docs,
 		coverage,
-		state.acquisition?.key ?? "",
+		selectedKey,
 		(doc) => String(readRtFlag(doc, "source") ?? ""),
 		(key: string) => game.i18n!.localize(key),
 	);
 	for (const [key, payload] of built) {
 		payloads.set(key, payload);
 	}
+	acquisitionBuildCache = { covSig, selectedKey, options, payloads: built };
 	return options;
+}
+
+/** The single-slot build cache behind startingAcquisitions (bead opur). */
+let acquisitionBuildCache: {
+	covSig: string;
+	selectedKey: string;
+	options: AcqOption[];
+	payloads: Map<string, object>;
+} | null = null;
+
+/**
+ * A stable fingerprint of a WeaponTrainingCoverage (the acquisition chips'
+ * `selectable` gate). Covers classes, per-category families, exotic subjects
+ * and source slugs; any talent pick that changes the gate busts the cache.
+ */
+function coverageSignature(coverage: WeaponTrainingCoverage): string {
+	const setPart = (set: Set<string>) => [...set].sort().join(",");
+	return JSON.stringify([
+		setPart(coverage.classes),
+		Object.entries(coverage.byCategory)
+			.map(
+				([category, families]) =>
+					`${category}:${setPart(families ?? new Set())}`,
+			)
+			.sort()
+			.join("|"),
+		setPart(coverage.exotic),
+		setPart(coverage.sources),
+	]);
 }

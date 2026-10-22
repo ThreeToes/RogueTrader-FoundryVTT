@@ -727,6 +727,100 @@
 	min-height: 320px;
 }
 
+/* Resizable windows need the min PAIR (docs/DESIGN-LANGUAGE.md sizing rule):
+   ApplicationV2 clamps dragging to the app class's computed min sizes, so a
+   class without them can be crushed below its content (bead hxv6). Floors
+   sit just under each window's default position so users can still shrink
+   moderately but the layout cannot collapse.
+
+   Actor sheets: */
+.rogue-trader.sheet.starship {
+	min-width: 560px;
+	min-height: 480px;
+}
+
+.rogue-trader.sheet.npc {
+	min-width: 480px;
+	min-height: 420px;
+}
+
+.rogue-trader.sheet.planet {
+	min-width: 480px;
+	min-height: 400px;
+}
+
+.rogue-trader.sheet.cache {
+	min-width: 400px;
+	min-height: 320px;
+}
+
+/* Item sheets (defaults ~500-560 × auto/480): */
+.rogue-trader.sheet.career {
+	min-width: 480px;
+	min-height: 420px;
+}
+
+.rogue-trader.sheet.action,
+.rogue-trader.sheet.game-table,
+.rogue-trader.sheet.ship-hull,
+.rogue-trader.sheet.ship-component,
+.rogue-trader.sheet.ship-complication,
+.rogue-trader.sheet.talent,
+.rogue-trader.sheet.trait,
+.rogue-trader.sheet.navigator-power,
+.rogue-trader.sheet.psychic-power {
+	min-width: 440px;
+	min-height: 320px;
+}
+
+.rogue-trader.sheet.warrant-option,
+.rogue-trader.sheet.madness-entry {
+	min-width: 480px;
+	min-height: 360px;
+}
+
+.rogue-trader.sheet.skill {
+	min-width: 360px;
+	min-height: 240px;
+}
+
+/* Pickers (catalog windows): */
+.rogue-trader.sheet.skill-picker {
+	min-width: 360px;
+	min-height: 440px;
+}
+
+.rogue-trader.sheet.talent-picker {
+	min-width: 360px;
+	min-height: 400px;
+}
+
+.rogue-trader.sheet.psychic-picker {
+	min-width: 380px;
+	min-height: 440px;
+}
+
+.rogue-trader.sheet.mod-picker {
+	min-width: 360px;
+	min-height: 380px;
+}
+
+.rogue-trader.sheet.ordnance-picker {
+	min-width: 360px;
+	min-height: 260px;
+}
+
+/* Creators (already scroll their window-content; now with the size floor): */
+.rogue-trader.sheet.ship-creator {
+	min-width: 640px;
+	min-height: 560px;
+}
+
+.rogue-trader.sheet.planet-creator {
+	min-width: 560px;
+	min-height: 480px;
+}
+
 .rogue-trader.gear .tab[data-tab="notes"] .notes-editor {
 	height: 100%;
 	display: flex;

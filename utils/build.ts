@@ -89,7 +89,13 @@ async function copyStaticFiles(target: SystemTarget) {
 		recursive: true,
 		force: true,
 	});
-	await cp("./asset", `./release/${target.packageDir}/asset`, {
+	// Only the referenced slice of asset/ ships: the aptitude icon the
+	// character-options aptitudes pack points at (systems/rogue-trader/asset/
+	// icons/aptitudes/aptitude400.png). The rest of the former tree (DH fork
+	// fonts/jpgs, 17 core-icon-replaced condition pngs, the DH logo) was dead
+	// and was deleted (bead ty1l) — keep the copy narrow so orphans cannot
+	// silently return.
+	await cp("./asset/icons/aptitudes", `./release/${target.packageDir}/asset/icons/aptitudes`, {
 		recursive: true,
 		force: true,
 	});

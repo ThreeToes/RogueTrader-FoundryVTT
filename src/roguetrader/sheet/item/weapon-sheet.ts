@@ -1,24 +1,25 @@
-import { ITEM_DATA_TABS } from "../tabs";
+import {
+	acceptsOrdnance,
+	LAUNCHER_FAMILY,
+} from "../../../ffg/domain/model/attack";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 import { RangedWeapon } from "../../data/item/ranged-weapon";
 import {
 	MELEE_CLASSES,
 	RANGED_CLASSES,
 	WeaponClass,
 } from "../../data/item/weapon-class";
-import {
-	acceptsOrdnance,
-	LAUNCHER_FAMILY,
-} from "../../../ffg/domain/model/attack";
-import { weaponFamilies, damageTypes } from "../../registry";
-import { cloneItemFromDrop } from "../drop-clone";
 import { getPorts } from "../../infrastructure/foundry/ports";
-import { effectActions } from "./effect-actions";
+import { damageTypes, weaponFamilies } from "../../registry";
 import { itemDataContext, sheetContext } from "../context";
+import { cloneItemFromDrop } from "../drop-clone";
+import { resolvePackDocument } from "../pack-resolve";
 import { itemSheetOptions } from "../sheet-options";
-import { loadOrdnance, OrdnancePicker } from "./ordnance-picker";
+import { ITEM_DATA_TABS } from "../tabs";
+import { effectActions } from "./effect-actions";
 import { ModPicker } from "./mod-picker";
+import { loadOrdnance, OrdnancePicker } from "./ordnance-picker";
 import { attachedModIds, installMod, removeMod } from "./weapon-mods";
-import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -165,9 +166,12 @@ export class WeaponSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		const actor = (this.document as { actor?: foundry.documents.Actor | null })
 			.actor;
 		if (!actor) return undefined;
-		const source = foundry.utils.fromUuidSync(
-			data.uuid as never,
-		) as foundry.documents.Item | null;
+		// Bead q6eo: the port path (resolvePackDocument), not fromUuidSync —
+		// the generic resolver silently no-ops for our LevelDB packs in-world
+		// (bead wwuc), which turned a dropped pack mod into a silent nothing.
+		const source = (await resolvePackDocument(
+			data.uuid,
+		)) as foundry.documents.Item | null;
 		if (!source) return undefined;
 		// Attached weapon modifications (bead huaf): a weapon-modification item
 		// INSTALLS regardless of launcher ordnance rules. Already-owned items

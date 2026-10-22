@@ -1137,22 +1137,32 @@ describe("the ship refit drop handler (bead brex blocker 2)", () => {
 	): () => void {
 		const foundryRecord = (globalThis as Record<string, unknown>)
 			.foundry as Record<string, unknown>;
-		const applications = foundryRecord.applications as Record<string, unknown>;
-		const utils = foundryRecord.utils as Record<string, unknown>;
+		const applications = foundryRecord.applications as Record<
+			string,
+			unknown
+		>;
 		const previous = {
 			ux: applications.ux,
-			fromUuid: utils.fromUuid,
 		};
 		applications.ux = {
 			TextEditor: {
 				getDragEventData: () => ({ type: "Item", uuid: source.uuid }),
 			},
 		};
-		utils.fromUuid = async () => source;
+		// Bead q6eo: the drop-to-clone resolves through the ContentPort now
+		// (drop-clone.ts#cloneItemIntoActor), so the doc is served by a
+		// content.document stub — the old utils.fromUuid stub was the dead path
+		// fromUuid takes in-world for our LevelDB packs (bead wwuc).
+		setPorts({
+			...getPorts(),
+			content: {
+				...getPorts().content,
+				document: async () => source,
+			},
+		} as never);
 		return () => {
 			applications.ux = previous.ux;
-			if (previous.fromUuid === undefined) delete utils.fromUuid;
-			else utils.fromUuid = previous.fromUuid;
+			resetPorts();
 		};
 	}
 

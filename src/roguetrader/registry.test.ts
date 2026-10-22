@@ -1,23 +1,27 @@
 import { describe, expect, test } from "bun:test";
 import {
+	afflictionProcedures,
+	attachRegistriesToConfig,
 	bodyLocations,
+	createRegistries,
+	damageTypes,
 	EntryRegistry,
+	madnessEntryKinds,
+	ORIGIN_ROW_ORDER,
+	ORIGIN_ROWS,
+	originRowChoices,
 	protectionTypes,
+	psychicDisciplines,
 	qualities,
 	talentCategories,
 	talentConditions,
-	afflictionProcedures,
 	talents,
 	vehicleClasses,
 	vehicleFacings,
 	vehicleSystems,
 	vehicleTraits,
 	weaponFamilies,
-	psychicDisciplines,
-	damageTypes,
-	madnessEntryKinds,
-	attachRegistriesToConfig,
-	createRegistries,
+	XENO_ORIGIN_ROWS,
 } from "./registry";
 
 describe("EntryRegistry", () => {
@@ -147,6 +151,40 @@ describe("EntryRegistry", () => {
 		}
 		for (const key of talentCategories.keys()) {
 			expect(talentCategories.get(key)).toMatch(/^TALENT_CATEGORY\./);
+		}
+	});
+});
+
+describe("Origin Path row vocabulary (bead rhua)", () => {
+	// Bead rhua: the chart row vocabulary moved here from rules/origins.ts so
+	// the `row` DataModel field (data/item/origin.ts) sources its schema enums
+	// from the data seam like every sibling model, not from the rules layer.
+	// The pack-entries coverage ("covers every row the pack actually uses")
+	// stays in rules/origins.test.ts, which now exercises the re-export.
+	test("ORIGIN_ROW_ORDER carries the whole chart vocabulary", () => {
+		expect(ORIGIN_ROW_ORDER).toEqual([
+			"home-world",
+			"birthright",
+			"lure",
+			"trials",
+			"motivation",
+			"lineage",
+			"kindred",
+			"klan",
+			"know-wotz",
+			"competence",
+		]);
+		// Human rows stay exactly the six documented ones (ITS p28 Lineage) and
+		// the xeno rows are APPENDED, never substituted (2026-09-20 containment).
+		expect(ORIGIN_ROWS).toHaveLength(6);
+		expect(XENO_ORIGIN_ROWS).toHaveLength(4);
+	});
+
+	test("originRowChoices covers every ordered row", () => {
+		const choices = originRowChoices();
+		expect(Object.keys(choices)).toEqual(ORIGIN_ROW_ORDER);
+		for (const row of ORIGIN_ROW_ORDER) {
+			expect(choices[row], row).toBe(row);
 		}
 	});
 });

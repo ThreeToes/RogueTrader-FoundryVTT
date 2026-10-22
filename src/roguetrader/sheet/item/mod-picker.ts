@@ -1,10 +1,10 @@
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
+import { getPorts } from "../../infrastructure/foundry/ports";
 import { OwnedItemPicker } from "../actor/owned-picker";
 import { grantedClonePayload } from "../clone-doc";
 import { sheetContext } from "../context";
-import { getPackDocuments } from "../pack-resolve";
-import { getPorts } from "../../infrastructure/foundry/ports";
+import { getPackDocuments, resolvePackDocument } from "../pack-resolve";
 import { installMod, removeMod } from "./weapon-mods";
-import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 // One row of the picker is {id?, uuid?, name, upgrades, owned} — structural
 // object literals, no interface (the template reads it directly).
@@ -126,7 +126,11 @@ export class ModPicker extends OwnedItemPicker {
 	): Promise<void> {
 		const uuid = target.dataset.uuid ?? "";
 		if (!uuid) return;
-		const doc = foundry.utils.fromUuidSync(uuid as never) as {
+		// Bead q6eo: resolvePackDocument (the port path) instead of
+		// foundry.utils.fromUuidSync — the generic resolver silently returns
+		// undefined in-world for our LevelDB packs (bead wwuc), which is exactly
+		// the quiet-install-nothing this branch warns about.
+		const doc = (await resolvePackDocument(uuid)) as {
 			toObject?: () => object;
 			system?: Record<string, unknown>;
 		} | null;

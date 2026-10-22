@@ -9,6 +9,7 @@
 
 import { isWeaponType } from "../data/accessors";
 import { clonePackDocPayload } from "./clone-doc";
+import { resolvePackDocument } from "./pack-resolve";
 
 export interface CloneItemOptions {
 	/** Static merge into every cloned item's system data. */
@@ -36,7 +37,12 @@ export async function cloneItemIntoActor(
 	uuid: string,
 	options: CloneItemOptions = {},
 ): Promise<foundry.documents.Item | undefined> {
-	const source = await foundry.utils.fromUuid(uuid);
+	// Bead q6eo: resolvePackDocument (the ContentPort path), not
+	// foundry.utils.fromUuid — the generic resolver silently no-ops for our
+	// LevelDB packs in-world (bead wwuc), which would turn every dropped pack
+	// item into a silent nothing. Compendium-shaped uuids resolve direct from
+	// the pack; other shapes fall through to fromUuid inside the adapter.
+	const source = await resolvePackDocument(uuid);
 	if (!(source instanceof foundry.documents.Item)) return undefined;
 	if (
 		options.skipOwned !== false &&

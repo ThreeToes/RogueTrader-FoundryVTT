@@ -13,7 +13,10 @@ import {
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 import { imageActions } from "../image-actions";
-import { getCharacterOptionDocs } from "../pack-resolve";
+// Memoized fetch (bead pwbr): characterOptionDocsOnce caches the
+// character-options pack fetch per type per session — the pack does not
+// change mid-session, so re-fetching it on every tab render was pure waste.
+import { characterOptionDocsOnce } from "../pack-resolve";
 import { clonePackDocPayload } from "../clone-doc";
 import {
 	findPackDoc,
@@ -775,7 +778,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		await waitForDefaultGrants(this.actor.uuid);
 		if (this.actor.items.size > 0) return;
 		if (this.actor.type !== "explorer" && this.actor.type !== "npc") return;
-		const documents = (await getCharacterOptionDocs(
+		const documents = (await characterOptionDocsOnce(
 			"skill",
 		)) as foundry.documents.Item[];
 		const grants = missingSkillGrants(
@@ -814,8 +817,8 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 		// Career docs fetched ONCE per render (bead yi5t) and shared by both
 		// consumers below — the advancement-thresholds lookup and the career-link
-		// lookup. getCharacterOptionDocs re-fetches the pack on every call.
-		const careerDocs = (await getCharacterOptionDocs(
+		// lookup. The fetch is memoized per session (bead pwbr).
+		const careerDocs = (await characterOptionDocsOnce(
 			"career",
 		)) as unknown as CareerDocRow[];
 
@@ -1122,7 +1125,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	): Promise<void> {
 		// Compendium link per talent row (bead oaaz): pack uuid by name
 		// (case-insensitive), same careers-pack pattern as careerItemId above.
-		const packDocs = (await getCharacterOptionDocs(
+		const packDocs = (await characterOptionDocsOnce(
 			"talent",
 		)) as unknown as Array<{
 			uuid?: string;

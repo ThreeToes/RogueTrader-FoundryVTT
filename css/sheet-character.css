@@ -166,7 +166,7 @@
 }
 
 /* .active gold fill comes from the shared FILL treatment (bead 6zha,
-   sheet-gear.css). */
+   css/40k-components.css). */
 
 .rogue-trader.sheet.character .skill-roll {
 	width: 1.5em;
@@ -1220,8 +1220,8 @@
 
 /* Shared chip anatomy (bead 628o): difficulty (button) and condition
    (label+hidden input) chips share the chrome — base chrome now from the
-   shared chip family (sheet-gear.css, bead 6zha); the genuinely different
-   bits live in the rules below. */
+   shared chip family (css/40k-components.css, bead 6zha); the genuinely
+   different bits live in the rules below. */
 .test-dialog-app .test-dialog .difficulty-chip,
 .test-dialog-app .test-dialog .condition-chip {
 	display: inline-flex;

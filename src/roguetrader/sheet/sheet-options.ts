@@ -23,7 +23,7 @@ export function itemSheetOptions(config: {
 	actions?: Record<string, unknown>;
 }): object {
 	return {
-		classes: ["rogue-trader", "sheet", config.slug],
+		classes: ["rogue-trader", "sheet", config.slug, "rt-component"],
 		position: { width: config.width, height: config.height },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },

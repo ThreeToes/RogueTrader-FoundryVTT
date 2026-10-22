@@ -101,10 +101,12 @@ describe("rules app window scroll layers (bead yt8r)", () => {
 	test("the app element carries the classes the CSS scopes against", () => {
 		// `.rogue-trader.rules-app` is how the stylesheet keeps itself off the
 		// sheets; if a class is dropped from DEFAULT_OPTIONS every rule here
-		// stops matching and the window goes back to clipping.
+		// stops matching and the window goes back to clipping. rt-component
+		// (cmio.6) is the shared component layer's root, guarded by
+		// utils/rt-component-root.test.ts.
 		const classes = appSource.match(/classes:\s*\[([^\]]*)\]/)?.[1] ?? "";
 		const carried = [...classes.matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
-		expect(carried).toEqual(["rogue-trader", "dialog", "rules-app"]);
+		expect(carried).toEqual(["rogue-trader", "dialog", "rules-app", "rt-component"]);
 		for (const selector of [".rogue-trader.rules-app"]) {
 			for (const part of selector.split(".").filter(Boolean)) {
 				expect(

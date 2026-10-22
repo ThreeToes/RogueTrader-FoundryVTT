@@ -1,5 +1,14 @@
 /* Rules app (epic wxut, child B4) — the house-rule profile editor.
  *
+ * THIS FILE IS ONLY THE APP-SPECIFIC LAYER (cmio.6): the window chrome, the
+ * scroll scaffolding, the sidebar/main split and the app-local disabled-
+ * button treatment. The app's component rules (tab strip, profile list,
+ * knob form, band/diff tables, notices, JSON and import/export, diff panel)
+ * moved to the system-neutral shared layer css/40k-components.css, re-rooted
+ * from .rules-app to the .rt-component root class this app's window carries
+ * (see the root convention in that file's header). The shared layer is
+ * bundled FIRST, so the rules below still win any tie against it.
+ *
  * Scoped to the app element, which carries DEFAULT_OPTIONS.classes
  * (`.rogue-trader .dialog .rules-app`), so nothing here can reach a sheet.
  * Palette, type steps and radii are the DESIGN-LANGUAGE tokens defined at the
@@ -26,8 +35,8 @@
  * the knob form, the JSON tab, the pack panel and the diff table were simply
  * clipped at the window height (bead yt8r). One rule cannot do it, because the
  * app root is a flex column: the window content scrolls, the template root
- * fills it, the columns keep its height instead of the content's, and the panel
- * and the sidebar each scroll inside their own box. */
+ * fills it, the columns keep its height instead of the content's, and the
+ * panel and the sidebar each scroll inside their own box. */
 
 .rogue-trader.rules-app .window-content {
 	display: flex;
@@ -46,39 +55,6 @@
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow-y: auto;
-}
-
-/* --- Tab strip ----------------------------------------------------------- */
-
-.rules-app .rules-tabs {
-	display: flex;
-	gap: 4px;
-	border-bottom: 1px solid var(--rt-border);
-	padding-bottom: 4px;
-}
-
-.rules-app .rules-tab {
-	background: none;
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	color: var(--rt-muted);
-	font-size: var(--rt-fs-sm);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	padding: 3px 10px;
-	cursor: pointer;
-}
-
-.rules-app .rules-tab:hover {
-	color: var(--rt-gold-soft);
-	border-color: var(--rt-gold);
-}
-
-.rules-app .rules-tab.active {
-	background: var(--rt-gold-alpha-faint);
-	border-color: var(--rt-gold);
-	color: var(--rt-gold);
-	font-weight: bold;
 }
 
 /* --- Two columns -------------------------------------------------------- */
@@ -111,376 +87,14 @@
 	min-height: 0;
 }
 
-/* --- Profile list ------------------------------------------------------- */
+/* --- App-local button chrome --------------------------------------------- */
 
-.rules-app ul.rules-profile-list {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	background: var(--rt-panel-shade);
-}
-
-.rules-app .rules-profile {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 6px;
-	padding: 3px 6px;
-	border-bottom: 1px solid var(--rt-border-faint);
-	cursor: pointer;
-	font-size: var(--rt-fs-md);
-}
-
-.rules-app .rules-profile:last-child {
-	border-bottom: none;
-}
-
-.rules-app .rules-profile:hover {
-	color: var(--rt-gold-soft);
-}
-
-.rules-app .rules-profile.selected {
-	background: var(--rt-gold-alpha-faint);
-	color: var(--rt-gold);
-}
-
-.rules-app .rules-profile.active .rules-profile-name {
-	font-weight: bold;
-}
-
-.rules-app .rules-profile-name {
-	flex: 1;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.rules-app .rules-profile-active {
-	font-size: var(--rt-fs-xs);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--rt-gold);
-}
-
-/* --- Module-registered profiles (bead wxut.6) ---------------------------
- *
- * A module's profile is DATA THE MODULE SHIPPED, not the GM's: its group is
- * marked apart (dashed rule, muted names) so the read-only panel below it is
- * not the first thing a GM learns about it. Selecting still works — a GM must
- * be able to look at what a module changed — and so does activation, which is
- * the one write the group accepts. */
-
-.rules-app ul.rules-profile-list.module {
-	border-style: dashed;
-}
-
-.rules-app ul.rules-profile-list.module .rules-profile-name {
-	color: var(--rt-muted);
-}
-
-.rules-app .rules-module-label {
-	margin-top: 6px;
-}
-
-.rules-app ul.rules-skipped {
-	margin: 0;
-	padding-left: 14px;
-	color: var(--rt-warn);
-	font-size: var(--rt-fs-xs);
-}
-
-.rules-app .rules-sidebar-hint,
-.rules-app .rules-hint {
-	color: var(--rt-muted);
-	font-size: var(--rt-fs-sm);
-	margin: 2px 0;
-}
-
-/* --- Header ------------------------------------------------------------- */
-
-.rules-app .rules-header {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-}
-
-.rules-app .rules-header-row {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-}
-
-.rules-app .rules-header-row input[type="text"] {
-	flex: 1;
-	min-width: 0;
-}
-
-.rules-app .rules-header-flag {
-	font-size: var(--rt-fs-xs);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--rt-gold);
-}
-
-.rules-app .rules-header-actions,
-.rules-app .rules-sidebar-actions,
-.rules-app .rules-json-actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-}
-
-.rules-app button.rules-button {
-	background: none;
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	color: var(--rt-muted);
-	font-size: var(--rt-fs-sm);
-	padding: 2px 8px;
-	cursor: pointer;
-}
-
-.rules-app button.rules-button:hover:not(:disabled) {
-	color: var(--rt-gold);
-	border-color: var(--rt-gold);
-}
-
-.rules-app button.rules-button.default {
-	color: var(--rt-gold);
-	border-color: var(--rt-gold);
-}
-
+/* Disabled buttons: greyed and unclickable. Deliberately NOT moved to the
+   shared layer (cmio.6): a bare `button:disabled` under the rt-component
+   root would reach every RT window and change sheets' disabled controls —
+   it stays scoped to this app. */
 .rules-app button:disabled {
 	color: var(--rt-muted-deep);
 	border-color: var(--rt-border-faint);
 	cursor: default;
-}
-
-/* --- Notices ------------------------------------------------------------ */
-
-.rules-app .rules-notice {
-	margin: 2px 0;
-	padding: 4px 6px;
-	border-radius: var(--rt-radius);
-	font-size: var(--rt-fs-sm);
-	background: var(--rt-panel-shade);
-	border: 1px solid var(--rt-border);
-}
-
-.rules-app .rules-notice.ok {
-	border-color: var(--rt-success);
-	color: var(--rt-success);
-}
-
-.rules-app .rules-notice.error {
-	border-color: var(--rt-danger-deep);
-	color: var(--rt-danger-deep);
-}
-
-.rules-app ul.rules-notice-errors {
-	margin: 2px 0 0;
-	padding-left: 16px;
-}
-
-/* --- Generated knob form ------------------------------------------------ */
-
-.rules-app h2.rules-group-label,
-.rules-app h3.rules-group-label {
-	margin: 6px 0 2px;
-}
-
-.rules-app .rules-knob-group {
-	border: 1px solid var(--rt-border);
-	border-radius: var(--rt-radius);
-	padding: 4px 6px;
-}
-
-.rules-app .rule-knob {
-	padding: 4px 0;
-	border-bottom: 1px solid var(--rt-border-faint);
-}
-
-.rules-app .rule-knob:last-child {
-	border-bottom: none;
-}
-
-.rules-app .rule-knob-head {
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
-}
-
-.rules-app .rule-knob-label {
-	font-size: var(--rt-fs-md);
-	font-weight: bold;
-}
-
-.rules-app .rule-knob-flag {
-	font-size: var(--rt-fs-xs);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--rt-gold);
-	background: var(--rt-gold-alpha-soft);
-	border-radius: var(--rt-radius-sm);
-	padding: 0 4px;
-}
-
-.rules-app .rule-knob-hazard {
-	font-size: var(--rt-fs-xs);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--rt-muted);
-	margin-left: auto;
-}
-
-/* The two knobs whose values assume the spent-xp ledger: always visible. */
-.rules-app .rule-knob.overridden .rule-knob-hazard {
-	color: var(--rt-warn);
-}
-
-.rules-app .rule-knob-hint {
-	margin: 1px 0;
-	color: var(--rt-muted);
-	font-size: var(--rt-fs-sm);
-}
-
-.rules-app .rule-knob-control {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 8px;
-}
-
-.rules-app .rule-knob-control input[type="number"] {
-	width: 6em;
-}
-
-.rules-app .rule-knob-core {
-	color: var(--rt-muted);
-	font-size: var(--rt-fs-sm);
-}
-
-.rules-app .rule-knob-core em {
-	color: var(--rt-muted-deep);
-}
-
-/* --- Hit-location band table (whole replacement) ------------------------ */
-
-.rules-app table.rule-band-table,
-.rules-app table.rules-diff-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: var(--rt-fs-sm);
-}
-
-.rules-app table.rule-band-table th,
-.rules-app table.rules-diff-table th {
-	text-align: left;
-	font-size: var(--rt-fs-xs);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--rt-muted);
-	border-bottom: 1px solid var(--rt-border-strong);
-	padding: 1px 4px;
-}
-
-.rules-app table.rule-band-table td,
-.rules-app table.rules-diff-table td {
-	padding: 1px 4px;
-	border-bottom: 1px solid var(--rt-border-soft);
-	vertical-align: top;
-}
-
-.rules-app table.rule-band-table input[type="text"] {
-	width: 6em;
-}
-
-.rules-app .rule-band-remove {
-	background: none;
-	border: none;
-	color: var(--rt-danger);
-	cursor: pointer;
-	padding: 0 2px;
-}
-
-/* --- JSON tab ----------------------------------------------------------- */
-
-.rules-app textarea.rules-json-text {
-	width: 100%;
-	min-height: 220px;
-	font-family: monospace;
-	font-size: var(--rt-fs-sm);
-	color: var(--rt-gold-soft);
-	background: var(--rt-panel-shade);
-	border: 1px solid var(--rt-border-strong);
-	border-radius: var(--rt-radius);
-	padding: 4px 6px;
-	resize: vertical;
-}
-
-.rules-app .rules-notice-message {
-	margin-left: 6px;
-}
-
-/* --- Import / export tab (bead wxut.5) ----------------------------------- */
-
-.rules-app .rules-pack-row {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin: 4px 0;
-}
-
-.rules-app textarea.rules-pack-text {
-	min-height: 180px;
-}
-
-.rules-app label.rules-pack-file {
-	position: relative;
-	overflow: hidden;
-	display: inline-block;
-}
-
-/* The file input is the label's own control, so it stays keyboard-reachable
-   while the visible button is the styled span beside it. */
-.rules-app .rules-pack-file input[type="file"] {
-	position: absolute;
-	inset: 0;
-	opacity: 0;
-	cursor: pointer;
-}
-
-.rules-app label.rules-pack-check {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	color: var(--rt-muted);
-	font-size: var(--rt-fs-sm);
-}
-
-/* --- Diff panel --------------------------------------------------------- */
-
-.rules-app .rules-diff-row.overridden .rules-diff-row-key {
-	color: var(--rt-gold);
-}
-
-.rules-app .rules-diff-row.breaking td {
-	background: var(--rt-panel-shade);
-	color: var(--rt-danger-deep);
-}
-
-.rules-app .rules-diff-breaking {
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	font-weight: bold;
-}
-
-.rules-app .rules-diff-row.unknown code {
-	color: var(--rt-warn);
-}
-
-.rules-app .rules-diff-table code {
-	font-size: var(--rt-fs-xs);
 }

@@ -6,6 +6,11 @@ import { readFile } from "node:fs/promises";
  * is now a plain concatenation — no Less dependency, no compile step.
  */
 const SOURCES = [
+	// Bead cmio.6: the shared system-neutral component layer comes FIRST —
+	// "components before skins" — so every skin file's per-site modifiers keep
+	// winning over the moved chip base / rules-app component rules exactly as
+	// they did when those rules sat at the head of their own files.
+	"css/40k-components.css",
 	"css/sheet-gear.css",
 	"css/sheet-character.css",
 	"css/chat-roll.css",

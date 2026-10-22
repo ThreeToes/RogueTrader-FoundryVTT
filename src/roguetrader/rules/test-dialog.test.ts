@@ -122,7 +122,9 @@ describe("test-dialog system seams (bead p7jv)", () => {
 		expect(TestDialogBase.branding).toEqual({
 			template: "",
 			windowId: "test-dialog",
-			windowClasses: ["dialog", "test-dialog-app"],
+			// rt-component (cmio.6): the shared component layer's root — inert
+			// until a system bundles the shared CSS.
+			windowClasses: ["dialog", "test-dialog-app", "rt-component"],
 		});
 		expect(TestDialogBase.defaults).toEqual({});
 	});

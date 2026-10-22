@@ -49,44 +49,11 @@
 	--rt-radius-sm: 3px;
 }
 
-/* Shared chip base (bead 6zha): ONE anatomy for every boxed chip affordance
-   — border + radius + padding + type + cursor. Per-site modifiers keep only
-   what differs (font-size step, border token, cursor:help, display bits).
-   The scope list covers every chip site across the sheets, the creators and
-   the test dialog (which sits outside .rogue-trader — bead y8u3). It sits
-   before every per-site rule so modifiers always win. The ladder-option
-   entry is keyed to the ROLE level (bead qn9i): the chip renders on the
-   character, starship, planet and NPC sheets alike. */
-.rogue-trader.sheet .chip-option .chip,
-.rogue-trader .pick-chip,
-.rogue-trader.sheet .traits-row .chip,
-.rogue-trader.sheet.starship .inv-row .state-chip,
-.rogue-trader.sheet.starship .inv-row .slot-chip,
-.rogue-trader .ladder-option,
-.rogue-trader.sheet .origin-chip,
-.rogue-trader .character-creator .chip,
-.rogue-trader .psychic .psychic-tags .chip,
-.rogue-trader .background .origin-mod,
-.rogue-trader .advancement .adv-multiplier,
-.test-dialog-app .test-dialog .difficulty-chip,
-.test-dialog-app .test-dialog .condition-chip {
-	border: 1px solid var(--rt-border);
-	border-radius: var(--rt-radius);
-	padding: 1px 8px;
-	font-size: var(--rt-fs-md);
-	cursor: pointer;
-	background: none;
-}
-
-/* Selected treatment 1 of 2 — solid gold FILL: the input:checked ladder and
-   radio toggles light fully gold (bead 6zha collapsed the per-site copies
-   of this treatment). */
-.rogue-trader.sheet .chip-option input:checked + .chip,
-.rogue-trader .ladder-option.active {
-	background: var(--rt-gold);
-	border-color: var(--rt-gold);
-	color: var(--rt-on-gold);
-}
+/* Shared chip base + both checked treatments (bead 6zha) now live in the
+   system-neutral shared layer, css/40k-components.css (cmio.6) — re-rooted
+   from .rogue-trader to the rt-component root class every consuming window
+   carries. This file keeps only the site-local modifiers; the base is
+   bundled FIRST, so the per-site rules below still win. */
 
 .rogue-trader .tab {
 	min-height: 0;
@@ -358,7 +325,7 @@
 }
 
 /* Checked highlight lives in the shared gold FILL treatment (bead 6zha,
-   top of this file). */
+   css/40k-components.css). */
 .rogue-trader.sheet .chip-option:hover .chip {
 	border-color: var(--rt-gold);
 	color: var(--rt-gold);
@@ -1273,8 +1240,8 @@
 	flex: none;
 }
 
-/* State/slot chrome comes from the shared chip base (bead 6zha); these are
-   the site-local steps. */
+/* State/slot chrome comes from the shared chip base (bead 6zha,
+   css/40k-components.css); these are the site-local steps. */
 .rogue-trader.sheet.starship .inv-row .state-chip,
 .rogue-trader.sheet.starship .inv-row .slot-chip {
 	font-size: var(--rt-fs-xs);
@@ -1282,31 +1249,9 @@
 	color: var(--rt-muted);
 }
 
-.rogue-trader.sheet.starship .inv-row .state-chip:hover,
-.rogue-trader.sheet.starship .inv-row .slot-chip:hover {
-	border-color: var(--rt-border-strong);
-}
-
-/* The dialog's hover ramp and the checked TINT are ordered together: the
-   checked gold border must survive hovering (hover ramps then tint).
-   Also shared by state + slot chips below. */
-.test-dialog-app .test-dialog button.difficulty-chip:hover,
-.test-dialog-app .test-dialog .condition-chip:hover {
-	border-color: var(--rt-border-strong);
-}
-
-/* Checked treatment 2 of 2 — dim gold TINT (bead 6zha): the gold border +
-   faint gold wash + gold text rung, exactly as the test dialog renders its
-   selected ladder rung (owner round 3/5 ruling), shared by the checked
-   starship state/slot chips. */
-.test-dialog-app .test-dialog button.difficulty-chip.checked,
-.test-dialog-app .test-dialog .condition-chip:has(input:checked),
-.rogue-trader.sheet.starship .inv-row .state-chip.checked,
-.rogue-trader.sheet.starship .inv-row .slot-chip.checked {
-	border-color: var(--rt-gold);
-	background: var(--rt-gold-alpha-faint);
-	color: var(--rt-gold);
-}
+/* The hover ramps and the checked TINT (bead 6zha, treatment 2 — dim gold
+   wash) also live in css/40k-components.css (cmio.6): the ramps travel WITH
+   the tint they must lose to, so the checked gold border survives hovering. */
 
 /* Checked state/slot chips are additionally bold — the current-state
    emphasis of the vitals strip. */

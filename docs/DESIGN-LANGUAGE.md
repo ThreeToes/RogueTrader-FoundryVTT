@@ -86,6 +86,32 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
 - **Inventory rows**: `.inv-row` flex, grip icon, `flex: 1` ellipsized name (click
   opens sheet), muted weight, faded-red delete.
 
+## Component ownership and the shared root class (cmio.6, cmio.8 part 1)
+
+- **Ownership rule**: a component that carries NO system noun lives in the
+  shared, system-neutral layer `css/40k-components.css`, once, so both FFG
+  40k systems (Rogue Trader, DH2) can bundle it verbatim. A system's skin —
+  its window chrome, sheet scaffolding, and any per-site modifier that only
+  makes sense on one site — stays in that system's own files. The shared
+  layer may use the DESIGN-LANGUAGE tokens (`var(--rt-*)`, defined at the top
+  of `css/sheet-gear.css`) but decides no system look.
+- **Root convention**: every consuming Application carries the compound root
+  `<system-root> rt-component` — the window's `DEFAULT_OPTIONS.classes` (or
+  `windowClasses`, for the branding-shaped test dialog) lists the system root
+  FIRST and `"rt-component"` LAST. rt sheets: `["rogue-trader", …,
+  "rt-component"]`. `utils/rt-component-root.test.ts` guards that every
+  classes array in `src` carries it, so a new window cannot silently miss the
+  shared components.
+- **Neutrality gate**: the shared layer contains NO system slug and NO
+  unrooted selector — every rule is rooted on `.rt-component` (the one
+  exception: the test dialog's chip entries keep the dialog's own
+  `.test-dialog-app` root, bead y8u3). A DH2 bundle can ship the file without
+  RT's rules leaking into its windows and vice versa (bead 3xi2, folded into
+  cmio.6's acceptance criteria).
+- **Bundle order**: components before skins — `css/40k-components.css` is
+  FIRST in `utils/css.ts`'s SOURCES so every per-site modifier in the skin
+  files keeps winning the cascade over the shared base rules.
+
 ## Sizing rules
 
 - Every sheet: `window: { resizable: true }` in DEFAULT_OPTIONS, **plus** CSS

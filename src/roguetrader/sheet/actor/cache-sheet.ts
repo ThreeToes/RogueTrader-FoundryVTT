@@ -58,7 +58,7 @@ import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "cache"],
+		classes: ["rogue-trader", "sheet", "cache", "rt-component"],
 		position: { width: 480, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },

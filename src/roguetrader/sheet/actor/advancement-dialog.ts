@@ -75,7 +75,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(
 ) {
 	static DEFAULT_OPTIONS = {
 		id: "rogue-trader-advancement-dialog",
-		classes: ["rogue-trader", "dialog", "advancement-dialog"],
+		classes: ["rogue-trader", "dialog", "advancement-dialog", "rt-component"],
 		position: { width: 640, height: 560 },
 		window: { title: "ADVANCE.TITLE", resizable: true },
 		actions: {

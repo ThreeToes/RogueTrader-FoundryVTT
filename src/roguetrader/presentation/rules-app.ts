@@ -345,7 +345,7 @@ function readModuleProfiles(): readonly ModuleProfileRow[] {
 export class RulesApp extends HandlebarsApplicationMixin(ApplicationV2) {
 	static DEFAULT_OPTIONS = {
 		id: "rogue-trader-rules-app",
-		classes: ["rogue-trader", "dialog", "rules-app"],
+		classes: ["rogue-trader", "dialog", "rules-app", "rt-component"],
 		position: { width: 860, height: 660 },
 		// Resizable per the repo UI rule, with the min sizes the CSS clamps
 		// mirror: ApplicationV2 clamps the resize to the element's computed

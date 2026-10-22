@@ -18,7 +18,7 @@ import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "vehicle"],
+		classes: ["rogue-trader", "sheet", "vehicle", "rt-component"],
 		position: { width: 560, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },

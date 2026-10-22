@@ -1,0 +1,510 @@
+/* 40k-components (cmio.6): the SHARED, system-neutral component layer — the
+ * rules BOTH FFG 40k systems bundle. Rogue Trader ships it in its bundle
+ * (utils/css.ts); DH2 includes it when its build target lands (bead w9sa.4).
+ *
+ * OWNERSHIP RULE: a component that carries no system noun lives HERE, once;
+ * a system's skin stays in that system's own files. What belongs here is the
+ * repeatable component anatomy (chips, the rules-app widget set); what stays
+ * behind is everything system- or app-specific — window chrome, sheet
+ * scaffolding, app-shell grids and per-site modifiers that only make sense
+ * on one site. Rules here may use the DESIGN-LANGUAGE tokens (var(--rt-*),
+ * defined at the top of css/sheet-gear.css) but decide no system look.
+ *
+ * ROOT CONVENTION: every consuming Application carries the compound root
+ * classes `<system-root> rt-component` — RT windows set
+ * `["rogue-trader", ..., "rt-component"]` in DEFAULT_OPTIONS.classes (or
+ * windowClasses, for the test dialog), guarded by
+ * utils/rt-component-root.test.ts. THIS file contains NO system slug and NO
+ * unrooted selector: every selector is rooted on .rt-component, except the
+ * test-dialog chip entries, which keep the dialog's own .test-dialog-app
+ * root (bead y8u3: that dialog sits outside the sheet root) — its window
+ * also carries rt-component. Re-rooting preserved each selector's
+ * specificity exactly (one class token swapped for one class token), so
+ * cascade order against the remaining per-site rules is unchanged.
+ *
+ * MOVED VERBATIM (cmio.6): the shared chip base + both checked treatments
+ * (from css/sheet-gear.css) and the rules-app component set (from
+ * css/rules-app.css, minus its app-specific window chrome, scroll
+ * scaffolding, sidebar/main split and app-local button chrome). */
+
+/* ================================================================== *
+ * Chip family (moved from css/sheet-gear.css, cmio.6)
+ * ================================================================== */
+
+/* Shared chip base (bead 6zha): ONE anatomy for every boxed chip affordance
+   — border + radius + padding + type + cursor. Per-site modifiers keep only
+   what differs (font-size step, border token, cursor:help, display bits).
+   The scope list covers every chip site across the sheets, the creators and
+   the test dialog (which sits outside .rogue-trader — bead y8u3). It sits
+   before every per-site rule so modifiers always win. The ladder-option
+   entry is keyed to the ROLE level (bead qn9i): the chip renders on the
+   character, starship, planet and NPC sheets alike. */
+.rt-component.sheet .chip-option .chip,
+.rt-component .pick-chip,
+.rt-component.sheet .traits-row .chip,
+.rt-component.sheet.starship .inv-row .state-chip,
+.rt-component.sheet.starship .inv-row .slot-chip,
+.rt-component .ladder-option,
+.rt-component.sheet .origin-chip,
+.rt-component .character-creator .chip,
+.rt-component .psychic .psychic-tags .chip,
+.rt-component .background .origin-mod,
+.rt-component .advancement .adv-multiplier,
+.test-dialog-app .test-dialog .difficulty-chip,
+.test-dialog-app .test-dialog .condition-chip {
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius);
+	padding: 1px 8px;
+	font-size: var(--rt-fs-md);
+	cursor: pointer;
+	background: none;
+}
+
+/* Selected treatment 1 of 2 — solid gold FILL: the input:checked ladder and
+   radio toggles light fully gold (bead 6zha collapsed the per-site copies
+   of this treatment). */
+.rt-component.sheet .chip-option input:checked + .chip,
+.rt-component .ladder-option.active {
+	background: var(--rt-gold);
+	border-color: var(--rt-gold);
+	color: var(--rt-on-gold);
+}
+
+/* The two hover ramps travel WITH the checked tint (moved from
+   css/sheet-gear.css, cmio.6): the checked gold border of treatment 2 must
+   survive hovering, so the ramps stay ahead of the tint in source order. */
+.rt-component.sheet.starship .inv-row .state-chip:hover,
+.rt-component.sheet.starship .inv-row .slot-chip:hover {
+	border-color: var(--rt-border-strong);
+}
+
+/* The dialog's hover ramp and the checked TINT are ordered together: the
+   checked gold border must survive hovering (hover ramps then tint).
+   Also shared by state + slot chips below. */
+.test-dialog-app .test-dialog button.difficulty-chip:hover,
+.test-dialog-app .test-dialog .condition-chip:hover {
+	border-color: var(--rt-border-strong);
+}
+
+/* Checked treatment 2 of 2 — dim gold TINT (bead 6zha): the gold border +
+   faint gold wash + gold text rung, exactly as the test dialog renders its
+   selected ladder rung (owner round 3/5 ruling), shared by the checked
+   starship state/slot chips. */
+.test-dialog-app .test-dialog button.difficulty-chip.checked,
+.test-dialog-app .test-dialog .condition-chip:has(input:checked),
+.rt-component.sheet.starship .inv-row .state-chip.checked,
+.rt-component.sheet.starship .inv-row .slot-chip.checked {
+	border-color: var(--rt-gold);
+	background: var(--rt-gold-alpha-faint);
+	color: var(--rt-gold);
+}
+
+/* ================================================================== *
+ * Rules-app component set (moved from css/rules-app.css, cmio.6)
+ *
+ * Re-rooted from the app's own .rules-app class to the shared
+ * .rt-component root. Still in rules-app.css: the window chrome
+ * (min sizes + app-shell flex), the scroll scaffolding, the
+ * sidebar/main split and the app-local disabled-button treatment.
+ * ================================================================== */
+
+/* --- Tab strip ----------------------------------------------------------- */
+
+.rt-component .rules-tabs {
+	display: flex;
+	gap: 4px;
+	border-bottom: 1px solid var(--rt-border);
+	padding-bottom: 4px;
+}
+
+.rt-component .rules-tab {
+	background: none;
+	border: 1px solid var(--rt-border-strong);
+	border-radius: var(--rt-radius);
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 3px 10px;
+	cursor: pointer;
+}
+
+.rt-component .rules-tab:hover {
+	color: var(--rt-gold-soft);
+	border-color: var(--rt-gold);
+}
+
+.rt-component .rules-tab.active {
+	background: var(--rt-gold-alpha-faint);
+	border-color: var(--rt-gold);
+	color: var(--rt-gold);
+	font-weight: bold;
+}
+
+/* --- Profile list ------------------------------------------------------- */
+
+.rt-component ul.rules-profile-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	border: 1px solid var(--rt-border-strong);
+	border-radius: var(--rt-radius);
+	background: var(--rt-panel-shade);
+}
+
+.rt-component .rules-profile {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 6px;
+	padding: 3px 6px;
+	border-bottom: 1px solid var(--rt-border-faint);
+	cursor: pointer;
+	font-size: var(--rt-fs-md);
+}
+
+.rt-component .rules-profile:last-child {
+	border-bottom: none;
+}
+
+.rt-component .rules-profile:hover {
+	color: var(--rt-gold-soft);
+}
+
+.rt-component .rules-profile.selected {
+	background: var(--rt-gold-alpha-faint);
+	color: var(--rt-gold);
+}
+
+.rt-component .rules-profile.active .rules-profile-name {
+	font-weight: bold;
+}
+
+.rt-component .rules-profile-name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.rt-component .rules-profile-active {
+	font-size: var(--rt-fs-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rt-gold);
+}
+
+/* --- Module-registered profiles (bead wxut.6) ---------------------------
+ *
+ * A module's profile is DATA THE MODULE SHIPPED, not the GM's: its group is
+ * marked apart (dashed rule, muted names) so the read-only panel below it is
+ * not the first thing a GM learns about it. Selecting still works — a GM must
+ * be able to look at what a module changed — and so does activation, which is
+ * the one write the group accepts. */
+
+.rt-component ul.rules-profile-list.module {
+	border-style: dashed;
+}
+
+.rt-component ul.rules-profile-list.module .rules-profile-name {
+	color: var(--rt-muted);
+}
+
+.rt-component .rules-module-label {
+	margin-top: 6px;
+}
+
+.rt-component ul.rules-skipped {
+	margin: 0;
+	padding-left: 14px;
+	color: var(--rt-warn);
+	font-size: var(--rt-fs-xs);
+}
+
+.rt-component .rules-sidebar-hint,
+.rt-component .rules-hint {
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+	margin: 2px 0;
+}
+
+/* --- Header ------------------------------------------------------------- */
+
+.rt-component .rules-header {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.rt-component .rules-header-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.rt-component .rules-header-row input[type="text"] {
+	flex: 1;
+	min-width: 0;
+}
+
+.rt-component .rules-header-flag {
+	font-size: var(--rt-fs-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rt-gold);
+}
+
+.rt-component .rules-header-actions,
+.rt-component .rules-sidebar-actions,
+.rt-component .rules-json-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.rt-component button.rules-button {
+	background: none;
+	border: 1px solid var(--rt-border-strong);
+	border-radius: var(--rt-radius);
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+	padding: 2px 8px;
+	cursor: pointer;
+}
+
+.rt-component button.rules-button:hover:not(:disabled) {
+	color: var(--rt-gold);
+	border-color: var(--rt-gold);
+}
+
+.rt-component button.rules-button.default {
+	color: var(--rt-gold);
+	border-color: var(--rt-gold);
+}
+
+/* --- Notices ------------------------------------------------------------ */
+
+.rt-component .rules-notice {
+	margin: 2px 0;
+	padding: 4px 6px;
+	border-radius: var(--rt-radius);
+	font-size: var(--rt-fs-sm);
+	background: var(--rt-panel-shade);
+	border: 1px solid var(--rt-border);
+}
+
+.rt-component .rules-notice.ok {
+	border-color: var(--rt-success);
+	color: var(--rt-success);
+}
+
+.rt-component .rules-notice.error {
+	border-color: var(--rt-danger-deep);
+	color: var(--rt-danger-deep);
+}
+
+.rt-component ul.rules-notice-errors {
+	margin: 2px 0 0;
+	padding-left: 16px;
+}
+
+/* --- Generated knob form ------------------------------------------------ */
+
+.rt-component h2.rules-group-label,
+.rt-component h3.rules-group-label {
+	margin: 6px 0 2px;
+}
+
+.rt-component .rules-knob-group {
+	border: 1px solid var(--rt-border);
+	border-radius: var(--rt-radius);
+	padding: 4px 6px;
+}
+
+.rt-component .rule-knob {
+	padding: 4px 0;
+	border-bottom: 1px solid var(--rt-border-faint);
+}
+
+.rt-component .rule-knob:last-child {
+	border-bottom: none;
+}
+
+.rt-component .rule-knob-head {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+}
+
+.rt-component .rule-knob-label {
+	font-size: var(--rt-fs-md);
+	font-weight: bold;
+}
+
+.rt-component .rule-knob-flag {
+	font-size: var(--rt-fs-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rt-gold);
+	background: var(--rt-gold-alpha-soft);
+	border-radius: var(--rt-radius-sm);
+	padding: 0 4px;
+}
+
+.rt-component .rule-knob-hazard {
+	font-size: var(--rt-fs-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rt-muted);
+	margin-left: auto;
+}
+
+/* The two knobs whose values assume the spent-xp ledger: always visible. */
+.rt-component .rule-knob.overridden .rule-knob-hazard {
+	color: var(--rt-warn);
+}
+
+.rt-component .rule-knob-hint {
+	margin: 1px 0;
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+}
+
+.rt-component .rule-knob-control {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.rt-component .rule-knob-control input[type="number"] {
+	width: 6em;
+}
+
+.rt-component .rule-knob-core {
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+}
+
+.rt-component .rule-knob-core em {
+	color: var(--rt-muted-deep);
+}
+
+/* --- Hit-location band table (whole replacement) ------------------------ */
+
+.rt-component table.rule-band-table,
+.rt-component table.rules-diff-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--rt-fs-sm);
+}
+
+.rt-component table.rule-band-table th,
+.rt-component table.rules-diff-table th {
+	text-align: left;
+	font-size: var(--rt-fs-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rt-muted);
+	border-bottom: 1px solid var(--rt-border-strong);
+	padding: 1px 4px;
+}
+
+.rt-component table.rule-band-table td,
+.rt-component table.rules-diff-table td {
+	padding: 1px 4px;
+	border-bottom: 1px solid var(--rt-border-soft);
+	vertical-align: top;
+}
+
+.rt-component table.rule-band-table input[type="text"] {
+	width: 6em;
+}
+
+.rt-component .rule-band-remove {
+	background: none;
+	border: none;
+	color: var(--rt-danger);
+	cursor: pointer;
+	padding: 0 2px;
+}
+
+/* --- JSON tab ----------------------------------------------------------- */
+
+.rt-component textarea.rules-json-text {
+	width: 100%;
+	min-height: 220px;
+	font-family: monospace;
+	font-size: var(--rt-fs-sm);
+	color: var(--rt-gold-soft);
+	background: var(--rt-panel-shade);
+	border: 1px solid var(--rt-border-strong);
+	border-radius: var(--rt-radius);
+	padding: 4px 6px;
+	resize: vertical;
+}
+
+.rt-component .rules-notice-message {
+	margin-left: 6px;
+}
+
+/* --- Import / export tab (bead wxut.5) ----------------------------------- */
+
+.rt-component .rules-pack-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 4px 0;
+}
+
+.rt-component textarea.rules-pack-text {
+	min-height: 180px;
+}
+
+.rt-component label.rules-pack-file {
+	position: relative;
+	overflow: hidden;
+	display: inline-block;
+}
+
+/* The file input is the label's own control, so it stays keyboard-reachable
+   while the visible button is the styled span beside it. */
+.rt-component .rules-pack-file input[type="file"] {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.rt-component label.rules-pack-check {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	color: var(--rt-muted);
+	font-size: var(--rt-fs-sm);
+}
+
+/* --- Diff panel --------------------------------------------------------- */
+
+.rt-component .rules-diff-row.overridden .rules-diff-row-key {
+	color: var(--rt-gold);
+}
+
+.rt-component .rules-diff-row.breaking td {
+	background: var(--rt-panel-shade);
+	color: var(--rt-danger-deep);
+}
+
+.rt-component .rules-diff-breaking {
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	font-weight: bold;
+}
+
+.rt-component .rules-diff-row.unknown code {
+	color: var(--rt-warn);
+}
+
+.rt-component .rules-diff-table code {
+	font-size: var(--rt-fs-xs);
+}

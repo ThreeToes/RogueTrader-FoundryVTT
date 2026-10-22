@@ -117,7 +117,7 @@ const owningSkillKeys = new Set<string>();
 
 export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "character"],
+		classes: ["rogue-trader", "sheet", "character", "rt-component"],
 		position: { width: 600, height: 500 },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },

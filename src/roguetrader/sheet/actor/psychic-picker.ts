@@ -1,9 +1,10 @@
-import { getPorts } from "../../infrastructure/foundry/ports";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 import { sheetContext } from "../context";
 import { getCharacterOptionDocs, resolvePackDocument } from "../pack-resolve";
-import { OwnedItemPicker } from "./owned-picker";
-import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 import { clonePackDocPayload } from "./creator-apply";
+// Bead eqay: the shared warn owns the missing-doc console line AND the toast.
+import { warnPackDocMissing } from "./grant-helpers";
+import { OwnedItemPicker } from "./owned-picker";
 
 /**
  * Psychic power compendium picker (bead m4me): lists the character-options
@@ -97,10 +98,12 @@ export class PsychicPicker extends OwnedItemPicker {
 			);
 		}
 		if (!doc?.toObject) {
-			console.warn(
-				`rogue-trader | psychic picker: "${uuid}" did not resolve; grant skipped`,
-			);
-			getPorts().notify.error("PSYCHIC_POWER.ADD_FAIL", { uuid });
+			// Bead eqay: the shared warn owns console AND the notify (error
+			// severity kept, PSYCHIC_POWER.ADD_FAIL).
+			warnPackDocMissing("psychicpower", uuid, "grant skipped", "compendium", {
+				key: "PSYCHIC_POWER.ADD_FAIL",
+				vars: { uuid },
+			});
 			return;
 		}
 		// The clone must not carry the pack doc's _id (two Items cannot share

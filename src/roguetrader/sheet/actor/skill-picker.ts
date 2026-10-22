@@ -1,11 +1,13 @@
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 import { Character } from "../../data/actor/character";
 import { characteristics } from "../../registry";
+// Bead iktx: the ONE characteristic-label composition seam (labels.ts).
+import { characteristicLabelKey } from "../../rules/labels";
 import { sheetContext } from "../context";
 import { getCharacterOptionDocs } from "../pack-resolve";
+import { clonePackDocPayload } from "./creator-apply";
 import { findPackDoc, warnPackDocMissing } from "./grant-helpers";
 import { OwnedItemPicker } from "./owned-picker";
-import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
-import { clonePackDocPayload } from "./creator-apply";
 
 /**
  * Minimal skill picker: lists the catalog from the skills compendium pack and
@@ -56,7 +58,7 @@ export class SkillPicker extends OwnedItemPicker {
 			owned: owned.has(entry.name),
 			charLabel:
 				characteristics.choices[entry.characteristic] ??
-				"CHARACTERISTIC.".concat(entry.characteristic.toUpperCase()),
+				characteristicLabelKey(entry.characteristic),
 		}));
 		context.characteristicChoices = characteristics.choices;
 		return context;
@@ -76,6 +78,8 @@ export class SkillPicker extends OwnedItemPicker {
 			name,
 		)) as foundry.documents.Item | null;
 		if (!source) {
+			// Bead eqay: the shared warn owns the user-facing notify too — the
+			// default error severity (this site used to be console-only).
 			warnPackDocMissing("skill", name, "grant skipped");
 			return;
 		}

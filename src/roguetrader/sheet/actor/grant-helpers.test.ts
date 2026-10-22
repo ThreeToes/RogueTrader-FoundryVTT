@@ -167,6 +167,53 @@ describe("findPackDoc — the one pack-by-name resolve (bead 38io)", () => {
 			'rogue-trader | talent "Iron Jaw" not found in the character-options pack; granting a bare item',
 		]);
 	});
+
+	// Bead eqay: warnPackDocMissing owns the user-facing notify TOO — no site
+	// resolves a missing pack doc silently, and each surface keeps its own
+	// key + severity through the notify spec.
+	test("warnPackDocMissing owns the notify — key/severity per call, error by default", () => {
+		type Call = { severity: string; message: string };
+		const calls: Call[] = [];
+		const originalUi = (globalThis as { ui?: unknown }).ui;
+		const originalGame = (globalThis as { game?: unknown }).game;
+		(globalThis as { ui?: unknown }).ui = {
+			notifications: {
+				warn: (m: string) => calls.push({ severity: "warn", message: m }),
+				info: (m: string) => calls.push({ severity: "info", message: m }),
+				error: (m: string) => calls.push({ severity: "error", message: m }),
+			},
+		};
+		// Interpolation stub (ports.localise delegates to game.i18n.format).
+		(globalThis as { game?: unknown }).game = {
+			i18n: {
+				localize: (k: string) => k,
+				format: (k: string, v: Record<string, string>) =>
+					`${k}:${Object.values(v ?? {}).join("|")}`,
+			},
+		};
+		try {
+			// Explicit spec: the surfaces keep their intended key + severity.
+			warnPackDocMissing("talent", "Rival", "grant skipped", undefined, {
+				key: "AFFLICTION.GRANT_MISSING",
+				severity: "warn",
+				vars: { name: "Rival" },
+			});
+			warnPackDocMissing(
+				"psychicpower",
+				"Item.x",
+				"grant skipped",
+				"compendium",
+				{ key: "PSYCHIC_POWER.ADD_FAIL", vars: { uuid: "Item.x" } },
+			);
+			// No notify spec: the DEFAULT is error — never silent.
+			warnPackDocMissing("skill", "Dodge", "grant skipped");
+		} finally {
+			(globalThis as { ui?: unknown }).ui = originalUi;
+			(globalThis as { game?: unknown }).game = originalGame;
+		}
+		expect(calls.map((c) => c.severity)).toEqual(["warn", "error", "error"]);
+		expect(calls[0]!.message).toContain("Rival");
+	});
 });
 
 /**

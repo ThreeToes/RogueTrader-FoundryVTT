@@ -181,6 +181,10 @@ export const weaponHandler: RollHandler<"weapon"> = {
 							// Bead 9b95 F6: the dialog fire mode rides the flag
 							// so the auto-consume computes the shots spent.
 							fireMode: info?.context?.fireMode,
+							// Bead gqz2: the dialog's condition flags (e.g. charging)
+							// ride the flag too, so the damage channel's guarded rows
+							// fire only when their condition held at to-hit time.
+							flags: info?.context?.flags,
 							rolled: false,
 						},
 					},

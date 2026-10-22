@@ -156,6 +156,9 @@
 	gap: 2px;
 }
 
+/* Character-step modifiers: the character sheet's skill ladder uses the
+   xs step; the base chip (bead qn9i, shared across all sheets) sets the
+   md step. */
 .rogue-trader.sheet.character .ladder-option {
 	font-size: var(--rt-fs-xs);
 	border-color: var(--rt-muted);
@@ -290,10 +293,13 @@
 	margin-top: 6px;
 }
 
-/* Character creator (Origin Path wizard, bead ay0) */
-
+/* Character creator (Origin Path wizard, bead ay0). min-height (bead 5cgd):
+   ApplicationV2 clamps resize only to the computed min sizes, so without a
+   floor here the window could be dragged to zero height — same pattern as
+   .advancement-dialog below. */
 .rogue-trader.character-creator {
 	min-width: 560px;
+	min-height: 440px;
 }
 
 /* Scrollable creator body: long origin lists exceed the fixed window.
@@ -311,6 +317,7 @@
    window is resizable (AGENTS.md rule). */
 .rogue-trader.warrant-creator {
 	min-width: 560px;
+	min-height: 440px;
 }
 
 .rogue-trader.warrant-creator .window-content {
@@ -926,17 +933,6 @@
 	background: var(--rt-border-faint);
 }
 
-.rogue-trader.sheet .psychic-picker .catalog-row {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	padding: 2px 0;
-}
-
-.rogue-trader.sheet .psychic-picker .catalog-row .name {
-	flex: 1;
-}
-
 /* Consolidated Background tab (bead ay0): origins + career + talents. */
 
 .rogue-trader .background .origin-list {
@@ -1305,9 +1301,15 @@
 	min-height: 2.4em;
 }
 
-/* Skill picker (Add Custom) */
+/* Skill + talent + psychic pickers. Bead kkne: keyed on the pickers' role
+   classes instead of the window class — the talent picker reuses the
+   skill-picker root markup under its own talent-picker window class, which
+   used to drop this whole styling. The psychic-picker near-duplicate
+   collapsed into these rules (their add links gain the shared gold
+   affordance). */
 
-.rogue-trader.sheet.skill-picker .skill-picker {
+.rogue-trader .skill-picker,
+.rogue-trader .talent-picker {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
@@ -1315,7 +1317,8 @@
 	overflow: hidden;
 }
 
-.rogue-trader.sheet.skill-picker .catalog {
+.rogue-trader .skill-picker .catalog,
+.rogue-trader .talent-picker .catalog {
 	flex: 1 1 auto;
 	min-height: 0;
 	max-height: 380px;
@@ -1323,7 +1326,8 @@
 	padding-right: 4px;
 }
 
-.rogue-trader.sheet.skill-picker .catalog-row {
+.rogue-trader .skill-picker .catalog-row,
+.rogue-trader .psychic-picker .catalog-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -1331,25 +1335,32 @@
 	padding: 1px 0;
 }
 
-.rogue-trader.sheet.skill-picker .catalog-row.owned {
+.rogue-trader .skill-picker .catalog-row .name,
+.rogue-trader .psychic-picker .catalog-row .name {
+	flex: 1;
+}
+
+.rogue-trader .skill-picker .catalog-row.owned,
+.rogue-trader .psychic-picker .catalog-row.owned {
 	opacity: 0.55;
 }
 
-.rogue-trader.sheet.skill-picker .add-row {
+.rogue-trader .skill-picker .add-row,
+.rogue-trader .psychic-picker .add-row {
 	cursor: pointer;
 	color: var(--rt-gold);
 	width: 1.5em;
 	text-align: center;
 }
 
-.rogue-trader.sheet.skill-picker form.custom {
+.rogue-trader .skill-picker form.custom {
 	flex: none;
 	display: flex;
 	gap: 6px;
 	align-items: center;
 }
 
-.rogue-trader.sheet.skill-picker form.custom input {
+.rogue-trader .skill-picker form.custom input {
 	flex: 1;
 	min-width: 8em;
 }
@@ -1395,11 +1406,6 @@
 .rogue-trader.sheet.character .encumbrance-bar .chip-value input {
 	width: 4em;
 	text-align: center;
-}
-
-.rogue-trader.sheet.character .encumbrance-bar .unit {
-	color: var(--rt-muted);
-	font-size: var(--rt-fs-md);
 }
 
 .rogue-trader.sheet.character .capacity-note {

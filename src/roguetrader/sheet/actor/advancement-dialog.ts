@@ -1,12 +1,20 @@
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { systemOf } from "../../data/accessors";
+import { CHARACTERISTIC_KEYS } from "../../data/actor/character";
 import {
-	characteristicValues,
-	findOwnedSkillForRow,
-	LADDER_MAX,
-} from "../skills-domain";
-import { sheetContext } from "../context";
-import { characterOptionDocsOnce, openPackDocUuid } from "../pack-resolve";
+	type AdvanceLedgerEntry,
+	type AdvanceRowLike,
+	type CharacteristicSchemeLike,
+	characteristicNextAdvance,
+	derivedRank,
+	evaluateAlternateRankGate,
+	ledgerEntryFor,
+	type RankThresholdLike,
+	totalSpent,
+} from "../../rules/advancement";
+// Bead iktx: the ONE characteristic-label composition seam (labels.ts).
+import { characteristicLabelKey } from "../../rules/labels";
 // Bead 656m: the shared pack-doc catalog builders — the inline mapping
 // loops that duplicated the character creator's grant catalog lived here.
 import {
@@ -16,38 +24,32 @@ import {
 	type SkillCatalogEntry,
 	type TalentCatalogEntry,
 } from "../catalog";
+import { sheetContext } from "../context";
 // Bead npnn: the shared imperative input-wiring helpers (dataset.wired guard).
 import { wireInput } from "../dom-wire";
 // Shared doc-link library (epic 61pk, bead n2b2): the resolvers live there,
 // re-exported through pack-resolve (see below); no local copies.
 import { resolveSkillDoc } from "../pack-doc-links";
+import { characterOptionDocsOnce, openPackDocUuid } from "../pack-resolve";
 import {
-	characteristicNextAdvance,
-	derivedRank,
-	evaluateAlternateRankGate,
-	ledgerEntryFor,
-	totalSpent,
-	type AdvanceLedgerEntry,
-	type AdvanceRowLike,
-	type CharacteristicSchemeLike,
-	type RankThresholdLike,
-} from "../../rules/advancement";
+	characteristicValues,
+	findOwnedSkillForRow,
+	LADDER_MAX,
+} from "../skills-domain";
+// Bead avah: the PURE purchase helpers (validation, ledger update, talent
+// grant) — #buyRow orchestrates over them.
+import {
+	advanceConfirmReasons,
+	applyTalentGrant,
+	type TalentGrantDeps,
+	updateLedger,
+	validateAdvancePurchase,
+} from "./advancement-buy";
 import {
 	buildAdvancementViewModel,
 	filterAdvancementRows,
 } from "./advancement-view-model";
-import { CHARACTERISTIC_KEYS } from "../../data/actor/character";
-import { talentGrant, promptParameterisedSubject } from "./grant-helpers";
-// Bead avah: the PURE purchase helpers (validation, ledger update, talent
-// grant) — #buyRow orchestrates over them.
-import {
-	applyTalentGrant,
-	advanceConfirmReasons,
-	updateLedger,
-	validateAdvancePurchase,
-	type TalentGrantDeps,
-} from "./advancement-buy";
-import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
+import { promptParameterisedSubject, talentGrant } from "./grant-helpers";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ApplicationV2 } = foundry.applications.api;
@@ -537,7 +539,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(
 			},
 		} as never);
 		getPorts().notify.info("ADVANCE.BOUGHT", {
-			name: `${getPorts().i18n.t(`CHARACTERISTIC.${key.toUpperCase()}`)} +5 (${next.tier})`,
+			name: `${getPorts().i18n.t(characteristicLabelKey(key))} +5 (${next.tier})`,
 			cost: String(next.cost),
 		});
 		this.render({ force: true } as never);
@@ -603,7 +605,7 @@ export class AdvancementDialog extends HandlebarsApplicationMixin(
 					validation,
 					(key: string) => game.i18n!.localize(key),
 					(key: string, vars?: Record<string, string>) =>
-					game.i18n!.format(key, vars),
+						game.i18n!.format(key, vars),
 				),
 			))
 		) {

@@ -72,7 +72,7 @@ War, Black Crusade...).
   metadata fields the book doesn't support without an explicit owner
   decision.
 - **Modifiers are visible**: every test path shows contributor breakdowns in
-  the TestDialog (skill rolls currently bypass it — bead 02u); silent
+  the TestDialog; silent
   modifiers are bugs.
 
 ## Portraits & actor art

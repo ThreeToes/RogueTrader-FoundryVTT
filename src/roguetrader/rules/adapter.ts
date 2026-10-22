@@ -3,6 +3,7 @@ import {
 	locationForHit,
 	parseDamageFormula,
 	resolveDamage,
+	type DamageRequest,
 	type Modifier,
 } from "../../rules-engine/index";
 import { DamageType, normaliseDamageType } from "../data/item/damage-types";
@@ -10,7 +11,7 @@ import { actorView } from "../../ffg/infrastructure/foundry/actor-view";
 import type { DiceResult, Ports } from "../../ffg/application/ports";
 import { getPorts } from "../infrastructure/foundry/ports";
 import * as damageDice from "../../ffg/application/damage-dice";
-import { bodyLocationLabelKey } from "./labels";
+import { bodyLocationLabelKey, conditionLabel } from "./labels";
 import {
 	applyTearing,
 	collectRollMechanicEffects,
@@ -184,6 +185,9 @@ export async function rollDamageForCard(data: DamageRollFlag): Promise<void> {
 		data.critical === true,
 		// Bead 9b95 F6: the to-hit dialog's fire mode, stamped onto the flag.
 		data.fireMode,
+		// Bead gqz2: the to-hit dialog's condition flags, stamped onto the
+		// flag so guarded damage rows can fire on the damage channel.
+		data.flags,
 	);
 }
 
@@ -381,6 +385,35 @@ async function applyRollQualityMechanics(
 }
 
 /**
+ * Righteous Fury extra damage dice (Core Rulebook pp249-250, bead 8ssh owner
+ * decisions 2026-10-21): the kernel only FLAGS a triggering hit (damage.ts
+ * docblock — the adapter resolves it), and the attacker rolls ONE additional
+ * damage die (1d10 per the weapon) and adds it to the Damage total, looping
+ * while the NEW die is a natural 10. Each extra die joins the total soaks
+ * against Armour/Toughness normally (decision 2 — the re-resolution happens
+ * at the call site). The vehicle path (Core Rulebook p218 — 1d5 on the
+ * Vehicle Critical Hit Chart INSTEAD of the extra die) is OUT OF SCOPE here.
+ */
+async function rollRighteousFuryDice(ports: Ports): Promise<{
+	added: number;
+	rolls: unknown[];
+}> {
+	let added = 0;
+	// Bead wvkd's contract: every die the step rolls rides out for the card to
+	// attach, so Dice So Nice! animates exactly the dice the breakdown shows.
+	const rolls: unknown[] = [];
+	for (;;) {
+		const extra = await ports.dice.roll("1d10");
+		added += extra.total;
+		rolls.push(...(extra.rolls ?? []));
+		// The loop condition rides the natural-10 trigger detector (bead k98i):
+		// only a NEW die showing a natural 10 keeps the chain going.
+		if (!damageDice.righteousFuryTriggered(extra)) break;
+	}
+	return { added, rolls };
+}
+
+/**
  * Target soak inputs (bead d3yc step, formerly inlined in postWeaponDamage):
  * the worn armour's value/primitive at the hit location, the weapon's
  * primitive input and the Toughness Bonus the kernel soaks against.
@@ -453,12 +486,18 @@ function collectTargetArmour(
 function collectAttackerTalentDamage(
 	attacker: Actor,
 	profile: AttackProfile,
+	// Bead gqz2: the to-hit dialog's condition flags (e.g. { charging: true }),
+	// threaded via the damageRoll flag. Without them, guardPasses never saw a
+	// flag on the damage channel and a guarded damage-flat row (e.g. "while
+	// charging") was silently inert.
+	conditionFlags?: Record<string, boolean>,
 ): TalentDamageCollection {
 	return collectTalentDamageEffects(actorView(attacker), {
 		attackType: profile.attackType,
 		// Bead 2k5: the attacking weapon's own damage effects apply; note
 		// the item id is needed for per-item matching.
 		weaponId: profile.id ?? undefined,
+		...(conditionFlags ? { flags: conditionFlags } : {}),
 	});
 }
 
@@ -490,6 +529,18 @@ async function postDamageCard(
 	},
 ): Promise<void> {
 	const locationLabelKey = bodyLocationLabelKey(card.location);
+	// Bead 0u0o: gqz2 threaded the to-hit dialog's condition flags into the
+	// damage channel, which also put the raw registry slug on each guarded
+	// contributor row (e.g. "(charging)" on the card). Resolve the label
+	// through the same seam the TestDialog uses so the card shows a
+	// human-readable condition; the template keeps rendering what it is
+	// given. Kernel data above this point stays untouched — this is a
+	// display-step rewrite only.
+	const damageContributors = card.damageContributors.map((mod) =>
+		mod.condition
+			? { ...mod, condition: ports.i18n.t(conditionLabel(mod.condition)) }
+			: mod,
+	);
 	await postCard(
 		attacker,
 		`${TEMPLATE_ROOT}chat/damage.hbs`,
@@ -507,8 +558,9 @@ async function postDamageCard(
 			damageTypeLabelKey: card.notation.damageTypeLabelKey,
 			damageTypeAlternatives: card.notation.damageTypeAlternatives,
 			damage: card.damage,
-			// Bead atx: talent damage contributors shown as breakdown rows.
-			damageContributors: card.damageContributors,
+			// Bead atx: talent damage contributors shown as breakdown rows
+			// (conditions localized for display — bead 0u0o).
+			damageContributors,
 			// Bead gci0: roll-mechanic quality notes (Tearing/Toxic/Blast);
 			// Toxic only when the hit dealt damage after soak.
 			qualityNotes: card.qualityNotes,
@@ -587,6 +639,11 @@ async function postWeaponDamage(
 	// damageRoll flag; absent on the sheet quick-damage path — then the
 	// consume falls back to the launcher's RoF (single-shot-only = 1).
 	fireMode?: FireMode | null,
+	// Bead gqz2: the to-hit dialog's condition flags, stamped onto the
+	// damageRoll flag by the weapon handler's after-hook; the talent-damage
+	// collector guards its rows on them. Absent on the sheet quick-damage
+	// path (no dialog ran) — unguarded rows apply, guarded ones stay off.
+	conditionFlags?: Record<string, boolean>,
 ): Promise<void> {
 	const ports = getPorts();
 	// Bead 4obp: an UNLOADED launcher has no damage of its own (the book
@@ -628,12 +685,16 @@ async function postWeaponDamage(
 	// Step d3yc-2: quality mechanics on the roll — Tearing bumps the total
 	// and Blast/unparryable/full-action become card notes (see
 	// applyRollQualityMechanics).
-	const { damageTotal, qualityNotes, rolls } = await applyRollQualityMechanics(
-		ports,
-		damageRoll,
-		mechanics,
-		profile,
-	);
+	const { damageTotal: rolledDamageTotal, qualityNotes, rolls } =
+		await applyRollQualityMechanics(
+			ports,
+			damageRoll,
+			mechanics,
+			profile,
+		);
+	// Righteous Fury (bead 8ssh) re-resolves with the extra dice folded in,
+	// so the damage total is mutable past this point.
+	let damageTotal = rolledDamageTotal;
 
 	// Bead yojf: the kernel profile resolves through ports.config.profile()
 	// instead of a direct rtCore import, so a sibling module swaps one binding.
@@ -648,7 +709,11 @@ async function postWeaponDamage(
 	// joins the roll before soak; critical-damage applies only when the to-hit
 	// was critical; both are condition-guarded via flags (see
 	// collectAttackerTalentDamage).
-	const talentDamage = collectAttackerTalentDamage(attacker, profile);
+	const talentDamage = collectAttackerTalentDamage(
+		attacker,
+		profile,
+		conditionFlags,
+	);
 	// Card breakdown: flat damage always; critical-damage rows only on a
 	// critical hit (they are gated in the kernel by isCritical); trait
 	// damage-reduction rows always (they soak regardless of the hit type).
@@ -658,7 +723,7 @@ async function postWeaponDamage(
 		...soak.traitReduction,
 	];
 
-	const damage = resolveDamage({
+	const damageRequest: DamageRequest = {
 		roll: damageTotal,
 		penetration: profile.penetration,
 		// Bead xof: wire the primitive-armour rule through at runtime.
@@ -676,7 +741,33 @@ async function postWeaponDamage(
 		isCritical,
 		righteousFuryTriggered,
 		profile: ruleProfile,
-	});
+	};
+	// First pass: base damage, no Righteous Fury dice. The kernel's flag is
+	// the trigger gate (enabled + triggered + the hit actually damaged — the
+	// profile's "damaging-hit" trigger), so nothing rolls when the hit is
+	// fully soaked or the damage.righteousFury knob is OFF (bead 8ssh decision
+	// 5: off suppresses the whole effect, on produces it).
+	let damage = resolveDamage(damageRequest);
+	if (damage.righteousFury) {
+		// Bead 8ssh (Core Rulebook pp249-250): the extra damage die(s) join the
+		// total BEFORE the re-resolution (decision 2), so they soak against
+		// armour/Toughness normally; the added amount is a visible contributor
+		// row, the confirming second attack roll is GM-called (decision 3 —
+		// no auto-confirm is built), and the vehicle path (p218) stays out of
+		// scope (decision 4; see rollRighteousFuryDice).
+		const fury = await rollRighteousFuryDice(ports);
+		damageTotal += fury.added;
+		rolls.push(...fury.rolls);
+		damageRequest.roll = damageTotal;
+		damage = resolveDamage(damageRequest);
+		damageContributors.push({
+			id: "righteous-fury",
+			source: { type: "effect", label: "CHAT.RIGHTEOUS_FURY" },
+			label: ports.i18n.t("CHAT.RIGHTEOUS_FURY"),
+			value: fury.added,
+		});
+		qualityNotes.push(ports.i18n.t("CHAT.RIGHTEOUS_FURY_GM_CALLED"));
+	}
 
 	// Step d3yc-5: the toxic gate + the card (see postDamageCard). Toxic
 	// (beads gci0 + d8bc, owner rule text): the Toughness-test gate only

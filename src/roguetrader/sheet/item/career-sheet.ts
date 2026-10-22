@@ -1,10 +1,12 @@
-import { careers } from "../../registry";
-import type { CareerRank } from "../../data/item/career";
-import { OPEN_PACK_DOC_ACTION, openPackDocUuid } from "../pack-resolve";
-import { ITEM_DESCRIPTION_TABS } from "../tabs";
-import { itemDataContext, sheetContext } from "../context";
-import { itemSheetOptions } from "../sheet-options";
 import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
+import type { CareerRank } from "../../data/item/career";
+import { careers } from "../../registry";
+// Bead iktx: the ONE characteristic-label composition seam (labels.ts).
+import { characteristicLabelKey } from "../../rules/labels";
+import { itemDataContext, sheetContext } from "../context";
+import { OPEN_PACK_DOC_ACTION, openPackDocUuid } from "../pack-resolve";
+import { itemSheetOptions } from "../sheet-options";
+import { ITEM_DESCRIPTION_TABS } from "../tabs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -128,7 +130,7 @@ export class CareerSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 		context.charAdvanceRows = Object.entries(
 			system.characteristicAdvances ?? {},
 		).map(([char, costs]) => ({
-			char: game.i18n.localize(`CHARACTERISTIC.${char.toUpperCase()}`),
+			char: game.i18n.localize(characteristicLabelKey(char)),
 			costs,
 		}));
 		context.rankRows = [...(system.ranks ?? [])]

@@ -14,3 +14,31 @@ export function clonePackDocPayload<T extends { _id?: unknown }>(
 	delete clone._id;
 	return clone as Omit<T, "_id">;
 }
+
+/**
+ * Creator-grant clone payload (bead lnya): the pack-doc clone _id strip
+ * PLUS the grantedBy provenance stamp (iufv convention) the creators and
+ * pickers add so a re-run can reconcile its own previous grants. One shape,
+ * three former hand-rolled copies: ship-creator, planet-creator, mod-picker.
+ *
+ * `doc` is a RESOLVED pack doc (`fromUuid` result or `doc.toObject()`); the
+ * returned payload is `createEmbeddedDocuments`-ready (no _id, system
+ * spread + grantedBy).
+ */
+export function grantedClonePayload<
+	T extends { _id?: unknown; system?: object | null },
+>(
+	doc: T,
+	grantedBy: string,
+): Omit<T, "_id"> {
+	const clone = clonePackDocPayload(doc) as Omit<T, "_id"> & {
+		system?: object | null;
+	};
+	return {
+		...clone,
+		system: {
+			...(clone.system ?? {}),
+			grantedBy,
+		} as NonNullable<T["system"]>,
+	};
+}

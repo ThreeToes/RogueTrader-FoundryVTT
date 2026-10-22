@@ -22,11 +22,16 @@
  *    the guard still pins their translated presence in all four files.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { CHARACTERISTIC_KEYS } from "../ffg/domain/model/taxonomy";
 // The turn-flag vocabulary the runtime composes i18n keys from (bead c7jo:
 // the torpedo-run chip gap this test pins).
 import { SHIP_TURN_FLAG_KEYS } from "../rules-engine/ship-turn-state";
+// Bead iktx: the characteristic composition seam + the key vocabulary it
+// composes over — the parity guard pins every characteristic key's label
+// key in all four language files.
+import { characteristicLabelKey } from "./rules/labels";
 // The ship-action GROUP LABEL map (bead t2bj): the four group h3 labels
 // localize through this table, so a group key added without translations
 // renders RAW in the tab — the parity guard pins the map instead
@@ -170,10 +175,15 @@ describe("i18n key parity (bead qgtz)", () => {
 	 */
 	const DYNAMIC_KEY_FAMILIES: Array<{ prefix: string; sites: string[] }> = [
 		{
-			// `CHARACTERISTIC.${key.toUpperCase()}` short forms and the
-			// CHARACTERISTIC.WEAPON_SKILL-style long forms.
+			// characteristicLabelKey(key) (bead iktx) — the ONE composition seam
+			// for the short `CHARACTERISTIC.${key.toUpperCase()}` form; every
+			// sheet/presentation site imports it from rules/labels.ts. The
+			// CHARACTERISTIC.WEAPON_SKILL-style long forms stay a separate
+			// registry (registry.ts) — short and long translate differently in
+			// es/fr/pl.
 			prefix: "CHARACTERISTIC.",
 			sites: [
+				"src/roguetrader/rules/labels.ts (characteristicLabelKey)",
 				"src/roguetrader/sheet/actor/advancement-view-model.ts:344",
 				"src/roguetrader/sheet/item/career-sheet.ts:127",
 				"src/roguetrader/sheet/actor/advancement-dialog.ts:557",
@@ -224,11 +234,15 @@ describe("i18n key parity (bead qgtz)", () => {
 			// (the guidance buttons, rules-engine/ship-ordnance.ts's
 			// TORPEDO_GUIDANCES keys) — bead a413.
 			prefix: "SHIP_ORDNANCE.PICK_",
-			sites: ["src/roguetrader/presentation/rolls/ship-ordnance.ts (promptPick)"]
+			sites: [
+				"src/roguetrader/presentation/rolls/ship-ordnance.ts (promptPick)",
+			],
 		},
 		{
 			prefix: "SHIP_ORDNANCE.GUIDANCE_",
-			sites: ["src/roguetrader/presentation/rolls/ship-ordnance.ts (guidance buttons)"]
+			sites: [
+				"src/roguetrader/presentation/rolls/ship-ordnance.ts (guidance buttons)",
+			],
 		},
 		{
 			// `STARSHIP.CREW_${key.toUpperCase()}` /
@@ -305,6 +319,22 @@ describe("i18n key parity (bead qgtz)", () => {
 			sites: ["src/roguetrader/sheet/npc-inventory.ts:56"],
 		},
 	];
+
+	// Bead iktx: the label keys characteristicLabelKey() composes are real
+	// references (the static literal scan cannot see them), so pin that EVERY
+	// characteristic key's label key resolves in all four language files.
+	test("every characteristic key's label key exists in all four languages (bead iktx)", () => {
+		for (const key of CHARACTERISTIC_KEYS) {
+			const labelKey = characteristicLabelKey(key);
+			expect(labelKey).toBe(`CHARACTERISTIC.${key.toUpperCase()}`);
+			for (const lang of LANGS) {
+				expect(
+					dictionaries[lang][labelKey],
+					`${lang}.json is missing ${labelKey} (bead iktx: characteristic "${key}")`,
+				).toBeTruthy();
+			}
+		}
+	});
 
 	test("dynamic key families are translated in all four language files", () => {
 		for (const { prefix, sites } of DYNAMIC_KEY_FAMILIES) {

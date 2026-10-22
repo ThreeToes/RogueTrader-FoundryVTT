@@ -94,22 +94,28 @@ export function dueDisorders(
 	).map((band) => ({ ...band }));
 }
 
-/** Trauma-test roll on Table 10-6: d100 + 10 per Degree of Failure. */
+/** Trauma-test roll on Table 10-6: d100 + 10 per Degree of Failure.
+ *
+ * THE book helper for that sentence (bead 7c2n): the Fear flow's Shock Table
+ * (Table 10-4, p295) implements the SAME sentence — "adding +10 to the result
+ * for each Degree of Failure" — and reads this function instead of repeating
+ * the arithmetic. If the Shock table ever wants a different rule, give it a
+ * distinct named helper next to fear.ts's tables; until then, one sentence,
+ * one function.
+ */
 export function traumaRoll(degreesOfFailure: number, d100: number): number {
 	return d100 + 10 * Math.max(0, degreesOfFailure);
 }
 
-/** Malignancy tests due: one per full 10 CP above 0 (p299). */
-export function malignancyTestsDue(corruptionPoints: number): number {
-	return Math.floor(corruptionPoints / 10);
-}
-
-/** Mutation tests due: two-characteristic tests per full 30 CP (p299). */
-export function mutationTestsDue(corruptionPoints: number): number {
-	return Math.floor(corruptionPoints / 30);
-}
-
 /**
+ * NOTE (bead aasf): the sheet does NOT enforce when a Malignancy or mutation
+ * test is DUE — the p299 rules (one Malignancy Test per full 10 Corruption
+ * Points; the mutation test, rolling two different characteristics, once per
+ * full 30 CP) live only in this comment for now. The former helpers
+ * (malignancyTestsDue/mutationTestsDue) were deleted as tested-but-dead
+ * rather than wiring an unenforced book rule; wire them here when the sheet
+ * starts enforcing the due-check.
+ *
  * Next disorder threshold above `points` (40/60/80), or null once all are
  * passed — pure display helper for sheet progress (never stored).
  */
@@ -159,6 +165,13 @@ export interface OwnedAfflictionLike {
  * q1ql, epic nt8k): shared by the background and combat tabs. PURE — takes
  * the cached pack rows, the track totals, the OWNED affliction Items, and a
  * structural actor; the sheet just spreads the result.
+ *
+ * NOTE (bead aasf): insanityPoints/corruptionPoints are RAW MANUAL FIELDS —
+ * the book's threshold rules have NOT been modelled and the fields stay
+ * manual until the rules are verified. That is a DECISION, not an API: the
+ * former never-implemented corruptionThreshold/insanityThreshold stubs
+ * (rules/derived.ts, always null) were deleted — do not re-add an implicit
+ * threshold machinery here without an owner decision.
  */
 export interface MadnessPoints {
 	insanity?: number;

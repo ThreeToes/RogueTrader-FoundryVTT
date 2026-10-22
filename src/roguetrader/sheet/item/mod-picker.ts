@@ -1,4 +1,5 @@
 import { OwnedItemPicker } from "../actor/owned-picker";
+import { grantedClonePayload } from "../clone-doc";
 import { sheetContext } from "../context";
 import { getPackDocuments } from "../pack-resolve";
 import { getPorts } from "../../infrastructure/foundry/ports";
@@ -134,15 +135,18 @@ export class ModPicker extends OwnedItemPicker {
 			getPorts().notify.warn("WEAPON.MOD_CLONE_FAILED");
 			return;
 		}
-		const payload = doc.toObject() as Record<string, unknown>;
-		const created = (await this.actor.createEmbeddedDocuments("Item", [
-			{
-				...payload,
-				system: {
-					...(payload.system ?? {}),
-					grantedBy: "mod-picker",
-				},
+		// Shared grantedClonePayload (bead lnya): the grantedBy stamp the old
+		// hand-rolled copy had, PLUS the pack doc's _id strip it was missing
+		// (repo convention: two Items cannot share an _id).
+		const payload = grantedClonePayload(
+			doc.toObject() as unknown as {
+				_id?: unknown;
+				system: Record<string, unknown>;
 			},
+			"mod-picker",
+		);
+		const created = (await this.actor.createEmbeddedDocuments("Item", [
+			payload,
 		] as never)) as Array<{ id?: string }>;
 		const itemId = created?.[0]?.id ?? "";
 		if (!itemId) {

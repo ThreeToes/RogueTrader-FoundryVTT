@@ -9,7 +9,7 @@
  * Split out of the former sheet/init.ts composition root.
  */
 
-import { migrateLegacyActors, removeLegacyCharacterTypes } from "../migrations";
+import { migrateLegacyActors, removeLegacyCharacterTypes, backfillOriginLedgerEntries } from "../migrations";
 import { firstStr, num, packSystem, str } from "../data/pack-fields";
 import type { SkillSourceLike } from "../rules/default-skills";
 import { setHeirloomEntries, type HeirloomEntry } from "../rules/heirlooms";
@@ -339,6 +339,17 @@ function warmGearsets(): void {
 	});
 }
 
+/** Origin-ledger backfill (bead gfsp): append the Origin Path xpCost
+ * baseline to previously-created actors' ledgers at ready. GM-only and
+ * idempotent (skips actors that already carry a type:"origin" entry). */
+function migrateOriginLedger(): void {
+	Hooks.once("ready", () => {
+		backfillOriginLedgerEntries().catch((error) =>
+			console.error("rogue-trader | origin-ledger backfill crashed:", error),
+		);
+	});
+}
+
 /** Register every ready-time warmer and the legacy-type migration. */
 export function registerContentWarmers(): void {
 	warmOriginTraits();
@@ -351,4 +362,5 @@ export function registerContentWarmers(): void {
 	warmActions();
 	warmTalentLinkDocs();
 	migrateLegacyTypes();
+	migrateOriginLedger();
 }

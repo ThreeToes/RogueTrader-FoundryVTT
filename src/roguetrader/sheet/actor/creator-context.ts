@@ -21,6 +21,11 @@ import {
 	type WeaponTrainingCoverage,
 } from "../../rules/acquisition";
 import {
+	type AdvanceLedgerEntry,
+	originLedgerEntry,
+	totalSpent,
+} from "../../rules/advancement";
+import {
 	type CatalogSkill,
 	careersForSpecies,
 	CREATOR_LAST_STEP,
@@ -41,6 +46,7 @@ import {
 	kitChoicesComplete,
 } from "../../rules/gearsets";
 import { reconcileForCreator } from "../../rules/grants";
+import { characteristicLabelKey } from "../../rules/labels";
 import {
 	allowedColumns,
 	type CharMod,
@@ -50,6 +56,7 @@ import {
 	type OriginPick,
 	type OriginRow,
 	originByKey,
+	originLedgerEntryName,
 	originRowsForSpecies,
 	originsInRow,
 	type ResolvedOrigin,
@@ -210,7 +217,7 @@ export function buildCharacteristicRows(state: {
 	base: number | null;
 }> {
 	return CHARACTERISTIC_ORDER.map((key) => {
-		const labelKey = `CHARACTERISTIC.${key.toUpperCase()}`;
+		const labelKey = characteristicLabelKey(key);
 		const rolled = state.rolled[key];
 		const alloc = state.allocated[key] ?? 0;
 		return {
@@ -349,7 +356,7 @@ export function buildReview(
 	return {
 		characteristics: CHARACTERISTIC_ORDER.map((key) => ({
 			key,
-			labelKey: `CHARACTERISTIC.${key.toUpperCase()}`,
+			labelKey: characteristicLabelKey(key),
 			value: chars[key],
 			delta: resolved.characteristics[key] ?? 0,
 		})),
@@ -367,9 +374,25 @@ export function buildReview(
 }
 
 /**
+ * The audit name for the Origin Path's creation-baseline ledger entry: the
+ * picked origins' book names in canonical row order (the ledger means "xp
+ * spent for", so the entry says what it paid for). Shared with the migration
+ * backfill so both writers agree for identical picks.
+ */
+function originLedgerName(state: CreatorState): string {
+	return originLedgerEntryName(state.picks);
+}
+
+/**
  * The new explorer's `system` payload the creator writes on finish
  * (Core Rulebook p13: 4,500 xp already spent + 500 to spend; bead b03f
  * raises the spent baseline per xpCost; bead m4me psyker status).
+ *
+ * Bead r8mw, owner shape (a) 2026-10-21: the Origin Path's printed xpCost
+ * rides the ADVANCE LEDGER as a rank-0 creation-baseline entry, not just in
+ * xp.spent — so `totalSpent` (the sheet display, the advancement dialog's
+ * pool and the first purchase's recomputation) all agree with the stored
+ * value instead of the origin cost evaporating on the first advance.
  */
 export function buildCharacterSystemPayload(
 	state: CreatorState,
@@ -377,6 +400,10 @@ export function buildCharacterSystemPayload(
 	chars: Record<CharacteristicKey, number>,
 ): Record<string, unknown> {
 	const vitals = resolveCreatorVitals(state, resolved, chars);
+	// The origin xpCost as ledger data (bead r8mw): one rank-0 entry named
+	// after the picked origins, absent when the path cost nothing.
+	const ledger: AdvanceLedgerEntry[] =
+		resolved.xpCost > 0 ? [originLedgerEntry(originLedgerName(state), resolved.xpCost)] : [];
 	return {
 		characteristics: Object.fromEntries(
 			CHARACTERISTIC_ORDER.map((key) => [
@@ -388,7 +415,10 @@ export function buildCharacterSystemPayload(
 		fate: { value: vitals.fate, max: vitals.fate },
 		insanity: vitals.insanity,
 		corruption: vitals.corruption,
-		xp: { total: 5000, spent: 4500 + resolved.xpCost },
+		xp: { total: 5000, spent: totalSpent(ledger) },
+		// The ledger IS the audit trail behind xp.spent (bead g7k) — now
+		// including the creation baseline itself (bead r8mw).
+		advances: ledger,
 		psyker:
 			state.careerKey === "astropath-transcendent" ||
 			state.careerKey === "navigator",
@@ -402,6 +432,52 @@ export function buildCharacterSystemPayload(
 		// picks were silently discarded.
 		origins: storedOriginsFromPicks(state.picks),
 	};
+}
+
+/**
+ * Bead 9o5z (merge-preserving creator re-run): the creator's fresh payload
+ * carries ONLY the creation-baseline origin entry, but the update path
+ * (right-clicked actor) wholesale-overwrote `system` — erasing the actor's
+ * recorded purchases and refunding their xp. The pure merge the update
+ * branch applies: the actor's own purchases stay untouched, while the
+ * CREATION BASELINE is CREATOR-OWNED like the re-derived origins themselves
+ * — a re-run rewrites system.origins and re-grants items, so it must also
+ * re-book the origin ledger entry it stands for:
+ *
+ *   - prior type:"origin" entries are REPLACED in place by the new baseline
+ *     (multiple stale entries collapse to one placement at the first slot),
+ *     so a changed-pick re-run re-books the right name/cost (a free→priced
+ *     re-run charges, the inverse refunds);
+ *   - an EMPTY baseline (the re-derived path is costless) DROPS the prior
+ *     origin entries instead of keeping a stale cost behind blank picks;
+ *   - a same-picks re-run replaces the entry with identical content, so it
+ *     is idempotent; purchases are preserved in every case.
+ *
+ * The CREATE branch does not call this: a new actor keeps the fresh ledger.
+ */
+export function mergeLedgerWithBaseline(
+	existing: AdvanceLedgerEntry[] | undefined | null,
+	baseline: AdvanceLedgerEntry[],
+): AdvanceLedgerEntry[] {
+	const prior = Array.isArray(existing) ? existing : [];
+	const out: AdvanceLedgerEntry[] = [];
+	let placed = false;
+	for (const entry of prior) {
+		if (entry.type === "origin") {
+			// The first stale baseline slot becomes the new baseline's place;
+			// any further stale entries collapse away (never double-booked).
+			if (!placed && baseline.length > 0) {
+				out.push(...baseline);
+				placed = true;
+			}
+			continue;
+		}
+		out.push(entry);
+	}
+	// No prior origin entry (a free first run, or a legacy/blank actor): the
+	// baseline is appended after the purchases, as before.
+	if (!placed) out.push(...baseline);
+	return out;
 }
 
 // ---------------------------------------------------------------------------

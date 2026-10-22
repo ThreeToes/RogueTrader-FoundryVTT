@@ -7,17 +7,23 @@
  * here are characteristic bonuses, which are definitional (bonus = value/10,
  * effective bonus = bonus x unnatural multiplier).
  */
-import { textField } from "../fields";
 
-import { effectsAreLive } from "../item/effects";
-import { sourceField } from "../item/source";
-import { careers, sorceryRanks } from "../../registry";
+import type { CharacteristicItemIn } from "../../../ffg/domain/effects";
+import { collectCharacteristicDelta } from "../../../ffg/domain/effects";
 import { MAX_CRITICAL_SEVERITY } from "../../../rules-engine/index";
+import { careers, sorceryRanks } from "../../registry";
 import {
 	collectInitiativeRows,
-	sumInitiativeRows,
 	type InitiativeItemIn,
+	sumInitiativeRows,
 } from "../../rules/initiative-rows";
+import { textField } from "../fields";
+import { sourceField } from "../item/source";
+// Bead n4m9: the advance ledger's entry shapes live in the rules engine;
+// aliasing the declared union to AdvanceType (instead of restating it) is
+// how a new AdvanceType ("origin", bead r8mw) stopped drifting into a
+// silent always-false TS2367 narrowing on data-model consumers.
+import type { AdvanceType } from "../../rules/advancement";
 
 export {
 	CHARACTERISTIC_KEYS,
@@ -114,7 +120,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 	declare xp: { spent: number; total: number };
 	declare description: string;
 	declare advances: Array<{
-		type: "skill" | "talent" | "characteristic";
+		type: AdvanceType;
 		key: string;
 		name: string;
 		characteristic?: string;
@@ -336,7 +342,9 @@ export class Character extends foundry.abstract.TypeDataModel<
 			 * XP purchase ledger (bead g7k): every advance bought, the audit
 			 * trail behind xp.spent (total = 4,500 creation baseline + ledger
 			 * sum, see rules/advancement). GM refunds/undo remove entries.
-			 * rank 0 marks creation-baseline/elite advances.
+			 * rank 0 marks creation-baseline/elite advances. Type "origin" is
+			 * the Origin Path's own xpCost (bead r8mw, Into the Storm p17): a
+			 * creation-baseline entry so every xp reader sees it.
 			 */
 			advances: new foundry.data.fields.ArrayField(
 				new foundry.data.fields.SchemaField({
@@ -345,6 +353,7 @@ export class Character extends foundry.abstract.TypeDataModel<
 							skill: "ADVANCE.TYPE_SKILL",
 							talent: "ADVANCE.TYPE_TALENT",
 							characteristic: "ADVANCE.TYPE_CHARACTERISTIC",
+							origin: "ADVANCE.TYPE_ORIGIN",
 						},
 						initial: "skill",
 						required: true,
@@ -444,36 +453,27 @@ export class Character extends foundry.abstract.TypeDataModel<
 	 * read. TESTS still start from the base value and add the same deltas via
 	 * the modifier funnel, so the breakdown stays visible and nothing is
 	 * double-counted.
+	 *
+	 * The walk itself is the domain's shared collector (bead jahb): the
+	 * liveness table, the characteristic key match AND the guard policy live
+	 * there, not here. A guarded row counts only when its condition flag is
+	 * set — callers without a flag context (this method's default, the sheet
+	 * display and every derived badge) see the UNGUARDED value, the fix for a
+	 * guarded row (e.g. a "frenzying" −15 Agility) silently lowering every
+	 * derived reader while tests dropped it. Pass `flags` to fold a guarded
+	 * row in when its condition holds.
 	 */
-	effectiveCharacteristicValue(key: string): number {
+	effectiveCharacteristicValue(
+		key: string,
+		flags?: Record<string, boolean>,
+	): number {
 		const base = this.characteristics[key]?.value ?? 0;
 		const items = (
 			this.parent as unknown as {
-				items?: Iterable<{
-					type?: string;
-					system?: {
-						equipState?: string;
-						effects?: Array<{
-							kind?: string;
-							testKey?: string;
-							value?: number;
-						}>;
-					};
-				}>;
+				items?: Iterable<CharacteristicItemIn>;
 			} | null
 		)?.items;
-		if (!items) return base;
-		let delta = 0;
-		for (const item of items) {
-			if (!effectsAreLive(item.type ?? "", item.system?.equipState)) continue;
-			for (const effect of item.system?.effects ?? []) {
-				if (effect.kind !== "characteristic-modifier") continue;
-				if (effect.testKey !== key) continue;
-				const value = Number(effect.value ?? 0);
-				if (Number.isFinite(value)) delta += value;
-			}
-		}
-		return base + delta;
+		return base + collectCharacteristicDelta(items, key, flags);
 	}
 
 	/**
@@ -548,6 +548,8 @@ export class Character extends foundry.abstract.TypeDataModel<
 			this.parent as unknown as { items?: Iterable<InitiativeItemIn> } | null
 		)?.items;
 		if (!items) return this.agilityBonus();
-		return this.agilityBonus() + sumInitiativeRows(collectInitiativeRows(items));
+		return (
+			this.agilityBonus() + sumInitiativeRows(collectInitiativeRows(items))
+		);
 	}
 }

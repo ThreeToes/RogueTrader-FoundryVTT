@@ -10,9 +10,11 @@
  *   2. soak = effective armour + toughness bonus
  *   3. primitive-armour rule (profile): non-primitive weapons vs primitive
  *      armour double the POST-SOAK damage
- *   4. Righteous Fury is flagged, not resolved: the adapter rolls any extra
- *      damage and re-enters resolveDamage (or applies it directly) per the
- *      profile's trigger description.
+ *   4. Righteous Fury is flagged, not resolved: the adapter rolls the extra
+ *      damage die(s) (Core Rulebook pp249-250) and RE-ENTERS resolveDamage
+ *      with the added amount folded into the roll total (bead 8ssh), so it
+ *      soaks against armour/Toughness in the normal way; the vehicle path
+ *      (1d5 on the Vehicle Critical Hit Chart, p218) is out of scope.
  */
 import type { RuleProfile } from "./profile";
 

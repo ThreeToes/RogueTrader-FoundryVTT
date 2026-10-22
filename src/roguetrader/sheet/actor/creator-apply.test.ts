@@ -103,6 +103,7 @@ globals.foundry = {
 
 const { createOrUpdateActor } = await import("./creator-apply");
 
+import { originLedgerEntry, totalSpent, type AdvanceLedgerEntry } from "../../rules/advancement";
 import type { ApplyableActor } from "./creator-apply";
 
 afterAll(() => {
@@ -315,5 +316,64 @@ describe("createOrUpdateActor — update branch (bead w7zm)", () => {
 		expect(ok).toBe(true);
 		expect(confirmCalls).toBe(0); // the ship path has no confirm dialog
 		expect(applied).toBe(true);
+	});
+
+	// Bead 9o5z regression pin: the character creator's payload carries the
+	// creation-baseline origin ledger entry under system.advances; the update
+	// branch must MERGE it into the actor's purchase history (not overwrite
+	// it wholesale) and recompute xp.spent from the merged ledger.
+	test("a payload WITH an advances ledger merges into the actor's purchases (ledger splice)", async () => {
+		const purchase: AdvanceLedgerEntry = {
+			type: "skill",
+			key: "awareness",
+			name: "Awareness",
+			cost: 100,
+			rank: 1,
+		};
+		const baseline = [originLedgerEntry("Origin Path: Survivalist", 300)];
+		const { actor: target, calls } = fakeActor({
+			system: {
+				advances: [purchase],
+				xp: { spent: 4600, total: 5000 },
+			},
+		});
+		const payloadSystem = {
+			careerKey: "arch-militant",
+			advances: structuredClone(baseline),
+			xp: { total: 5000, spent: 300 },
+		};
+		const ok = await createOrUpdateActor(
+			target,
+			{ name: "New Name", type: "explorer", system: payloadSystem },
+			async () => undefined,
+			{ fallbackNameKey: "X", close: () => undefined },
+		);
+		expect(ok).toBe(true);
+		expect(calls).toHaveLength(1);
+		const system = (calls[0] as { system?: Record<string, unknown> }).system!;
+		// The merged array: prior purchase first, baseline appended after it.
+		expect(system.advances).toEqual([...[purchase], ...baseline]);
+		// xp.spent recomputed FROM the merged ledger (4500 baseline + 400).
+		expect(system.xp).toEqual({ total: 5000, spent: totalSpent(system.advances as never) });
+		expect(system.xp).toEqual({ total: 5000, spent: 4900 });
+		// Everything else of the payload passes through.
+		expect(system.careerKey).toBe("arch-militant");
+	});
+
+	test("a ship-shaped payload WITHOUT advances passes system through verbatim", async () => {
+		const { actor: target, calls } = fakeActor({
+			system: { xp: { spent: 100, total: 5000 } },
+		});
+		const shipSystem = { hull: 40, crew: { rating: 30 } };
+		const ok = await createOrUpdateActor(
+			target,
+			{ name: "New Ship", type: "starship", system: shipSystem },
+			async () => undefined,
+			{ fallbackNameKey: "X", close: () => undefined },
+		);
+		expect(ok).toBe(true);
+		expect(calls).toHaveLength(1);
+		// No ledger merge, no xp rewrite — the system object verbatim.
+		expect(calls[0]).toEqual({ name: "New Ship", system: shipSystem });
 	});
 });

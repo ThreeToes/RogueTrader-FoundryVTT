@@ -155,6 +155,33 @@ describe("effective characteristic values (bead xu83)", () => {
 		c.characteristics.s.unnatural = 2;
 		expect(c.effectiveCharacteristicBonus("s")).toBe(4); // floor(25/10)=2, ×2
 	});
+
+	// Bead jahb: the effective-value walk now rides the domain's shared
+	// collector, so a GUARDED row follows the funnel's guard policy. Before,
+	// this walk never read `condition`, so a guarded −15 Agility row lowered
+	// every derived reader while tests correctly dropped it.
+	test("a guarded row contributes nothing while its flag is unset, its value when set", () => {
+		const c = withItems(charWith({ ag: 40 }), [
+			{
+				type: "mutation",
+				system: {
+					effects: [
+						{
+							kind: "characteristic-modifier",
+							testKey: "ag",
+							value: -15,
+							condition: "frenzying",
+						},
+					],
+				},
+			},
+		]);
+		// Flag UNSET: the guarded row is dropped — the effective value matches
+		// what an Agility test would roll.
+		expect(c.effectiveCharacteristicValue("ag")).toBe(40);
+		// Flag SET: the guarded row contributes its value.
+		expect(c.effectiveCharacteristicValue("ag", { frenzying: true })).toBe(25);
+	});
 });
 
 describe("NPC identity fields (bead lib6)", () => {

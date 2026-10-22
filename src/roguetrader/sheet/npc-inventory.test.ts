@@ -3,11 +3,32 @@
  * semantics are pure functions so the GM-facing sheet stays thin.
  */
 import { describe, expect, it } from "bun:test";
+import { isReady } from "../data/accessors";
 import {
 	compendiumSourceOf,
 	equipToggleState,
+	NPC_EQUIPPABLE_TYPES,
 	npcInventoryGroups,
 } from "./npc-inventory";
+import { PC_EQUIPPABLE_TYPES } from "./pc-inventory";
+
+describe("PC/NPC equippable-type parity (bead q8il, open bead o4w2)", () => {
+	it("NPC_EQUIPPABLE_TYPES is a subset of the single-source PC set", () => {
+		// The PC set (sheet/pc-inventory.ts) is the one source of truth; the
+		// sheet-level allowlist duplication (with its phantom "weapon" type)
+		// is gone. The NPC sheet's toggle set must never drift outside it.
+		for (const type of NPC_EQUIPPABLE_TYPES) {
+			expect(PC_EQUIPPABLE_TYPES.has(type)).toBe(true);
+		}
+	});
+
+	it("the only deliberate difference is armour (NPC armour panel owns wear/stow)", () => {
+		const pcOnly = [...PC_EQUIPPABLE_TYPES].filter(
+			(type) => !NPC_EQUIPPABLE_TYPES.has(type),
+		);
+		expect(pcOnly).toEqual(["armour"]);
+	});
+});
 
 describe("equipToggleState (armour-aware, bead 2dvj)", () => {
 	it("armour cycles worn <-> stowed (never 'carried')", () => {
@@ -28,6 +49,35 @@ describe("equipToggleState (armour-aware, bead 2dvj)", () => {
 });
 
 describe("npcInventoryGroups (no more all-types-in-one list)", () => {
+	// Bead tkm7: the row builder's `ready` moved from an inline
+	// "equipState === carried" copy to the shared isReady predicate. Armour is
+	// excluded upstream (EXCLUDED_TYPES), so for every type that REACHES the
+	// builder the two agree exactly — pinned here so the latent divergence
+	// (armour allowed into a group later) fails loudly instead of silently.
+	it("every emitted row's ready flag matches the shared isReady predicate", () => {
+		let n = 0;
+		const items = [
+			"ranged-weapon",
+			"melee-weapon",
+			"gear",
+			"talent",
+			"ammunition",
+		].flatMap((type) =>
+			["stowed", "carried", "worn", undefined].map((equipState) => ({
+				id: `i${n++}`,
+				name: "row",
+				type,
+				system: { equipState },
+			})),
+		);
+		const byId = new Map(items.map((i) => [i.id, i]));
+		const rows = npcInventoryGroups(items).flatMap((g) => g.items);
+		for (const row of rows) {
+			expect(row.ready).toBe(isReady(byId.get(row.id) as never));
+		}
+	});
+
+
 	it("groups by type in the documented order with localized label keys", () => {
 		const groups = npcInventoryGroups([
 			{ id: "t1", name: "Rapid Reload", type: "talent" },
@@ -103,6 +153,19 @@ describe("npcInventoryGroups (no more all-types-in-one list)", () => {
 			equippable: false,
 			ready: false,
 		});
+	});
+
+	it("armour rows would agree with isReady too (they never reach the builder, bead tkm7)", () => {
+		// The latent divergence: if armour were ever allowed into a group, the
+		// shared predicate would report it ready when WORN — the old inline copy
+		// never would. The pin is the shared predicate itself; this test just
+		// documents the armour semantics the equivalence relies on.
+		expect(isReady({ type: "armour", system: { equipState: "worn" } })).toBe(
+			true,
+		);
+		expect(isReady({ type: "armour", system: { equipState: "carried" } })).toBe(
+			false,
+		);
 	});
 
 	it("excludes skills, powers and armour (handled elsewhere)", () => {

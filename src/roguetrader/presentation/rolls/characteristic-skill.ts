@@ -11,6 +11,7 @@ import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import type { Modifier } from "../../../rules-engine/index";
 import { systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
+import { characteristicLabelKey } from "../../rules/labels";
 import { effectiveProfile } from "../../rules/homebrew";
 import { collectTestModifiers } from "../../rules/funnel";
 import type {
@@ -49,7 +50,7 @@ export const characteristicHandler: RollHandler<"characteristic"> = {
 			return null;
 		}
 		return {
-			title: `${request.actor.name} — ${getPorts().i18n.t(`CHARACTERISTIC.${request.key.toUpperCase()}`)}`,
+			title: `${request.actor.name} — ${getPorts().i18n.t(characteristicLabelKey(request.key))}`,
 			baseTarget: characteristic.value,
 			testKind: "characteristic",
 			testKey: request.key,

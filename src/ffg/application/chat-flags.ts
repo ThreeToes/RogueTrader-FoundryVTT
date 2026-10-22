@@ -41,6 +41,13 @@ export interface DamageRollFlag {
 	 * the launcher's RoF (single-shot-only = 1, else refuse).
 	 */
 	fireMode?: "single" | "burst" | "full";
+	/**
+	 * The to-hit dialog's condition flags (bead gqz2, e.g. { charging: true }):
+	 * threaded to the damage channel so a guarded damage-flat/critical-damage
+	 * row fires only when its condition held at to-hit time. Absent on the
+	 * sheet quick-damage path — unguarded rows apply, guarded rows stay off.
+	 */
+	flags?: Record<string, boolean>;
 	rolled?: boolean;
 }
 

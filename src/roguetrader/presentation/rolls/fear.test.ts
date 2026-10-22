@@ -17,8 +17,8 @@
 
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import type { Ports } from "../../../ffg/application/ports";
-import type { PreparedRoll } from "../../rules/roll-contract";
 import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
+import type { PreparedRoll } from "../../rules/roll-contract";
 
 // --- Foundry/global stubs (must precede the dynamic import) ---------------
 const originalGlobals: Record<string, unknown> = {};
@@ -31,7 +31,11 @@ for (const key of ["game", "ui", "foundry"]) {
 	user: { isGM: true },
 };
 (globalThis as Record<string, unknown>).ui = {
-	notifications: { warn: () => undefined, error: () => undefined, info: () => undefined },
+	notifications: {
+		warn: () => undefined,
+		error: () => undefined,
+		info: () => undefined,
+	},
 };
 (globalThis as Record<string, unknown>).foundry = {
 	applications: {
@@ -61,8 +65,7 @@ afterEach(() => resetPorts());
 
 afterAll(() => {
 	for (const key of ["game", "ui", "foundry"]) {
-		if (originalGlobals[key] === undefined)
-			delete globals[key];
+		if (originalGlobals[key] === undefined) delete globals[key];
 		else globals[key] = originalGlobals[key];
 	}
 });
@@ -96,7 +99,8 @@ function fakeActor() {
 			for (const [key, value] of Object.entries(patch)) {
 				const path = key.split(".");
 				let cursor = a as Record<string, unknown>;
-				for (const step of path.slice(0, -1)) cursor = cursor[step] as Record<string, unknown>;
+				for (const step of path.slice(0, -1))
+					cursor = cursor[step] as Record<string, unknown>;
 				cursor[path[path.length - 1]!] = value;
 			}
 		},
@@ -107,9 +111,10 @@ function fakeActor() {
 }
 
 /** Dice stub: answer each formula from a queue, remembering every call. */
-function fakeDice(
-	answers: Record<string, number[]>,
-): { dice: Ports["dice"]; rolled: string[] } {
+function fakeDice(answers: Record<string, number[]>): {
+	dice: Ports["dice"];
+	rolled: string[];
+} {
 	const queue = new Map(Object.entries(answers));
 	const counters: Record<string, number> = {};
 	const rolled: string[] = [];
@@ -253,14 +258,53 @@ describe("fearHandler.after Insanity threading (bead 3u1p: combat)", () => {
 		// the 21-40 bucket (also "0" Insanity, conditions.ts SHOCK_INSANITY).
 		const { actor, updates } = setup({ "1d100": [20] });
 		await fearHandler.after!(
-			{ kind: "fear", actor: actor as unknown as FearRequest["actor"], rating: 2, situation: "combat" },
+			{
+				kind: "fear",
+				actor: actor as unknown as FearRequest["actor"],
+				rating: 2,
+				situation: "combat",
+			},
 			preparedFor("combat"),
 			failedOutcome(51) as FearOutcome,
 			"msg-1",
 		);
 		expect(shockOutcome(30).textKey).toBe("FEAR.SHOCK_21_40");
 		expect(actor.system.insanity).toBe(0);
-		expect(updates.filter((u) => u["system.insanity"] !== undefined)).toHaveLength(0);
+		expect(
+			updates.filter((u) => u["system.insanity"] !== undefined),
+		).toHaveLength(0);
+	});
+
+	// Bead 7c2n: the executed Shock total must be the ONE book helper's result
+	// (traumaRoll, rules/madness.ts — Table 10-6 and the Shock Table are the
+	// same sentence), not a re-inlined copy. The expectation is COMPUTED from
+	// the inputs the handler executes (d100 face 30; Fear-test roll 80 against
+	// target 50 = 4 degrees), so it pins the executed path, not a literal.
+	test("the Shock total equals the shared d100 + 10/degree helper's result", async () => {
+		const { traumaRoll } = await import("../../rules/madness");
+		const { degreesOfFailure } = await import("../../rules/fear");
+		const { actor, posted } = setup({ "1d100": [30] });
+		await fearHandler.after!(
+			{
+				kind: "fear",
+				actor: actor as unknown as FearRequest["actor"],
+				rating: 2,
+				situation: "combat",
+			},
+			preparedFor("combat"),
+			failedOutcome(80) as FearOutcome,
+			"msg-1",
+		);
+		const card = posted[0]!;
+		const expected = traumaRoll(
+			degreesOfFailure(preparedFor("combat").baseTarget, 80),
+			30,
+		);
+		// traumaRoll(4, 30) = 70 — the 61-80 bucket (frozen + 1d5 Insanity; the
+		// unqueued 1d5 stub answers 0, so the track is untouched).
+		expect(expected).toBe(70);
+		expect(shockOutcome(expected).textKey).toBe("FEAR.SHOCK_61_80");
+		expect(card.vars.shockRoll).toBe(expected);
 	});
 });
 
@@ -271,7 +315,12 @@ describe("fearHandler.after Insanity threading (bead eclw: non-combat)", () => {
 		// insanity "0", so the rolled gain must be threaded explicitly.
 		const { actor, rolled, posted } = setup({ "1d5": [3] });
 		await fearHandler.after!(
-			{ kind: "fear", actor: actor as unknown as FearRequest["actor"], rating: 2, situation: "non-combat" },
+			{
+				kind: "fear",
+				actor: actor as unknown as FearRequest["actor"],
+				rating: 2,
+				situation: "non-combat",
+			},
 			preparedFor("non-combat"),
 			failedOutcome(91) as FearOutcome,
 			"msg-1",
@@ -290,7 +339,12 @@ describe("fearHandler.after Insanity threading (bead eclw: non-combat)", () => {
 		// 1d5 — the pass was only the unqueued dice stub answering 0.)
 		const { actor, updates, rolled } = setup({});
 		await fearHandler.after!(
-			{ kind: "fear", actor: actor as unknown as FearRequest["actor"], rating: 2, situation: "non-combat" },
+			{
+				kind: "fear",
+				actor: actor as unknown as FearRequest["actor"],
+				rating: 2,
+				situation: "non-combat",
+			},
 			preparedFor("non-combat"),
 			failedOutcome(79) as FearOutcome,
 			"msg-1",
@@ -298,7 +352,9 @@ describe("fearHandler.after Insanity threading (bead eclw: non-combat)", () => {
 		// Exactly on the boundary: 3 degrees rolls no Insanity die.
 		expect(rolled).not.toContain("1d5");
 		expect(actor.system.insanity).toBe(0);
-		expect(updates.filter((u) => u["system.insanity"] !== undefined)).toHaveLength(0);
+		expect(
+			updates.filter((u) => u["system.insanity"] !== undefined),
+		).toHaveLength(0);
 	});
 
 	test("failed by exactly 30 (4 degrees) rolls and applies the +1d5 gain", async () => {
@@ -307,7 +363,12 @@ describe("fearHandler.after Insanity threading (bead eclw: non-combat)", () => {
 		// track (and on the card), not silently dropped.
 		const { actor, posted } = setup({ "1d5": [2] });
 		await fearHandler.after!(
-			{ kind: "fear", actor: actor as unknown as FearRequest["actor"], rating: 2, situation: "non-combat" },
+			{
+				kind: "fear",
+				actor: actor as unknown as FearRequest["actor"],
+				rating: 2,
+				situation: "non-combat",
+			},
 			preparedFor("non-combat"),
 			failedOutcome(80) as FearOutcome,
 			"msg-1",

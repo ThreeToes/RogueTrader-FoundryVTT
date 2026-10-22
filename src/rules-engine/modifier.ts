@@ -15,7 +15,9 @@ export interface Modifier {
 	/** Localized label shown on chat cards. */
 	label: string;
 	value: number;
-	/** Optional guard display (CONDITION.* i18n key), e.g. "when charging". */
+	/** Optional guard key — the raw registry slug (e.g. "charging"), NOT a
+	 * localized label: display layers resolve it through the talentConditions
+	 * registry seam (orchestrator/test-dialog; postDamageCard for the card). */
 	condition?: string;
 	/** Reserved for future stacking semantics. */
 	stacking?: string;

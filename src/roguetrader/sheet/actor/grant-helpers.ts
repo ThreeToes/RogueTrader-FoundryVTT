@@ -5,16 +5,17 @@
  * by the creator, advancement dialog and talent picker.
  */
 
-import { CHARACTER_OPTIONS_PACK, getPackDocuments } from "../pack-resolve";
+import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import {
+	type GrantPayload,
+	type PackTalentSnapshot,
 	parameterisedBase,
 	parameterisedPackBase,
 	resolveParameterised,
 	suggestedSubjects,
 	talentGrantPayload,
-	type GrantPayload,
-	type PackTalentSnapshot,
 } from "../../rules/grants";
+import { CHARACTER_OPTIONS_PACK, getPackDocuments } from "../pack-resolve";
 
 /**
  * Pack slugs used by grants-item effect labels ("traits:Fear",
@@ -97,20 +98,49 @@ export async function findPackDoc(
 }
 
 /**
+ * User-facing notify spec (bead eqay): missing-doc GRANT surfaces get BOTH
+ * the console line (owned here) and a toast (owned here) — no grant surface
+ * resolves a missing pack doc silently. (Some non-grant open surfaces, e.g.
+ * the generic openPackItemAction, remain console-only.)
+ */
+export interface PackDocMissingNotify {
+	/** i18n key for the toast (all sites pass their own action-local key). */
+	key: string;
+	/** Toast severity — defaults to "error" when omitted. */
+	severity?: "info" | "warn" | "error";
+	/** Interpolation vars for the toast (e.g. { name } / { uuid }). */
+	vars?: Record<string, unknown>;
+}
+
+/**
  * Shared missing-doc warn (bead 38io): the established grant semantics — one
  * loud console line per miss — from every surface that resolves pack docs by
- * name. Callers layer their own user-facing notify on top where the action
- * needs one.
+ * name. Bead eqay: this function now owns the user-facing notify TOO (the
+ * default severity is "error" — a missing doc is never silent), so callers
+ * no longer layer their own toasts with divergent severity choices; a
+ * surface that needs a specific key/severity passes a
+ * PackDocMissingNotify (both character-sheet severities and the psychic
+ * picker's error route through here unchanged).
  */
 export function warnPackDocMissing(
 	type: string,
 	name: string,
 	action: string,
 	pack = "character-options",
+	notify?: PackDocMissingNotify,
 ): void {
 	console.warn(
 		`rogue-trader | ${type} "${name}" not found in the ${pack} pack; ${action}`,
 	);
+	const {
+		key,
+		severity = "error",
+		vars,
+	} = notify ?? {
+		key: "GRANT.DOC_MISSING",
+		vars: { type, name, pack },
+	};
+	getPorts().notify[severity](key, vars);
 }
 
 /** Case-insensitive name match against the talents compendium pack. */

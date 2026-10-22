@@ -54,13 +54,15 @@
    what differs (font-size step, border token, cursor:help, display bits).
    The scope list covers every chip site across the sheets, the creators and
    the test dialog (which sits outside .rogue-trader — bead y8u3). It sits
-   before every per-site rule so modifiers always win. */
+   before every per-site rule so modifiers always win. The ladder-option
+   entry is keyed to the ROLE level (bead qn9i): the chip renders on the
+   character, starship, planet and NPC sheets alike. */
 .rogue-trader.sheet .chip-option .chip,
 .rogue-trader .pick-chip,
 .rogue-trader.sheet .traits-row .chip,
 .rogue-trader.sheet.starship .inv-row .state-chip,
 .rogue-trader.sheet.starship .inv-row .slot-chip,
-.rogue-trader.sheet.character .ladder-option,
+.rogue-trader .ladder-option,
 .rogue-trader.sheet .origin-chip,
 .rogue-trader .character-creator .chip,
 .rogue-trader .psychic .psychic-tags .chip,
@@ -80,7 +82,7 @@
    radio toggles light fully gold (bead 6zha collapsed the per-site copies
    of this treatment). */
 .rogue-trader.sheet .chip-option input:checked + .chip,
-.rogue-trader.sheet.character .ladder-option.active {
+.rogue-trader .ladder-option.active {
 	background: var(--rt-gold);
 	border-color: var(--rt-gold);
 	color: var(--rt-on-gold);
@@ -123,14 +125,6 @@
 	flex-shrink: 0;
 	gap: 8px;
 	align-items: center;
-}
-
-.rogue-trader.sheet .header .avatar img {
-	max-width: 95px;
-	max-height: 95px;
-	border: none;
-	display: block;
-	margin: auto;
 }
 
 /* Compact item-sheet header: small icon, name + short description stacked */
@@ -370,9 +364,14 @@
 	color: var(--rt-gold);
 }
 
-/* Design tokens: consistent labels/inputs across all system sheets */
+/* Design tokens: consistent labels/inputs across all system sheets.
 
-.rogue-trader.sheet .stats h1 {
+   Section headings: <h1> inside the .stats/.combat/.inventory section
+   wrappers share the treatment — bead 9l1m added the .inventory rule the
+   design language documented but the CSS lacked (.combat h1 lives in
+   sheet-character.css). */
+.rogue-trader.sheet .stats h1,
+.rogue-trader.sheet .inventory h1 {
 	margin-bottom: 8px;
 }
 
@@ -387,7 +386,6 @@
 .rogue-trader .part-label,
 .rogue-trader .chip-label,
 .rogue-trader.starship .stat-grid .stat > label,
-.rogue-trader.npc .stat-grid .stat > label,
 .rogue-trader.ship-creator .stat-grid .stat > label,
 .rogue-trader.planet .stat-grid .stat > label,
 .rogue-trader.npc table.npc-chars th,
@@ -569,27 +567,29 @@
 	background: var(--rt-panel-shade);
 }
 
-/* Career prose (bead rcv): epigraph quote + attribution styling. */
-.rogue-trader.sheet .career-content .epigraph {
+/* Career prose (bead rcv, c1lm): epigraph quote + attribution styling.
+   The .career-content wrapper class was emitted by no template or TS —
+   the styling now keys on the real classes. */
+.rogue-trader.sheet .epigraph {
 	margin: 0 0 1em;
 	padding: 4px 0 4px 10px;
 	border-left: 2px solid var(--rt-gold);
 }
 
-.rogue-trader.sheet .career-content .epigraph p {
+.rogue-trader.sheet .epigraph p {
 	font-style: italic;
 	margin: 0 0 6px;
 }
 
-.rogue-trader.sheet .career-content .epigraph .attribution {
+.rogue-trader.sheet .epigraph .attribution {
 	text-align: right;
 	font-size: var(--rt-fs-lg);
 	color: var(--rt-white-alpha);
 	margin: 0;
 }
 
-.rogue-trader.sheet .career-content .description-readonly p,
-.rogue-trader.sheet .career-content .prose-mirror-editor p {
+.rogue-trader.sheet .description-readonly p,
+.rogue-trader.sheet .prose-mirror-editor p {
 	margin: 0 0 0.9em;
 	line-height: 1.5;
 }
@@ -642,10 +642,6 @@
 	width: 50%;
 	min-width: 0;
 	border-radius: var(--rt-radius-sm);
-}
-
-.rogue-trader.sheet .stats-row .stat.short-description {
-	flex: 1;
 }
 
 /* Rate-of-fire composite group: book format S/2/3 */
@@ -897,11 +893,13 @@
 	font-size: var(--rt-fs-md);
 }
 
-/* Starship statline: compact multi-column grid (design-language stats-row
-   pattern) replacing the stacked full-width inputs. Label typography comes
-   from the shared small-caps label rule (xcte). */
+/* Starship + ship-creator stat grids: ONE compact multi-column primitive
+   (bead t0i8) replacing the stacked full-width inputs — the NPC sheet
+   renders table.npc-chars and never .stat-grid, so its dead branches are
+   gone. The planet sheet's .stat-grid is overlaid by .planet-profile-grid
+   (sheet-character.css), which redefines layout on top. Label typography
+   comes from the shared small-caps label rule (xcte). */
 .rogue-trader.sheet.starship .stat-grid,
-.rogue-trader.sheet.npc .stat-grid,
 .rogue-trader.sheet.ship-creator .stat-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
@@ -910,7 +908,6 @@
 }
 
 .rogue-trader.sheet.starship .stat-grid .stat,
-.rogue-trader.sheet.npc .stat-grid .stat,
 .rogue-trader.sheet.ship-creator .stat-grid .stat {
 	display: flex;
 	flex-direction: column;
@@ -1028,11 +1025,6 @@
 
 .rogue-trader.sheet.starship .refit-budget .capacity-bar {
 	max-width: 32em;
-}
-
-/* Editable total input inside a Hull-tab capacity bar (block slot). */
-.rogue-trader.sheet.starship .capacity-bar input {
-	width: 4.5em;
 }
 
 /* Hull snapshot + stat groups (owner option A, 2026-09-27): header diet,

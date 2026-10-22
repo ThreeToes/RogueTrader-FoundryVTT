@@ -91,7 +91,9 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
 - Every sheet: `window: { resizable: true }` in DEFAULT_OPTIONS, **plus** CSS
   `min-width`/`min-height` on the sheet class — ApplicationV2 clamps resize to the
   app element's computed `minWidth`/`minHeight` (core `application.mjs:1124–1153`).
-  Current: `.sheet.character` 500×800, `.sheet.weapon` 500×420.
+  The RULE is the pair on every resizable app class — the values live in `css/`
+  next to the class (the stale enumeration that used to sit here misled an
+  implementer into shipping only two clamps; bead 3kus).
 - Fixed-width inputs: value inputs `3.5em`, bonus `2.5em`, weights `4em`, centered.
 
 ## i18n

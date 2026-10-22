@@ -15,7 +15,7 @@
  * side too — game.i18n must not be read inside this module.
  */
 
-import { equipStateOf, isWeaponType } from "../../ffg/domain/model/taxonomy";
+import { isReady, isWeaponType } from "../../ffg/domain/model/taxonomy";
 import { postCard } from "./chat-flags";
 import { nested, packSystem, str } from "../data/pack-fields";
 import {
@@ -312,8 +312,10 @@ export function actionCapabilities(
 	};
 	for (const item of items) {
 		if (isWeaponType(item.type)) {
-			// Non-armour items are ready when CARRIED (isReady semantics).
-			if (equipStateOf(item) !== "carried") continue;
+			// Only weapons reach this branch, so isReady's armour semantics never
+			// apply: a stowed weapon is not ready (the old inline "!== carried"
+			// check, now the shared predicate — bead tkm7).
+			if (!isReady(item)) continue;
 			caps.readyWeapons += 1;
 			const system = item.system ?? {};
 			if (system.class === "heavy") caps.heavyWeapon = true;

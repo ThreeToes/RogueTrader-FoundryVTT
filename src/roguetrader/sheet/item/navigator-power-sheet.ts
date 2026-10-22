@@ -1,8 +1,10 @@
-import { effectActions } from "./effect-actions";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 import { NavigatorPower } from "../../data/item/navigator-power";
+// Bead iktx: the ONE characteristic-label composition seam (labels.ts).
+import { characteristicLabelKey } from "../../rules/labels";
 import { itemDataContext, sheetContext } from "../context";
 import { itemSheetOptions } from "../sheet-options";
-import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
+import { effectActions } from "./effect-actions";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -48,7 +50,7 @@ export class NavigatorPowerSheet extends HandlebarsApplicationMixin(
 		// other composition site already upper-cases (see the characteristicLabel
 		// line below and creator-context.ts); these two are the same seam.
 		context.characteristicLabel = game.i18n.localize(
-			`CHARACTERISTIC.${(this.document.system.characteristic ?? "per").toUpperCase()}`,
+			characteristicLabelKey(this.document.system.characteristic ?? "per"),
 		);
 		context.masteryLabel = game.i18n.localize(
 			`NAVIGATOR_POWER.${(this.document.system.mastery ?? "novice").toUpperCase()}`,

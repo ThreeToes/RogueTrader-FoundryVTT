@@ -421,6 +421,117 @@ describe("architecture boundaries (epic kof0)", () => {
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Effect-engine walk locality (bead jahb)
+// ---------------------------------------------------------------------------
+
+/**
+ * The effect kind whose WALK must stay in the engine.
+ *
+ * `collectCharacteristicDelta` (domain/effects) is the ONE walk that folds
+ * "characteristic-modifier" rows into a derived delta; the effective
+ * characteristic value, and anything built on it, reads that. A module that
+ * re-walks the kind by hand re-plants the bug bead jahb fixed (its walk never
+ * read the guard), and open bead xdwt will consolidate the walks — a second
+ * hand copy would bake the bug back in.
+ *
+ * The scan is a cheap grep over the kind's literal in non-test source outside
+ * `src/ffg/domain/effects/**`, comments stripped (prose mentions never trip;
+ * a hand walk's `effect.kind !== "characteristic-modifier"` does). Files that
+ * legitimately name the kind for OTHER purposes (row authoring, drop-time
+ * wiring) are allowlisted below; like the sibling allowlist above, the list
+ * is pinned and each entry is a documented non-walk use.
+ */
+const CHARACTERISTIC_WALK_DIR = "src/ffg/domain/effects";
+
+const CHARACTERISTIC_MODIFIER_KIND = /characteristic-modifier/g;
+
+const CHARACTERISTIC_WALK_ALLOWLIST: ReadonlySet<string> = new Set([
+	// Authors mutation rows carrying the kind (affliction grant payloads) —
+	// data authoring, not a derived-value walk.
+	"src/roguetrader/rules/afflictions.ts",
+	// Classifies drop-time rows by kind when applying an affliction — reads the
+	// row the drop just authored, not a walk over owned effects.
+	"src/roguetrader/sheet/actor/affliction-drop.ts",
+]);
+
+/**
+ * Every place OUTSIDE the effect engine that mentions the kind in code
+ * (empty = the walk is local). Comments are stripped so a doc-comment mention
+ * of WHY the collector exists never trips.
+ */
+export function characteristicWalkViolationsFor(
+	file: string,
+	source: string,
+): string[] {
+	const rel = path.relative(process.cwd(), file).replaceAll("\\", "/");
+	if (
+		rel.startsWith(`${CHARACTERISTIC_WALK_DIR}/`) ||
+		rel === CHARACTERISTIC_WALK_DIR ||
+		CHARACTERISTIC_WALK_ALLOWLIST.has(rel)
+	) {
+		return [];
+	}
+	const stripped = stripComments(source);
+	CHARACTERISTIC_MODIFIER_KIND.lastIndex = 0;
+	if (!CHARACTERISTIC_MODIFIER_KIND.test(stripped)) return [];
+	return [
+		`${rel} touches the "characteristic-modifier" kind outside the effect engine — derive deltas through collectCharacteristicDelta (domain/effects) instead of re-walking the kind; a second walk re-plants the guard bug (bead jahb)`,
+	];
+}
+
+describe("effect-engine walk locality (bead jahb)", () => {
+	test("the characteristic-modifier walk lives only in the effect engine (or the documented allowlist)", () => {
+		const violations = collect("src").flatMap((file) =>
+			characteristicWalkViolationsFor(file, readFileSync(file, "utf8")),
+		);
+		expect(violations).toEqual([]);
+	});
+
+	test("the allowlist is exactly the two non-walk kind users", () => {
+		// A growing allowlist is a second walk growing quietly; keep the list
+		// pinned and each entry documented as a non-walk use.
+		expect([...CHARACTERISTIC_WALK_ALLOWLIST].sort()).toEqual([
+			"src/roguetrader/rules/afflictions.ts",
+			"src/roguetrader/sheet/actor/affliction-drop.ts",
+		]);
+	});
+
+	test("the scanner flags a hand walk outside the effect engine", () => {
+		const violations = characteristicWalkViolationsFor(
+			"src/roguetrader/data/actor/character.ts",
+			'for (const e of effects) { if (e.kind !== "characteristic-modifier") continue; }\n',
+		);
+		expect(violations.length).toBe(1);
+		expect(violations[0]).toContain("outside the effect engine");
+	});
+
+	test("the scanner ignores the kind inside domain/effects", () => {
+		const violations = characteristicWalkViolationsFor(
+			"src/ffg/domain/effects/x.ts",
+			'export const KIND = "characteristic-modifier";\n',
+		);
+		expect(violations).toEqual([]);
+	});
+
+	test("the scanner ignores a prose mention in a comment", () => {
+		// Documenting WHY the collector exists must not trip the guard.
+		const violations = characteristicWalkViolationsFor(
+			"src/roguetrader/rules/x.ts",
+			"// characteristic-modifier rows fold through the shared collector\nexport const x = 1;\n",
+		);
+		expect(violations).toEqual([]);
+	});
+
+	test("the scanner honours the allowlist", () => {
+		const violations = characteristicWalkViolationsFor(
+			"src/roguetrader/rules/afflictions.ts",
+			'if (effect.kind !== "characteristic-modifier") continue;\n',
+		);
+		expect(violations).toEqual([]);
+	});
+});
+
 describe("shared-layer neutrality (bead w9sa.4)", () => {
 	test("src/ffg and src/rules-engine never name the sibling system", () => {
 		// The invariant the sibling boot depends on: the shared core carries NO

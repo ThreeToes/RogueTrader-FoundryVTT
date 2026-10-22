@@ -5,10 +5,13 @@ import {
 	TARGET_CHARACTER_TYPE,
 	explorerClonePayload,
 	needsTypeMigration,
+	originLedgerBackfill,
 	removeLegacyCharacterTypes,
 	shouldRunLegacyMigration,
 	withoutLegacyCharacterTypes,
 } from "./migrations";
+import { totalSpent } from "./rules/advancement";
+import { type OriginEntry, setOriginEntries, storedOriginPicks } from "./rules/origins";
 
 describe("the migration is gated to the Rogue Trader system (bead w9sa.7)", () => {
 	// "acolyte" is Dark Heresy 2e's OWN character type. A sibling system that
@@ -197,5 +200,167 @@ describe("legacy types are mutated in place (bead aicd)", () => {
 		const types = [...LEGACY_CHARACTER_TYPES, "explorer"];
 		removeLegacyCharacterTypes(types);
 		expect(types).toEqual(["explorer"]);
+	});
+});
+
+// --------------------------------------------------------------------------
+// Bead gfsp — the one-time origin-xp ledger backfill for EXISTING actors
+// --------------------------------------------------------------------------
+
+describe("originLedgerBackfill (bead gfsp)", () => {
+	// Priced origin fixture (Into the Storm p17: Survivalist 300) + a free one.
+	const FIXTURES: OriginEntry[] = [
+		{
+			key: "survivalist",
+			row: "home-world",
+			col: 0,
+			name: "Survivalist",
+			description: "",
+			mechanics: { xpCost: 300 },
+		},
+		{
+			key: "hive-world",
+			row: "home-world",
+			col: 0,
+			name: "Hive World",
+			description: "",
+			mechanics: {},
+		},
+	];
+	// An actor that advanced past creation pre-r8mw: one purchase in its
+	// ledger, NO origin entry, stored origin picks on system.origins (the
+	// five human fields' "key|variantKey" convention).
+	type ActorLike = Parameters<typeof originLedgerBackfill>[0];
+	const ADVANCES = [
+		{ type: "skill", key: "awareness", name: "Awareness", cost: 100, rank: 1 },
+	] as NonNullable<ActorLike["system"]>["advances"];
+	function actorFixture(overrides: object = {}): ActorLike {
+		return {
+			system: {
+				origins: { homeWorld: "survivalist" },
+				advances: structuredClone(ADVANCES!),
+				xp: { spent: 4500 + 100, total: 5000 },
+			},
+			...overrides,
+		} as ActorLike;
+	}
+
+	test("appends the origin baseline AFTER existing purchases and recomputes xp.spent", () => {
+		try {
+			setOriginEntries(FIXTURES);
+			const patch = originLedgerBackfill(actorFixture())!;
+			const system = patch.system as {
+				advances: Array<Record<string, unknown>>;
+				xp: { spent: number; total: number };
+			};
+			const ledger = system.advances;
+			// Prior purchase untouched, baseline appended after it.
+			expect(ledger).toHaveLength(2);
+			expect(ledger[0]).toEqual(ADVANCES![0]);
+			expect(ledger[1]).toMatchObject({
+				type: "origin",
+				cost: 300,
+				rank: 0,
+				name: "Origin Path: Survivalist",
+			});
+			// xp.spent recomputed FROM the merged ledger: the pool no longer
+			// overstates by the origin xpCost. xp.total preserved.
+			expect(system.xp).toEqual({
+				spent: totalSpent(system.advances as never),
+				total: 5000,
+			});
+			expect(system.xp.spent).toBe(4500 + 100 + 300);
+		} finally {
+			setOriginEntries([]);
+		}
+	});
+
+	test("is IDEMPOTENT: nothing to append onto an already-patched actor, no double-append", () => {
+		try {
+			setOriginEntries(FIXTURES);
+			const base = actorFixture();
+			const first = originLedgerBackfill(base)!;
+			// Simulate the patch applied ONTO the actor, keeping system.origins
+			// as it lives on the document (the patch itself carries only
+			// advances + xp). Replacing system WHOLESALE here discarded the
+			// stored picks, so the second pass bailed at the NO-PICKS gate and
+			// the test never exercised the origin-entry gate it claims.
+			const patchedSystem = {
+				...(base.system as Record<string, unknown>),
+				...(first.system as Record<string, unknown>),
+			};
+			const patched = actorFixture({ system: patchedSystem } as object);
+			// The gate pinned here: the stored picks still resolve...
+			expect(
+				Object.keys(
+					storedOriginPicks(
+						patchedSystem.origins as Parameters<typeof storedOriginPicks>[0],
+					),
+				),
+			).not.toHaveLength(0);
+			// ...and the ledger now carries the origin entry...
+			expect(
+				(patchedSystem.advances as Array<{ type?: string }>).some(
+					(entry) => entry.type === "origin",
+				),
+			).toBe(true);
+			// ...so the next ready-time pass is a no-op VIA THE ORIGIN-ENTRY
+			// GATE, not because the picks went missing.
+			expect(originLedgerBackfill(patched)).toBeNull();
+		} finally {
+			setOriginEntries([]);
+		}
+	});
+
+	test("a costless origin (xpCost = 0) needs no entry", () => {
+		try {
+			setOriginEntries(FIXTURES);
+			const costlessOrigin = actorFixture({
+				system: {
+					origins: { homeWorld: "hive-world" },
+					advances: structuredClone(ADVANCES!),
+					xp: { spent: 4600, total: 5000 },
+				},
+			} as object);
+			expect(originLedgerBackfill(costlessOrigin)).toBeNull();
+		} finally {
+			setOriginEntries([]);
+		}
+	});
+
+	test("no persisted origin picks -> nothing to do", () => {
+		expect(originLedgerBackfill({ system: {} } as ActorLike)).toBeNull();
+		expect(originLedgerBackfill({} as ActorLike)).toBeNull();
+		// Empty picks ARE no picks: blank origin fields resolve to no entries.
+		expect(
+			originLedgerBackfill({
+				system: { origins: { homeWorld: "", birthright: "" } },
+			} as ActorLike),
+		).toBeNull();
+	});
+
+	test("a post-r8mw (creator-made) actor already carrying an origin entry is untouched", () => {
+		try {
+			setOriginEntries(FIXTURES);
+			const creatorMade = actorFixture({
+				system: {
+					origins: { homeWorld: "survivalist" },
+					advances: [
+						...structuredClone(ADVANCES!),
+						{
+							type: "origin",
+							key: "",
+							name: "Origin Path: Survivalist",
+							cost: 300,
+							rank: 0,
+						},
+					],
+					xp: { spent: 4900, total: 5000 },
+				},
+			} as object);
+			expect(originLedgerBackfill(creatorMade)).toBeNull();
+		} finally {
+			setOriginEntries([]);
+		}
 	});
 });

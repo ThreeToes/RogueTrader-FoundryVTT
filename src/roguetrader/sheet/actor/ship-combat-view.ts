@@ -28,11 +28,15 @@
  */
 import {
 	boardingCommandBonus,
-	shipIsBoarded,
+	SHIP_TURN_FLAG_TARGET_ALL,
 	type ShipBoardingState,
 	type ShipTurnFlag,
+	shipIsBoarded,
 } from "../../../rules-engine/index";
-import { manoeuvreRow } from "../../presentation/rolls/ship-manoeuvre";
+import {
+	parseShipActionTestKey,
+	SHIP_ACTION_SHIP_STATS,
+} from "../../presentation/rolls/ship-action";
 import {
 	boardingRowHandlers,
 	boardingRowKey,
@@ -40,15 +44,13 @@ import {
 	commandBonusRows,
 	type StarshipSystem,
 } from "../../presentation/rolls/ship-boarding";
-import {
-	SHIP_ACTION_SHIP_STATS,
-	parseShipActionTestKey,
-} from "../../presentation/rolls/ship-action";
+import { manoeuvreRow } from "../../presentation/rolls/ship-manoeuvre";
 import {
 	ORDNANCE_PROMPT_ONLY_ROWS,
 	ordnanceRowHandlers,
 } from "../../presentation/rolls/ship-ordnance";
-import { SHIP_TURN_FLAG_TARGET_ALL } from "../../../rules-engine/index";
+// Bead iktx: the ONE characteristic-label composition seam (labels.ts).
+import { characteristicLabelKey } from "../../rules/labels";
 
 /** The starship-actions concept pack (bead ca3x/S4) — the chip source. */
 export const STARSHIP_ACTIONS_PACK = "rogue-trader.starship-actions";
@@ -148,9 +150,7 @@ export function shipActionTestLabel(
 	const parts: string[] = [];
 	if (route.skill) parts.push(route.skill);
 	else if (route.characteristic)
-		parts.push(
-			localize(`CHARACTERISTIC.${route.characteristic.toUpperCase()}`),
-		);
+		parts.push(localize(characteristicLabelKey(route.characteristic)));
 	else if (route.interaction)
 		parts.push(localize("SHIP_COMBAT.TEST_INTERACTION_ANY"));
 	if (parsed.shipStat)

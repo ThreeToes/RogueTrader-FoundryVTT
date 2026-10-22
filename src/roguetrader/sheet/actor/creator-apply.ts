@@ -11,11 +11,13 @@
  */
 
 import { type CatalogSkill, isUnresolvedChoice } from "../../rules/creation";
+import { totalSpent, type AdvanceLedgerEntry } from "../../rules/advancement";
 import { GRANTED_BY_CREATOR, skillGrantPayload } from "../../rules/grants";
 import { gearsetFor } from "../../rules/gearsets";
 import type { ResolvedOrigin } from "../../rules/origins";
 import {
 	buildSummaryCard,
+	mergeLedgerWithBaseline,
 	originSkillGrants,
 	reconcileLegacyGrants,
 	type ExistingItemLike,
@@ -117,9 +119,34 @@ export async function createOrUpdateActor(
 				if (!confirmed) return false;
 			}
 		}
+		// Bead 9o5z: since bead r8mw the character creator's payload carries
+		// the creation-baseline origin ledger entry under system.advances. A
+		// wholesale system update ERASED the pre-existing actor's purchase
+		// history and refunded its xp. When the payload carries a ledger (the
+		// character creator always does; the ship creator's system does not),
+		// merge the existing ledger with the baseline instead of overwriting
+		// — prior purchases stay untouched and xp.spent is recomputed FROM
+		// the merged ledger, so the create branch's fresh-ledger behaviour
+		// is unchanged (blank actors merge to the baseline alone).
+		let system = payload.system as {
+			advances?: unknown;
+			xp?: { total?: number; spent?: number };
+		};
+		if (Array.isArray(system?.advances)) {
+			const existing = (targetActor.system ?? {}) as { advances?: unknown };
+			const merged = mergeLedgerWithBaseline(
+				existing.advances as AdvanceLedgerEntry[],
+				system.advances as AdvanceLedgerEntry[],
+			);
+			system = {
+				...system,
+				advances: merged,
+				xp: { ...(system.xp ?? {}), spent: totalSpent(merged) },
+			};
+		}
 		await targetActor.update({
 			name: payload.name || targetActor.name,
-			system: payload.system,
+			system,
 		} as never);
 		await applyFn(targetActor);
 		options.close();

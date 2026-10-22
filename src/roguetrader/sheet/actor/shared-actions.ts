@@ -5,9 +5,11 @@
  * as the minimal shape the sheet provides.
  *
  * Action NAMES stay on the sheets (templates depend on them); only the
- * bodies are shared here. #onRollSkill is deliberately NOT shared: the
- * sheets read different data attributes (character: data-item, npc:
- * data-item-id).
+ * bodies are shared here. The characteristic and skill roll bodies moved in
+ * too (bead z4df): the old comment claiming #onRollSkill is deliberately not
+ * shared was FALSE — both sheets read the shared data-item-id row vocabulary
+ * (itemIdFromTarget) and both characteristic rolls read data-key on the
+ * target, so there is no remaining divergence to record.
  */
 import { itemIdFromTarget } from "../dom";
 import { performRoll, rollWeaponDamage } from "../../rules/adapter";
@@ -36,6 +38,38 @@ export function startItemRowDrag(event: DragEvent): void {
 		"text/plain",
 		JSON.stringify({ type: "Item", uuid: row.dataset.itemUuid }),
 	);
+}
+
+/** Roll a characteristic from a clicked cell (data-key on the target). */
+export async function rollCharacteristicAction(
+	this: { actor: foundry.documents.Actor },
+	_event: unknown,
+	target: HTMLElement,
+): Promise<void> {
+	const key = target.dataset.key;
+	if (!key) return;
+	await performRoll({
+		kind: "characteristic",
+		actor: this.actor,
+		key,
+		skipDialog: false,
+	});
+}
+
+/** Roll a known skill row (item id via the shared data-item-id vocabulary). */
+export async function rollSkillAction(
+	this: { actor: foundry.documents.Actor },
+	_event: unknown,
+	target: HTMLElement,
+): Promise<void> {
+	const itemId = itemIdFromTarget(target);
+	if (!itemId) return;
+	await performRoll({
+		kind: "skill",
+		actor: this.actor,
+		itemId,
+		skipDialog: false,
+	});
 }
 
 /** Roll the to-hit test for a weapon row (data-item-id). */

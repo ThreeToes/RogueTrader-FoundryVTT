@@ -11,6 +11,8 @@
  */
 
 import type { CharacteristicKey } from "../data/actor/character";
+// Bead iktx: the ONE characteristic-label composition seam (labels.ts).
+import { characteristicLabelKey } from "../rules/labels";
 
 // ---------------------------------------------------------------------------
 // Skill ladder (Table 4-... : Known / +10 / +20)
@@ -247,7 +249,7 @@ export function buildCharacteristicViews(
 			const delta = effectiveValue - data.value;
 			return {
 				key,
-				label: `CHARACTERISTIC.${key.toUpperCase()}`,
+				label: characteristicLabelKey(key),
 				value: data.value,
 				effectiveValue,
 				delta,

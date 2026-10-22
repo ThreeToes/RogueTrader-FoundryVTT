@@ -6,6 +6,10 @@
 import "./specs";
 
 export {
+	type CharacteristicItemIn,
+	collectCharacteristicDelta,
+} from "./characteristic-delta";
+export {
 	collectEffectModifiers,
 	collectEffects,
 	effectKinds,

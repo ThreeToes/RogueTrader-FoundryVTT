@@ -17,7 +17,6 @@
 import { type TestOutcome } from "../../../rules-engine/index";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { getPorts } from "../../infrastructure/foundry/ports";
-import { talentConditions } from "../../registry";
 import { collectConditionKeys, collectTestModifiers } from "../../rules/funnel";
 import type {
 	RollHandler,
@@ -27,10 +26,7 @@ import type {
 } from "../../rules/roll-contract";
 import { TestDialog } from "../../rules/test-dialog";
 import { dialogContributors, runTest } from "./pipeline";
-
-/** Registry-seam label lookup for the TestDialog's condition toggles (8ycd). */
-const conditionLabel = (key: string): string =>
-	talentConditions.get(key) ?? key;
+import { conditionLabel } from "../../rules/labels";
 
 /**
  * A neutral outcome for prepare-only kinds (bead 77r1): the shared test step

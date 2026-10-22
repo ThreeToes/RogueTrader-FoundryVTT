@@ -58,10 +58,16 @@ import { resolveAfflictionGrants } from "../../rules/afflictions";
 import { fatigueThreshold, woundsMax } from "../../rules/derived";
 import { actorEncumbrance } from "../../rules/encumbrance";
 import { getSkillCatalog } from "./skill-catalog";
+// Bead iktx: the ONE characteristic-label composition seam (labels.ts).
+import { characteristicLabelKey } from "../../rules/labels";
+// Bead q8il: the single-source equippable-type set (sheet/pc-inventory.ts).
+import { PC_EQUIPPABLE_TYPES } from "../pc-inventory";
 import {
 	gatePsykerTab,
 	openItemAction,
+	rollCharacteristicAction,
 	rollDamageAction,
+	rollSkillAction,
 	rollWeaponAction,
 	startItemRowDrag,
 } from "./shared-actions";
@@ -70,6 +76,7 @@ import { armourLocations, weaponRows } from "./view-models";
 import {
 	buildCharacteristicViews,
 	findOwnedSkillForRow,
+	LADDER_MAX,
 	mergeOwnedAndCatalogRows,
 	skillNameKey,
 	type OwnedSkillLike,
@@ -114,8 +121,8 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		form: { submitOnChange: true, closeOnSubmit: false },
 		actions: {
 			editImage: imageActions.editImage,
-			rollTest: CharacterSheet.#onRollTest,
-			rollSkill: CharacterSheet.#onRollSkill,
+			rollTest: rollCharacteristicAction,
+			rollSkill: rollSkillAction,
 			rollUntrained: CharacterSheet.#onRollUntrained,
 			ownSkill: CharacterSheet.#onOwnSkill,
 			addSkill: CharacterSheet.#onAddSkill,
@@ -271,8 +278,15 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			// resolution (sheet/pack-resolve.ts), fromUuid as fallback.
 			const item = await resolvePackDocument(uuid);
 			if (!item) {
-				getPorts().notify.error("BACKGROUND.OPEN_CAREER_FAIL", { uuid });
-				console.warn(`rogue-trader | career link: "${uuid}" did not resolve`);
+				// Bead eqay: the shared warn owns BOTH the console line and the
+				// user-facing toast (error severity kept).
+				warnPackDocMissing(
+					"career",
+					uuid,
+					"opening its sheet skipped",
+					"compendium",
+					{ key: "BACKGROUND.OPEN_CAREER_FAIL", vars: { uuid } },
+				);
 				return;
 			}
 			await openDocumentSheet(item, "career link", undefined, { uuid });
@@ -351,8 +365,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				pack: `rogue-trader.${pack}`,
 			})) as foundry.documents.Item | null;
 			if (!doc) {
-				warnPackDocMissing(pack, name, "grant skipped");
-				getPorts().notify.warn("AFFLICTION.GRANT_MISSING", { name });
+				// Bead eqay: warn+notify (warn severity kept) owned by the shared
+				// helper — the console line now names the actually-searched pack.
+				warnPackDocMissing(pack, name, "grant skipped", `rogue-trader.${pack}`, {
+					key: "AFFLICTION.GRANT_MISSING",
+					severity: "warn",
+					vars: { name },
+				});
 				return;
 			}
 			// Same grant write as the mapped route below: one clone (the pack doc's
@@ -374,8 +393,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			name,
 		)) as foundry.documents.Item | null;
 		if (!doc) {
-			warnPackDocMissing(type, name, "grant skipped");
-			getPorts().notify.warn("AFFLICTION.GRANT_MISSING", { name });
+			// Bead eqay: warn+notify (warn severity kept) owned by the shared helper.
+			warnPackDocMissing(type, name, "grant skipped", undefined, {
+				key: "AFFLICTION.GRANT_MISSING",
+				severity: "warn",
+				vars: { name },
+			});
 			return;
 		}
 		const object = clonePackDocPayload(
@@ -435,6 +458,13 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	/**
 	 * Malignancy Test (epic 1g2t, p299): Willpower test modified by the
 	 * Corruption Track; on failure roll on the Malignancies table (manual/GM).
+	 *
+	 * WHEN a test is DUE (Core Rulebook p299: one Malignancy Test per full 10
+	 * Corruption Points; the mutation test, rolling two different
+	 * characteristics, once per full 30 CP) is deliberately NOT enforced yet —
+	 * the book's due-check lives only in this comment (bead aasf deleted the
+	 * tested-but-dead malignancyTestsDue/mutationTestsDue helpers rather than
+	 * keep an unenforced rule). Wire the due-check in here when enforced.
 	 */
 	static async #onRollMalignancyTest(this: {
 		actor: foundry.documents.Actor;
@@ -465,9 +495,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	}
 
 	/**
-	 * Toggle the equip state of an inventory item. The type allowlist stays
-	 * here (bead 73di: the character keeps a narrower type set); the state
-	 * computation is the ONE shared machine (sheet/equip.ts, bead 2dvj).
+	 * Toggle the equip state of an inventory item. The type allowlist is the
+	 * single-source PC_EQUIPPABLE_TYPES set (sheet/pc-inventory.ts, bead q8il);
+	 * the state computation is the ONE shared machine (sheet/equip.ts, bead
+	 * 2dvj).
 	 */
 	static async #onToggleEquip(
 		this: { actor: foundry.documents.Actor },
@@ -479,48 +510,15 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		const item = this.actor.items.get(itemId);
 		if (!item) return;
 		const type = item.type as string;
-		if (
-			!["weapon", "melee-weapon", "ranged-weapon", "armour", "gear"].includes(
-				type,
-			)
-		)
-			return;
+		if (!PC_EQUIPPABLE_TYPES.has(type)) return;
 		const next = equipToggleState(type, equipStateOf(item));
 		await item.update({ system: { equipState: next } });
 	}
 
 	/**
-	 * Click a characteristic to roll it.
+	 * Click a characteristic to roll it / click a known skill to roll it: the
+	 * shared bodies (bead z4df) — the sheets only keep the action names.
 	 */
-	static async #onRollTest(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const key = target.dataset.key;
-		if (!key) return;
-		await performRoll({
-			kind: "characteristic",
-			actor: this.actor,
-			key,
-			skipDialog: false,
-		});
-	}
-
-	static async #onRollSkill(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const itemId = target.dataset.item;
-		if (!itemId) return;
-		await performRoll({
-			kind: "skill",
-			actor: this.actor,
-			itemId,
-			skipDialog: false,
-		});
-	}
 
 	static async #onRollUntrained(
 		this: { actor: foundry.documents.Actor },
@@ -616,7 +614,12 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			await item.delete();
 			return;
 		}
-		await item.update({ system: { ladder: value } });
+		// Clamp to the shared LADDER_MAX (bead v99r): the setter previously
+		// wrote the raw value, so it disagreed with the NPC sheet's cap (a
+		// ladder of 99 was writable here).
+		await item.update({
+			system: { ladder: Math.min(LADDER_MAX, Math.max(1, value)) },
+		});
 	}
 
 	/** Set the unnatural multiplier from a clicked pip; clicking the last lit pip resets to natural. */
@@ -916,7 +919,7 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		context.skillGroups = Object.keys(
 			(system.characteristics ?? {}) as Record<string, unknown>,
 		).map((key) => {
-			const label = `CHARACTERISTIC.${key.toUpperCase()}`;
+			const label = characteristicLabelKey(key);
 			// 6l90: shared merge drops catalog entries owned under differing
 			// casing (t093 semantics) so owned skills never render twice.
 			const skills = mergeOwnedAndCatalogRows(

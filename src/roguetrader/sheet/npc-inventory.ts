@@ -9,8 +9,9 @@
  * weapons arrive CARRIED — an NPC is holding what the GM gives it); this is
  * where the GM changes their mind about that.
  */
-import { equipStateOf } from "../data/accessors";
+import { isReady } from "../data/accessors";
 import { readRtFlag } from "../rules/chat-flags";
+
 // One equip state machine (bead 73di) — lives in sheet/equip.ts so both
 // sheets consume the same module; re-exported here for existing importers.
 export { equipToggleState } from "./equip";
@@ -80,8 +81,14 @@ const EXCLUDED_TYPES: ReadonlySet<string> = new Set([
 	"armour",
 ]);
 
-/** Types that get an equip/stow toggle (matches the PC equip model). */
-const EQUIPPABLE_TYPES: ReadonlySet<string> = new Set([
+/**
+ * Types that get an equip/stow toggle (bead q8il: the NPC-set twin of
+ * PC_EQUIPPABLE_TYPES, sheet/pc-inventory.ts). Deliberately NARROWER: the NPC
+ * sheet's armour panel owns wear/stow, so armour is not in this set — every
+ * entry here is a subset of the PC equip model. (The old "matches the PC
+ * equip model" comment was wrong.)
+ */
+export const NPC_EQUIPPABLE_TYPES: ReadonlySet<string> = new Set([
 	"melee-weapon",
 	"ranged-weapon",
 	"gear",
@@ -108,8 +115,12 @@ export function npcInventoryGroups(
 			id: item.id ?? "",
 			name: item.name ?? "",
 			type,
-			equippable: EQUIPPABLE_TYPES.has(type),
-			ready: equipStateOf(item) === "carried",
+			equippable: NPC_EQUIPPABLE_TYPES.has(type),
+			// Shared ready-state predicate (domain/model/taxonomy): the sheet
+			// previously re-inlined `equipStateOf(item) === "carried"` (bead tkm7).
+			// Equivalence holds today because EXCLUDED_TYPES keeps armour out of
+			// these groups; pinned by the npc-inventory test.
+			ready: isReady(item),
 			source: compendiumSourceOf(item),
 		};
 		const bucket = buckets.find((b) => b.typeSet.has(type));

@@ -8,6 +8,12 @@
  */
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { GearsetEntry } from "../../data/item/gearset";
+import {
+	type AdvanceLedgerEntry,
+	ledgerEntryFor,
+	originLedgerEntry,
+	totalSpent,
+} from "../../rules/advancement";
 import { setGearsetEntries } from "../../rules/gearsets";
 import type {
 	OriginEntry,
@@ -18,6 +24,7 @@ import type {
 
 import { resolveOrigins, setOriginEntries } from "../../rules/origins";
 import type { CreatorState } from "./creator-context";
+import { updateLedger } from "./advancement-buy";
 import {
 	baseCharacteristics,
 	buildAcquisitionGroups,
@@ -33,6 +40,7 @@ import {
 	buildSpeciesOptions,
 	buildSummaryCard,
 	emptyState,
+	mergeLedgerWithBaseline,
 	kitOptionName,
 	reconcileLegacyGrants,
 	resolveCreatorVitals,
@@ -301,6 +309,186 @@ describe("buildCharacterSystemPayload (bead a87x)", () => {
 		expect((payload.origins as Record<string, string>).homeWorld).toBe(
 			"hive-world",
 		);
+	});
+
+	// Bead r8mw, owner shape (a) 2026-10-21: the Origin Path's xpCost rides
+	// the ADVANCE LEDGER as a rank-0 creation-baseline entry, so every xp
+	// reader (sheet display, dialog pool, first purchase) sees it. Into the
+	// Storm p17: expanded options each cost xp (e.g. Survivalist 300).
+	test("a 300 xp Origin Path rides the ledger: pool 200, first purchase preserves it", () => {
+		const priced: OriginEntry[] = [
+			{
+				key: "survivalist",
+				row: "home-world",
+				col: 0,
+				name: "Survivalist",
+				description: "",
+				mechanics: { xpCost: 300 },
+			},
+		];
+		try {
+			setOriginEntries(priced);
+			const picks = { "home-world": { key: "survivalist" } };
+			const s = state(picks);
+			const payload = buildCharacterSystemPayload(
+				s,
+				resolved(picks),
+				baseCharacteristics(s),
+			) as Record<string, any>;
+			const ledger = payload.advances as AdvanceLedgerEntry[];
+			// xp.spent = 4500 baseline + 300 origin cost — derived FROM the
+			// ledger, so sheet display and stored value agree.
+			expect(payload.xp).toEqual({ total: 5000, spent: 4800 });
+			expect(ledger).toHaveLength(1);
+			expect(ledger[0]).toMatchObject({
+				type: "origin",
+				cost: 300,
+				rank: 0,
+				name: "Origin Path: Survivalist",
+			});
+			// The pool a creator-made character can spend: 5000 - 4800 = 200.
+			expect(5000 - totalSpent(ledger)).toBe(200);
+			// The first purchase does not erase the origin cost: the ledger
+			// recomputation includes the creation-baseline entry.
+			const next = updateLedger(
+				ledger,
+				ledgerEntryFor({
+					key: "awareness",
+					name: "Awareness",
+					type: "skill",
+					cost: 100,
+					multiplier: 1,
+					prerequisites: [],
+					rank: 1,
+				}),
+				[],
+				1,
+			);
+			expect((next.updates.advances as AdvanceLedgerEntry[]).some(
+				(e) => e.type === "origin",
+			)).toBe(true);
+			expect(5000 - totalSpent(next.updates.advances as AdvanceLedgerEntry[])).toBe(
+				100,
+			);
+		} finally {
+			setOriginEntries(ORIGIN_FIXTURES);
+		}
+	});
+});
+
+// Bead 9o5z: a creator RE-RUN on an existing actor (right-click entry) must
+// be merge-preserving — the fresh payload carries ONLY the creation-baseline
+// origin entry, and the update branch merges it into the actor's existing
+// ledger instead of overwriting it wholesale.
+describe("mergeLedgerWithBaseline (bead 9o5z)", () => {
+	// An actor that advanced past creation: one skill purchase in its ledger.
+	const purchaserLedger: AdvanceLedgerEntry[] = [
+		ledgerEntryFor({
+			key: "awareness",
+			name: "Awareness",
+			type: "skill",
+			cost: 100,
+			multiplier: 1,
+			prerequisites: [],
+			rank: 1,
+		}),
+		ledgerEntryFor({
+			key: "jaded",
+			name: "Jaded",
+			type: "talent",
+			cost: 200,
+			multiplier: 1,
+			prerequisites: [],
+			rank: 1,
+		}),
+	];
+	// The fresh payload's creation baseline (Into the Storm p17, e.g. 300 xp).
+	const baseline: AdvanceLedgerEntry[] = [
+		originLedgerEntry("Origin Path: Survivalist", 300),
+	];
+
+	test("re-run on an actor WITH purchases preserves them and keeps ONE origin entry", () => {
+		const merged = mergeLedgerWithBaseline(purchaserLedger, baseline);
+		// Prior purchases untouched, in place, ahead of the appended baseline.
+		expect(merged).toHaveLength(3);
+		expect(merged.slice(0, 2)).toEqual(purchaserLedger);
+		expect(merged.filter((e) => e.type === "origin")).toHaveLength(1);
+		expect(merged[2]).toEqual(baseline[0]);
+		// xp.spent recomputed FROM the merged ledger: none of the purchases are
+		// refunded into the pool.
+		expect(totalSpent(merged)).toBe(4500 + 100 + 200 + 300);
+	});
+
+	test("re-run is IDEMPOTENT: an actor already carrying the baseline is unchanged", () => {
+		const once = mergeLedgerWithBaseline(purchaserLedger, baseline);
+		expect(mergeLedgerWithBaseline(once, baseline)).toEqual(once);
+	});
+
+	test("an actor WITHOUT a ledger records just the baseline (blank/legacy actor)", () => {
+		expect(mergeLedgerWithBaseline(undefined, baseline)).toEqual(baseline);
+		expect(mergeLedgerWithBaseline([], baseline)).toEqual(baseline);
+	});
+
+	test("a FREE first run then a priced re-run charges the new baseline (free\u2192300xp)", () => {
+		// A costless first run leaves no origin entry; the priced re-run books
+		// its baseline after the purchases like any other append.
+		const merged = mergeLedgerWithBaseline(purchaserLedger, baseline);
+		expect(merged.slice(0, 2)).toEqual(purchaserLedger);
+		expect(merged[2]).toEqual(originLedgerEntry("Origin Path: Survivalist", 300));
+		expect(totalSpent(merged)).toBe(4500 + 100 + 200 + 300);
+	});
+
+	test("a CHANGED-pick re-run REPLACES the stale baseline in place (name + cost re-booked)", () => {
+		// Purchases BEFORE and AFTER the old baseline entry: replacement hits
+		// exactly the entry's slot.
+		const prior: AdvanceLedgerEntry[] = [
+			purchaserLedger[0],
+			originLedgerEntry("Origin Path: Hive World", 100),
+			purchaserLedger[1],
+		];
+		const merged = mergeLedgerWithBaseline(prior, baseline);
+		expect(merged).toHaveLength(3);
+		expect(merged[0]).toEqual(purchaserLedger[0]);
+		expect(merged[1]).toEqual(originLedgerEntry("Origin Path: Survivalist", 300));
+		expect(merged[2]).toEqual(purchaserLedger[1]);
+		expect(totalSpent(merged)).toBe(4500 + 100 + 200 + 300);
+	});
+
+	test("a re-run whose picks price the path at ZERO DROPS the stale baseline", () => {
+		// Pricing re-derived to 0 (free combination) must not keep a stale cost
+		// behind blanked picks; the purchases survive.
+		const merged = mergeLedgerWithBaseline(
+			[...purchaserLedger, originLedgerEntry("Origin Path: Hive World", 100)],
+			[],
+		);
+		expect(merged).toEqual(purchaserLedger);
+		expect(merged.some((e) => e.type === "origin")).toBe(false);
+		expect(totalSpent(merged)).toBe(4500 + 100 + 200);
+	});
+
+	test("a no-longer-priced re-run on a BLANK ledger returns nothing", () => {
+		expect(mergeLedgerWithBaseline([originLedgerEntry("Origin Path: Hive World", 100)], [])).toEqual([]);
+	});
+
+	test("MULTIPLE stale origin entries collapse to one placement (never double-booked)", () => {
+		const prior: AdvanceLedgerEntry[] = [
+			originLedgerEntry("Origin Path: Hive World", 100),
+			purchaserLedger[0],
+			originLedgerEntry("Origin Path: Forge World", 150),
+			purchaserLedger[1],
+		];
+		const merged = mergeLedgerWithBaseline(prior, baseline);
+		expect(merged.filter((e) => e.type === "origin")).toHaveLength(1);
+		expect(merged).toHaveLength(3);
+		expect(merged[0]).toEqual(originLedgerEntry("Origin Path: Survivalist", 300));
+		expect(merged.slice(1)).toEqual([purchaserLedger[0], purchaserLedger[1]]);
+	});
+
+	test("a same-picks re-run is content-identical through the REPLACE path", () => {
+		// The once-merged ledger carries the baseline as its last entry; a
+		// same-picks re-run replaces that entry with identical content.
+		const once = [...purchaserLedger, ...baseline];
+		expect(mergeLedgerWithBaseline(once, baseline)).toEqual(once);
 	});
 });
 

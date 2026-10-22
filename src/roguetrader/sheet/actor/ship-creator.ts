@@ -17,6 +17,7 @@
  * manually dropped components (bead pyi3 DnD) survive the reconcile.
  */
 import { getPackDocuments } from "../pack-resolve";
+import { grantedClonePayload } from "../clone-doc";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { sheetContext } from "../context";
 import { crewQualityEffects, CREW_QUALITIES } from "../../rules/ship-crew";
@@ -652,17 +653,19 @@ export class ShipCreator extends CreatorApplication {
 			}
 			pickedDocs.push(doc);
 		}
-		// Stamp iufv-style provenance so a re-run wipes only creator items.
-		const payloads = pickedDocs.map((doc) => ({
-			...(doc as unknown as {
-				name?: string;
-				system?: Record<string, unknown>;
-			}),
-			system: {
-				...(doc.system as Record<string, unknown>),
-				grantedBy: "ship-creator",
-			},
-		}));
+		// Stamp iufv-style provenance so a re-run wipes only creator items
+		// (shared grantedClonePayload — also strips the pack doc's _id, which the
+		// hand-rolled copy leaked — bead lnya).
+		const payloads = pickedDocs.map((doc) =>
+			grantedClonePayload(
+				doc as unknown as {
+					_id?: unknown;
+					name?: string;
+					system?: Record<string, unknown>;
+				},
+				"ship-creator",
+			),
+		);
 
 		// Shared create-vs-update edge (bead w7zm, creator-apply.ts): the
 		// character creator's in-place-update branch confirms overwrites; the

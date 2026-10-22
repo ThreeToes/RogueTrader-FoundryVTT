@@ -3,8 +3,6 @@ import {
 	corruptionTrack,
 	dueDisorders,
 	insanityTrack,
-	malignancyTestsDue,
-	mutationTestsDue,
 	nextDisorderThreshold,
 	nextMutationThreshold,
 	madnessSheetContext,
@@ -215,19 +213,10 @@ describe("traumaRoll (Table 10-6)", () => {
 	});
 });
 
-describe("malignancy and mutation tests (p299)", () => {
-	test("malignancy test every 10 CP", () => {
-		expect(malignancyTestsDue(9)).toBe(0);
-		expect(malignancyTestsDue(10)).toBe(1);
-		expect(malignancyTestsDue(31)).toBe(3);
-	});
-
-	test("mutation tests: two characteristics per 30 CP", () => {
-		expect(mutationTestsDue(29)).toBe(0);
-		expect(mutationTestsDue(30)).toBe(1);
-		expect(mutationTestsDue(60)).toBe(2);
-	});
-});
+// Bead aasf: the malignancyTestsDue/mutationTestsDue pins are gone with the
+// helpers — the p299 due rules (one Malignancy Test per full 10 CP; the
+// mutation test once per full 30 CP) are deliberately NOT enforced anywhere
+// and live in a comment beside the character sheet's #onRollMalignancyTest.
 
 describe("madnessSheetContext (bead chsi regression)", () => {
 	// The character sheet passes owned Items in so the chips can target them

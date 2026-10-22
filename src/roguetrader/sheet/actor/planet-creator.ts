@@ -18,6 +18,7 @@
  * creator-installed rows, manual drops survive — iufv pattern).
  */
 import { getPackDocuments } from "../pack-resolve";
+import { grantedClonePayload } from "../clone-doc";
 import {
 	matchRollMap,
 	parseRollMap,
@@ -439,13 +440,17 @@ export class PlanetCreator extends CreatorApplication {
 				);
 				continue;
 			}
-			payloads.push({
-				...(doc as unknown as Record<string, unknown>),
-				system: {
-					...(doc.system ?? {}),
-					grantedBy: "planet-creator",
-				},
-			});
+			// Shared grantedClonePayload (bead lnya): grantedBy stamp + _id strip.
+			payloads.push(
+				grantedClonePayload(
+					doc as unknown as {
+						_id?: unknown;
+						name?: string;
+						system?: Record<string, unknown>;
+					},
+					"planet-creator",
+				),
+			);
 		}
 		const systemPayload = { ...this.profile };
 		if (this.targetActor) {

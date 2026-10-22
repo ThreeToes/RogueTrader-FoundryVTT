@@ -13,6 +13,10 @@
  * honoured here too.
  */
 import { getPorts } from "../../ffg/infrastructure/foundry/ports";
+// Bead eqay: the shared warn owns the missing-doc console line AND the toast
+// (only function declarations cross this module pair — the cycle is inert).
+import { warnPackDocMissing } from "./actor/grant-helpers";
+
 /**
  * The OPEN layer of the pack-doc link library (epic 61pk, bead n2b2):
  * this module pairs the pure resolvers/anchor helper (sheet/pack-doc-links.ts,
@@ -22,14 +26,14 @@ import { getPorts } from "../../ffg/infrastructure/foundry/ports";
  * directly; adopters that open sheets import here.
  */
 export {
+	type DocLinkRowLike,
 	docLinkUuid,
-	packDocAnchor,
-	resolveSkillDoc,
-	resolveTalentDoc,
 	OPEN_PACK_DOC_ACTION,
 	type PackDocAnchor,
 	type PackDocLike,
-	type DocLinkRowLike,
+	packDocAnchor,
+	resolveSkillDoc,
+	resolveTalentDoc,
 } from "./pack-doc-links";
 export async function resolvePackDocument(
 	uuid: string,
@@ -153,8 +157,18 @@ export async function openPackDocUuid(
 	try {
 		const doc = await resolvePackDocument(uuid);
 		if (!doc) {
-			console.warn(`rogue-trader | ${label}: "${uuid}" did not resolve`);
-			getPorts().notify.error(notifyKey, { uuid });
+			// Bead eqay: the shared warn owns console AND the notify (error
+			// severity kept, under the caller's key).
+			warnPackDocMissing(
+				label,
+				uuid,
+				"opening its sheet skipped",
+				"compendium",
+				{
+					key: notifyKey,
+					vars: { uuid },
+				},
+			);
 			return;
 		}
 		await openDocumentSheet(doc, label, notifyKey, {

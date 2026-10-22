@@ -342,6 +342,20 @@ export function originByKey(key: string): OriginEntry | undefined {
 	return originPool.byKey(key);
 }
 
+/** The audit name for an Origin Path creation-baseline ledger entry: the
+ * picked origins' book names joined in CANONICAL row order (ORIGIN_ROW_ORDER),
+ * never UI click order, so a re-run of the same picks produces a
+ * content-identical entry (review find 2026-10-21) and the creator and the
+ * migration backfill cannot disagree on order for identical picks. */
+export function originLedgerEntryName(
+	picks: Partial<Record<OriginRow, OriginPick | undefined>>,
+): string {
+	const names = ORIGIN_ROW_ORDER.map((row) =>
+		picks[row] ? (originByKey(picks[row]!.key)?.name ?? "") : "",
+	).filter(Boolean);
+	return names.length > 0 ? `Origin Path: ${names.join(", ")}` : "Origin Path";
+}
+
 /** Core origin keys an entry may substitute, normalised to an array. */
 export function replacedKeys(entry: {
 	replaces?: string | string[];

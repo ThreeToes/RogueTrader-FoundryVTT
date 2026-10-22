@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { buildActorView } from "../../ffg/domain/model/build";
-import {
-	corruptionThreshold,
-	fatigueThreshold,
-	insanityThreshold,
-	woundsMax,
-} from "./derived";
+import { fatigueThreshold, woundsMax } from "./derived";
 
 const char = {
 	characteristics: {
@@ -94,9 +89,8 @@ describe("derived character values", () => {
 	test("fatigueThreshold = TB", () => {
 		expect(fatigueThreshold(char)).toBe(4);
 	});
-
-	test("corruption/insanity thresholds are not guessed", () => {
-		expect(corruptionThreshold(char)).toBeNull();
-		expect(insanityThreshold(char)).toBeNull();
-	});
+	// Bead aasf: the always-null corruptionThreshold/insanityThreshold stubs
+	// and their "not guessed" pin are gone — the raw-fields-stay-manual
+	// DECISION now lives on the corruption/insanity display path
+	// (madnessSheetContext, rules/madness.ts).
 });

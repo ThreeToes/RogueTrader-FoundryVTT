@@ -83,14 +83,3 @@ export function fatigueThreshold(character: CharacterSystemLike): number {
  *   shows the SAME rows through the funnel dialog.
  */
 export const INITIATIVE_FORMULA = "1d10 + @initiativeBonus";
-
-/**
- * Corruption/Insanity thresholds per the book: NOT modelled - the raw fields
- * stay manual until the rules are verified (returns null; no guessing).
- */
-export function corruptionThreshold(_character: CharacterSystemLike): null {
-	return null;
-}
-export function insanityThreshold(_character: CharacterSystemLike): null {
-	return null;
-}

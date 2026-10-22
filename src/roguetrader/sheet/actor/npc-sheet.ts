@@ -10,12 +10,14 @@ import { equipToggleState } from "../equip";
 import {
 	gatePsykerTab,
 	openItemAction,
+	rollCharacteristicAction,
 	rollDamageAction,
+	rollSkillAction,
 	rollWeaponAction,
 } from "./shared-actions";
 import { openPackItemAction } from "../pack-resolve";
 import { armourLocations, weaponRows } from "./view-models";
-import { CHAR_SHORTS, LADDER_OPTIONS } from "../skills-domain";
+import { CHAR_SHORTS, LADDER_MAX, LADDER_OPTIONS } from "../skills-domain";
 import { sheetContext } from "../context";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
 import { isPsykerLike } from "../../rules/psyker";
@@ -25,6 +27,24 @@ import { itemIdFromTarget } from "../dom";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
+
+/**
+ * Set the owned skill's ladder (Known/+10/+20) (bead mqdy). Module-level so
+ * the sheet's imperative _onRender wiring and the clamp test (bead v99r)
+ * share one symbol; the clamp is the shared LADDER_MAX.
+ */
+export async function setNpcLadder(
+	actor: foundry.documents.Actor,
+	itemId: string,
+	value: number,
+): Promise<void> {
+	if (!itemId || !Number.isFinite(value)) return;
+	await actor.items.get(itemId)?.update({
+		// Shared LADDER_MAX (bead v99r): the cap was a hard-coded Math.min(3,
+		// ...) that disagreed with the character sheet (which did not clamp).
+		system: { ladder: Math.min(LADDER_MAX, Math.max(1, value)) },
+	});
+}
 
 /**
  * GM-facing NPC sheet (bead mqdy, owner spec 2026-09-06): fast at-the-table
@@ -47,8 +67,8 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		actions: {
 			editImage: imageActions.editImage,
 			openItem: openItemAction,
-			rollNpcTest: NpcSheet.#onRollTest,
-			rollNpcSkill: NpcSheet.#onRollSkill,
+			rollNpcTest: rollCharacteristicAction,
+			rollNpcSkill: rollSkillAction,
 			rollNpcWeapon: rollWeaponAction,
 			rollNpcDamage: rollDamageAction,
 			rollNpcPower: NpcSheet.#onRollPower,
@@ -123,7 +143,7 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		) ?? []) {
 			select.dataset.wired = "1";
 			select.addEventListener("change", () => {
-				NpcSheet.#onSetLadder(
+				setNpcLadder(
 					this.actor,
 					select.dataset.item ?? "",
 					Number(select.value),
@@ -220,38 +240,8 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		return context;
 	}
 
-	/** Click a characteristic cell to roll it. */
-	static async #onRollTest(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		const key = target.dataset.key;
-		if (!key) return;
-		await performRoll({
-			kind: "characteristic",
-			actor: this.actor,
-			key,
-			skipDialog: false,
-		});
-	}
-
-	/** Click a known skill to roll it. */
-	static async #onRollSkill(
-		this: { actor: foundry.documents.Actor },
-		_event: unknown,
-		target: HTMLElement,
-	): Promise<void> {
-		// Shared inv-row vocabulary: actions ride data-item-id on the row.
-		const itemId = itemIdFromTarget(target);
-		if (!itemId) return;
-		await performRoll({
-			kind: "skill",
-			actor: this.actor,
-			itemId,
-			skipDialog: false,
-		});
-	}
+	/** Characteristic + skill roll bodies: shared (bead z4df); the sheet only
+	 * keeps its own action names. */
 
 	/** Activate a psychic power (or navigator power by item type). */
 	static async #onRollPower(
@@ -276,22 +266,6 @@ export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				itemId,
 			});
 		}
-	}
-
-	/**
-	 * Ladder dropdown change: set the owned skill's ladder (Known/+10/+20).
-	 * Drag-and-drop from the compendium adds the skill; the dropdown sets its
-	 * level afterwards (replaces the SkillPicker button, bead mqdy).
-	 */
-	static async #onSetLadder(
-		actor: foundry.documents.Actor,
-		itemId: string,
-		value: number,
-	): Promise<void> {
-		if (!itemId || !Number.isFinite(value)) return;
-		await actor.items.get(itemId)?.update({
-			system: { ladder: Math.min(3, Math.max(1, value)) },
-		});
 	}
 
 	/** Remove an inventory item. */

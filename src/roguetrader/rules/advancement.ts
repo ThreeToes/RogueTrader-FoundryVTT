@@ -38,7 +38,11 @@ import {
  */
 export const PRE_SPENT_BASELINE: number = rtCore.preSpentBaseline;
 
-export type AdvanceType = "skill" | "talent" | "characteristic";
+export type AdvanceType =
+	| "skill"
+	| "talent"
+	| "characteristic"
+	| "origin";
 
 /** One purchase recorded on the actor (the audit trail, g7k 1a). */
 export interface AdvanceLedgerEntry {
@@ -97,14 +101,19 @@ export const SCHEME_TIERS: SchemeTier[] = [
 
 // ---------------------------------------------------------------- Ledger math
 
-/** Total xp spent = creation baseline + sum of ledger entries (p13). */
+/** Total xp spent = creation baseline + sum of ledger entries (p13). The
+ * per-entry cost is guarded against non-numeric values (a hand-edited or
+ * legacy entry) so the sum can never NaN-poison a written xp.spent. */
 export function totalSpent(
 	ledger: AdvanceLedgerEntry[],
 	profile: SystemProfile = DEFAULT_SYSTEM_PROFILE,
 ): number {
 	return (
 		profile.preSpentBaseline +
-		ledger.reduce((sum, entry) => sum + entry.cost, 0)
+		ledger.reduce((sum, entry) => {
+			const cost = Number(entry.cost);
+			return sum + (Number.isFinite(cost) ? cost : 0);
+		}, 0)
 	);
 }
 
@@ -259,6 +268,27 @@ export function ledgerEntryFor(
 		cost: row.cost,
 		rank: row.rank,
 		source,
+	};
+}
+
+/**
+ * The ledger's creation-baseline entry for the Origin Path's xp cost (bead
+ * r8mw, owner shape (a) 2026-10-21): the XP a character has spent FOR is the
+ * ledger's meaning, not just advances bought — so the creator records the
+ * Origin Path's cost (Into the Storm p17, e.g. Survivalist 300) as a rank-0
+ * entry. `totalSpent` then stays authoritative (baseline + ledger sum) and
+ * every xp reader (dialog pool, sheet display, stored xp.spent) sees it.
+ */
+export function originLedgerEntry(
+	name: string,
+	cost: number,
+): AdvanceLedgerEntry {
+	return {
+		type: "origin",
+		key: "",
+		name,
+		cost,
+		rank: 0,
 	};
 }
 

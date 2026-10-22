@@ -13,15 +13,16 @@
  * ports for i18n / notify / dice / actor writes.
  */
 
-import { systemOf } from "../../data/accessors";
-import { adjustTrack } from "../../../ffg/application/tracks";
 import type { DiceResult } from "../../../ffg/application/ports";
+import { adjustTrack } from "../../../ffg/application/tracks";
+import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 import { actorView } from "../../../ffg/infrastructure/foundry/actor-view";
+import { systemOf } from "../../data/accessors";
 import { getPorts } from "../../infrastructure/foundry/ports";
 import { postCard } from "../../rules/chat-flags";
 import {
-	carriedConditions,
 	type ConditionData,
+	carriedConditions,
 	conditionEffectData,
 	shockCondition,
 	systemStatus,
@@ -34,9 +35,9 @@ import {
 	fearSeverityModifier,
 	shockOutcome,
 } from "../../rules/fear";
+import { traumaRoll } from "../../rules/madness";
 import type { RollHandler } from "../../rules/roll-contract";
 import { runTest } from "./pipeline";
-import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 // ---------------------------------------------------------------------------
 // Status conditions (bead q1ql) — Foundry-side helpers. The pure mapping
@@ -243,10 +244,15 @@ export const fearHandler: RollHandler<"fear"> = {
 			return;
 		}
 		// Combat failure (p295): Shock Table, d100 + 10 per degree of failure.
+		// The +10-per-degree arithmetic is ONE helper (bead 7c2n): traumaRoll is
+		// the book-cited implementation (Table 10-6 — the same sentence), shared
+		// instead of repeated here.
 		// Bead wvkd: the evaluated roll is kept so the Shock die animates.
 		const shock = await ports.dice.roll("1d100");
-		const shockTotal =
-			shock.total + 10 * degreesOfFailure(finalTarget, outcome.roll);
+		const shockTotal = traumaRoll(
+			degreesOfFailure(finalTarget, outcome.roll),
+			shock.total,
+		);
 		const row = shockOutcome(shockTotal);
 		// Apply the row's condition + Insanity gain (bead q1ql): statuses are
 		// the Foundry-native carrier; the card shows what landed. The SAME dice

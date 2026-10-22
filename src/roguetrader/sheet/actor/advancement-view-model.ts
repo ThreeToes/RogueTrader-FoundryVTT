@@ -16,26 +16,26 @@
  * rules/advancement.ts; prereq evaluation in rules/prereq.ts (bead tfk).
  */
 
-import { evaluatePrerequisites, parsePrerequisites } from "../../rules/prereq";
-import {
-	availableRows,
-	characteristicNextAdvance,
-	derivedRank,
-	multiplierRemaining,
-	rankProgress,
-	spentOnRank,
-	totalSpent,
-	type AdvanceLedgerEntry,
-	type AdvanceRowLike,
-	type CharacteristicSchemeLike,
-	type RankThresholdLike,
-} from "../../rules/advancement";
 import {
 	CHARACTERISTIC_KEYS,
 	type CharacteristicKey,
 } from "../../../ffg/domain/model/taxonomy";
-
-import { findOwnedSkillForRow, LADDER_MAX } from "../skills-domain";
+import {
+	type AdvanceLedgerEntry,
+	type AdvanceRowLike,
+	availableRows,
+	type CharacteristicSchemeLike,
+	characteristicNextAdvance,
+	derivedRank,
+	multiplierRemaining,
+	type RankThresholdLike,
+	rankProgress,
+	spentOnRank,
+	totalSpent,
+} from "../../rules/advancement";
+// Bead iktx: the ONE characteristic-label composition seam (labels.ts).
+import { characteristicLabelKey } from "../../rules/labels";
+import { evaluatePrerequisites, parsePrerequisites } from "../../rules/prereq";
 // The shared doc-link library (epic 61pk, bead n2b2): the row→pack-doc
 // resolvers + uuid stamp live in sheet/pack-doc-links.ts — this module is a
 // CONSUMER, not a second definition (behaviour-preserving extraction; the
@@ -45,6 +45,7 @@ import {
 	resolveSkillDoc,
 	resolveTalentDoc,
 } from "../pack-doc-links";
+import { findOwnedSkillForRow, LADDER_MAX } from "../skills-domain";
 
 // --------------------------------------------------------------- input shapes
 
@@ -368,7 +369,7 @@ export function buildAdvancementViewModel(
 			const next = scheme ? characteristicNextAdvance(scheme, purchased) : null;
 			return {
 				key,
-				labelKey: `CHARACTERISTIC.${key.toUpperCase()}`,
+				labelKey: characteristicLabelKey(key),
 				value: input.characteristics[key] ?? 0,
 				purchased,
 				next,

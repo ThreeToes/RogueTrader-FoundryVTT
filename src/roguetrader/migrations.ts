@@ -9,9 +9,22 @@
  * relinked.
  *
  * Pure decision logic (`LEGACY_CHARACTER_TYPES`, `needsTypeMigration`,
- * `explorerClonePayload`) is exported for tests; the runner is the only
- * Foundry-coupled layer.
+ * `explorerClonePayload`, and the origin-ledger backfill below) is exported
+ * for tests; the runner is the only Foundry-coupled layer.
  */
+
+import {
+	originLedgerEntry,
+	totalSpent,
+	type AdvanceLedgerEntry,
+} from "./rules/advancement";
+import {
+	type OriginPick,
+	type OriginRow,
+	originLedgerEntryName,
+	resolveOrigins,
+	storedOriginPicks,
+} from "./rules/origins";
 
 export const TARGET_CHARACTER_TYPE = "explorer";
 
@@ -182,6 +195,116 @@ export async function migrateLegacyActors(): Promise<void> {
 		} catch (error) {
 			console.error(
 				`rogue-trader | legacy-actor migration failed for ${actor.id}:`,
+				error,
+			);
+		}
+	}
+}
+
+// -------------------------------------------------------------------------
+// Bead gfsp — one-time origin-xp ledger backfill for EXISTING actors
+// -------------------------------------------------------------------------
+
+/** The actor surface the origin-ledger backfill reads/patches. */
+export interface OriginLedgerActorLike {
+	system?: {
+		origins?: Record<string, unknown>;
+		advances?: AdvanceLedgerEntry[];
+		xp?: { spent?: number; total?: number };
+	};
+}
+
+/**
+ * The audit name for the backfilled creation-baseline entry: the picked
+ * origins' book names in canonical row order, exactly like the creator's own
+ * originLedgerName (shared helper originLedgerEntryName, rules/origins.ts),
+ * so a backfilled entry is indistinguishable in kind from a creator-booked
+ * one.
+ */
+function originLedgerBackfillName(
+	picks: Partial<Record<OriginRow, OriginPick>>,
+): string {
+	return originLedgerEntryName(picks);
+}
+
+/**
+ * Bead gfsp (owner-approved backfill of EXISTING actors): the origin-ledger
+ * baseline (bead r8mw) only reaches characters made by the FIXED creator;
+ * previously-created actors have no type:"origin" entry, so their pool
+ * overstates by the origin xpCost. The pure decision: when an actor persists
+ * origin picks (system.origins) and its ledger carries NO origin entry,
+ * resolve the origin's xpCost and append the originLedgerEntry baseline,
+ * recomputing xp.spent FROM the merged ledger. xpCost = 0 needs no entry.
+ * REPEATED RUNS MUST NOT DOUBLE-APPEND — the "no origin entry present" gate
+ * makes a patched actor a no-op on the next pass (idempotent).
+ *
+ * Returns the update patch, or null when there is nothing to do.
+ */
+export function originLedgerBackfill(
+	actor: OriginLedgerActorLike,
+): Record<string, unknown> | null {
+	// THE single stored-picks reader (bead 58js): a xeno's path picks must
+	// resolve here too, not just the five human fields.
+	const picks = storedOriginPicks(
+		actor.system?.origins as Parameters<typeof storedOriginPicks>[0],
+	);
+	if (Object.keys(picks).length === 0) return null;
+	const existing = Array.isArray(actor.system?.advances)
+		? actor.system!.advances
+		: [];
+	// Same idempotency gate as the creator re-run's merge (bead 9o5z): an
+	// actor that already carries an origin entry (newer creator) is untouched.
+	if (existing.some((entry) => entry.type === "origin")) return null;
+	const xpCost = resolveOrigins(picks).xpCost;
+	if (xpCost <= 0) return null;
+	const merged: AdvanceLedgerEntry[] = [
+		...existing,
+		originLedgerEntry(originLedgerBackfillName(picks), xpCost),
+	];
+	return {
+		system: {
+			advances: merged,
+			xp: { ...(actor.system?.xp ?? {}), spent: totalSpent(merged) },
+		},
+	};
+}
+
+/**
+ * Run the backfill at ready. GM-only (players cannot update world actors the
+ * group sheet does not own), RT-system-gated like the legacy-type migration.
+ * Per-actor try/catch: one broken actor must not stop the pass.
+ */
+export async function backfillOriginLedgerEntries(): Promise<void> {
+	const api = game as unknown as {
+		user?: { isGM: boolean };
+		actors?: {
+			contents: Array<
+				OriginLedgerActorLike & {
+					id?: string;
+					update: (data: object) => Promise<unknown>;
+				}
+			>;
+		};
+		system?: { id?: unknown };
+	};
+	if (!api.user?.isGM) return;
+	if (api.system?.id !== LEGACY_MIGRATION_SYSTEM_ID) {
+		console.log(
+			`rogue-trader | origin-ledger backfill skipped: not running under "${LEGACY_MIGRATION_SYSTEM_ID}".`,
+		);
+		return;
+	}
+	for (const actor of [...(api.actors?.contents ?? [])]) {
+		try {
+			const patch = originLedgerBackfill(actor);
+			if (!patch) continue;
+			await actor.update(patch);
+			console.log(
+				"rogue-trader | origin-ledger baseline backfilled onto actor.",
+			);
+		} catch (error) {
+			console.error(
+				"rogue-trader | origin-ledger backfill failed for an actor:",
 				error,
 			);
 		}

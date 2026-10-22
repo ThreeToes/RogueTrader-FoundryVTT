@@ -47,6 +47,16 @@ export class Starship extends foundry.abstract.TypeDataModel<
 	 * component compatibility beyond their hull class.
 	 */
 	declare extraHullTypes: string;
+	/**
+	 * Comma-separated ships-pack component NAMES the hull comes pre-equipped
+	 * with (BFK printed p30, Universe-class "Secondary Power Genetorium").
+	 * Machine restatement of the hull's pre-equipped SPECIAL RULES prose —
+	 * every entry must cite the printed page it was verified against. The
+	 * ship creator resolves each name against the pack (loud failure when
+	 * unresolvable), installs it as a locked pick, and it is counted in the
+	 * power/space/SP totals like any other pick.
+	 */
+	declare preEquipped: string;
 
 	static override defineSchema() {
 		return {
@@ -122,6 +132,11 @@ export class Starship extends foundry.abstract.TypeDataModel<
 			 * vocabulary consumed by hullClassMatches (ship-systems).
 			 */
 			extraHullTypes: new foundry.data.fields.StringField({ initial: "" }),
+			// Pre-installed components (see the declare above): OPTIONAL,
+			// comma-separated ships-pack component names. Authoring rule: the
+			// hull's book prose (specialRules) is the authority; this field is
+			// the machine restatement the creator acts on.
+			preEquipped: new foundry.data.fields.StringField({ initial: "" }),
 		};
 	}
 }

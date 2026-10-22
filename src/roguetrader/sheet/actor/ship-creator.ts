@@ -35,6 +35,9 @@ import { CreatorApplication } from "./creator-application";
 // Bead nxok: the shared collapsible-group toggle (same pattern mirrored
 // from the character creator).
 import { toggleCollapse } from "./character-creator";
+// Bead 38io guard: pack-by-name resolution goes through the ONE shared
+// findPackDoc (case-insensitive), never a re-implemented find.
+import { findPackDoc } from "./grant-helpers";
 // Bead w7zm: the shared create-vs-update branching the creators mirror.
 import { createOrUpdateActor, type ApplyableActor } from "./creator-apply";
 import { creatorGrantIds, type OwnedItemLike } from "../../rules/grants";
@@ -53,6 +56,23 @@ interface ShipPick {
 	category: string;
 	/** The book's component-type taxonomy (essential slot / weapon type). */
 	componentType: string;
+	/** Pre-equipped by the hull (BFK p30): cannot be replaced or removed. */
+	locked: boolean;
+}
+
+function shipPickFromOption(option: PackOption, locked = false): ShipPick {
+	return {
+		uuid: option.uuid,
+		id: option.id,
+		name: option.name,
+		type: option.type,
+		power: option.power,
+		space: option.space,
+		sp: option.sp,
+		category: option.category,
+		componentType: option.componentType,
+		locked,
+	};
 }
 
 function emptyShipState(): {
@@ -350,6 +370,9 @@ export class ShipCreator extends CreatorApplication {
 			}))
 			.filter((g) => g.options.length > 0);
 		context.picks = state.picks;
+		// Pre-equipped (locked) picks (BFK p30): the template renders these as
+		// "pre-installed" chips — no remove affordance, no replace route.
+		context.preEquippedPicks = state.picks.filter((p) => p.locked);
 		// Running totals (book p198-199): the hull's generated power vs
 		// installed draw, space, and the SP budget (hull SP + crew delta).
 		const components: ShipComponentLike[] = state.picks.map((p) => ({
@@ -464,6 +487,19 @@ export class ShipCreator extends CreatorApplication {
 		uuid: string,
 	): Promise<void> {
 		if (!componentType) return;
+		// Locked picks (BFK p30 pre-equipped components): a locked pick's
+		// componentType must not be replaceable — the slot is not even
+		// clearable; the hull installed it and the book says it stays.
+		if (
+			this.creatorState.picks.some(
+				(p) => p.componentType === componentType && p.locked,
+			)
+		) {
+			console.warn(
+				`rogue-trader | ship creator: essential slot "${componentType}" holds a pre-equipped pick; replacement ignored`,
+			);
+			return;
+		}
 		const withoutType = this.creatorState.picks.filter(
 			(p) => p.componentType !== componentType,
 		);
@@ -475,17 +511,7 @@ export class ShipCreator extends CreatorApplication {
 			if (!option) return;
 			this.creatorState.picks = [
 				...withoutType,
-				{
-					uuid,
-					id: option.id,
-					name: option.name,
-					type: option.type,
-					power: option.power,
-					space: option.space,
-					sp: option.sp,
-					category: option.category,
-					componentType: option.componentType,
-				},
+				shipPickFromOption(option),
 			];
 		}
 		this.render({ force: true });
@@ -512,7 +538,50 @@ export class ShipCreator extends CreatorApplication {
 		} | null;
 		this.creatorState.hullName = doc?.name ?? "";
 		this.creatorState.hullClass = doc?.system?.hullClass ?? "";
+		// Pre-equipped components (BFK p30): the hull's machine-restated
+		// preEquipped names install as locked picks (never removable,
+		// counted in the totals). Unresolved names warn loudly, naming the
+		// hull + name — never a silent drop.
+		if (doc?.system) {
+			await this.#applyPreEquipped(
+				String((doc.system as { preEquipped?: string }).preEquipped ?? ""),
+				this.creatorState.hullName ?? "",
+			);
+		}
 		this.render({ force: true });
+	}
+
+	/**
+	 * Resolve a hull's preEquipped names against the ships pack and add a
+	 * locked ShipPick per entry (BFK p30, the Universe-class Secondary Power
+	 * Genetorium). Exact name match; already-picked entries are skipped
+	 * (the pick state survives); unresolvable names warn loudly.
+	 */
+	async #applyPreEquipped(this: ShipCreator, preEquipped: string, hullName: string): Promise<void> {
+		const names = (preEquipped ?? "")
+			.split(",")
+			.map((n) => n.trim())
+			.filter((n) => n.length > 0);
+		if (names.length === 0) return;
+		const options = await fetchComponentOptions();
+		for (const name of names) {
+			if (this.creatorState.picks.some((p) => p.name === name)) continue;
+			// Shared pack-by-name resolve (bead 38io): exact name, case-
+			// insensitive — over the fetched option docs, no refetch.
+			const option = (await findPackDoc(null, name, {
+				docs: options,
+			})) as PackOption | null;
+			if (!option) {
+				console.warn(
+					`rogue-trader | ship creator: hull "${hullName}" declares preEquipped component "${name}" which did not resolve against the ships pack; skipped loudly`,
+				);
+				continue;
+			}
+			this.creatorState.picks = [
+				...this.creatorState.picks,
+				shipPickFromOption(option, true),
+			];
+		}
 	}
 
 	/** Toggle a pick category group's collapsed state (session-only). */
@@ -535,6 +604,14 @@ export class ShipCreator extends CreatorApplication {
 	): Promise<void> {
 		const uuid = target.dataset.uuid;
 		if (!uuid) return;
+		// Locked picks (BFK p30 pre-equipped components) are never removable:
+		// toggling their chip is a no-op (they must not vanish off the ship).
+		if (this.creatorState.picks.find((p) => p.uuid === uuid)?.locked) {
+			console.warn(
+				`rogue-trader | ship creator: "${this.creatorState.picks.find((p) => p.uuid === uuid)?.name}" is pre-equipped by the hull and cannot be removed`,
+			);
+			return;
+		}
 		if (this.creatorState.picks.some((p) => p.uuid === uuid)) {
 			this.creatorState.picks = this.creatorState.picks.filter(
 				(p) => p.uuid !== uuid,
@@ -543,6 +620,18 @@ export class ShipCreator extends CreatorApplication {
 			const options = await fetchComponentOptions();
 			const option = options.find((o) => o.uuid === uuid);
 			if (!option) return;
+			// Locked picks of the same type block replacement too (their slot
+			// is not the wizard's to swap out).
+			if (
+				this.creatorState.picks.some(
+					(p) => p.locked && p.componentType === option.componentType,
+				)
+			) {
+				console.warn(
+					`rogue-trader | ship creator: "${option.name}" (${option.componentType}) is pre-equipped by the hull and cannot be replaced`,
+				);
+				return;
+			}
 			// Essential components: ONE per category (book p200) — a new pick
 			// of an essential type REPLACES the previous pick of that type
 			// (this is what makes the dropdowns single-select).
@@ -551,17 +640,7 @@ export class ShipCreator extends CreatorApplication {
 					(p) => p.componentType !== option.componentType,
 				),
 			];
-			picks.push({
-				uuid,
-				id: option.id,
-				name: option.name,
-				type: option.type,
-				power: option.power,
-				space: option.space,
-				sp: option.sp,
-				category: option.category,
-				componentType: option.componentType,
-			});
+			picks.push(shipPickFromOption(option));
 			this.creatorState.picks = picks;
 			// Clicking a chip also inspects it (owner ask): the details panel
 			// shows the picked component's flavour + stats.
@@ -595,22 +674,6 @@ export class ShipCreator extends CreatorApplication {
 			getPorts().notify.warn("SHIP_CREATOR.NO_HULL");
 			return;
 		}
-		// Essential completeness (book p200): "A ship must have one (no more)
-		// Component from each of the following categories, lest the ship lose
-		// some vital function" — finish blocks with the missing list.
-		const missing = ESSENTIAL_COMPONENT_TYPES.filter(
-			(type) => !state.picks.some((p) => p.componentType === type),
-		).map((type) =>
-			game.i18n.localize(
-				`SHIP_CREATOR.TYPE_${type.toUpperCase().replace(/-/g, "_")}`,
-			),
-		);
-		if (missing.length > 0) {
-			getPorts().notify.warn("SHIP_CREATOR.MISSING_ESSENTIALS", {
-				list: missing.join(", "),
-			});
-			return;
-		}
 		const hull = (await foundry.utils.fromUuid(state.hullUuid)) as unknown as {
 			name?: string;
 			uuid?: string;
@@ -632,6 +695,33 @@ export class ShipCreator extends CreatorApplication {
 			};
 		} | null;
 		if (!hull?.system) return;
+		// Pre-equipped components (BFK p30), lazily at finish: apply the
+		// hull's preEquipped names BEFORE the essentials check so a hull whose
+		// book rule ships an essential component is not falsely blocked by it.
+		// (Unresolvable names warn loudly inside the applier; the missing-list
+		// check below reads the now-complete pick state.)
+		await this.#applyPreEquipped(
+			String(
+				(hull.system as { preEquipped?: string }).preEquipped ?? "",
+			),
+			hull.name ?? "",
+		);
+		// Essential completeness (book p200): "A ship must have one (no more)
+		// Component from each of the following categories, lest the ship lose
+		// some vital function" — finish blocks with the missing list.
+		const missing = ESSENTIAL_COMPONENT_TYPES.filter(
+			(type) => !state.picks.some((p) => p.componentType === type),
+		).map((type) =>
+			game.i18n.localize(
+				`SHIP_CREATOR.TYPE_${type.toUpperCase().replace(/-/g, "_")}`,
+			),
+		);
+		if (missing.length > 0) {
+			getPorts().notify.warn("SHIP_CREATOR.MISSING_ESSENTIALS", {
+				list: missing.join(", "),
+			});
+			return;
+		}
 		const s = hull.system;
 		const systemPayload = {
 			hullName: hull.name ?? "",

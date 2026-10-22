@@ -1559,6 +1559,7 @@
 	"SHIP_CREATOR.SP_DELTA": "SP delta",
 	"SHIP_CREATOR.CREW_HINT": "Crew quality (Core Rulebook p193): all ships start Competent; Incompetent grants +5 SP, Crack costs 5 SP, Veteran 15 SP.",
 	"SHIP_CREATOR.UNPICK": "Remove this pick",
+	"SHIP_CREATOR.PRE_EQUIPPED": "Pre-installed by the hull",
 	"SHIP_CREATOR.NO_PICKS": "Nothing picked yet.",
 	"SHIP_CREATOR.PREV": "Back",
 	"SHIP_CREATOR.NEXT": "Next",

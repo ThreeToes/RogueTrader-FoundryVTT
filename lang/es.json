@@ -1521,6 +1521,7 @@
 	"SHIP_CREATOR.SP_DELTA": "Delta de PN",
 	"SHIP_CREATOR.CREW_HINT": "Calidad de la tripulación (Core Rulebook p193): todas las naves empiezan Competente; Incompetente otorga +5 PN, Crack cuesta 5 PN, Veterano 15 PN.",
 	"SHIP_CREATOR.UNPICK": "Quitar esta selección",
+	"SHIP_CREATOR.PRE_EQUIPPED": "Preinstalado por el casco",
 	"SHIP_CREATOR.NO_PICKS": "Nada seleccionado todavía.",
 	"SHIP_CREATOR.PREV": "Atrás",
 	"SHIP_CREATOR.NEXT": "Siguiente",

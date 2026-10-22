@@ -1521,6 +1521,7 @@
 	"SHIP_CREATOR.SP_DELTA": "Delta PV",
 	"SHIP_CREATOR.CREW_HINT": "Qualité de l'équipage (Core Rulebook p193) : tous les vaisseaux commencent Competent ; Incompetent accorde +5 PV, Crack coûte 5 PV, Veteran 15 PV.",
 	"SHIP_CREATOR.UNPICK": "Retirer ce choix",
+	"SHIP_CREATOR.PRE_EQUIPPED": "Pré-installé par la coque",
 	"SHIP_CREATOR.NO_PICKS": "Rien de sélectionné.",
 	"SHIP_CREATOR.PREV": "Retour",
 	"SHIP_CREATOR.NEXT": "Suivant",

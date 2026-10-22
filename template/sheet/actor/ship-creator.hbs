@@ -53,6 +53,11 @@
         <span class="chip origin-mod">{{localize "STARSHIP.SPACE"}} {{derived.spaceUsed}}/{{derived.hullSpace}}</span>
         <span class="chip origin-mod">SP {{derived.spSpent}}/{{derived.spBudget}} {{#if derived.overBudget}}<span class="warn">⚠ {{derived.spLeft}}</span>{{/if}}</span>
         <span class="chip origin-mod">{{localize "SHIP_CREATOR.CREW_SKILL"}} {{derived.crewSkill}} ({{localize "SHIP_CREATOR.SP_DELTA"}} {{derived.crewSpDelta}})</span>
+        {{!-- Pre-equipped components (BFK p30): hull-locked picks, shown as
+             a "pre-installed" tag — no remove affordance, not replaceable. --}}
+        {{#each preEquippedPicks as |p|}}
+        <span class="chip origin-mod pre-equipped" data-tooltip="{{localize "SHIP_CREATOR.PRE_EQUIPPED"}}"><i class="fa-solid fa-lock"></i> {{p.name}} — {{localize "SHIP_CREATOR.PRE_EQUIPPED"}}</span>
+        {{/each}}
     </div>
 
     <h2>{{#if (eq step 1)}}{{localize "SHIP_CREATOR.STEP_ESSENTIAL"}}{{else}}{{localize "SHIP_CREATOR.STEP_SUPPLEMENTAL"}}{{/if}}</h2>

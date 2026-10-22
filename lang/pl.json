@@ -1521,6 +1521,7 @@
 	"SHIP_CREATOR.SP_DELTA": "Delta PS",
 	"SHIP_CREATOR.CREW_HINT": "Jakość załogi (Core Rulebook p193): wszystkie statki zaczynają jako Competent; Incompetent daje +5 PS, Crack kosztuje 5 PS, Veteran 15 PS.",
 	"SHIP_CREATOR.UNPICK": "Usuń ten wybór",
+	"SHIP_CREATOR.PRE_EQUIPPED": "Preinstalowany przez kadłub",
 	"SHIP_CREATOR.NO_PICKS": "Nic jeszcze nie wybrano.",
 	"SHIP_CREATOR.PREV": "Wstecz",
 	"SHIP_CREATOR.NEXT": "Dalej",

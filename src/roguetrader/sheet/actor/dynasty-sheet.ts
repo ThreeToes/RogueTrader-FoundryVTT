@@ -88,7 +88,7 @@ import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class DynastySheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "dynasty", "rt-component"],
+		classes: ["rogue-trader", "sheet", "dynasty", "rt-component", "rtk-window"],
 		position: { width: 520, height: "auto" as const },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },

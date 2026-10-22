@@ -128,7 +128,7 @@ export class TestDialogBase extends HandlebarsApplicationMixin(ApplicationV2) {
 		// Bead cmio.6: every consuming window carries the shared layer's root
 		// class (css/40k-components.css) — inert for a system that does not yet
 		// bundle the shared CSS.
-		windowClasses: ["dialog", "test-dialog-app", "rt-component"],
+		windowClasses: ["dialog", "test-dialog-app", "rt-component", "rtk-window"],
 	};
 
 	/**

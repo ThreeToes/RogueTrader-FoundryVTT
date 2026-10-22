@@ -30,6 +30,43 @@
  * scaffolding, sidebar/main split and app-local button chrome). */
 
 /* ================================================================== *
+ * Window contract (bead cmio.7)
+ *
+ * Every RESIZABLE Application window carries the contract class
+ * `.rtk-window` next to its rt-component root (e.g.
+ * `<system-root> sheet weapon rt-component rtk-window` in the classes
+ * array). The class is the shared resize + scroll contract in ONE
+ * place, so a NEW resizable window gets it by naming the class:
+ *
+ *   - min-size floors from custom properties with sensible fallbacks
+ *     (320px x 240px). Per-window clamps in the skin files (the "min
+ *     window sizes" blocks in sheet-gear.css / sheet-character.css,
+ *     rules-app.css) set the CONCRETE floors at higher (or equal,
+ *     later-loaded) specificity and always beat these fallbacks — the
+ *     contract is the floor UNDER them, not a replacement (hxv6's
+ *     audit fed this: its per-class floors stay, this only backstops
+ *     a window that has none).
+ *   - the window content scrolls: Foundry v14 core pins
+ *     `.application .window-content` to overflow: hidden, so a window
+ *     must opt out explicitly (it never scrolls by itself — bead yt8r).
+ *     This is the same overflow-y: auto the per-file window-content
+ *     rules already declare; the skins keep their display/flex
+ *     scaffolding and win the cascade by load order.
+ *
+ * Guard: utils/rt-component-root.test.ts scans every `resizable: true`
+ * window for the class (documented literal-scan brittleness).
+ * ================================================================== */
+
+.rt-component.rtk-window {
+	min-width: var(--rtk-window-min-w, 320px);
+	min-height: var(--rtk-window-min-h, 240px);
+}
+
+.rt-component.rtk-window .window-content {
+	overflow-y: auto;
+}
+
+/* ================================================================== *
  * Chip family (moved from css/sheet-gear.css, cmio.6)
  * ================================================================== */
 

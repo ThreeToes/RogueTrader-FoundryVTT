@@ -60,7 +60,7 @@ import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class NpcSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "npc", "rt-component"],
+		classes: ["rogue-trader", "sheet", "npc", "rt-component", "rtk-window"],
 		position: { width: 560, height: 480 },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },

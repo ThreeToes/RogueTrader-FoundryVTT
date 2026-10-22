@@ -161,6 +161,13 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
   The RULE is the pair on every resizable app class — the values live in `css/`
   next to the class (the stale enumeration that used to sit here misled an
   implementer into shipping only two clamps; bead 3kus).
+- **Window contract class (bead cmio.7)**: every resizable Application also
+  carries `rtk-window` in its classes array — the shared contract in
+  css/40k-components.css giving a `--rtk-window-min-w/h` floor fallback
+  (320px × 240px) under the per-class clamps above, and the
+  `.window-content { overflow-y: auto }` content scroll rule (core pins window
+  content to `overflow: hidden`; a window never scrolls by itself). Per-window
+  floors stay in the skin files and beat the fallbacks.
 - Fixed-width inputs: value inputs `3.5em`, bonus `2.5em`, weights `4em`, centered.
 
 ## i18n

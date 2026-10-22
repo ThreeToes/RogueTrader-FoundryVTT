@@ -84,10 +84,7 @@ import {
 	skillNameKey,
 	type OwnedSkillLike,
 } from "../skills-domain";
-import {
-	openDocumentSheet,
-	openPackItemAction,
-} from "../pack-resolve";
+import { openDocumentSheet, openPackItemAction } from "../pack-resolve";
 import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
 import { SkillPicker } from "./skill-picker";
@@ -117,7 +114,13 @@ const owningSkillKeys = new Set<string>();
 
 export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "character", "rt-component"],
+		classes: [
+			"rogue-trader",
+			"sheet",
+			"character",
+			"rt-component",
+			"rtk-window",
+		],
 		position: { width: 600, height: 500 },
 		window: { resizable: true },
 		form: { submitOnChange: true, closeOnSubmit: false },
@@ -369,18 +372,27 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			if (!doc) {
 				// Bead eqay: warn+notify (warn severity kept) owned by the shared
 				// helper — the console line now names the actually-searched pack.
-				warnPackDocMissing(pack, name, "grant skipped", `rogue-trader.${pack}`, {
-					key: "AFFLICTION.GRANT_MISSING",
-					severity: "warn",
-					vars: { name },
-				});
+				warnPackDocMissing(
+					pack,
+					name,
+					"grant skipped",
+					`rogue-trader.${pack}`,
+					{
+						key: "AFFLICTION.GRANT_MISSING",
+						severity: "warn",
+						vars: { name },
+					},
+				);
 				return;
 			}
 			// Same grant write as the mapped route below: one clone (the pack doc's
 			// _id stripped, bead 27eu), an optional benefit stamp, and a
 			// re-rendered sheet.
 			const unmapped = clonePackDocPayload(
-				doc.toObject() as unknown as { _id?: string; system?: { benefit?: string } },
+				doc.toObject() as unknown as {
+					_id?: string;
+					system?: { benefit?: string };
+				},
 			) as unknown as { system?: { benefit?: string } };
 			if (benefit && unmapped.system) unmapped.system.benefit = benefit;
 			await this.actor.createEmbeddedDocuments("Item", [unmapped as never]);
@@ -404,7 +416,10 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			return;
 		}
 		const object = clonePackDocPayload(
-			doc.toObject() as unknown as { _id?: string; system?: { benefit?: string } },
+			doc.toObject() as unknown as {
+				_id?: string;
+				system?: { benefit?: string };
+			},
 		) as unknown as { system?: { benefit?: string } };
 		if (benefit && object.system) object.system.benefit = benefit;
 		await this.actor.createEmbeddedDocuments("Item", [object as never]);
@@ -1064,17 +1079,14 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 		// is deliberately NOT calculated here.
 		const inventory = pcInventoryGroups(
 			this.actor.items
-				.filter(
-					(item) => !INVENTORY_EXCLUDED_TYPES.has(item.type as string),
-				)
+				.filter((item) => !INVENTORY_EXCLUDED_TYPES.has(item.type as string))
 				.map(
 					(item): PcInventoryItemLike => ({
 						id: item.id,
 						name: item.name,
 						uuid: item.uuid,
 						type: item.type as string,
-						weight:
-							(item.system as unknown as { weight?: number }).weight ?? 0,
+						weight: (item.system as unknown as { weight?: number }).weight ?? 0,
 						// Gear-base quantity (bead 1sxq) - only the ammunition
 						// group renders it (xN usage count, bead 8uc7).
 						quantity:
@@ -1085,12 +1097,11 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 						// registry when present, core states via the lang keys.
 						equipStateLabel: equipStateLabel(equipStateOf(item)),
 						equipped:
-							equipStateOf(item) === "carried" ||
-							equipStateOf(item) === "worn",
+							equipStateOf(item) === "carried" || equipStateOf(item) === "worn",
 						// Weapons get the inline attack/damage roll button.
 						isWeapon: isWeaponType(item.type as string),
 					}),
-			),
+				),
 		);
 
 		// Ammunition group note (bead 8uc7): rows stay draggable (core {type,
@@ -1348,7 +1359,9 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
  * inventory rows; the byType talents path keeps its own inline copy). */
 function equipStateLabel(stateKey: string): string {
 	const registryLabel = equipStates.get(stateKey);
-	return registryLabel ? game.i18n!.localize(registryLabel) : (stateKey ?? "stowed");
+	return registryLabel
+		? game.i18n!.localize(registryLabel)
+		: (stateKey ?? "stowed");
 }
 
 // Affliction drop machinery — the mutation pack resolution, the procedure

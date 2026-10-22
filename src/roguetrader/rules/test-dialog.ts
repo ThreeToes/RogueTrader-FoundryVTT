@@ -60,7 +60,13 @@ export const DIFFICULTY_LADDER: DifficultyStep[] = [
 export const RT_TEST_DIALOG_BRANDING: TestDialogBranding = {
 	template: `${TEMPLATE_ROOT}dialog/test-dialog.hbs`,
 	windowId: "rt-test-dialog",
-	windowClasses: ["rogue-trader", "dialog", "test-dialog-app", "rt-component"],
+	windowClasses: [
+		"rogue-trader",
+		"dialog",
+		"test-dialog-app",
+		"rt-component",
+		"rtk-window",
+	],
 };
 
 /**

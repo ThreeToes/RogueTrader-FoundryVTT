@@ -514,15 +514,10 @@
 	overflow-y: auto;
 }
 
-/* Creator wizards (character + warrant): both are step wizards whose
-   flex-column content must scroll - the body grows past the fixed window
-   height (AGENTS.md resizable-window rule). */
-.rogue-trader.character-creator .window-content,
-.rogue-trader.warrant-creator .window-content {
-	display: flex;
-	flex-direction: column;
-	overflow-y: auto;
-}
+/* Creator wizards (character + warrant): their window-content scroll rules
+   live ONCE in css/sheet-character.css (cmio.8 part 2 removed the duplicate
+   that used to sit here — an identical-body copy of the same selectors,
+   loaded EARLIER than the surviving rules, i.e. pure dead weight). */
 
 .rogue-trader.sheet .career-source {
 	font-size: var(--rt-fs-md);

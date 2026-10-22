@@ -118,7 +118,13 @@ import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class ShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 	static DEFAULT_OPTIONS = {
-		classes: ["rogue-trader", "sheet", "starship", "rt-component"],
+		classes: [
+			"rogue-trader",
+			"sheet",
+			"starship",
+			"rt-component",
+			"rtk-window",
+		],
 		position: { width: 640, height: 560 },
 		// Resizable per the repo UI rule, with min clamps (the rules-app
 		// precedent): the two-column chip grids and the vitals strip need the

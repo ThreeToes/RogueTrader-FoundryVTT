@@ -25,6 +25,13 @@ import { describe, expect, test } from "bun:test";
 
 const SRC = "src";
 const SHARED_CSS = "css/40k-components.css";
+const CSS_FILES = [
+	"css/40k-components.css",
+	"css/sheet-gear.css",
+	"css/sheet-character.css",
+	"css/chat-roll.css",
+	"css/rules-app.css",
+];
 
 /** Root tokens a shared-layer selector may key on. */
 const ALLOWED_ROOTS = [".rt-component", ".test-dialog-app"];
@@ -52,7 +59,11 @@ describe("shared component root (bead cmio.6)", () => {
 		for (const file of sourceFiles(SRC)) {
 			const source = readFileSync(file, "utf8");
 			for (const match of source.matchAll(
-				/(?:^|\n)\s*(?:window)?classes:\s*\[([^\]]*)\]/g,
+				/(?:^|\n)\s*(?:windowClasses|classes):\s*\[([^\]]*)\]/g,
+				// NOTE: `(?:window)?classes:` cannot match `windowClasses:` (after the
+				// optional "window" comes capital C) — the alternation is deliberate;
+				// the old optional-group form silently skipped branding-shaped
+				// literals (found by the first rtk-window run, 2026-10-22).
 			)) {
 				const entries = match[1]
 					.split(",")
@@ -66,8 +77,104 @@ describe("shared component root (bead cmio.6)", () => {
 		}
 		// The shared layer is the ONLY reason for the root, so a window that
 		// cannot carry it must be allowlisted here with the reason.
-		const reported = missing.filter((m) => !allowlist.some((a) => m.startsWith(a)));
+		const reported = missing.filter(
+			(m) => !allowlist.some((a) => m.startsWith(a)),
+		);
 		expect(reported).toEqual([]);
+	});
+
+	test("every resizable window carries the rtk-window contract class (bead cmio.7)", () => {
+		// The .rtk-window class (css/40k-components.css) is the shared
+		// resize + clamp + scroll contract. A NEW resizable Application that
+		// forgets it gets no floor fallback and no content scroll rule.
+		//
+		// BRITTLENESS (same literal-scan style as the test above): this is a
+		// grep over source, not a runtime check — it (a) keys on the literal
+		// `resizable: true` and the classes array on the SAME line, so a
+		// multi-line array or a computed resizable value goes unseen, and
+		// (b) is per-FILE: a window whose classes array is built elsewhere
+		// (branding) escapes it. Known escape today: the test dialog's
+		// windowClasses live in src/roguetrader/rules/test-dialog.ts while
+		// `resizable: true` sits in src/ffg/infrastructure/foundry/
+		// test-dialog.ts — both wired now (parent round, cmio.7), so the
+		// allowlist is empty; computed classes arrays would still escape this
+		// literal scan (documented brittleness).
+		const allowlist: Array<{ file: string; reason: string }> = [];
+		const missing: string[] = [];
+		for (const file of sourceFiles(SRC)) {
+			const source = readFileSync(file, "utf8");
+			if (!source.includes("resizable: true")) continue;
+			if (allowlist.some((a) => file.endsWith(a.file))) continue;
+			const hasContractClass = [
+				...source.matchAll(
+					/(?:^|\n)\s*(?:windowClasses|classes):\s*\[([^\]]*)\]/g,
+				),
+			].some((m) =>
+				m[1]
+					.split(",")
+					.map((e) => e.trim().replace(/^["']|["']$/g, ""))
+					.includes("rtk-window"),
+			);
+			if (!hasContractClass) {
+				missing.push(file);
+			}
+		}
+		expect(missing).toEqual([]);
+	});
+
+	test("no RT css rule is defined in more than one RT css file (bead cmio.8 part 2)", () => {
+		// The four duplicated primitives measured on cmio.8 (.sheet/.stat/
+		// .inv-row/.chat) turned out to share CLASS NAMES, not identical rule
+		// bodies — the only literally duplicated rule found (the creator
+		// window-content scroll pair, sheet-gear.css copying
+		// sheet-character.css) was REMOVED in that round, and no rule may
+		// come back in two files. Two files redefining one rule make the
+		// cascade order load-bearing for values that should live once.
+		//
+		// Comparison is root-token-normalized: .rogue-trader and
+		// .rt-component are the same match for RT's windows (every consuming
+		// application carries BOTH roots), so a selector moved between roots
+		// is not a duplicate. BRITTLENESS: a naive CSS parser (comments
+		// stripped, no nesting/@media handling — none used in these files).
+		// It does NOT catch same-BODY-under-different-selector copies (e.g.
+		// .psychic-row restating the .inv-row base) — that drift stays on
+		// backlog bead io7g.
+		const seen = new Map<string, Set<string>>();
+		for (const file of CSS_FILES) {
+			const css = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+			let buf = "";
+			let depth = 0;
+			for (const ch of css) {
+				buf += ch;
+				if (ch === "{") depth++;
+				else if (ch === "}") {
+					depth--;
+					if (depth === 0) {
+						const i = buf.indexOf("{");
+						const sel = buf
+							.slice(0, i)
+							.trim()
+							.replace(/\s+/g, " ")
+							.replace(/\.rogue-trader/g, "~ROOT~")
+							.replace(/\.rt-component/g, "~ROOT~");
+						const decls = buf
+							.slice(i + 1, -1)
+							.split(";")
+							.map((d) => d.trim().replace(/\s+/g, " "))
+							.filter(Boolean)
+							.sort();
+						const key = `${sel} { ${decls.join("; ")} }`;
+						if (!seen.has(key)) seen.set(key, new Set());
+						seen.get(key)?.add(file);
+						buf = "";
+					}
+				}
+			}
+		}
+		const duplicated = [...seen.entries()]
+			.filter(([, files]) => files.size > 1)
+			.map(([key, files]) => `${[...files].join(" + ")}: ${key}`);
+		expect(duplicated).toEqual([]);
 	});
 
 	test("the shared component layer is system-neutral and rooted", () => {

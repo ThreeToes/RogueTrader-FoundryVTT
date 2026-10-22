@@ -89,7 +89,13 @@ export abstract class CreatorApplication extends HandlebarsApplicationMixin(
 	}): object {
 		return {
 			id: config.id,
-			classes: ["rogue-trader", "sheet", config.slug, "rt-component"],
+			classes: [
+				"rogue-trader",
+				"sheet",
+				config.slug,
+				"rt-component",
+				"rtk-window",
+			],
 			position: { width: config.width, height: config.height },
 			window: { title: config.titleKey, resizable: true },
 			actions: {

@@ -106,7 +106,15 @@ describe("rules app window scroll layers (bead yt8r)", () => {
 		// utils/rt-component-root.test.ts.
 		const classes = appSource.match(/classes:\s*\[([^\]]*)\]/)?.[1] ?? "";
 		const carried = [...classes.matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
-		expect(carried).toEqual(["rogue-trader", "dialog", "rules-app", "rt-component"]);
+		expect(carried).toEqual([
+			"rogue-trader",
+			"dialog",
+			"rules-app",
+			"rt-component",
+			// rtk-window (cmio.7): the shared resize/clamp/scroll contract class;
+			// the app's own 640×480 clamp rule wins the (0,2,0) tie by load order.
+			"rtk-window",
+		]);
 		for (const selector of [".rogue-trader.rules-app"]) {
 			for (const part of selector.split(".").filter(Boolean)) {
 				expect(

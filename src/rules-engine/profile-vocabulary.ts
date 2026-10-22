@@ -263,8 +263,11 @@ export type EliteAdvancePerAdvance = Extract<EliteAdvanceCost, {
  *
  * RT multiplies the Toughness Bonus (2xTB) plus a die; DH2e gives a FLAT
  * number per home world plus 1d5 (Feral 9, Highborn 9, Forge 8, Hive 8,
- * Shrine 7, Voidborn 7 — printed pp32-43). RT's own variant is carried here
- * too, so a shared consumer can read either without a cast.
+ * Shrine 7, Voidborn 7 — printed pp32-43). NOTE: this union currently serves
+ * DH2 only — RT's startingWounds is still carried by RuleProfile's own
+ * untagged shape, so a shared consumer reading rtCore.startingWounds needs
+ * the rule-profile shape, not a member of this union (review finding,
+ * 2026-10-22).
  */
 export type StartingWounds =
 	| {
@@ -281,8 +284,10 @@ export type StartingWounds =
  * RT rolls 1d10 against printed bands. DH2e has a **Fate threshold**: a
  * maximum set by the home world, topped up at the start of each session, with
  * a one-off +1 chance on the Emperor's Blessing roll (printed p30 and
- * pp293-294). A threshold is not a roll, so it gets its own model. RT's two
- * models ride along so a shared consumer can read either.
+ * pp293-294). A threshold is not a roll, so it gets its own model. NOTE: like
+ * StartingWounds, this union currently serves DH2 only — RT's startingFate
+ * rides on RuleProfile's `{model: "bands" | "table"}` shape at a different
+ * tier (review finding, 2026-10-22).
  */
 export type StartingFate =
 	| { model: "bands" }

@@ -1900,8 +1900,6 @@
 	"RULES.PSYCHIC_PUSH_CAP_DAEMONIC_HINT": "De combien un psyker Démoniaque peut porter le taux psychique effectif d'un pouvoir au-dessus du sien (Table 6-1, Livre de base DH2e page 195 : +3).",
 	"RULES.PSYCHIC_PUSH_CAP_UNBOUND": "Plafond de Poussée psychique (Délié)",
 	"RULES.PSYCHIC_PUSH_CAP_UNBOUND_HINT": "De combien un psyker Délié peut porter le taux psychique effectif d'un pouvoir au-dessus du sien (Table 6-1, Livre de base DH2e page 195 : +4).",
-	"RULES.SKILLS_UNTRAINED_PENALTY": "Pénalité de compétence non formée",
-	"RULES.SKILLS_UNTRAINED_PENALTY_HINT": "La pénalité fixe pour utiliser une compétence sans le rang Connu (Livre de base DH2e page 80 : -20). DH2e utilise une pénalité fixe, pas le modèle Rogue Trader de la moitié de la caractéristique.",
 	"RULES.CREATION_GENERATION_DICE": "Dés de génération des caractéristiques",
 	"RULES.CREATION_GENERATION_DICE_HINT": "Combien de d10 chaque jet de caractéristique utilise à la création (Livre de base DH2e page 31 : 2). Création seule : les personnages existants gardent ce qu'ils ont tiré.",
 	"RULES.CREATION_GENERATION_BONUS": "Bonus de génération des caractéristiques",

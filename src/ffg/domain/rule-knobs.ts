@@ -111,9 +111,10 @@ export type KnobHazard = "auto-recomputed" | "creation-only" | "ledger-assuming"
 
 /** One GM-tunable knob. */
 export interface RuleKnob {
-	/** Delta/settings key, e.g. "combat.fireModeBonus.burst". */
+	/** Delta/settings key, e.g. "combat.fireModes.semiAutoBurst.modifier". */
 	readonly key: string;
-	/** Where the knob lives on the profile, e.g. ["fireModeBonus", "burst"]. */
+	/** Where the knob lives on the profile, e.g.
+	 * ["fireModes", "semiAutoBurst", "modifier"] (cmio.2's kernel vocabulary). */
 	readonly path: readonly [string, ...string[]];
 	readonly labelKey: string;
 	readonly hintKey: string;
@@ -675,9 +676,11 @@ function copyValue(value: unknown): unknown {
  * write goes through `boxOf`), so it does not care what the profile IS — which
  * is what lets a sibling system's profile drive the same merge. The constraint
  * that matters is the opposite one: a `DarkHeresyProfile` is intentionally not
- * assignable to `SystemProfile` (RT's fields are omitted there until the book
- * verifies them), and a narrow signature would either force a second merge
- * path or, worse, paper over that hole.
+ * assignable to `SystemProfile` — after cmio.2 the member TYPES differ (RT's
+ * point-buy generation, levels push, flat-base elite cost vs DH2's roll,
+ * rating-over-base, per-advance), not because of unverified holes (bead
+ * cmio.3 closed those) — and a narrow signature would either force a second
+ * merge path or, worse, paper over that hole.
  *
  * Values are written as given: run validateProfile first when the delta comes
  * from a user-facing surface.

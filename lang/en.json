@@ -1900,8 +1900,6 @@
 	"RULES.PSYCHIC_PUSH_CAP_DAEMONIC_HINT": "How far a Daemonic psyker may set a power's effective psy rating above his own (Table 6-1, DH2 Core Rulebook, printed p195: +3).",
 	"RULES.PSYCHIC_PUSH_CAP_UNBOUND": "Psychic Push cap (Unbound)",
 	"RULES.PSYCHIC_PUSH_CAP_UNBOUND_HINT": "How far an Unbound psyker may set a power's effective psy rating above his own (Table 6-1, DH2 Core Rulebook, printed p195: +4).",
-	"RULES.SKILLS_UNTRAINED_PENALTY": "Untrained skill penalty",
-	"RULES.SKILLS_UNTRAINED_PENALTY_HINT": "The flat penalty for using a skill without the Known rank (DH2 Core Rulebook, printed p80: -20). DH2e uses a flat penalty, not Rogue Trader's half-characteristic model.",
 	"RULES.CREATION_GENERATION_DICE": "Characteristic generation dice",
 	"RULES.CREATION_GENERATION_DICE_HINT": "How many d10s each characteristic roll uses at creation (DH2 Core Rulebook, printed p31: 2). Creation only: existing characters keep the values they rolled.",
 	"RULES.CREATION_GENERATION_BONUS": "Characteristic generation bonus",

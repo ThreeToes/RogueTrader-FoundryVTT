@@ -177,6 +177,58 @@ describe("shared component root (bead cmio.6)", () => {
 		expect(duplicated).toEqual([]);
 	});
 
+	test("every window floor is at or above the rtk-window contract fallback (review 2026-10-22)", () => {
+		// The contract class sets fallback floors (320×240). Each window's own
+		// clamp must be >= the fallback, otherwise the fallback silently raises
+		// (or, worse, hides a deliberate smaller window). Selected the same way
+		// the windows are: sheet.<slug>, the creators, the dialogs, the app —
+		// the same inventory the classes-array scan covers. Non-window rules
+		// (inner min-widths like .stat grids, inputs, chips) do not match the
+		// pattern. BRITTLENESS: same as the rest of this file — literal scan,
+		// no @media (none used).
+		const windowSelector =
+			/(\.sheet\.[a-z-]+|rules-app|test-dialog-app|[a-z-]+creator\b|advancement-dialog|picker\b)/;
+		const floors: Array<{ rule: string; prop: string; px: number }> = [];
+		for (const file of CSS_FILES) {
+			const css = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+			let buf = "";
+			let depth = 0;
+			for (const ch of css) {
+				buf += ch;
+				if (ch === "{") depth++;
+				else if (ch === "}") {
+					depth--;
+					if (depth === 0) {
+						const i = buf.indexOf("{");
+						const sel = buf.slice(0, i).trim().replace(/\s+/g, " ");
+						const body = buf.slice(i + 1, -1);
+						const withoutRoots = sel
+							.replace(/\.(rogue-trader|rt-component)/g, "")
+							.trim();
+						if (windowSelector.test(sel) && !withoutRoots.includes(" ")) {
+							for (const m of body.matchAll(/min-(width|height):\s*(\d+)px/g)) {
+								floors.push({
+									rule: `${file}: ${sel}`,
+									prop: m[1] ?? "",
+									px: Number(m[2] ?? 0),
+								});
+							}
+						}
+						buf = "";
+					}
+				}
+			}
+		}
+		const tooSmall = floors.filter(
+			(f) =>
+				(f.prop === "width" && f.px < 320) ||
+				(f.prop === "height" && f.px < 240),
+		);
+		expect(tooSmall).toEqual([]);
+		// Sanity: the scan actually saw the window inventory (not zero rules).
+		expect(floors.length).toBeGreaterThan(20);
+	});
+
 	test("the shared component layer is system-neutral and rooted", () => {
 		const css = readFileSync(SHARED_CSS, "utf8");
 		// Comments are stripped first: the file's own header documents the

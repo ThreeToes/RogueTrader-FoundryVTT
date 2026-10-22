@@ -1900,8 +1900,6 @@
 	"RULES.PSYCHIC_PUSH_CAP_DAEMONIC_HINT": "Cuánto puede elevar un psíker Demoníaco el índice psíquico efectivo de un poder por encima del suyo (Tabla 6-1, Manual principal de DH2e, página 195: +3).",
 	"RULES.PSYCHIC_PUSH_CAP_UNBOUND": "Límite de Impulso psíquico (Desatado)",
 	"RULES.PSYCHIC_PUSH_CAP_UNBOUND_HINT": "Cuánto puede elevar un psíker Desatado el índice psíquico efectivo de un poder por encima del suyo (Tabla 6-1, Manual principal de DH2e, página 195: +4).",
-	"RULES.SKILLS_UNTRAINED_PENALTY": "Penalización sin entrenar",
-	"RULES.SKILLS_UNTRAINED_PENALTY_HINT": "La penalización fija por usar una habilidad sin el rango Conocido (Manual principal de DH2e, página 80: -20). DH2e usa una penalización fija, no el modelo de Rogue Trader de mitad de la característica.",
 	"RULES.CREATION_GENERATION_DICE": "Dados de generación de características",
 	"RULES.CREATION_GENERATION_DICE_HINT": "Cuántos d10 usa cada tirada de característica al crear el personaje (Manual principal de DH2e, página 31: 2). Solo en creación: los personajes existentes conservan lo que sacaron.",
 	"RULES.CREATION_GENERATION_BONUS": "Bonificación de generación de características",

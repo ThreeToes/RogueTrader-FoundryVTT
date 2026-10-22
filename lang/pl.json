@@ -1900,8 +1900,6 @@
 	"RULES.PSYCHIC_PUSH_CAP_DAEMONIC_HINT": "O ile psyker Demoniczny może podnieść efektywną rangę psychiki mocy ponad własną (Tabela 6-1, Podręcznik główny DH2e, strona 195: +3).",
 	"RULES.PSYCHIC_PUSH_CAP_UNBOUND": "Limit wypchnięć (Niezwiązany)",
 	"RULES.PSYCHIC_PUSH_CAP_UNBOUND_HINT": "O ile psyker Niezwiązany może podnieść efektywną rangę psychiki mocy ponad własną (Tabela 6-1, Podręcznik główny DH2e, strona 195: +4).",
-	"RULES.SKILLS_UNTRAINED_PENALTY": "Kara bez treningu",
-	"RULES.SKILLS_UNTRAINED_PENALTY_HINT": "Stała kara za użycie umiejętności bez stopnia Znajomości (Podręcznik główny DH2e, strona 80: -20). DH2e stosuje stałą karę, nie model RT polegający na połowie cechy.",
 	"RULES.CREATION_GENERATION_DICE": "Kości przy generowaniu cech",
 	"RULES.CREATION_GENERATION_DICE_HINT": "Ile d10 rzuca się na każdą cechę przy tworzeniu bohatera (Podręcznik główny DH2e, strona 31: 2). Tylko przy tworzeniu: istniejące postacie zachowują wyrzucone wartości.",
 	"RULES.CREATION_GENERATION_BONUS": "Premia przy generowaniu cech",

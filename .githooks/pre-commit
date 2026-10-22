@@ -6,11 +6,14 @@
 #
 # Checks: typecheck (pure + scoped), lint, bun test, verify:templates, build.
 #
-# The hook deliberately runs the SAME steps in the SAME order as CI so a
-# green hook means green CI (modulo the packless environment — CI has no
-# src/packs, so the pack-dependent suites here are the strict superset: when
-# this hook passes, CI's narrower set passes too). Bypass with:
-# git commit --no-verify.
+# The hook runs the same steps and order as ci.yaml. Note the parity
+# limitation: the hook runs WITH this checkout's src/packs present, while
+# CI has none. A pack-dependent test that fails only when packs are ABSENT
+# (a missing skipIf guard on an existsSync read) passes here and fails
+# there — the 2026-10-22 CI red was exactly this (afflictions pack guard).
+# New pack-driven tests must use the skipIf guard shape of
+# rules/origins.test.ts; a packless parity pass is tracked as a follow-up
+# bead. Bypass with: git commit --no-verify.
 set -eu
 
 cd "$(git rev-parse --show-toplevel)"

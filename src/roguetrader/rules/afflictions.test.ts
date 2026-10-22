@@ -16,6 +16,7 @@ import {
 // names procedures in `system.procedure`; CI does not ship compendia, so the
 // coverage assertion is skipped when the pack is absent.
 const MUTATION_PACK = "src/packs/rogue_trader/afflictions/mutations.yaml";
+const packTest = test.skipIf(!existsSync(MUTATION_PACK));
 const packProcedures = existsSync(MUTATION_PACK)
 	? new Set(
 			(
@@ -328,7 +329,7 @@ describe("applyAfflictionProcedure (beads xu83/kam1)", () => {
 		});
 	});
 
-	test("REGRESSION: the registry covers every procedure the mutation pack authors", () => {
+	packTest("REGRESSION: the registry covers every procedure the mutation pack authors", () => {
 		// The mutation pack names procedures in `system.procedure` as plain
 		// strings; a pack value the registry does not carry throws at
 		// acquisition and coerces in schema choices. Same guard shape as the

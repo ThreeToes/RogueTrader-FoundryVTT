@@ -11,6 +11,7 @@ import { systemOf } from "../../data/accessors";
 import type { EffectData } from "../../data/item/effects";
 import type { MutationRow } from "../../data/item/mutation-roll";
 import { getPackDocuments } from "../pack-resolve";
+import { clonePackDocPayload } from "../clone-doc";
 import { findPackDoc } from "./grant-helpers";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import {
@@ -81,7 +82,12 @@ export async function prepareDroppedItems(
 	source: foundry.documents.Item,
 	gainedByTableRoll = false,
 ): Promise<Record<string, unknown>[]> {
-	const object = source.toObject() as unknown as {
+	// The _id strip (shared helper, bead 27eu): a pack doc's _id must not ride
+	// along — the same pack entry dropped past a uuid-based already-owned
+	// check would clone a duplicate _id onto one actor.
+	const object = clonePackDocPayload(
+		source.toObject() as unknown as { _id?: unknown },
+	) as unknown as {
 		system?: {
 			kind?: string;
 			effects?: EffectData[];

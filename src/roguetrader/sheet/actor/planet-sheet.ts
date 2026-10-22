@@ -46,6 +46,8 @@ interface AttachedTable {
  * authoritative row texts live on the items. Fully resizable.
  */
 import { imageActions } from "../image-actions";
+import { resolvePackDocument } from "../pack-resolve";
+import { clonePackDocPayload } from "../clone-doc";
 import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class PlanetSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
@@ -139,16 +141,25 @@ export class PlanetSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			uuid?: string;
 		};
 		if (data.type !== "Item" || !data.uuid) return undefined;
-		const source = await foundry.utils.fromUuid(data.uuid);
+		// Bead usw3: the ContentPort path (resolvePackDocument), not fromUuid —
+		// the generic resolver silently no-ops for our LevelDB packs in-world
+		// (bead wwuc); world docs still resolve via the adapter's fallback.
+		const source = await resolvePackDocument(data.uuid);
 		// Planet-attach contract: only game-table documents stick.
 		if (!(source instanceof foundry.documents.Item)) return undefined;
 		if (source.type !== "game-table") return undefined;
 		if (this.document.items.find((i) => i.uuid === source.uuid)) {
 			return undefined;
 		}
-		const payload = source.toObject() as {
-			system?: Record<string, unknown>;
-		};
+		// The _id strip (shared helper, bead 27eu): a pack doc's _id must not
+		// ride along into the embedded clone. NOTE the uuid-based
+		// already-owned skip above cannot match pack sources (an embedded
+		// item's uuid is Actor.x.Item.y, the source's is Compendium.…), so
+		// attaching the same book table twice is possible — matching the
+		// duplicates-allowed semantics the other drop surfaces have.
+		const payload = clonePackDocPayload(
+			source.toObject() as { _id?: unknown; system?: Record<string, unknown> },
+		) as { system?: Record<string, unknown> };
 		const created = (await (
 			this.document as unknown as {
 				createEmbeddedDocuments: (

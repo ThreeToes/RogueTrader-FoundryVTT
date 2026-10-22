@@ -6,7 +6,8 @@
  * qualifying doc via doc.toObject() per render. The loader now:
  * - fetches the equipment pack once per session (packDocsOnce);
  * - caches the built {options, payloads} keyed by the weapon-training
- *   coverage fingerprint + the selected chip key — the two inputs the build
+ *   coverage fingerprint + the selected chip key + the language (bead
+ *   gyuj — the chips carry localized labels) — the inputs the build
  *   reads — so a re-render with unchanged inputs rebuilds nothing.
  *
  * These tests pin that the cached results are IDENTICAL for a given key and
@@ -221,5 +222,42 @@ describe("startingAcquisitions acquisition cache (bead opur)", () => {
 		expect(
 			backNoCareer.find((o) => o.key === "weapons::Lasgun")?.selectable,
 		).toBe(true);
+	});
+
+	test("a language switch busts the cache (localized labels, bead gyuj)", async () => {
+		installPorts();
+		const payloadsA = new Map<string, object>();
+		await startingAcquisitions(state("", "weapons::Lasgun"), payloadsA);
+		const copiesAfterFirst = copies;
+
+		// game.i18n.lang is unset in this suite's stub ("" per the loader's
+		// floor): switching it mid-session must rebuild, not serve stale labels.
+		const i18n = globals.game as { i18n: { lang?: string } };
+		i18n.i18n.lang = "fr";
+		try {
+			const payloadsB = new Map<string, object>();
+			const optionsB = await startingAcquisitions(
+				state("", "weapons::Lasgun"),
+				payloadsB,
+			);
+			// The build RE-RAN (toObject deep copies again) yet nothing else
+			// changed: the pack fetch stays memoized and the chips are equal.
+			expect(copies).toBeGreaterThan(copiesAfterFirst);
+			expect(equipmentFetches).toBe(1);
+			// The rebuilt chips carry the same shape: Lasgun still selected.
+			expect(optionsB.find((o) => o.key === "weapons::Lasgun")?.selected).toBe(
+				true,
+			);
+			expect(payloadsB.size).toBe(payloadsA.size);
+
+			// The SAME language again hits the single-slot cache once more.
+			const copiesAfterLangSwitch = copies;
+			const payloadsC = new Map<string, object>();
+			await startingAcquisitions(state("", "weapons::Lasgun"), payloadsC);
+			expect(copies).toBe(copiesAfterLangSwitch);
+			expect(payloadsC.size).toBe(payloadsA.size);
+		} finally {
+			delete i18n.i18n.lang;
+		}
 	});
 });

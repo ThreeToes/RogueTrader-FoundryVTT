@@ -182,6 +182,12 @@ export async function startingAcquisitions(
 	payloads.clear();
 	const coverage = await weaponTrainingCoverageFor(state);
 	const selectedKey = state.acquisition?.key ?? "";
+	// Bead gyuj: the chips carry LOCALIZED labels (buildAcquisitions calls
+	// game.i18n.localize), so the cache key must include the language —
+	// otherwise a mid-session language switch would keep serving stale
+	// labels from the single-slot cache. game.i18n.lang ("" when unset,
+	// the test-stub floor) is a stable per-language fingerprint.
+	const lang = game.i18n?.lang ?? "";
 	// Bead opur: the creator re-renders on every allocation/pick/roll, and the
 	// old path re-fetched the equipment pack AND deep-copied every qualifying
 	// doc via doc.toObject() PER RENDER. Both are now cached:
@@ -194,7 +200,8 @@ export async function startingAcquisitions(
 	if (
 		acquisitionBuildCache &&
 		acquisitionBuildCache.covSig === covSig &&
-		acquisitionBuildCache.selectedKey === selectedKey
+		acquisitionBuildCache.selectedKey === selectedKey &&
+		acquisitionBuildCache.lang === lang
 	) {
 		for (const [key, payload] of acquisitionBuildCache.payloads) {
 			payloads.set(key, payload);
@@ -214,7 +221,7 @@ export async function startingAcquisitions(
 	for (const [key, payload] of built) {
 		payloads.set(key, payload);
 	}
-	acquisitionBuildCache = { covSig, selectedKey, options, payloads: built };
+	acquisitionBuildCache = { covSig, selectedKey, lang, options, payloads: built };
 	return options;
 }
 
@@ -222,6 +229,7 @@ export async function startingAcquisitions(
 let acquisitionBuildCache: {
 	covSig: string;
 	selectedKey: string;
+	lang: string;
 	options: AcqOption[];
 	payloads: Map<string, object>;
 } | null = null;

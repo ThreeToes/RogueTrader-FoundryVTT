@@ -217,12 +217,14 @@ describe("mutationRowsFrom (bead yxpk)", () => {
 // --- prepareDroppedItems ---------------------------------------------------
 
 describe("prepareDroppedItems (bead yxpk)", () => {
-	test("an item with no system passes through untouched", async () => {
+	test("an item with no system passes through untouched (minus the _id strip)", async () => {
 		wireDice([]);
 		const actor = fakeActor();
 		const source = { name: "Plain", toObject: () => ({ _id: "x" }) } as never;
 		const payloads = await prepareDroppedItems(actor, source);
-		expect(payloads).toEqual([{ _id: "x" }]);
+		// The only transformation is the bead-27eu _id strip: a pack doc's _id
+		// must not ride along into the embedded clone.
+		expect(payloads).toEqual([{}]);
 		expect(rollCalls).toEqual([]);
 		expect(postedCards).toHaveLength(0);
 	});

@@ -13,6 +13,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 import { imageActions } from "../image-actions";
+import { resolvePackDocument } from "../pack-resolve";
 import { TEMPLATE_ROOT } from "../../../ffg/domain/template-root";
 
 export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
@@ -98,10 +99,12 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			name: foundry.utils.fromUuidSync(uuid as never)?.name ?? uuid,
 		}));
 
-		// Mounted weapon rows + facing choices.
+		// Mounted weapon rows + facing choices. resolvePackDocument, not fromUuid:
+		// the drop writer (bead usw3) now stores compendium uuids here, and the
+		// generic resolver silently no-ops for LevelDB packs in-world (wwuc).
 		context.mountedRows = await Promise.all(
 			(system.mountedWeapons ?? []).map(async (m, index) => {
-				const doc = await foundry.utils.fromUuid(m.uuid);
+				const doc = await resolvePackDocument(m.uuid);
 				return {
 					uuid: m.uuid,
 					facing: m.facing,
@@ -131,7 +134,11 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			});
 		}
 		if (data.type === "Item") {
-			const doc = await foundry.utils.fromUuid(data.uuid);
+			// Bead usw3: the ContentPort path (resolvePackDocument), not
+			// fromUuid — the generic resolver silently no-ops for our LevelDB
+			// packs in-world (bead wwuc); world docs still resolve via the
+			// adapter's fallback.
+			const doc = await resolvePackDocument(data.uuid);
 			if (!(doc instanceof foundry.documents.Item)) return;
 			// Mounted-weapon filter (p5nw review): the vehicle weapons tab lists
 			// character-scale weapons mounted on the hull with a facing, so only

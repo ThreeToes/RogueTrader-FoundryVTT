@@ -13,7 +13,7 @@
             {{#each group.skills as |skill|}}
             <li class="skill-row{{#unless skill.owned}} untrained{{/unless}}" data-item-id="{{skill.id}}">
                 {{#if skill.owned}}
-                <a class="skill-roll" data-action="rollSkill" data-item="{{skill.id}}"
+                <a class="skill-roll" data-action="rollSkill"
                     data-tooltip="{{localize "ROLL.SUCCESS"}}"
                 ><i class="fa-solid fa-dice-d10"></i></a>
                 {{else}}

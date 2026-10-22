@@ -16,7 +16,7 @@ import { imageActions } from "../image-actions";
 // Memoized fetch (bead pwbr): characterOptionDocsOnce caches the
 // character-options pack fetch per type per session — the pack does not
 // change mid-session, so re-fetching it on every tab render was pure waste.
-import { characterOptionDocsOnce } from "../pack-resolve";
+import { characterOptionDocsOnce, resolvePackDocument } from "../pack-resolve";
 import { clonePackDocPayload } from "../clone-doc";
 import {
 	findPackDoc,
@@ -87,7 +87,6 @@ import {
 import {
 	openDocumentSheet,
 	openPackItemAction,
-	resolvePackDocument,
 } from "../pack-resolve";
 import { AdvancementDialog } from "./advancement-dialog";
 import { PsychicPicker } from "./psychic-picker";
@@ -756,7 +755,11 @@ export class CharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			uuid?: string;
 		};
 		if (data.type !== "Item" || !data.uuid) return;
-		const source = await foundry.utils.fromUuid(data.uuid);
+		// Bead usw3: resolvePackDocument (the ContentPort path), not
+		// foundry.utils.fromUuid — the generic resolver silently no-ops for our
+		// LevelDB packs in-world (bead wwuc), so dropped pack Items did nothing.
+		// World-document uuids fall through to fromUuid inside the adapter.
+		const source = await resolvePackDocument(data.uuid);
 		if (!(source instanceof foundry.documents.Item)) return;
 		if (this.actor.items.find((item) => item.uuid === source.uuid)) return;
 		return this.actor.createEmbeddedDocuments(

@@ -2,6 +2,8 @@ import { CacheActor } from "../../data/actor/cache";
 import { getPorts } from "../../../ffg/infrastructure/foundry/ports";
 import { actorEncumbrance } from "../../rules/encumbrance";
 import { startItemRowDrag } from "./shared-actions";
+import { resolvePackDocument } from "../pack-resolve";
+import { clonePackDocPayload } from "../clone-doc";
 import { sheetContext } from "../context";
 import { enrichText } from "../rich-text";
 
@@ -143,7 +145,10 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 			uuid?: string;
 		};
 		if (data.type !== "Item" || !data.uuid) return undefined;
-		const source = await foundry.utils.fromUuid(data.uuid);
+		// Bead usw3: the ContentPort path (resolvePackDocument), not fromUuid —
+		// the generic resolver silently no-ops for our LevelDB packs in-world
+		// (bead wwuc); world docs still resolve via the adapter's fallback.
+		const source = await resolvePackDocument(data.uuid);
 		if (!(source instanceof foundry.documents.Item)) return undefined;
 		if (this.document.items.find((item) => item.uuid === source.uuid)) {
 			return undefined;
@@ -156,7 +161,14 @@ export class CacheSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 				) => Promise<unknown>;
 			}
 		).createEmbeddedDocuments("Item", [
-			(source as unknown as { toObject(): unknown }).toObject(),
+			// The _id strip (shared helper, bead 27eu): a pack doc's _id must not
+			// ride along — the same pack entry stocked twice past the uuid-based
+			// already-owned check would clone a duplicate _id into one cache.
+			clonePackDocPayload(
+				(source as unknown as { toObject(): unknown }).toObject() as {
+					_id?: unknown;
+				},
+			),
 		]);
 	}
 

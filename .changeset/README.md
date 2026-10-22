@@ -28,4 +28,10 @@ Never describe `src/packs` content in a changeset. The release body is
 mirrored verbatim to the public GitHub release, which ships no packs — a
 pack mention would leak into a public page.
 
+**Owner override, 2026-10-22:** for the Into the Storm hull addition
+(`into-the-storm-hulls.md`) the owner explicitly chose to describe the
+pack addition in a changeset anyway, so the private release notes carry
+it. This was a deliberate one-off recorded on that file's creation — do
+not generalise it without a fresh owner decision.
+
 See `.agents/skills/changesets/SKILL.md` for when to add one.

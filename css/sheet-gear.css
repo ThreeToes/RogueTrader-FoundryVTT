@@ -881,9 +881,16 @@
 	background: var(--rt-panel-shadow);
 }
 
+/* The fill's width is DATA, not stylesheet opinion: every caller passes the
+   percentage (bead zatz) as the --rt-cb-fill custom property on the element,
+   and this rule owns the width declaration, so a theme retunes every meter
+   from one place and a reviewer can trace the geometry from the CSS. The
+   inline `style` attributes that set the property are the tree's ONLY inline
+   style surface. */
 .rogue-trader .cb-fill {
 	display: block;
 	height: 100%;
+	width: var(--rt-cb-fill, 0);
 	background: var(--rt-success);
 }
 

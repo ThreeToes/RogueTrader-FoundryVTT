@@ -36,30 +36,6 @@ export function packSlugToType(slug: string): string | null {
 
 /**
  * THE pack-by-name resolve (bead 38io): case-insensitive name match against
- * character-option documents of ONE Item type — or, with `options.pack`,
- * against another compendium pack (the afflictions mutations) filtered by
- * the same type; `type` may be null to accept any Item type (the starting
- * kit's mixed-type gear). With `options.source`, only docs whose
- * `flags["rogue-trader"].source` folder matches resolve (build-time source
- * provenance, bead n7hu). Returns null on miss; the CALLER owns the
- * missing-doc behaviour through warnPackDocMissing (bare fallback / notify /
- * no-op), so one function owns the resolution instead of a per-surface
- * docs.find().
- */
-/**
- * THE pack-by-name resolve (bead 38io): case-insensitive name match against
- * character-option documents of ONE Item type (or ANY type, with a null
- * `type`); with `options.pack`, against that compendium pack; with
- * `options.source`, narrowed to one build-time source folder
- * (`flags["rogue-trader"].source`, bead n7hu). Fetches go through the shared
- * once-cache under the PACK key so mixed-type resolves (the starting kit)
- * never refetch per option (epic zlwc round 4). Returns null on miss; the
- * CALLER owns the missing-doc behaviour through warnPackDocMissing (bare
- * fallback / notify / no-op), so one function owns the resolution instead of
- * a per-surface docs.find().
- */
-/**
- * THE pack-by-name resolve (bead 38io): case-insensitive name match against
  * character-option documents of ONE Item type (or ANY type, with a null
  * `type`); with `options.pack`, against that compendium pack; with
  * `options.source`, narrowed to one build-time source folder

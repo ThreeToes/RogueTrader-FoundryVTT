@@ -30,6 +30,7 @@ import { chatCardTitleDoc } from "../presentation/chat-doc-links";
 // which is the layer allowed to bind the Foundry resolution port; the adapter
 // consumes it for the fired-ordnance resolution and re-exports it unchanged.
 import { documentFromUuid } from "../presentation/damage-rolls";
+import { type ArmourItemLike, armourValueAt } from "../sheet/actor/view-models";
 import { postCard } from "./chat-flags";
 import { effectiveProfile } from "./homebrew";
 import { bodyLocationLabelKey, conditionLabel } from "./labels";
@@ -376,13 +377,12 @@ function collectTargetArmour(
 	const weaponPrimitive =
 		profile.primitive ||
 		profile.qualities.some((q) => q.toLowerCase() === "primitive");
-	const armourValue = Math.max(
-		0,
-		...wornArmour.map((i) =>
-			(i.system as unknown as { armourAt(loc: string): number }).armourAt(
-				location,
-			),
-		),
+	// Bead pbsv: the per-location AP max is shared with the sheet view model
+	// (view-models.ts armourValueAt); the worn filter above stays here because
+	// armourPrimitive needs the same subset.
+	const armourValue = armourValueAt(
+		wornArmour as unknown as ArmourItemLike[],
+		location,
 	);
 	const naturalToughnessBonus = Math.floor(
 		systemOf(target).effectiveCharacteristicValue("t") / 10,

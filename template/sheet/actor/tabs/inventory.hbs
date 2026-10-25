@@ -9,7 +9,7 @@
             </a>
             <div class="encumbrance-progress">
                 <div class="cb-track">
-                    <span class="cb-fill" style="width: {{#if encumbrance.capacity}}{{encumbrance.percent}}{{else}}0{{/if}}%"></span>
+                    <span class="cb-fill" style="--rt-cb-fill: {{#if encumbrance.capacity}}{{encumbrance.percent}}{{else}}0{{/if}}%"></span>
                 </div>
                 <span class="encumbrance-text">{{encumbrance.weight}} / {{encumbrance.capacity}} kg ({{encumbrance.percent}}%) {{localize encumbrance.stateLabel}}</span>
             </div>

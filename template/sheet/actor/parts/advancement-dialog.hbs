@@ -40,7 +40,7 @@
     <div class="advancement-meter">
         {{#if progress.nextRank}}
         <span class="cb-label">{{localize "ADVANCE.NEXT_RANK"}} {{progress.nextRank}}</span>
-        <span class="cb-track"><span class="cb-fill" style="width: {{progressPct}}%"></span></span>
+        <span class="cb-track"><span class="cb-fill" style="--rt-cb-fill: {{progressPct}}%"></span></span>
         <span class="cb-value">{{progress.remaining}} {{localize "ADVANCE.XP_REMAINING"}}</span>
         {{else}}
         <span class="cb-label">{{localize "ADVANCE.MAX_RANK"}}</span>

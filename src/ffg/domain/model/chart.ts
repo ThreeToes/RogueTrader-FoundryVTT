@@ -23,6 +23,38 @@ export interface ChartEntry {
 	col: number;
 }
 
+/** A table row carrying an inclusive `rollMin`-`rollMax` band. */
+export interface CoveringRowLike {
+	rollMin?: number;
+	rollMax?: number;
+}
+
+/**
+ * The row of `rows` whose key field equals `key` and whose inclusive
+ * `rollMin`-`rollMax` band covers `value`, or null when nothing covers it.
+ *
+ * One lookup for every banded table: the Insanity/Corruption tracks
+ * (rules/madness.ts, key field `kind`) and the mutation tables
+ * (data/item/mutation-roll.ts, key field `tableKey`). An absent band edge is
+ * open-ended (`rollMin` 0 / `rollMax` 999) for tables whose rows may omit it;
+ * the mutation rows declare both edges, so the defaults never fire there.
+ */
+export function coveringRow<R extends CoveringRowLike>(
+	rows: readonly R[],
+	key: string,
+	value: number,
+	keyField = "kind",
+): R | null {
+	return (
+		rows.find(
+			(row) =>
+				(row as unknown as Record<string, unknown>)[keyField] === key &&
+				value >= (row.rollMin ?? 0) &&
+				value <= (row.rollMax ?? 999),
+		) ?? null
+	);
+}
+
 /**
  * The entries of one chart, plus the row vocabulary that validates stored data.
  */

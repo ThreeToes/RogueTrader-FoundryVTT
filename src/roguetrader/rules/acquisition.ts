@@ -9,6 +9,8 @@
  * automatically. Everything here is pure; Foundry coupling stays in the UI.
  */
 
+import { WeaponClass } from "../data/item/weapon-class";
+
 /** Table 9-35: Acquisition Modifiers (availability ladder). */
 export const AVAILABILITY_MODIFIERS: Readonly<Record<string, number>> = {
 	ubiquitous: 70,
@@ -193,14 +195,8 @@ const TRAINING_GROUPS: Readonly<
 	thrown: { groups: [], universal: ["thrown"] },
 };
 
-/** The five weapon classes (weapon-class.ts WeaponClass values). */
-export const WEAPON_CLASSES = [
-	"melee",
-	"thrown",
-	"pistol",
-	"basic",
-	"heavy",
-] as const;
+/** The five weapon classes — the WeaponClass enum is the one source of truth. */
+export const WEAPON_CLASSES: readonly string[] = Object.values(WeaponClass);
 
 /** Talent-group spellings -> weapon-family registry keys. */
 const FAMILY_ALIASES: Record<string, string> = {
@@ -312,39 +308,4 @@ export function isTrainedFor(
 	}
 	if (family) return coverage.byCategory[klass]?.has(family) ?? false;
 	return coverage.classes.has(klass);
-}
-
-/**
- * Weapon classes covered by a character's Weapon Training talents (Core
- * Rulebook printed p272, "Acquisition and Starting Characters" bullet 2:
- * "In the case of weapons, a character may only choose those which he can
- * use. i.e., he must have a corresponding Weapon Training Talent.").
- *
- * "(Universal)" covers every class of that training's category (the book
- * sells Pistol/Basic/Heavy/Melee/Thrown Weapon Training (Universal)). A
- * specific-family talent (e.g. "Basic Weapon Training (Las)") only truly
- * covers its families — the weapon schema has no family field, so this is
- * enforced at CLASS level: a matching-class specific talent covers the
- * class. Empty/blank talent lists return an empty set (nothing covered).
- */
-export function coveredWeaponClasses(
-	talentNames: ReadonlyArray<string>,
-): Set<string> {
-	const covered = new Set<string>();
-	for (const raw of talentNames) {
-		const name = String(raw);
-		if (!/weapon training|weapon proficiency/i.test(name)) continue;
-		const universal = /\buniversal\b/i.test(name);
-		const matches = name.match(
-			/\bpistol\b|\bbasic\b|\bheavy\b|\bmelee\b|\bthrown\b/gi,
-		);
-		if (matches) {
-			for (const match of matches) covered.add(match.toLowerCase());
-		} else if (universal) {
-			// Universal with no stated category (authoring variance) — treat
-			// as covering everything rather than dropping the talent.
-			for (const klass of WEAPON_CLASSES) covered.add(klass);
-		}
-	}
-	return covered;
 }

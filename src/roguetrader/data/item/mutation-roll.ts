@@ -3,6 +3,8 @@
  * the table logic is unit-testable without Foundry.
  */
 
+import { coveringRow } from "../../../ffg/domain/model/chart";
+
 /**
  * The fields a table lookup needs. Deliberately structural (not a reference to
  * the Mutation document class) so this module stays dependency-free: the
@@ -22,12 +24,9 @@ export function rollMutation(
 	tableKey: string,
 	d100: number,
 ): { name: string } | null {
-	const candidates = rows.filter(
-		(row) =>
-			row.tableKey === tableKey && d100 >= row.rollMin && d100 <= row.rollMax,
-	);
-	if (candidates.length === 0) return null;
-	return { name: candidates[0].name ?? "" };
+	const row = coveringRow(rows, tableKey, d100, "tableKey");
+	if (!row) return null;
+	return { name: row.name ?? "" };
 }
 
 /**

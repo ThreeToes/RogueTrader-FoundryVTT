@@ -1,6 +1,6 @@
 // Unit tests for the shared actor-sheet view models (bead v2ll).
 import { describe, expect, test } from "bun:test";
-import { armourLocations, weaponRows } from "./view-models";
+import { armourLocations, armourValueAt, weaponRows } from "./view-models";
 
 const weapon = (overrides: Record<string, unknown> = {}) => ({
 	id: "w1",
@@ -55,6 +55,21 @@ describe("weaponRows", () => {
 			weapon({ name: "Alpha" }),
 		]);
 		expect(rows.map((r) => r.name)).toEqual(["Zeta", "Alpha"]);
+	});
+});
+
+describe("armourValueAt", () => {
+	test("takes the highest AP at one location, never below 0", () => {
+		const armour = [
+			{
+				type: "armour",
+				system: { armourAt: (loc: string) => (loc === "head" ? 4 : 8) },
+			},
+			{ type: "armour", system: { armourAt: () => -1 } },
+		];
+		expect(armourValueAt(armour, "head")).toBe(4);
+		expect(armourValueAt(armour, "body")).toBe(8);
+		expect(armourValueAt([], "body")).toBe(0);
 	});
 });
 

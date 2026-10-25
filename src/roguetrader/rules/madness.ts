@@ -17,27 +17,14 @@
  * reads the owned disorder items' gained severity, not a separate ledger.
  */
 
+import { coveringRow } from "../../ffg/domain/model/chart";
+
 export interface TrackRowLike {
 	kind?: string;
 	rollMin?: number;
 	rollMax?: number;
 	degree?: string;
 	modifier?: number;
-}
-
-function coveringRow(
-	rows: TrackRowLike[],
-	kind: string,
-	points: number,
-): TrackRowLike | null {
-	return (
-		rows.find(
-			(row) =>
-				row.kind === kind &&
-				points >= (row.rollMin ?? 0) &&
-				points <= (row.rollMax ?? 999),
-		) ?? null
-	);
 }
 
 /** Degree of Madness + Trauma-test modifier for an insanity total. */

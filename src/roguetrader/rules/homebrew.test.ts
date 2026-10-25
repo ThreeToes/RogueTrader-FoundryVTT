@@ -19,7 +19,7 @@
  * Bead x4ly: the profile is read through a caller-bound ConfigPort — these
  * tests bind ConfigPort doubles; no Foundry port swap needed at all.
  */
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { rtCore } from "../../ffg/domain/system-profile";
 import {
 	registerRuleKnobRegistry,
@@ -282,6 +282,52 @@ describe("effectiveProfile memoisation (bead qa9k)", () => {
 		const first = effectiveProfile(config);
 		const second = effectiveProfile(config);
 		expect(second).toBe(first);
+	});
+
+	test("the stored value is decoded ONCE across repeated attack rolls (qa9k)", () => {
+		// The finding's core: every attack roll reached the seam, so every roll
+		// paid for a decode. Count JSON.parse — the seam's only decode step —
+		// over ten reads of one stored value.
+		resetEffectiveProfileCacheForTests();
+		const parse = spyOn(JSON, "parse");
+		try {
+			for (let roll = 0; roll < 10; roll++)
+				effectiveProfile(
+					configWithHomebrew('{"combat.fireModeBonus.burst":0}'),
+				);
+			expect(parse).toHaveBeenCalledTimes(1);
+		} finally {
+			parse.mockRestore();
+		}
+	});
+
+	test("a changed setting invalidates the memo and re-decodes", () => {
+		// The settings-change event's OBSERVABLE effect is that the provider's
+		// next read returns different stored text; the raw value is the memo key,
+		// so that alone is the invalidation (no Foundry hook to mistype).
+		resetEffectiveProfileCacheForTests();
+		const parse = spyOn(JSON, "parse");
+		try {
+			const first = effectiveProfile(
+				configWithHomebrew('{"combat.fireModeBonus.burst":0}'),
+			);
+			// The GM saves an edit: the provider now answers with the new text.
+			const second = effectiveProfile(
+				configWithHomebrew('{"combat.fireModeBonus.burst":7}'),
+			);
+			expect(parse).toHaveBeenCalledTimes(2);
+			expect(second).not.toBe(first);
+			expect(second.fireModes.semiAutoBurst.modifier).toBe(7);
+			// Re-reading the NEW value is a memo hit again, not a third decode.
+			expect(
+				effectiveProfile(
+					configWithHomebrew('{"combat.fireModeBonus.burst":7}'),
+				),
+			).toBe(second);
+			expect(parse).toHaveBeenCalledTimes(2);
+		} finally {
+			parse.mockRestore();
+		}
 	});
 
 	test("a changed stored value recomputes", () => {

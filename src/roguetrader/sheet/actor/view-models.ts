@@ -86,6 +86,16 @@ export interface ArmourLocationRow {
 }
 
 /**
+ * Highest AP at one body location across the GIVEN armour items, never below
+ * 0 (an empty list has no AP). The caller owns worn-ness filtering: the
+ * sheets pass all owned armour through armourLocations, the damage pipeline
+ * passes its already-filtered wornArmour subset (bead yb6).
+ */
+export function armourValueAt(items: ArmourItemLike[], loc: string): number {
+	return Math.max(0, ...items.map((item) => item.system?.armourAt?.(loc) ?? 0));
+}
+
+/**
  * Highest AP per body location across WORN armour (stowed armour contributes
  * nothing, matching the damage pipeline's wornArmour filter, bead yb6), in
  * BODY_LOCATION_ORDER. Callers adapt into their context shape (PC: record
@@ -98,6 +108,6 @@ export function armourLocations(items: ArmourItemLike[]): ArmourLocationRow[] {
 	);
 	return BODY_LOCATION_ORDER.map((loc) => ({
 		loc,
-		ap: Math.max(0, ...worn.map((item) => item.system?.armourAt?.(loc) ?? 0)),
+		ap: armourValueAt(worn, loc),
 	}));
 }

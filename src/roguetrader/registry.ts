@@ -15,6 +15,10 @@
  * (i.e. during `init`). Schema field `choices` are captured at that point.
  */
 
+import {
+	characteristicChoices,
+	RT_CHARACTERISTIC_REGISTRY,
+} from "../ffg/domain/model/characteristic-registry";
 import { DamageType } from "../ffg/domain/model/damage";
 import { Registry } from "../ffg/domain/registry";
 
@@ -32,20 +36,15 @@ export class EntryRegistry extends Registry<string> {
 
 /**
  * Characteristic labels in the SHORT form ("CHARACTERISTIC.WS"), which is
- * what the skill/power pickers render. The vocabulary itself is
- * CHARACTERISTIC_KEYS (domain/model/taxonomy).
+ * what the skill/power pickers render. GENERATED from Rogue Trader's own
+ * characteristic registry (bead w9sa.10): the profile declares the nine keys
+ * and the label prefix, so this is no longer a second hand-list to keep in
+ * step with the Character schema. `RT_CHARACTERISTIC_REGISTRY` is named
+ * explicitly rather than read from the active binding: this seed feeds RT's
+ * CONFIG.ROGUE_TRADER namespace, which stays RT's even in a process a sibling
+ * system booted (the same reason the other seeds here are RT's).
  */
-const CHARACTERISTIC_LABELS = {
-	ws: "CHARACTERISTIC.WS",
-	bs: "CHARACTERISTIC.BS",
-	s: "CHARACTERISTIC.S",
-	t: "CHARACTERISTIC.T",
-	ag: "CHARACTERISTIC.AG",
-	int: "CHARACTERISTIC.INT",
-	per: "CHARACTERISTIC.PER",
-	wp: "CHARACTERISTIC.WP",
-	fel: "CHARACTERISTIC.FEL",
-} as const;
+const CHARACTERISTIC_LABELS = characteristicChoices(RT_CHARACTERISTIC_REGISTRY);
 
 /**
  * The same characteristics in the DESCRIPTIVE form

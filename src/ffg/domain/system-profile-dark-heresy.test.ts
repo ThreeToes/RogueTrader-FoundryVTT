@@ -13,11 +13,14 @@
 import { describe, expect, test } from "bun:test";
 
 import type { RuleProfile } from "../../rules-engine/profile";
-import type {
-	CharacteristicGeneration,
-	EliteAdvanceCost,
-	PsychicPush,
-	RtAdvanceLadder,
+import {
+	FIRE_MODES,
+	type CharacteristicGeneration,
+	type EliteAdvanceCost,
+	type FireModes,
+	fireModeRule,
+	type PsychicPush,
+	type RtAdvanceLadder,
 } from "../../rules-engine/profile-vocabulary";
 import {
 	SCHEME_TIERS,
@@ -438,6 +441,41 @@ describe("the shared kernel vocabulary (bead cmio.2) — instantiate, never rede
 		expect(sanctioned).toBeUndefined();
 		expect(baseCost).toBeUndefined();
 		expect(penalty).toBeUndefined();
+	});
+
+	test("RT's fire-mode triple is not a REQUIREMENT on a sibling (bead w9sa.12)", () => {
+		// The shared set is a name-keyed map now, so DH2e's Standard Attack and
+		// Full-Auto Burst pair stands on its own: dropping the third mode is a
+		// complete profile table, not a type error.
+		const { semiAutoBurst, ...standardAndFullAuto } = dh2Core.fireModes;
+		const twoModeSet: FireModes = standardAndFullAuto;
+		expect(Object.keys(twoModeSet).sort()).toEqual([
+			"fullAutoBurst",
+			"standard",
+		]);
+		// The semi-auto value THIS profile declares is still there (printed
+		// p223), and a consumer asking for it on the two-mode set gets an
+		// honest `undefined` rather than an assumed rule.
+		expect(semiAutoBurst.modifier).toBe(0);
+		expect(fireModeRule(twoModeSet, "semiAutoBurst")).toBeUndefined();
+		expect(fireModeRule(twoModeSet, "fullAutoBurst")).toEqual(
+			dh2Core.fireModes.fullAutoBurst,
+		);
+		// RT core still declares ALL THREE — the widening changed the shape, not
+		// RT's values.
+		expect(Object.keys(rtCore.fireModes).sort()).toEqual([...FIRE_MODES].sort());
+	});
+
+	test("both profiles declare ONLY pinned shared mode names (drift guard)", () => {
+		// The vocabulary is data, not a third declaration: every mode name a
+		// profile carries must be one FIRE_MODES gives a meaning to.
+		const declared = [
+			...Object.keys(rtCore.fireModes),
+			...Object.keys(dh2Core.fireModes),
+		];
+		for (const name of declared) {
+			expect((FIRE_MODES as readonly string[]).includes(name)).toBe(true);
+		}
 	});
 
 	test("the system-tagged ladders NEVER map onto each other (cmio.4's seal)", () => {

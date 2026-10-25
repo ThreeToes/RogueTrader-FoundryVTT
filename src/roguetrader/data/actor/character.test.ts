@@ -239,3 +239,41 @@ describe("NPC identity fields (bead lib6)", () => {
 		expect(npc.prototypeToken).toEqual({ bar1: { attribute: "wounds" } });
 	});
 });
+
+describe("the characteristic schema is generated from the registry (bead w9sa.10)", () => {
+	test("Rogue Trader's nine characteristics are stored fields, in book order", () => {
+		const schema = Character.defineSchema() as Record<string, unknown>;
+		const characteristics = schema.characteristics as {
+			fields?: Record<string, unknown>;
+		};
+		// The keys come from the active characteristic registry (`rtCore`'s
+		// `characteristics.keys`), so a schema field and a picker option can no
+		// longer disagree about which characteristics exist.
+		expect(Object.keys(characteristics.fields ?? {})).toEqual([
+			"ws",
+			"bs",
+			"s",
+			"t",
+			"ag",
+			"int",
+			"per",
+			"wp",
+			"fel",
+		]);
+	});
+
+	test("every generated characteristic carries the value/unnatural pair", () => {
+		const schema = Character.defineSchema() as Record<string, unknown>;
+		const characteristics = schema.characteristics as {
+			fields?: Record<string, { fields?: Record<string, unknown> }>;
+		};
+		const fields = characteristics.fields ?? {};
+		expect(Object.keys(fields).length).toBeGreaterThan(0);
+		for (const [key, field] of Object.entries(fields)) {
+			expect(Object.keys(field.fields ?? {}), `${key} field shape`).toEqual([
+				"value",
+				"unnatural",
+			]);
+		}
+	});
+});

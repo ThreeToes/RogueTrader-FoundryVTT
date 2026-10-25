@@ -129,6 +129,11 @@ export interface DarkHeresyProfile
 	 * p226): Standard Attack +10, Full Auto Burst -10, Semi-Auto Burst +0 —
 	 * the sign inversion versus RT's bonuses is per-VALUE data under the
 	 * shared shape, not a reason to fork the field.
+	 *
+	 * The set is a NAME-KEYED map, not RT's closed triple (bead w9sa.12): this
+	 * profile declares the three modes DH2e actually prints (and there is no
+	 * separate single-shot ACTION — a single shot IS the Standard Attack,
+	 * printed p223), which a system that models fewer would not have to do.
 	 */
 	fireModes: FireModes;
 	/**

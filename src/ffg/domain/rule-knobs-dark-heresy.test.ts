@@ -14,10 +14,11 @@
  *   3. THE ABSENCES — RT's push-cap shape, RT's fire-mode bonuses, RT's elite
  *      base cost and a single-shot fire mode are pinned ABSENT, so adding one
  *      later is a deliberate edit that has to delete a test.
- *   4. THE i18n SURFACE — the derived label/hint keys exist, translated, in all
- *      four language files. Three keys are deliberately SHARED with RT (see the
- *      `shared` pin) and the rest are DH2's own, because the flat `RULES.`
- *      namespace means RT's wording would otherwise contradict DH2's core.
+ *   4. THE i18n SURFACE — every knob's label/hint lives under DH2's OWN prefix
+ *      (`RULES.DH.*`, bead w9sa.11) and exists, translated, in all four
+ *      language files. Exactly three knob IDS are shared with RT because they
+ *      name the same rule in both books; only those three co-own one
+ *      book-neutral label key (see the `shared` pin).
  */
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -25,11 +26,13 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
 	DARK_HERESY_RULE_KNOBS,
 	DARK_HERESY_RULE_KNOB_REGISTRY,
+	DH2_KNOB_I18N_PREFIX,
 	DH2_SYSTEM_ID,
 } from "./rule-knobs-dark-heresy";
 import {
 	findKnob,
 	hintKeyFor,
+	knobLabelNamespace,
 	knobsInGroup,
 	labelKeyFor,
 	mergeProfile,
@@ -106,6 +109,13 @@ const INVENTORY: readonly string[] = [
 	"advancement.characteristicCost.expert.two",
 	"advancement.characteristicCost.expert.one",
 	"advancement.characteristicCost.expert.zero",
+];
+
+/** The knob ids this book shares with RT because they name the same rule. */
+const SHARED_KNOB_IDS: readonly string[] = [
+	"test.critOnDouble",
+	"damage.primitiveArmourDouble",
+	"damage.righteousFury",
 ];
 
 describe("DH2's rule-knob registry", () => {
@@ -275,13 +285,31 @@ describe("DH2's rule-knob registry", () => {
 		}
 	});
 
-	test("labelKey/hintKey are the documented derivation", () => {
+	test("labelKey/hintKey are the documented derivation, under DH2's own prefix", () => {
 		const KEY_SHAPE = /^[A-Z][A-Z0-9_]*(?:\.[A-Z0-9_]+)+$/;
+		// Bead w9sa.11: DH2's labels live under RULES.DH.*, never in RT's flat
+		// RULES.* family — except the three deliberately co-owned, book-neutral
+		// rules, which keep RT's key (pinned by the `shared` test below).
+		expect(DH2_KNOB_I18N_PREFIX).toBe("dh");
 		for (const knob of DARK_HERESY_RULE_KNOBS) {
-			expect(knob.labelKey, knob.key).toBe(labelKeyFor(knob.key));
-			expect(knob.hintKey, knob.key).toBe(hintKeyFor(knob.key));
 			expect(knob.labelKey).toMatch(KEY_SHAPE);
 			expect(knob.hintKey).toMatch(KEY_SHAPE);
+			if (SHARED_KNOB_IDS.includes(knob.key)) {
+				// Co-owned with RT (see the `shared` test): RT's book-neutral key.
+				expect(knob.labelKey, knob.key).toBe(labelKeyFor(knob.key));
+				expect(knob.hintKey, knob.key).toBe(hintKeyFor(knob.key));
+				continue;
+			}
+			expect(knob.labelKey, knob.key).toBe(
+				labelKeyFor(knob.key, DH2_KNOB_I18N_PREFIX),
+			);
+			expect(knob.hintKey, knob.key).toBe(
+				hintKeyFor(knob.key, DH2_KNOB_I18N_PREFIX),
+			);
+			expect(
+				knob.labelKey.startsWith(knobLabelNamespace(DH2_KNOB_I18N_PREFIX)),
+				`${knob.labelKey} must live under DH2's prefix`,
+			).toBe(true);
 		}
 	});
 
@@ -308,20 +336,34 @@ describe("DH2's rule-knob registry", () => {
 		}
 	});
 
-	test("exactly three keys are SHARED with RT's registry, each book-neutral", () => {
-		// The RULES. namespace is flat and shared, so DH2 reuses a key only when
-		// RT's wording stays true for DH2. A fourth shared key would need the
-		// same argument — or its own key.
+	test("exactly three knob IDS are SHARED with RT's registry, each book-neutral", () => {
+		// A shared knob ID is allowed only when it names the SAME rule in both
+		// books; for those three the wording is book-neutral too, so the two
+		// systems CO-OWN one label key instead of duplicating the translation.
+		// Any other overlap is a no-sibling-names guard failure (bead w9sa.11)
+		// rather than something this test has to notice.
 		const shared = INVENTORY.filter((key) => findKnob(RT_KNOBS, key) !== undefined);
-		expect(shared).toEqual([
-			"test.critOnDouble",
-			"damage.primitiveArmourDouble",
-			"damage.righteousFury",
-		]);
-		// The three entries really do carry RT's keys, not look-alikes.
-		expect(knobByKey("test.critOnDouble").labelKey).toBe(
-			labelKeyFor("test.critOnDouble"),
-		);
+		expect(shared).toEqual(SHARED_KNOB_IDS);
+		// The three entries really do carry RT's co-owned keys, not look-alikes,
+		// and each is the same rule SHAPE on both sides (group, control, path).
+		for (const key of SHARED_KNOB_IDS) {
+			const mine = knobByKey(key);
+			const theirs = findKnob(RT_KNOBS, key);
+			expect(mine.labelKey).toBe(labelKeyFor(key));
+			expect(mine.hintKey).toBe(hintKeyFor(key));
+			expect(mine.labelKey).toBe(theirs?.labelKey);
+			expect(mine.group).toBe(theirs?.group);
+			expect(mine.control).toBe(theirs?.control);
+			expect(mine.path).toEqual(theirs?.path);
+		}
+		// Every other DH2 label is DH2's own, so the namespaces cannot collide.
+		for (const knob of DARK_HERESY_RULE_KNOBS) {
+			if (SHARED_KNOB_IDS.includes(knob.key)) continue;
+			expect(
+				knob.labelKey.startsWith(knobLabelNamespace(DH2_KNOB_I18N_PREFIX)),
+				`${knob.labelKey} must live under DH2's prefix`,
+			).toBe(true);
+		}
 	});
 });
 

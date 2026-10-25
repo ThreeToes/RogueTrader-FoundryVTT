@@ -127,6 +127,39 @@ export type UntrainedSkillFlatPenalty = Extract<
 >;
 
 /**
+ * A fire-mode NAME (bead w9sa.12).
+ *
+ * A string ALIAS, deliberately not a closed union: which modes a system offers
+ * is its own book's data. RT core offers a Standard Attack (a straight test,
+ * no modifier), a Semi-Auto Burst (+10) and a Full-Auto Burst (+20), Core
+ * Rulebook p237; DH2e's Standard Attack is +10 (melee or ranged) and its
+ * Full-Auto Burst a -10 penalty (printed p226), with a +0 Semi-Auto Burst
+ * (printed p223). {@link FIRE_MODES} pins the names the shared layer gives a
+ * meaning to; a consumer asks for a mode BY NAME and must cope with a profile
+ * that does not model it (see {@link fireModeRule}).
+ */
+export type FireMode = string;
+
+/**
+ * The fire-mode names the shared layer PINS, as data (bead w9sa.12).
+ *
+ * Both profiles in the tree model exactly these three actions — RT core's
+ * p237 trio and DH2e's p223/p226 trio — so naming them here is vocabulary,
+ * not a fabricated taxonomy. It is NOT a required field set: {@link FireModes}
+ * demands none of them (a system declares only the modes its book models), and
+ * the list exists so tests and dialog builders can walk the shared names
+ * without restating them in every file.
+ */
+export const FIRE_MODES = [
+	"standard",
+	"semiAutoBurst",
+	"fullAutoBurst",
+] as const;
+
+/** One of the pinned fire-mode names ({@link FIRE_MODES}). */
+export type KnownFireMode = (typeof FIRE_MODES)[number];
+
+/**
  * A single fire mode's contribution to the attack test.
  *
  * ONE SIGNED set for both systems: RT's core bonuses (+10 semi-auto burst,
@@ -145,16 +178,40 @@ export interface FireModeRule {
 }
 
 /**
- * The fire-mode set. DH2e has no single-shot ACTION (a single shot IS the
- * Standard Attack, printed p223), so there is deliberately NO `singleShot`
- * key — RT's Standard Attack is its +0 standard mode, and a system that
- * models single shots differently declares its own field.
+ * A system's fire-mode table: mode name -> rule.
+ *
+ * WIDENED (bead w9sa.12) from the closed `{standard, semiAutoBurst,
+ * fullAutoBurst}` triple. That triple is ROGUE TRADER's field set: DH2e's fire
+ * modes are a different set with an INVERTED sign (Standard Attack +10,
+ * Full-Auto Burst -10, printed p226) and no separate single-shot ACTION (a
+ * single shot IS the Standard Attack, printed p223), so requiring RT's three
+ * named fields from a sibling profile is the same-name-shape-mismatch hazard
+ * bead cmio.2 removed from the rest of this vocabulary.
+ *
+ * The map is OPEN on purpose, the way `RuleProfile.hitLocations` is: a mode a
+ * profile does not declare is simply ABSENT. A consumer that is asked for a
+ * mode its system may not model must therefore look it up through
+ * {@link fireModeRule}; RT's own consumers read `standard`/`semiAutoBurst`/
+ * `fullAutoBurst` directly, which is sound only because `rtCore` declares all
+ * three. A two-mode set (e.g. `{standard, fullAutoBurst}`) is a complete,
+ * valid `FireModes`.
  */
-export type FireModes = {
-	standard: FireModeRule;
-	semiAutoBurst: FireModeRule;
-	fullAutoBurst: FireModeRule;
-};
+export type FireModes = Readonly<Record<FireMode, FireModeRule>>;
+
+/**
+ * Look a fire mode up HONESTLY: the rule when the profile declares that mode,
+ * `undefined` when the system does not model it.
+ *
+ * The map's index signature cannot express ABSENCE per name, so this is the
+ * accessor for any consumer that does not already know the profile's mode set
+ * (the shared/sibling path). RT's own rules read its declared triple directly.
+ */
+export function fireModeRule(
+	modes: FireModes,
+	mode: FireMode,
+): FireModeRule | undefined {
+	return Object.hasOwn(modes, mode) ? modes[mode] : undefined;
+}
 
 /**
  * Psychic Strength PUSH.

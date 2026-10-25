@@ -1,4 +1,4 @@
-import { characteristics } from "../../registry";
+import { characteristicChoices } from "../../../ffg/domain/model/characteristic-registry";
 import { sourceField } from "./source";
 import { textField } from "../fields";
 
@@ -53,8 +53,9 @@ export class NavigatorPower extends foundry.abstract.TypeDataModel<
 	static get characteristicChoices(): Record<string, string> {
 		// Navigator powers test Characteristics directly (book p178: Willpower
 		// and Perception are most common; per-power characteristic comes from
-		// the extraction's per-power note).
-		return characteristics.choices;
+		// the extraction's per-power note). The active system's registry supplies
+		// the vocabulary (bead w9sa.10).
+		return characteristicChoices();
 	}
 
 	static override defineSchema() {

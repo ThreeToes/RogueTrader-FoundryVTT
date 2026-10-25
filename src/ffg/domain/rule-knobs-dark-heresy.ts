@@ -20,20 +20,27 @@
  * both proven absent by child D6 of this epic, and the registry carries them so
  * a GM can opt IN deliberately rather than by accident.
  *
- * WHOSE KEY, AND WHY SOME KEYS ARE SHARED WITH RT's
- * -------------------------------------------------
- * `labelKeyFor(key)` derives an i18n key in the FLAT, shared `RULES.` namespace,
- * so a DH2 key collides with RT's whenever the two strings match. Collision is
- * fine where both systems' text stays true — `test.critOnDouble`,
+ * WHOSE KEY, AND WHY EACH SYSTEM OWNS ITS i18n NAMESPACE
+ * ------------------------------------------------------
+ * `labelKeyFor(key)` used to derive one FLAT `RULES.` namespace shared by every
+ * system, so a DH2 key collided with RT's whenever the two strings matched —
+ * and a collision is only harmless while both books' wording stays true. Bead
+ * w9sa.11 gave each registry its own prefix: RT keeps the incumbent un-prefixed
+ * namespace (`RULES.…`, its released translations and stored deltas), DH2's
+ * labels live under `RULES.DH.…` (`DH2_KNOB_I18N_PREFIX = "dh"`).
+ *
+ * Every entry below therefore takes its label/hint pair from `labelsFor()`, and
+ * a label can no longer land in another system's namespace by accident. The
+ * only exception is DELIBERATE, same-rule co-ownership: `test.critOnDouble`,
  * `damage.primitiveArmourDouble` and `damage.righteousFury` name the same rule
- * with book-neutral wording, so DH2 reuses RT's keys and translations. It is
- * NOT fine where RT's text asserts RT's own core: RT's
- * `RULES.TEST_AUTO_FAIL_ROLL_HINT` says "The Core Rulebook prints no such band,
- * so core is none; a sibling system (Dark Heresy) sets 96", which is FALSE for
- * DH2e (the book prints 100, and the 96 is DH1's unverified memory — corrected
- * by child D6). A knob whose label contradicts its own core value is a silent
- * wrongness, so those two take DH2's own keys. Editing RT's translation instead
- * is out of scope for this bead, so the stale 96 is reported to the parent.
+ * in both books with book-neutral wording, so they keep RT's label keys (the
+ * shared-id allow-list in src/ffg/domain/rule-knobs-namespaces.test.ts pins
+ * exactly those three). Everything else — including the two automatic
+ * pass/fail bands, whose printed values differ — has DH2's own labels.
+ *
+ * The stale claim in RT's `RULES.TEST_AUTO_FAIL_ROLL_HINT` ("a sibling system
+ * (Dark Heresy) sets 96") is RT's own lang string, out of scope here; DH2 no
+ * longer reads it, and it is reported to the parent.
  *
  * DELIBERATELY ABSENT (pinned absent by the test file)
  * ---------------------------------------------------
@@ -74,6 +81,26 @@ import {
 export const DH2_SYSTEM_ID = "dark-heresy-2e";
 
 /**
+ * DH2's knob i18n prefix (bead w9sa.11): its labels live at `RULES.DH.<WORDS>`,
+ * a namespace no sibling system may claim (RT owns the un-prefixed one).
+ * Declared here as DH2's own data, exactly like `DH2_SYSTEM_ID`.
+ */
+export const DH2_KNOB_I18N_PREFIX = "dh";
+
+/**
+ * The i18n key pair of one DH2 knob, DERIVED from its key under DH2's prefix —
+ * never hand-written, so no entry can drift into another system's namespace.
+ * The three deliberately co-owned, book-neutral rules spell RT's key out
+ * instead (see the file header and the no-sibling-names guard).
+ */
+function labelsFor(key: string): Pick<RuleKnob, "labelKey" | "hintKey"> {
+	return {
+		labelKey: labelKeyFor(key, DH2_KNOB_I18N_PREFIX),
+		hintKey: hintKeyFor(key, DH2_KNOB_I18N_PREFIX),
+	};
+}
+
+/**
  * DH2's knobs, grouped by section, in display order.
  *
  * The characteristic-advance COSTS (Table 2-2, printed p80) are appended after
@@ -93,7 +120,10 @@ const KNOBS: RuleKnob[] = [
 		// exactly two special cases — 1 auto-succeeds, 100 auto-fails — and
 		// says nothing about doubles; a DH2e character's Criticals come from
 		// damage exceeding wounds (printed p232). Core FALSE, so the knob
-		// exists for a GM who wants RT's rule as a house rule.
+		// exists for a GM who wants RT's rule as a house rule. SHARED id, and
+		// the only kind of label NOT under DH2's prefix: the rule is the same
+		// and RT's wording is book-neutral, so the two systems CO-OWN this key
+		// (the guard's shared-id allow-list pins exactly three such ids).
 		key: "test.critOnDouble",
 		path: ["critOnDouble"],
 		labelKey: "RULES.TEST_CRIT_ON_DOUBLE",
@@ -110,8 +140,7 @@ const KNOBS: RuleKnob[] = [
 		// cannot un-print the band. DH2's own key (see the file header).
 		key: "test.automaticFailureRoll",
 		path: ["autoFailRoll"],
-		labelKey: "RULES.TEST_AUTOMATIC_FAILURE_ROLL",
-		hintKey: "RULES.TEST_AUTOMATIC_FAILURE_ROLL_HINT",
+		...labelsFor("test.automaticFailureRoll"),
 		group: "test",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -122,8 +151,7 @@ const KNOBS: RuleKnob[] = [
 		// automatically succeeds" — a single digit, NOT DH1's remembered 01-05.
 		key: "test.automaticSuccessRoll",
 		path: ["autoPassRoll"],
-		labelKey: "RULES.TEST_AUTOMATIC_SUCCESS_ROLL",
-		hintKey: "RULES.TEST_AUTOMATIC_SUCCESS_ROLL_HINT",
+		...labelsFor("test.automaticSuccessRoll"),
 		group: "test",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -161,8 +189,7 @@ const KNOBS: RuleKnob[] = [
 		// has no equivalent rule, so this is DH2's own key.
 		key: "damage.degreesReplaceOneDie",
 		path: ["degreesReplaceOneDamageDie"],
-		labelKey: "RULES.DAMAGE_DEGREES_REPLACE_ONE_DIE",
-		hintKey: "RULES.DAMAGE_DEGREES_REPLACE_ONE_DIE_HINT",
+		...labelsFor("damage.degreesReplaceOneDie"),
 		group: "damage",
 		control: "boolean",
 		hazard: "auto-recomputed",
@@ -176,8 +203,7 @@ const KNOBS: RuleKnob[] = [
 		// modes, so the two vocabularies must never meet.
 		key: "combat.standardAttackBonus",
 		path: ["fireModes", "standard", "modifier"],
-		labelKey: "RULES.COMBAT_STANDARD_ATTACK_BONUS",
-		hintKey: "RULES.COMBAT_STANDARD_ATTACK_BONUS_HINT",
+		...labelsFor("combat.standardAttackBonus"),
 		group: "combat",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -189,8 +215,7 @@ const KNOBS: RuleKnob[] = [
 		// whole reason DH2 keeps its own field instead of RT's +20 bonus.
 		key: "combat.fullAutoBurstPenalty",
 		path: ["fireModes", "fullAutoBurst", "modifier"],
-		labelKey: "RULES.COMBAT_FULL_AUTO_BURST_PENALTY",
-		hintKey: "RULES.COMBAT_FULL_AUTO_BURST_PENALTY_HINT",
+		...labelsFor("combat.fullAutoBurstPenalty"),
 		group: "combat",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -204,8 +229,7 @@ const KNOBS: RuleKnob[] = [
 		// `combat.singleShot*` key exists (pinned absent by the test).
 		key: "combat.semiAutoBurstModifier",
 		path: ["fireModes", "semiAutoBurst", "modifier"],
-		labelKey: "RULES.COMBAT_SEMI_AUTO_BURST_MODIFIER",
-		hintKey: "RULES.COMBAT_SEMI_AUTO_BURST_MODIFIER_HINT",
+		...labelsFor("combat.semiAutoBurstModifier"),
 		group: "combat",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -220,8 +244,7 @@ const KNOBS: RuleKnob[] = [
 		// bound/unbound/daemonic one.
 		key: "psychic.pushCap.bound",
 		path: ["psychicPush", "caps", "bound"],
-		labelKey: "RULES.PSYCHIC_PUSH_CAP_BOUND",
-		hintKey: "RULES.PSYCHIC_PUSH_CAP_BOUND_HINT",
+		...labelsFor("psychic.pushCap.bound"),
 		group: "psychic",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -231,8 +254,7 @@ const KNOBS: RuleKnob[] = [
 		// Table 6-1, printed p195: a Daemonic psyker pushes to +3.
 		key: "psychic.pushCap.daemonic",
 		path: ["psychicPush", "caps", "daemonic"],
-		labelKey: "RULES.PSYCHIC_PUSH_CAP_DAEMONIC",
-		hintKey: "RULES.PSYCHIC_PUSH_CAP_DAEMONIC_HINT",
+		...labelsFor("psychic.pushCap.daemonic"),
 		group: "psychic",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -242,8 +264,7 @@ const KNOBS: RuleKnob[] = [
 		// Table 6-1, printed p195: an Unbound psyker pushes to +4.
 		key: "psychic.pushCap.unbound",
 		path: ["psychicPush", "caps", "unbound"],
-		labelKey: "RULES.PSYCHIC_PUSH_CAP_UNBOUND",
-		hintKey: "RULES.PSYCHIC_PUSH_CAP_UNBOUND_HINT",
+		...labelsFor("psychic.pushCap.unbound"),
 		group: "psychic",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -262,8 +283,7 @@ const KNOBS: RuleKnob[] = [
 		// then adds 20" — the DICE are the first half of that printed rule.
 		key: "creation.generationDice",
 		path: ["generation", "dice"],
-		labelKey: "RULES.CREATION_GENERATION_DICE",
-		hintKey: "RULES.CREATION_GENERATION_DICE_HINT",
+		...labelsFor("creation.generationDice"),
 		group: "creation",
 		control: "number",
 		hazard: "creation-only",
@@ -283,8 +303,7 @@ const KNOBS: RuleKnob[] = [
 		// a system-wide default the book does not give.
 		key: "creation.generationBonus",
 		path: ["generation", "bonus"],
-		labelKey: "RULES.CREATION_GENERATION_BONUS",
-		hintKey: "RULES.CREATION_GENERATION_BONUS_HINT",
+		...labelsFor("creation.generationBonus"),
 		group: "creation",
 		control: "number",
 		hazard: "creation-only",
@@ -300,8 +319,7 @@ const KNOBS: RuleKnob[] = [
 		// economics struct (bead cmio.2).
 		key: "creation.xpBudget",
 		path: ["creationXpEconomics", "granted"],
-		labelKey: "RULES.CREATION_XP_BUDGET",
-		hintKey: "RULES.CREATION_XP_BUDGET_HINT",
+		...labelsFor("creation.xpBudget"),
 		group: "creation",
 		control: "number",
 		hazard: "creation-only",
@@ -322,8 +340,7 @@ for (const tier of DH2_ADVANCE_TIERS) {
 			// wrong (RT's own advance knobs carry the same hazard).
 			key,
 			path: ["characteristicAdvanceCost", tier, aptitudes],
-			labelKey: labelKeyFor(key),
-			hintKey: hintKeyFor(key),
+			...labelsFor(key),
 			group: "advancement",
 			control: "number",
 			hazard: "ledger-assuming",
@@ -338,5 +355,8 @@ export const DARK_HERESY_RULE_KNOBS: readonly RuleKnob[] = KNOBS;
 /** Dark Heresy 2e's registry: its system id over its own knobs. */
 export const DARK_HERESY_RULE_KNOB_REGISTRY: RuleKnobRegistry = {
 	systemId: DH2_SYSTEM_ID,
+	// DH2's labels live under its own namespace (bead w9sa.11), so no DH2 label
+	// can collide with RT's flat RULES.* family.
+	i18nPrefix: DH2_KNOB_I18N_PREFIX,
 	knobs: DARK_HERESY_RULE_KNOBS,
 };

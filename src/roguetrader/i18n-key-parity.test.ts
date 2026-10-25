@@ -265,13 +265,15 @@ describe("i18n key parity (bead qgtz)", () => {
 			// option and hazard labels) — none of them is a string literal in a
 			// template, so the static scan cannot see them. Bead wxut.4.
 			//
-			// ONE family serves BOTH registries: labelKeyFor() derives a single
-			// flat RULES. namespace, so Dark Heresy 2e's keys (epic w9sa, child
-			// D3) land here too. Three of DH2's keys deliberately REUSE RT's
+			// ONE family serves BOTH registries: labelKeyFor() derives the key under
+			// the owning registry's `i18nPrefix` (bead w9sa.11) — RT keeps the
+			// incumbent un-prefixed RULES.* namespace, so Dark Heresy 2e's labels
+			// (epic w9sa, child D3) live at RULES.DH.* and this RULES. family covers
+			// both. Three of DH2's knob IDS deliberately CO-OWN RT's label
 			// (test.critOnDouble, damage.primitiveArmourDouble,
 			// damage.righteousFury) — the wording stays true for both systems — and
-			// the rest are DH2's own. The reuse set is pinned by
-			// src/ffg/domain/rule-knobs-dark-heresy.test.ts.
+			// every other DH2 label is its own. The shared-id allow-list is pinned by
+			// src/ffg/domain/rule-knobs-namespaces.test.ts.
 			prefix: "RULES.",
 			sites: [
 				"src/ffg/domain/rule-knobs.ts (labelKeyFor/hintKeyFor)",

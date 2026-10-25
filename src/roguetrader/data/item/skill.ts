@@ -1,4 +1,4 @@
-import { characteristics } from "../../registry";
+import { characteristicChoices } from "../../../ffg/domain/model/characteristic-registry";
 import { sourceField } from "./source";
 import { textField } from "../fields";
 
@@ -22,9 +22,9 @@ export class Skill extends foundry.abstract.TypeDataModel<
 	 *  packer from the book name. */
 	declare key: string;
 
-	/** Short-form characteristic labels, from the registry. */
+	/** Short-form characteristic labels, from the active system's registry. */
 	static get characteristicChoices(): Record<string, string> {
-		return characteristics.choices;
+		return characteristicChoices();
 	}
 
 	static override defineSchema() {

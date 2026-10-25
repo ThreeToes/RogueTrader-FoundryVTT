@@ -11,11 +11,13 @@ import { rtCore } from "./system-profile";
 import {
 	hintKeyFor,
 	knobByKey,
+	knobLabelNamespace,
 	knobsForGroup,
 	labelKeyFor,
 	mergeProfile,
 	registerRuleKnobRegistry,
 	resetRuleKnobRegistryForTests,
+	RT_KNOB_I18N_PREFIX,
 	type RuleKnob,
 	type RuleKnobRegistry,
 	RT_RULE_KNOB_REGISTRY,
@@ -163,6 +165,28 @@ describe("rule-knob registry", () => {
 		);
 		expect(hintKeyFor("tables.hitLocations")).toBe(
 			"RULES.TABLES_HIT_LOCATIONS_HINT",
+		);
+		// Bead w9sa.11: the derivation takes the owning system's prefix, and RT's
+		// is the EMPTY one — every RT label is byte-identical to the pre-prefix
+		// scheme, because its translations and stored deltas cannot be renamed.
+		expect(RT_KNOB_I18N_PREFIX).toBe("");
+		expect(labelKeyFor("test.critOnDouble", RT_KNOB_I18N_PREFIX)).toBe(
+			labelKeyFor("test.critOnDouble"),
+		);
+		expect(knobLabelNamespace(RT_KNOB_I18N_PREFIX)).toBe("RULES.");
+		// A sibling system's prefix MOVES its whole family: DH2's labels live at
+		// RULES.DH.*, so the same rule can never share a key with RT's.
+		expect(labelKeyFor("test.critOnDouble", "dh")).toBe(
+			"RULES.DH.TEST_CRIT_ON_DOUBLE",
+		);
+		expect(hintKeyFor("combat.standardAttackBonus", "dh")).toBe(
+			"RULES.DH.COMBAT_STANDARD_ATTACK_BONUS_HINT",
+		);
+		expect(knobLabelNamespace("dh")).toBe("RULES.DH.");
+		// A prefix is ONE key segment: a dotted one would nest every label under
+		// an intermediate key, which foundry.utils.expandObject rejects.
+		expect(() => labelKeyFor("test.critOnDouble", "dh.v2")).toThrow(
+			/not one key segment/,
 		);
 		// The shape matches the i18n parity guard's KEY_SHAPE, so the calls the
 		// later bead adds will satisfy its static-reference scan.
@@ -450,12 +474,14 @@ describe("validateProfile", () => {
 	 * (bead w9sa.3 owns that).
 	 */
 const SIBLING_SYSTEM_ID = "dark-heresy-2e";
+/** The fake sibling's own i18n namespace, exactly as DH2 declares "dh". */
+const SIBLING_I18N_PREFIX = "dh";
 const SIBLING_KNOBS: readonly RuleKnob[] = [
 	{
 		key: "test.doublesAreCrits",
 		path: ["critOnDouble"],
-		labelKey: labelKeyFor("test.doublesAreCrits"),
-		hintKey: hintKeyFor("test.doublesAreCrits"),
+		labelKey: labelKeyFor("test.doublesAreCrits", SIBLING_I18N_PREFIX),
+		hintKey: hintKeyFor("test.doublesAreCrits", SIBLING_I18N_PREFIX),
 		group: "test",
 		control: "boolean",
 		hazard: "auto-recomputed",
@@ -464,8 +490,8 @@ const SIBLING_KNOBS: readonly RuleKnob[] = [
 	{
 		key: "combat.standardMode",
 		path: ["fireModes", "standard", "modifier"],
-		labelKey: labelKeyFor("combat.standardMode"),
-		hintKey: hintKeyFor("combat.standardMode"),
+		labelKey: labelKeyFor("combat.standardMode", SIBLING_I18N_PREFIX),
+		hintKey: hintKeyFor("combat.standardMode", SIBLING_I18N_PREFIX),
 		group: "combat",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -474,8 +500,8 @@ const SIBLING_KNOBS: readonly RuleKnob[] = [
 	{
 		key: "skills.untrainedPenalty",
 		path: ["untrainedSkill", "penalty"],
-		labelKey: labelKeyFor("skills.untrainedPenalty"),
-		hintKey: hintKeyFor("skills.untrainedPenalty"),
+		labelKey: labelKeyFor("skills.untrainedPenalty", SIBLING_I18N_PREFIX),
+		hintKey: hintKeyFor("skills.untrainedPenalty", SIBLING_I18N_PREFIX),
 		group: "skills",
 		control: "number",
 		hazard: "auto-recomputed",
@@ -484,6 +510,7 @@ const SIBLING_KNOBS: readonly RuleKnob[] = [
 ];
 const SIBLING_REGISTRY: RuleKnobRegistry = {
 	systemId: SIBLING_SYSTEM_ID,
+	i18nPrefix: SIBLING_I18N_PREFIX,
 	knobs: SIBLING_KNOBS,
 };
 

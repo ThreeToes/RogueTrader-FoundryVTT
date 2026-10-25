@@ -46,14 +46,28 @@
  * the union object member-wise, so a merge can never yield a union the type
  * does not allow (an orphan penalty, or a model with no penalty stored).
  *
- * I18N
- * ---
- * labelKey/hintKey are plain string literals in the `RULES.` namespace,
- * derived from the knob key by labelKeyFor()/hintKeyFor() below; the
- * translations themselves are a LATER bead (this one adds nothing to
- * lang/*.json). Bare literals cannot trip the i18n parity guard, which only
- * matches localize()/format()/t() call ARGUMENTS; the derived shape still
- * matches that guard's KEY_SHAPE so the later bead's calls stay green.
+ * I18N, PER SYSTEM (bead w9sa.11)
+ * ------------------------------
+ * labelKey/hintKey are plain string literals derived from the knob key by
+ * labelKeyFor()/hintKeyFor() below. The derivation takes the owning registry's
+ * `i18nPrefix` so the labels land in THAT system's namespace:
+ *
+ *   rogue-trader    ""     -> RULES.COMBAT_FIRE_MODE_BONUS_BURST  (incumbent)
+ *   dark-heresy-2e  "dh"   -> RULES.DH.COMBAT_STANDARD_ATTACK_BONUS
+ *
+ * The prefix namespaces the i18n LABELS, not the knob IDS: an id is the stored
+ * delta key and its first segment is its group, so prefixing ids would rename
+ * released worlds' deltas and break that invariant. Two systems may therefore
+ * still register the same id — but only for the same rule, and a same-rule id
+ * may deliberately co-own one book-neutral label. `knobNameConflicts` below is
+ * the guard that makes any other overlap (an id with a different meaning, a
+ * label outside its owner's prefix, a name shadowing another by dotted prefix)
+ * fail loudly; src/ffg/domain/rule-knobs-namespaces.test.ts pins the shipped
+ * registries against it.
+ *
+ * Bare literals cannot trip the i18n parity guard, which only matches
+ * localize()/format()/t() call ARGUMENTS; the derived shape still matches that
+ * guard's KEY_SHAPE so its calls stay green.
  *
  * WHOSE REGISTRY (bead w9sa.2)
  * ---------------------------
@@ -157,23 +171,66 @@ export const RULE_KNOBS_EXCLUDED_KEYS: readonly string[] = [
 /** camelCase humps split so fireModeBonus reads as FIRE_MODE_BONUS. */
 const CAMEL_HUMP = /([a-z0-9])([A-Z])/g;
 
-/** "combat.fireModeBonus.burst" -> "RULES.COMBAT_FIRE_MODE_BONUS_BURST". */
-export function labelKeyFor(key: string): string {
+/**
+ * Rogue Trader's knob i18n prefix — the EMPTY one, i.e. the un-prefixed flat
+ * `RULES.<WORDS>` namespace.
+ *
+ * RT is the INCUMBENT of that namespace and stays there: its label keys ship in
+ * all four language files and its knob ids are the delta keys stored in
+ * released worlds, so prefixing RT would rename both (bead w9sa.11). A sibling
+ * system declares its OWN prefix instead (Dark Heresy 2e: `"dh"`), and exactly
+ * one registry may claim each prefix — `knobNameConflicts` enforces it.
+ */
+export const RT_KNOB_I18N_PREFIX = "";
+
+/**
+ * One UPPER_SNAKE prefix segment plus its dot, or "" — never a dotted prefix:
+ * `RULES.DH.X` already gives DH2 a namespace without inventing the bare key
+ * `RULES.DH`, which would make every one of its labels a child of that key and
+ * trip the expandObject constraint below.
+ */
+function prefixSegment(i18nPrefix: string): string {
+	const trimmed = i18nPrefix.trim();
+	if (trimmed === "") return "";
+	if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(trimmed)) {
+		throw new RangeError(
+			`i18n prefix "${i18nPrefix}" is not one key segment — letters, digits, "_" or "-", no dots: a dotted prefix would nest every label under an intermediate key, which foundry.utils.expandObject rejects`,
+		);
+	}
+	return `${trimmed.toUpperCase()}.`;
+}
+
+/**
+ * The label key for a knob of the system whose prefix is `i18nPrefix`:
+ *
+ *   labelKeyFor("combat.fireModeBonus.burst")          -> RULES.COMBAT_FIRE_MODE_BONUS_BURST
+ *   labelKeyFor("combat.standardAttackBonus", "dh")   -> RULES.DH.COMBAT_STANDARD_ATTACK_BONUS
+ *
+ * The default is RT's incumbent, un-prefixed namespace, so RT's labels are the
+ * same strings they always were.
+ */
+export function labelKeyFor(
+	key: string,
+	i18nPrefix: string = RT_KNOB_I18N_PREFIX,
+): string {
 	const words = key
 		.replace(CAMEL_HUMP, "$1_$2")
 		.replaceAll(".", "_")
 		.replaceAll("-", "_");
-	return `RULES.${words.toUpperCase()}`;
+	return `RULES.${prefixSegment(i18nPrefix)}${words.toUpperCase()}`;
 }
 
 /** The sibling hint key: "..._BURST" -> "RULES.COMBAT_FIRE_MODE_BONUS_BURST_HINT". */
-export function hintKeyFor(key: string): string {
+export function hintKeyFor(
+	key: string,
+	i18nPrefix: string = RT_KNOB_I18N_PREFIX,
+): string {
 	// "_HINT" suffix, not a ".HINT" child: Foundry loads lang files through
 	// foundry.utils.expandObject, which throws when a key is a dotted prefix of
 	// another (label leaf + "X.HINT" child) and swallows the error — dropping
 	// the ENTIRE package dictionary, every sheet rendering raw keys. Keep
 	// label + hint separate LEAVES (foundry.utils.Localization#loadTranslationFile).
-	return `${labelKeyFor(key)}_HINT`;
+	return `${labelKeyFor(key, i18nPrefix)}_HINT`;
 }
 
 // ---------------------------------------------------------------------------
@@ -498,6 +555,15 @@ export const RULE_KNOB_KEYS: readonly string[] = RULE_KNOBS.map(
 export interface RuleKnobRegistry {
 	/** The Foundry system id this registry belongs to, e.g. "rogue-trader". */
 	readonly systemId: string;
+	/**
+	 * The prefix that namespaces this system's derived i18n LABELS (bead
+	 * w9sa.11): `""` for the incumbent flat `RULES.<WORDS>` namespace (Rogue
+	 * Trader), `"dh"` for `RULES.DH.<WORDS>` (Dark Heresy 2e). It is NOT applied
+	 * to the knob IDS — those are the stored delta keys, and their first segment
+	 * is the knob's group. See `labelKeyFor`, and `knobNameConflicts` for the
+	 * guard that keeps two systems from sharing a namespace.
+	 */
+	readonly i18nPrefix: string;
 	/** Every GM-tunable knob, grouped by section, in display order. */
 	readonly knobs: readonly RuleKnob[];
 }
@@ -528,6 +594,9 @@ export function ruleProfilePackKindFor(systemId: string): string {
 /** Rogue Trader's registry: its system id over its own knobs. */
 export const RT_RULE_KNOB_REGISTRY: RuleKnobRegistry = {
 	systemId: RT_SYSTEM_ID,
+	// RT owns the un-prefixed flat namespace: its labels and its stored delta
+	// keys predate the per-system scheme and must not be renamed (bead w9sa.11).
+	i18nPrefix: RT_KNOB_I18N_PREFIX,
 	knobs: RULE_KNOBS,
 };
 
@@ -814,4 +883,231 @@ export function validateProfile(
 		value[key] = raw;
 	}
 	return { valid: errors.length === 0, errors, value };
+}
+
+// ---------------------------------------------------------------------------
+// No sibling names (bead w9sa.11)
+// ---------------------------------------------------------------------------
+
+/**
+ * The i18n namespace a prefix owns, for messages and guard assertions:
+ * `""` -> "RULES." (RT's incumbent flat namespace), `"dh"` -> "RULES.DH.".
+ */
+export function knobLabelNamespace(i18nPrefix: string): string {
+	return `RULES.${prefixSegment(i18nPrefix)}`;
+}
+
+/** One way two systems' knob names collide. */
+export interface KnobNameConflict {
+	/** Which rule the pair broke, so a test can pin the failure BY KIND. */
+	readonly kind:
+		| "duplicate-system"
+		| "duplicate-prefix"
+		| "duplicate-knob-id"
+		| "duplicate-label"
+		| "duplicate-hint"
+		| "foreign-label"
+		| "shared-knob-differs"
+		| "shared-label"
+		| "shadowed-name";
+	/** The systems involved, in registry order (one for a within-system clash). */
+	readonly systems: readonly string[];
+	/** The names involved: the knob id and/or the i18n key(s). */
+	readonly names: readonly string[];
+	/** One English sentence naming both systems and the offending name. */
+	readonly message: string;
+}
+
+/**
+ * The parts of a knob that say WHICH RULE it is. The VALUE may legitimately
+ * differ between books (that is why each system's `coreValue` is read from its
+ * own profile); the rule a shared id names may not.
+ */
+function ruleShape(knob: RuleKnob): string {
+	return JSON.stringify([
+		knob.group,
+		knob.control,
+		knob.options ?? [],
+		knob.nullable ?? false,
+		knob.path,
+	]);
+}
+
+/**
+ * The no-sibling-names guard: everything that could make two systems' knob
+ * names collide, as English sentences naming both systems and the name.
+ *
+ * A registry is a system's own authored data, so nothing can throw at import
+ * time; the guard is a PURE FUNCTION a test (and a future boot-time check) runs
+ * over the shipped registries. `[]` means the systems are cleanly separated:
+ *
+ *   - one registry per system id, one registry per i18n prefix ("" is RT's);
+ *   - no registry repeats its own knob id, label key or hint key;
+ *   - every label and hint lives under the OWNING system's prefix, unless the
+ *     knob id is in `sharedKnobIds`;
+ *   - an i18n key held by two systems must belong to ONE knob id that is in
+ *     `sharedKnobIds` — the deliberate, book-neutral co-ownership — so a copy
+ *     of another system's label under a new id fails loudly;
+ *   - two systems that share an id must be describing the SAME rule (group,
+ *     control, options, nullability and profile path agree) — a shared id with
+ *     a different meaning fails loudly;
+ *   - no name is a dotted prefix of another (foundry.utils.expandObject would
+ *     reject the pair and drop the whole dictionary).
+ *
+ * `sharedKnobIds` is the caller's documented allow-list, so a NEW shared rule
+ * is a deliberate edit to the guard's data, never an accident. The shipped
+ * list is pinned by src/ffg/domain/rule-knobs-namespaces.test.ts.
+ */
+export function knobNameConflicts(
+	registries: readonly RuleKnobRegistry[],
+	sharedKnobIds: readonly string[] = [],
+): readonly KnobNameConflict[] {
+	const conflicts: KnobNameConflict[] = [];
+	const systemOwner = new Map<string, string>();
+	const prefixOwner = new Map<string, string>();
+
+	for (const registry of registries) {
+		const system = registry.systemId;
+
+		const sameSystem = systemOwner.get(system);
+		if (sameSystem !== undefined) {
+			conflicts.push({
+				kind: "duplicate-system",
+				systems: [sameSystem, system],
+				names: [system],
+				message: `two registries claim the system id "${system}" — one system, one registry`,
+			});
+		} else {
+			systemOwner.set(system, system);
+		}
+
+		const prefix = registry.i18nPrefix;
+		// Keyed on the NAMESPACE, not the raw string: "dh", "DH" and "dh " all
+		// produce RULES.DH.* and must therefore be the same claim.
+		const namespace = knobLabelNamespace(prefix);
+		const prefixOwnerOf = prefixOwner.get(namespace);
+		if (prefixOwnerOf !== undefined) {
+			conflicts.push({
+				kind: "duplicate-prefix",
+				systems: [prefixOwnerOf, system],
+				names: [knobLabelNamespace(prefix)],
+				message: `"${prefixOwnerOf}" and "${system}" both claim the knob i18n prefix "${prefix}" (${knobLabelNamespace(prefix)}) — one namespace per system, and the empty one is the incumbent's`,
+			});
+		} else {
+			prefixOwner.set(namespace, system);
+		}
+
+		// Names repeated INSIDE one registry: ids, labels, hints.
+		const pickers = [
+			["duplicate-knob-id", "knob id", (knob: RuleKnob) => knob.key],
+			["duplicate-label", "label key", (knob: RuleKnob) => knob.labelKey],
+			["duplicate-hint", "hint key", (knob: RuleKnob) => knob.hintKey],
+		] as const;
+		for (const [kind, what, pick] of pickers) {
+			const seen = new Map<string, string>();
+			for (const knob of registry.knobs) {
+				const name = pick(knob);
+				const first = seen.get(name);
+				if (first === undefined) {
+					seen.set(name, knob.key);
+					continue;
+				}
+				conflicts.push({
+					kind,
+					systems: [system],
+					names: [name, first],
+					message: `${system} registers the ${what} "${name}" twice ("${first}" and "${knob.key}")`,
+				});
+			}
+		}
+
+		// A label lives under its OWN prefix unless the id is deliberately shared.
+		for (const knob of registry.knobs) {
+			if (sharedKnobIds.includes(knob.key)) continue;
+			const expected = [
+				["label", labelKeyFor(knob.key, prefix), knob.labelKey],
+				["hint", hintKeyFor(knob.key, prefix), knob.hintKey],
+			] as const;
+			for (const [what, own, actual] of expected) {
+				if (actual === own) continue;
+				conflicts.push({
+					kind: "foreign-label",
+					systems: [system],
+					names: [actual, knob.key],
+					message: `${system}'s ${what} key for "${knob.key}" is "${actual}", outside its own namespace ("${own}") — labels live under the owning system's prefix`,
+				});
+			}
+		}
+	}
+
+	// Every i18n name and who holds it.
+	const holders = new Map<string, Array<{ system: string; knob: RuleKnob }>>();
+	for (const registry of registries) {
+		for (const knob of registry.knobs) {
+			for (const name of [knob.labelKey, knob.hintKey]) {
+				const list = holders.get(name);
+				if (list) list.push({ system: registry.systemId, knob });
+				else holders.set(name, [{ system: registry.systemId, knob }]);
+			}
+		}
+	}
+
+	for (const [name, list] of holders) {
+		const systems = [...new Set(list.map((holder) => holder.system))];
+		// A repeat inside ONE system is the duplicate check's finding above; this
+		// one is about two different systems.
+		if (systems.length < 2) continue;
+		const ids = [...new Set(list.map((holder) => holder.knob.key))];
+		if (ids.length === 1 && sharedKnobIds.includes(ids[0])) continue;
+		conflicts.push({
+			kind: "shared-label",
+			systems,
+			names: [name, ...ids],
+			message: `the i18n key "${name}" is claimed by ${systems.join(" and ")} (${ids.join(", ")}) — a label may be shared only by ONE knob id listed as deliberately shared, and every other label lives under its owner's prefix`,
+		});
+	}
+
+	// Dotted-prefix shadowing, the expandObject hazard, across every name.
+	const names = [...holders.keys()];
+	for (const shorter of names) {
+		for (const longer of names) {
+			if (shorter === longer || !longer.startsWith(`${shorter}.`)) continue;
+			const shorterHolders = holders.get(shorter) ?? [];
+			const longerHolders = holders.get(longer) ?? [];
+			conflicts.push({
+				kind: "shadowed-name",
+				systems: [
+					...new Set(
+						[...shorterHolders, ...longerHolders].map(
+							(holder) => holder.system,
+						),
+					),
+				],
+				names: [shorter, longer],
+				message: `"${shorter}" is a dotted prefix of "${longer}" — foundry.utils.expandObject rejects that pair and drops the whole dictionary`,
+			});
+		}
+	}
+
+	// The same id in two systems must be the SAME RULE (values may differ).
+	for (let i = 0; i < registries.length; i++) {
+		for (let j = i + 1; j < registries.length; j++) {
+			const mine = registries[i];
+			const theirs = registries[j];
+			for (const knob of mine.knobs) {
+				if (!sharedKnobIds.includes(knob.key)) continue;
+				const other = findKnob(theirs.knobs, knob.key);
+				if (!other) continue;
+				if (ruleShape(knob) === ruleShape(other)) continue;
+				conflicts.push({
+					kind: "shared-knob-differs",
+					systems: [mine.systemId, theirs.systemId],
+					names: [knob.key],
+					message: `"${mine.systemId}" and "${theirs.systemId}" both register the knob id "${knob.key}" but for different rules (${ruleShape(knob)} vs ${ruleShape(other)}) — a shared id must name the same rule in both books`,
+				});
+			}
+		}
+	}
+
+	return conflicts;
 }

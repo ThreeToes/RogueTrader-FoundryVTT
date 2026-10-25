@@ -439,6 +439,10 @@ describe("drift guards — the shipped core values", () => {
 ];
 const SIBLING_REGISTRY: RuleKnobRegistry = {
 	systemId: "dark-heresy-2e",
+	// A test fake, not a shipped system: it reuses the incumbent flat namespace
+	// so its hand-written label literals stay valid (bead w9sa.11 namespaces
+	// real registries; the no-sibling-names guard runs over those only).
+	i18nPrefix: "",
 	knobs: SIBLING_KNOBS,
 };
 

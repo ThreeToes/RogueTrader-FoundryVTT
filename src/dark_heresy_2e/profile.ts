@@ -16,6 +16,10 @@
  */
 
 import type { ConfigProfile } from "../ffg/application/ports";
+import {
+	type CharacteristicRegistry,
+	characteristicRegistryFor,
+} from "../ffg/domain/model/characteristic-registry";
 import { DH2_SYSTEM_ID } from "../ffg/domain/rule-knobs-dark-heresy";
 import type { SystemBranding } from "../ffg/domain/system-profile";
 import type { DarkHeresyProfile } from "../ffg/domain/system-profile-dark-heresy";
@@ -54,6 +58,23 @@ export const DARK_HERESY_ROLL_CARD_TEMPLATE = `${templateRootFor(DH2_SYSTEM_ID)}
  * honest null. Set the id here, once, when the DH2 rolltables pack exists.
  */
 export const DARK_HERESY_ROLLTABLES_PACK: string | null = null;
+
+/**
+ * DH2's characteristic vocabulary as a REGISTRY (bead w9sa.10).
+ *
+ * The ten keys are NOT restated here: `dh2Core.characteristics` declares them
+ * (Influence last, printed pp21-22) and this registry is the typed, bound view
+ * the shared machinery reads — the same derivation RT's own registry uses, so
+ * the Character schema, the label map and the `characteristicChoices` getters
+ * gain DH2's tenth characteristic without one shared file learning DH2 exists.
+ *
+ * Influence changes dynamically and is NOT advanceable (printed p22, p268),
+ * which is a property of the ADVANCE allow-list
+ * (`DH2_CHARACTERISTIC_APTITUDES`, nine keys), never of this vocabulary: the
+ * registry says what a character HAS, the aptitude map says what can be bought.
+ */
+export const DARK_HERESY_CHARACTERISTIC_REGISTRY: CharacteristicRegistry =
+	characteristicRegistryFor(DH2_SYSTEM_ID, dh2Core);
 
 /**
  * The DH2 shape of the config port's contract, WITHOUT a cast.

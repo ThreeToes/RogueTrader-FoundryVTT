@@ -7,23 +7,25 @@
  * rather than what it rendered:
  *
  *   - the entry point Foundry loads registers exactly one init hook;
- *   - firing init installs DH2's registry and DH2's profile through the SAME
- *     shared registrars RT uses (no forked seam, no RT file touched);
+ *   - firing init installs DH2's registry, DH2's characteristic vocabulary and
+ *     DH2's profile through the SAME shared registrars RT uses (no forked seam,
+ *     no RT file touched);
  *   - the active profile is `dh2Core` plus DH2's branding — RT's constants are
- *     absent, not defaulted;
+ *     absent, not defaulted; the active characteristic vocabulary is the book's
+ *     ten (Influence last), not RT's nine;
  *   - the shared consumers (chat-flag namespace, the kernel resolvers) read
  *     DH2's values through the port;
  *   - the DH2 module graph reaches ONLY the shared core and its own module,
  *     never `src/roguetrader` (the epic hr6r no-fork guarantee).
  *
  * PROCESS HYGIENE (the reason for the saves below): bun runs every suite in ONE
- * process, and both seams this boot claims are module-level state. The knob
- * registry has an official reset; the config seam does not, so the previous
- * values are captured and handed back on the way out. A leaked DH2 override
- * would retune every RT suite that runs afterwards.
+ * process, and every seam this boot claims is module-level state. The knob and
+ * characteristic registries have official resets; the config seam does not, so
+ * the previous values are captured and handed back on the way out. A leaked
+ * DH2 override would retune every RT suite that runs afterwards.
  */
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
@@ -82,10 +84,19 @@ const {
 const {
 	DARK_HERESY_RULE_KNOBS,
 	DARK_HERESY_RULE_KNOB_REGISTRY,
+	DH2_KNOB_I18N_PREFIX,
 	DH2_SYSTEM_ID,
 } = await import("../../ffg/domain/rule-knobs-dark-heresy");
 const { dh2Core } = await import("../../ffg/domain/system-profile-dark-heresy");
 const {
+	characteristicChoices,
+	characteristicKeys,
+	characteristicRegistry,
+	resetCharacteristicRegistryForTests,
+	RT_CHARACTERISTIC_REGISTRY,
+} = await import("../../ffg/domain/model/characteristic-registry");
+const {
+	DARK_HERESY_CHARACTERISTIC_REGISTRY,
 	DARK_HERESY_PROFILE,
 	DARK_HERESY_ROLLTABLES_PACK,
 	DARK_HERESY_ROLL_CARD_TEMPLATE,
@@ -100,6 +111,7 @@ const previousPackIds = foundryPorts.config.packIds();
 
 function restoreSharedSeams(): void {
 	resetRuleKnobRegistryForTests();
+	resetCharacteristicRegistryForTests();
 	// The config seam has no reset (unlike the knob registry's), so the previous
 	// values are handed back through it. Observationally identical: the same
 	// profile object and the same pack ids are what the port resolves before and
@@ -181,6 +193,46 @@ describe("the DH2 entry point (bead w9sa.4)", () => {
 		fire("init");
 		expect(ruleKnobRegistry()).toBe(DARK_HERESY_RULE_KNOB_REGISTRY);
 		expect(foundryPorts.config.profile()).toBe(DARK_HERESY_PROFILE);
+		expect(characteristicRegistry()).toBe(DARK_HERESY_CHARACTERISTIC_REGISTRY);
+	});
+});
+
+describe("the characteristic registry a DH2 world runs on (bead w9sa.10)", () => {
+	// Independent of suite order: this describe reads module state, so boot it.
+	beforeAll(() => {
+		fire("init");
+	});
+
+	test("DH2's registry is the ACTIVE one, and it is not RT's", () => {
+		const registry = characteristicRegistry();
+		expect(registry).toBe(DARK_HERESY_CHARACTERISTIC_REGISTRY);
+		expect(registry).not.toBe(RT_CHARACTERISTIC_REGISTRY);
+		expect(registry.systemId).toBe(DH2_SYSTEM_ID);
+	});
+
+	test("the vocabulary is the book's TEN, Influence last, derived from dh2Core", () => {
+		// Nothing is restated: the registry is the profile's declaration, bound.
+		expect(characteristicKeys()).toEqual(dh2Core.characteristics.keys);
+		expect(characteristicKeys()).toEqual([
+			"ws",
+			"bs",
+			"s",
+			"t",
+			"ag",
+			"int",
+			"per",
+			"wp",
+			"fel",
+			"ifl",
+		]);
+		expect(characteristicKeys().at(-1)).toBe("ifl");
+	});
+
+	test("the generated label map carries Influence's short label", () => {
+		const choices = characteristicChoices();
+		expect(choices.ifl).toBe("CHARACTERISTIC.IFL");
+		expect(Object.keys(choices)).toHaveLength(10);
+		expect(choices.ws).toBe("CHARACTERISTIC.WS");
 	});
 });
 
@@ -189,6 +241,10 @@ describe("the knob registry a DH2 world runs on", () => {
 		expect(ruleKnobRegistry()).toBe(DARK_HERESY_RULE_KNOB_REGISTRY);
 		expect(ruleKnobRegistry().systemId).toBe(DH2_SYSTEM_ID);
 		expect(ruleKnobRegistry().systemId).not.toBe(RT_SYSTEM_ID);
+		// Bead w9sa.11: the active registry also brings its own i18n namespace,
+		// so the labels a DH2 world renders cannot land in RT's released family.
+		expect(ruleKnobRegistry().i18nPrefix).toBe(DH2_KNOB_I18N_PREFIX);
+		expect(ruleKnobRegistry().i18nPrefix).toBe("dh");
 		expect(ruleKnobs()).toBe(DARK_HERESY_RULE_KNOBS);
 		expect(ruleKnobs().length).toBeGreaterThan(0);
 	});

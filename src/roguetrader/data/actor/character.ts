@@ -10,6 +10,7 @@
 
 import type { CharacteristicItemIn } from "../../../ffg/domain/effects";
 import { collectCharacteristicDelta } from "../../../ffg/domain/effects";
+import { characteristicKeys } from "../../../ffg/domain/model/characteristic-registry";
 import { MAX_CRITICAL_SEVERITY } from "../../../rules-engine/index";
 import { careers, sorceryRanks } from "../../registry";
 import {
@@ -151,17 +152,17 @@ export class Character extends foundry.abstract.TypeDataModel<
 			});
 
 		return {
-			characteristics: new foundry.data.fields.SchemaField({
-				ws: characteristic(),
-				bs: characteristic(),
-				s: characteristic(),
-				t: characteristic(),
-				ag: characteristic(),
-				int: characteristic(),
-				per: characteristic(),
-				wp: characteristic(),
-				fel: characteristic(),
-			}),
+			/**
+			 * One stored value per characteristic the ACTIVE system declares (bead
+			 * w9sa.10): Rogue Trader's nine, or a sibling's vocabulary (DH2 adds
+			 * Influence, `ifl`). The keys come from the characteristic registry, so
+			 * the schema can never disagree with the label map and the pickers.
+			 */
+			characteristics: new foundry.data.fields.SchemaField(
+				Object.fromEntries(
+					characteristicKeys().map((key) => [key, characteristic()]),
+				),
+			),
 			wounds: new foundry.data.fields.SchemaField({
 				value: new foundry.data.fields.NumberField({
 					min: 0,

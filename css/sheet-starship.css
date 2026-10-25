@@ -105,8 +105,10 @@
 	grid-template-columns: auto 1fr;
 }
 
+/* Portrait step: the shared portrait base (sheet-gear.css, bead io7g)
+   supplies the box sizing; the hull header only caps it lower. */
 .rogue-trader.sheet.starship .header-grid .profile-img {
-	max-height: 120px;
+	--rt-portrait-max: 120px;
 }
 
 /* Snapshot: ONE muted line under the header identity. */

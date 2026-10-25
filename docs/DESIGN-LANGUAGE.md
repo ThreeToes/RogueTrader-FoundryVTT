@@ -118,6 +118,17 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
   (`.sc-initiative`, `.sc-default-manoeuvre`, `.sc-repair`, the
   `rt-creator-nav-back`/`forward` pair keeping their `min-width` floors)
   inherit the base as-is.
+- **Icon-button slot** (ONE base rule — bead io7g, shared-sheet block of
+  css/sheet-gear.css): the centred square glyph slot behind the roll
+  anchors and row actions — `.char-roll`, `.skill-roll`, `.skill-delete`,
+  `.inv-leading`/`.inv-grab`/`.inv-delete`/`.inv-pack-link`/`.equip-toggle`,
+  `.weapon-roll`/`.damage-roll`, the pickers' `.add-row`, the creator's
+  roll/reroll anchors and the test dialog's `.modifier-remove`. The base
+  carries ONLY geometry (`width: var(--rt-icon-slot-w)`, 1.5em default, and
+  `text-align: center`); colour, cursor, hover and `flex: none` stay per
+  site, and the compact 1.2em step is a `--rt-icon-slot-w` override at the
+  site. Bordered steppers (`.alloc-btn`, `.bump`) and the inert
+  `.action-roll-hint` reserved slot are NOT members.
 - **Creator wizard frame** (bead j9so): ONE shared frame in
   `css/40k-components.css` for the four creators (character, ship, planet,
   warrant — all route through `CreatorApplication`, all carry
@@ -198,6 +209,14 @@ fold into xs, 0.78/0.8 into sm, 0.92/0.95 into lg). Corner radii:
   `2.5em`, weights `4em`, centered. A wider sibling of a tokenised width needs
   a named modifier class that says WHY (the htu1 modifier pattern); dangling
   overrides for content that no longer renders are dead CSS — delete them.
+- **Portrait + icon-slot sizes** (bead io7g, sheet-gear token block): the
+  header portrait is ONE base rule (`.header-grid .profile-img` plus the
+  compact item-header icon, which re-pins its fixed 48px square) whose
+  `max-height` is `var(--rt-portrait-max)` — 160px default, 150px on the
+  character header, 120px on the starship hull header, each overriding the
+  token at its own site instead of re-declaring the box sizing. The
+  icon-slot width is `var(--rt-icon-slot-w)` (1.5em; 1.2em for the compact
+  row actions).
 
 ## i18n
 

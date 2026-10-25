@@ -104,12 +104,12 @@
 
 /* Characteristic roll button on character sheets. Scoped to all sheets:
    the rt/combat-weapon-row component (bead wiy0) renders .char-roll anchors
-   on the NPC main tab too, and the PC styling is the base. */
+   on the NPC main tab too, and the PC styling is the base. The slot geometry
+   (1.5em, centred) comes from the shared icon-button slot base in
+   sheet-gear.css (bead io7g); only the palette line stays here. */
 
 .rogue-trader.sheet .char-roll {
 	flex: none;
-	width: 1.5em;
-	text-align: center;
 	color: var(--rt-gold);
 	cursor: pointer;
 }
@@ -136,8 +136,6 @@
 }
 
 .rogue-trader.sheet.character .skill-delete {
-	width: 1.5em;
-	text-align: center;
 	color: var(--rt-danger);
 	cursor: pointer;
 }
@@ -165,8 +163,6 @@
    css/40k-components.css). */
 
 .rogue-trader.sheet.character .skill-roll {
-	width: 1.5em;
-	text-align: center;
 	color: var(--rt-gold);
 	cursor: pointer;
 }
@@ -283,7 +279,14 @@
 	opacity: 0.45;
 }
 
-.rogue-trader.sheet.character .untrained-hint {
+/* Empty-state hint. NOT scoped to the character sheet (bead io7g): the same
+   class renders in the combat / psychic / background / vehicle tabs, in the
+   shared effect-editor partial used by every item sheet, and in the
+   advancement dialog and psychic picker — all of them carry the
+   .rogue-trader root (the pickers as .sheet.<slug>, the dialog as
+   .dialog.advancement-dialog). Values are unchanged, so the character-sheet
+   look is identical; no competing rule targets this class. */
+.rogue-trader .untrained-hint {
 	font-size: var(--rt-fs-sm);
 	color: var(--rt-muted);
 	margin-top: 6px;
@@ -505,12 +508,8 @@
 	opacity: 0.4;
 }
 
-.rogue-trader .character-creator .roll-btn,
-.rogue-trader .character-creator .reroll-btn {
-	width: 1.5em;
-	text-align: center;
-}
-
+/* The creator's roll/reroll anchors ride the shared icon-button slot base
+   (sheet-gear.css, bead io7g) — the 1.5em centred slot needs no site copy. */
 .rogue-trader .character-creator .roll-btn.dim {
 	opacity: 0.4;
 }
@@ -1164,8 +1163,7 @@
 }
 
 .test-dialog-app .test-dialog .modifier-remove {
-	width: 1.2em;
-	text-align: center;
+	--rt-icon-slot-w: 1.2em;
 	color: var(--rt-danger);
 	cursor: pointer;
 }
@@ -1335,8 +1333,6 @@
 .rogue-trader .psychic-picker .add-row {
 	cursor: pointer;
 	color: var(--rt-gold);
-	width: 1.5em;
-	text-align: center;
 }
 
 .rogue-trader .skill-picker form.custom {
@@ -1406,9 +1402,8 @@
 }
 
 .rogue-trader.sheet .inv-grab {
+	--rt-icon-slot-w: 1.2em;
 	color: var(--rt-muted);
-	width: 1.2em;
-	text-align: center;
 }
 
 .rogue-trader.sheet .inv-name {
@@ -1430,8 +1425,7 @@
 }
 
 .rogue-trader.sheet .inv-delete {
-	width: 1.2em;
-	text-align: center;
+	--rt-icon-slot-w: 1.2em;
 	color: var(--rt-muted);
 	cursor: pointer;
 }
@@ -1444,8 +1438,6 @@
    dice): 1.5em centred slot before the name, gold on hover. */
 .rogue-trader.sheet .inv-row .inv-leading {
 	flex: none;
-	width: 1.5em;
-	text-align: center;
 	color: var(--rt-gold);
 	cursor: pointer;
 }
@@ -1456,8 +1448,7 @@
 
 /* Bead oaaz: compendium link (book icon) next to talent rows. */
 .rogue-trader.sheet.character .inv-pack-link {
-	width: 1.2em;
-	text-align: center;
+	--rt-icon-slot-w: 1.2em;
 	color: var(--rt-muted);
 	cursor: pointer;
 }
@@ -1502,9 +1493,11 @@
 	color: var(--rt-muted);
 }
 
+/* Both weapon anchors keep only their no-shrink; the shared slot base
+   supplies the 1.5em width (bead io7g), and their centring already comes
+   from .char-roll (combat row) or .inv-leading (inventory row). */
 .rogue-trader.sheet .weapon-roll {
 	flex: none;
-	width: 1.5em;
 }
 
 /* Unequipped weapons: the attack icon is dimmed until carried (bead 05m). */
@@ -1515,7 +1508,6 @@
 /* Quick damage-roll button on the combat tab weapon rows. */
 .rogue-trader.sheet .damage-roll {
 	flex: none;
-	width: 1.5em;
 }
 
 .rogue-trader.sheet .weapon-stat {

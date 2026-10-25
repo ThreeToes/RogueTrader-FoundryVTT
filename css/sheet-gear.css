@@ -52,6 +52,13 @@
 	   "Sizing rules". A deliberately wider sibling needs a documented
 	   named modifier, not a second hard-coded width. */
 	--rt-input-value-w: 3.5em;
+	/* Slot + portrait sizing (bead io7g): the shared centred-icon slot width
+	   (sites on the compact step override it to 1.2em) and the header
+	   portrait max-height cap (the character/starship headers override the
+	   step) — see DESIGN-LANGUAGE "Component vocabulary" and "Sizing
+	   rules". */
+	--rt-icon-slot-w: 1.5em;
+	--rt-portrait-max: 160px;
 }
 
 /* Shared chip base + both checked treatments (bead 6zha) now live in the
@@ -134,11 +141,16 @@
 	padding: 6px 8px;
 }
 
+/* The compact header icon rides the shared portrait base below (border box
+   normalisation) and re-pins the fixed square: a cropped 48px thumbnail,
+   NOT a max-constrained portrait (bead io7g). Every override here undoes a
+   base declaration, which is why the two anatomies stay one rule + one
+   modifier rather than two rule bodies. */
 .rogue-trader.sheet .header.compact .profile-img {
+	max-width: none;
 	width: 48px;
 	height: 48px;
 	object-fit: cover;
-	border: none;
 	flex: none;
 }
 
@@ -176,7 +188,7 @@
 }
 
 .rogue-trader.sheet.character .header-grid .profile-img {
-	max-height: 150px;
+	--rt-portrait-max: 150px;
 }
 
 /* .header-grid .header-portrait centring comes from the shared portrait
@@ -254,9 +266,16 @@
 	justify-content: center;
 }
 
-.rogue-trader.sheet .header-grid .profile-img {
+/* Portrait BASE (bead io7g): ONE sizing rule for the max-constrained,
+   contain-fit portrait — the header-grid portrait plus the compact item
+   header icon (which re-pins its fixed square in the modifier above). The
+   cap is a token so a header that wants a smaller portrait overrides
+   --rt-portrait-max at its own site (character 150px, starship 120px)
+   instead of re-declaring the box sizing. */
+.rogue-trader.sheet .header-grid .profile-img,
+.rogue-trader.sheet .header.compact .profile-img {
 	max-width: 100%;
-	max-height: 160px;
+	max-height: var(--rt-portrait-max);
 	width: auto;
 	height: auto;
 	object-fit: contain;
@@ -756,8 +775,6 @@
 /* Equip toggle in inventory rows (bead 05m): ready state glows, stowed dims. */
 .rogue-trader.sheet .inv-row .equip-toggle {
 	flex: none;
-	width: 1.5em;
-	text-align: center;
 	color: var(--rt-muted-faint);
 }
 
@@ -813,6 +830,36 @@
 	font-size: var(--rt-fs-lg);
 	text-transform: uppercase;
 	color: var(--rt-muted);
+}
+
+/* Icon-button slot BASE (bead io7g): ONE geometry for the centred square
+   icon slot family — a fixed em width plus a centred glyph. Every site
+   keeps its original selector here (no template change), so specificity is
+   unchanged; the per-site rules keep only their colour / cursor / hover
+   deltas and the compact step as a --rt-icon-slot-w override. Deliberately
+   NOT in the base: `flex: none` (the rows that need it declare it; adding
+   it elsewhere would change shrink behaviour) and `color` (the family spans
+   the gold roll anchors, the muted row actions and the red deletes — the
+   palette line stays at the site). Not in the family: the bordered steppers
+   (.alloc-btn, .bump) and .action-roll-hint (an inert reserved slot, not a
+   button). */
+.rogue-trader.sheet .char-roll,
+.rogue-trader.sheet.character .skill-roll,
+.rogue-trader.sheet.character .skill-delete,
+.rogue-trader.sheet.character .inv-pack-link,
+.rogue-trader.sheet .inv-grab,
+.rogue-trader.sheet .inv-delete,
+.rogue-trader.sheet .inv-row .inv-leading,
+.rogue-trader.sheet .inv-row .equip-toggle,
+.rogue-trader.sheet .weapon-roll,
+.rogue-trader.sheet .damage-roll,
+.rogue-trader .skill-picker .add-row,
+.rogue-trader .psychic-picker .add-row,
+.rogue-trader .character-creator .roll-btn,
+.rogue-trader .character-creator .reroll-btn,
+.test-dialog-app .test-dialog .modifier-remove {
+	width: var(--rt-icon-slot-w);
+	text-align: center;
 }
 
 .rogue-trader.sheet .traits-row {

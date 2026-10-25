@@ -40,22 +40,30 @@ const { getPorts, resetPorts, setPorts } = await import(
 	"../infrastructure/foundry/ports"
 );
 const { applyDamageFromCard } = await import("./chat-actions");
+const { actorFixture, actorUpdateLog } = await import(
+	"../../test-helpers/actor-fixture"
+);
 
 const NAMESPACE = "rogue-trader";
 
-/** A victim actor: records the update payloads handed to actor.update. */
+/**
+ * A victim actor from the shared fixture: `recordUpdates` logs every write
+ * handed to actor.update, which is this suite's apply-once assertion surface.
+ * The fixture is ANONYMOUS (`name: null`) on purpose — the ownership refusal
+ * copy falls back to the uuid, and the warn assertions pin that fallback.
+ */
 function fakeVictim(startingWounds = 5) {
-	const updates: Array<Record<string, unknown>> = [];
-	return {
-		actor: {
-			system: { wounds: { value: startingWounds, max: 10 } },
-			isOwner: true,
-			update: async (data: object) => {
-				updates.push(data as Record<string, unknown>);
-			},
-		},
-		updates,
+	const actor = actorFixture({
+		uuid: "Actor.victim",
+		name: null,
+		isOwner: true,
+		recordUpdates: true,
+		system: { wounds: { value: startingWounds, max: 10 } },
+	}) as unknown as {
+		system: { wounds: { value: number; max: number } };
+		isOwner: boolean;
 	};
+	return { actor, updates: actorUpdateLog(actor) };
 }
 
 interface FakeMessage {

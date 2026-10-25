@@ -21,9 +21,16 @@ import {
 	postPowerDamage,
 	rollPhenomena,
 } from "./psychic-support";
+import { actorFixture } from "../../../test-helpers/actor-fixture";
 
 const cards: string[] = [];
 const varsOf: Array<Record<string, unknown>> = [];
+
+/**
+ * The caster: the shared actor fixture (an owned document). These paths only
+ * write through the ports' fakes, so the document itself stays non-writable.
+ */
+const psyker = () => actorFixture({ name: "Psyker" });
 
 afterEach(() => {
 	resetPorts();
@@ -66,7 +73,7 @@ function portsWith(find: ContentPort["find"]) {
 describe("rollPhenomena reads the table through the content port (bead xkad)", () => {
 	test("a missing table still posts the roll plus the manual-apply note", async () => {
 		setPorts(portsWith(async () => null));
-		await rollPhenomena({ name: "Psyker" } as never, {});
+		await rollPhenomena(psyker(), {});
 		expect(cards).toHaveLength(1);
 		// Bead oy8z: the card renders from the postCard template path.
 		expect(cards[0]).toContain("psychic-phenomena.hbs");
@@ -82,7 +89,7 @@ describe("rollPhenomena reads the table through the content port (bead xkad)", (
 				results: [{ text: "The air screams.", range: [1, 100] }],
 			})),
 		);
-		await rollPhenomena({ name: "Psyker" } as never, {});
+		await rollPhenomena(psyker(), {});
 		expect(cards).toHaveLength(1);
 		// The pack's table prose is passed as DATA (template-escaped), not
 		// interpolated into hand-built HTML (bead oy8z).
@@ -98,7 +105,7 @@ describe("rollPhenomena reads the table through the content port (bead xkad)", (
 				return null;
 			}),
 		);
-		await rollPhenomena({ name: "Psyker" } as never, {});
+		await rollPhenomena(psyker(), {});
 		// Exactly one lookup, through the port (the old code called
 		// foundryContent and this array would have stayed empty).
 		expect(asked).toHaveLength(1);
@@ -109,7 +116,7 @@ describe("rollPhenomena reads the table through the content port (bead xkad)", (
 describe("postPowerDamage + applyPowerCorruption post template cards (bead oy8z)", () => {
 	test("the damage card posts the expression and total as template vars", async () => {
 		setPorts(portsWith(async () => null));
-		await postPowerDamage({ name: "Psyker" } as never, "Fire Bolt", "1d10+4");
+		await postPowerDamage(psyker(), "Fire Bolt", "1d10+4");
 		expect(cards).toHaveLength(1);
 		expect(cards[0]).toContain("psychic-damage.hbs");
 		expect(varsOf[0].label).toBe("PSYCHIC_POWER.DAMAGE_ROLL");
@@ -132,7 +139,7 @@ describe("postPowerDamage + applyPowerCorruption post template cards (bead oy8z)
 			},
 		});
 		await applyPowerCorruption(
-			{ name: "Psyker" } as never,
+			psyker(),
 			{
 				name: "Summon Daemon",
 				system: { effects: [{ kind: "corruption", dice: "1d10+4" }] },
@@ -148,13 +155,10 @@ describe("postPowerDamage + applyPowerCorruption post template cards (bead oy8z)
 
 	test("no corruption effects, no card", async () => {
 		setPorts(portsWith(async () => null));
-		await applyPowerCorruption(
-			{ name: "Psyker" } as never,
-			{
-				name: "Fire Bolt",
-				system: { effects: [] },
-			} as never,
-		);
+		await applyPowerCorruption(psyker(), {
+			name: "Fire Bolt",
+			system: { effects: [] },
+		} as never);
 		expect(cards).toHaveLength(0);
 	});
 });

@@ -19,7 +19,7 @@
  *
  * Usage: bun utils/emit-careers-yaml.ts
  */
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import yaml from "yaml";
 // Bead dgei (A2): the slug algorithm is single-sourced in compendia.ts
 // slugKey. The old local slugify additionally folded a curly apostrophe
@@ -39,19 +39,28 @@ const TALENTS_YAML = "src/packs/rogue_trader/character-options/talents.yaml";
 const TRAITS_YAML = "src/packs/rogue_trader/character-options/traits.yaml";
 const OUT = "src/packs/rogue_trader/character-options/careers.yaml";
 
-if (!existsSync(PARSED)) {
-	throw new Error(
-		`run src/packs/.extraction-src/parse-careers.mjs first (${PARSED} missing)`,
-	);
+interface PackNames {
+	skills: Set<string>;
+	talents: Set<string>;
+	traits: Set<string>;
 }
 
-const parsed = yaml.parse(readFileSync(PARSED, "utf8")) as CareerParsed[];
-const altParsed = existsSync(ALT_PARSED)
-	? (yaml.parse(readFileSync(ALT_PARSED, "utf8")) as AltCareerParsed[])
-	: [];
-const skillNames = namesFrom(SKILLS_YAML);
-const talentNames = namesFrom(TALENTS_YAML);
-const traitNames = namesFrom(TRAITS_YAML);
+let packNamesCache: PackNames | null = null;
+
+/**
+ * Pack name sets, loaded on first use. Importing this module must stay inert:
+ * it is a CLI script whose body writes careers.yaml, and the fail-loud maps
+ * below are unit-tested by importing their exports. Emitting still resolves
+ * keyAdvance against the same three packs.
+ */
+function packNameSets(): PackNames {
+	packNamesCache ??= {
+		skills: namesFrom(SKILLS_YAML),
+		talents: namesFrom(TALENTS_YAML),
+		traits: namesFrom(TRAITS_YAML),
+	};
+	return packNamesCache;
+}
 
 function namesFrom(path: string): Set<string> {
 	const docs = yaml.parse(readFileSync(path, "utf8")) as Array<{
@@ -80,7 +89,7 @@ const RANK_XP: Record<number, number> = {
  * generated: authoring it directly in careers.yaml would be lost on the next
  * emit (caught while adding the koau splat content).
  */
-const SUGGESTED_HOME_WORLDS: Record<string, string[]> = {
+export const SUGGESTED_HOME_WORLDS: Record<string, string[]> = {
 	"rogue-trader": ["hive-world", "imperial-world", "noble-born", "void-born"],
 	"arch-militant": ["death-world", "forge-world", "hive-world", "void-born"],
 	"astropath-transcendent": ["hive-world", "imperial-world", "void-born"],
@@ -243,7 +252,10 @@ const unkeyed: string[] = [];
  * names ("Iron Discipl"; bead 3mj rebuilds it) and the skills pack differs
  * in singular/plural ("Drive (Ground Vehicles)").
  */
-function matchesPack(bookName: string, packNames: Set<string>): string | null {
+export function matchesPack(
+	bookName: string,
+	packNames: Set<string>,
+): string | null {
 	const norm = (s: string) => s.replace(/-/g, " ");
 	const book = norm(bookName);
 	if (packNames.has(bookName)) return bookName;
@@ -267,7 +279,7 @@ function matchesPack(bookName: string, packNames: Set<string>): string | null {
  * - "Good Repuatation (Ecclesiarchy)" — misspells Good Reputation,
  *   Missionary rank 1 (p60, verified in the PDF text layer).
  */
-const TYPO_KEY_MAP: Record<string, string> = {
+export const TYPO_KEY_MAP: Record<string, string> = {
 	Decieve: "deceive",
 	"Totall Recall": "total-recall",
 	"Good Repuatation (Ecclesiarchy)": "good-reputation",
@@ -277,7 +289,7 @@ const TYPO_KEY_MAP: Record<string, string> = {
 };
 
 /** Resolve an advance row to {key, name, multiplier}. */
-function keyAdvance(
+export function keyAdvance(
 	name: string,
 	type: string,
 ): { key: string; name: string; multiplier: number } {
@@ -298,6 +310,7 @@ function keyAdvance(
 	if (TYPO_KEY_MAP[clean]) {
 		return { key: TYPO_KEY_MAP[clean], name: "", multiplier };
 	}
+	const packs = packNameSets();
 	if (type === "skill") {
 		// "+10"/"+20" ladder rows resolve to the base skill pack key.
 		const base = clean.replace(/\s*\+\d+\s*$/, "").trim();
@@ -305,7 +318,7 @@ function keyAdvance(
 		// ("Common Lore") when no exact specialization entry exists.
 		const generic = base.replace(/\s*\([^)]*\)\s*$/, "").trim();
 		for (const candidate of [clean, base, generic]) {
-			const match = matchesPack(candidate, skillNames);
+			const match = matchesPack(candidate, packs.skills);
 			if (match) return { key: slugKey(match), name: "", multiplier };
 		}
 		// Book-typos + ladder suffix ("Decieve +10", VERIFIED p71-72).
@@ -317,20 +330,20 @@ function keyAdvance(
 	} else if (type === "trait") {
 		// Xenos careers print Trait advances (Kroot "Brutal Charge", "Unnatural
 		// Perception (x3)", Glimpse From Beyond "From Beyond").
-		const match = matchesPack(clean, traitNames);
+		const match = matchesPack(clean, packs.traits);
 		if (match) return { key: slugKey(match), name: "", multiplier };
 		const generic = clean.replace(/\s*\([^)]*\)\s*$/, "").trim();
 		if (generic !== clean) {
-			const baseMatch = matchesPack(generic, traitNames);
+			const baseMatch = matchesPack(generic, packs.traits);
 			if (baseMatch) return { key: slugKey(baseMatch), name: "", multiplier };
 		}
 	} else {
-		const match = matchesPack(clean, talentNames);
+		const match = matchesPack(clean, packs.talents);
 		if (match) return { key: slugKey(match), name: "", multiplier };
 		// Specialized talents ("Hatred (Pirates)") resolve to the base talent.
 		const generic = clean.replace(/\s*\([^)]*\)\s*$/, "").trim();
 		if (generic !== clean) {
-			const baseMatch = matchesPack(generic, talentNames);
+			const baseMatch = matchesPack(generic, packs.talents);
 			if (baseMatch) return { key: slugKey(baseMatch), name: "", multiplier };
 		}
 	}
@@ -345,7 +358,7 @@ function keyAdvance(
  * a verbatim sentence prefix at which a NEW paragraph begins. The text content
  * is unaltered - only <p> boundaries. Markers fail loudly if prose drifts.
  */
-const PARAGRAPH_STARTS: Record<string, string[]> = {
+export const PARAGRAPH_STARTS: Record<string, string[]> = {
 	"rogue-trader": [
 		"Despite the fact that the weight of such responsibility",
 		"Rogue Traders must always look to their own abilities",
@@ -392,7 +405,7 @@ const PARAGRAPH_STARTS: Record<string, string[]> = {
  * Split a body block into paragraphs at the curated markers. Sentences are
  * reassembled verbatim; the only change is <p> boundaries.
  */
-function splitParagraphs(block: string, markers: string[]): string[] {
+export function splitParagraphs(block: string, markers: string[]): string[] {
 	const sentences = block
 		.match(/[^.!?]*[.!?]+[\u201d\u2019]?|[^.!?]+$/g)
 		?.map((s) => s.trim())
@@ -417,7 +430,7 @@ function splitParagraphs(block: string, markers: string[]): string[] {
  * (enrichHTML collapses bare newlines). Finer paragraph breaks are a manual curation pass — the
  * raw text layer carries no in-paragraph markers.
  */
-function toDescriptionHtml(prose: string, careerKey: string): string {
+export function toDescriptionHtml(prose: string, careerKey: string): string {
 	const paragraphs = prose.split(/\n\n+/).filter(Boolean);
 	const out: string[] = [];
 	let i = 0;
@@ -463,39 +476,44 @@ function toDescriptionHtml(prose: string, careerKey: string): string {
 	return html;
 }
 
-const documents = [
-	...parsed.map((career) => ({
-		name: career.name,
-		type: "Item",
-		description: toDescriptionHtml(career.description ?? "", career.key),
-		system: {
-			key: career.key,
-			shortDescription: career.shortDescription,
-			source: { book: "Core Rulebook", page: career.page },
-			suggestedHomeWorlds: SUGGESTED_HOME_WORLDS[career.key] ?? [],
-			characteristicAdvances: career.characteristicAdvances,
-			startingSkills: career.startingSkills,
-			startingTalents: career.startingTalents,
-			startingGear: career.startingGear,
-			ranks: career.ranks.map((rank) => ({
-				rank: rank.rank,
-				xpLevel: RANK_XP[rank.rank] ?? 0,
-				advances: rank.advances.map((adv) => {
-					const resolved = keyAdvance(adv.name, adv.type);
-					return {
-						key: resolved.key,
-						name: resolved.name,
-						type: adv.type,
-						cost: adv.cost,
-						multiplier: resolved.multiplier,
-						prerequisites: adv.prerequisites,
-					};
-				}),
-			})),
-		},
-	})),
-	...altDocuments(altParsed),
-];
+function buildDocuments(
+	parsed: CareerParsed[],
+	altParsed: AltCareerParsed[],
+): unknown[] {
+	return [
+		...parsed.map((career) => ({
+			name: career.name,
+			type: "Item",
+			description: toDescriptionHtml(career.description ?? "", career.key),
+			system: {
+				key: career.key,
+				shortDescription: career.shortDescription,
+				source: { book: "Core Rulebook", page: career.page },
+				suggestedHomeWorlds: SUGGESTED_HOME_WORLDS[career.key] ?? [],
+				characteristicAdvances: career.characteristicAdvances,
+				startingSkills: career.startingSkills,
+				startingTalents: career.startingTalents,
+				startingGear: career.startingGear,
+				ranks: career.ranks.map((rank) => ({
+					rank: rank.rank,
+					xpLevel: RANK_XP[rank.rank] ?? 0,
+					advances: rank.advances.map((adv) => {
+						const resolved = keyAdvance(adv.name, adv.type);
+						return {
+							key: resolved.key,
+							name: resolved.name,
+							type: adv.type,
+							cost: adv.cost,
+							multiplier: resolved.multiplier,
+							prerequisites: adv.prerequisites,
+						};
+					}),
+				})),
+			},
+		})),
+		...altDocuments(altParsed),
+	];
+}
 
 const header = `# Careers pack (beads 2n5/rcv + koau): core-8 from Core Rulebook
 # Chapter II (p36-71) plus splatbook Alternate Career Ranks (ITS/HA/FC/DK),
@@ -512,16 +530,31 @@ const header = `# Careers pack (beads 2n5/rcv + koau): core-8 from Core Rulebook
 
 `;
 
-const body = yaml.stringify(documents, { lineWidth: 120 });
-const { writeFileSync } = await import("node:fs");
-writeFileSync(OUT, header + body);
-console.log(`[careers] ${documents.length} documents -> ${OUT}`);
+function main(): void {
+	if (!existsSync(PARSED)) {
+		throw new Error(
+			`run src/packs/.extraction-src/parse-careers.mjs first (${PARSED} missing)`,
+		);
+	}
 
-if (unkeyed.length) {
-	console.log(
-		`\n[careers] UNKEYED ROWS (${unkeyed.length}) — verify each is genuinely unkeyable:`,
-	);
-	for (const row of unkeyed) console.log(`  ${row}`);
-} else {
-	console.log("[careers] all advance rows keyed");
+	const parsed = yaml.parse(readFileSync(PARSED, "utf8")) as CareerParsed[];
+	const altParsed = existsSync(ALT_PARSED)
+		? (yaml.parse(readFileSync(ALT_PARSED, "utf8")) as AltCareerParsed[])
+		: [];
+	const documents = buildDocuments(parsed, altParsed);
+
+	const body = yaml.stringify(documents, { lineWidth: 120 });
+	writeFileSync(OUT, header + body);
+	console.log(`[careers] ${documents.length} documents -> ${OUT}`);
+
+	if (unkeyed.length) {
+		console.log(
+			`\n[careers] UNKEYED ROWS (${unkeyed.length}) — verify each is genuinely unkeyable:`,
+		);
+		for (const row of unkeyed) console.log(`  ${row}`);
+	} else {
+		console.log("[careers] all advance rows keyed");
+	}
 }
+
+if (import.meta.main) main();

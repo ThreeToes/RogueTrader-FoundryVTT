@@ -55,6 +55,9 @@ const { foundryPorts, resetPorts, setPorts } = await import(
 	"../../infrastructure/foundry/ports"
 );
 const { shockOutcome } = await import("../../rules/fear");
+const { actorFixture, actorUpdateLog } = await import(
+	"../../../test-helpers/actor-fixture"
+);
 
 type FearRequest = Parameters<NonNullable<typeof fearHandler.after>>[0];
 type FearOutcome = Parameters<NonNullable<typeof fearHandler.after>>[2];
@@ -80,34 +83,29 @@ interface PostedCard {
 }
 
 /**
- * A fake actor whose system.insanity the Actors port mutates in place, plus
- * the log of updates so a delta can be asserted directly.
+ * A victim actor from the shared fixture: the Actors port writes THROUGH the
+ * document (exactly what the real adapter applies), and the fixture records
+ * every write so a delta can be asserted directly.
  */
 function fakeActor() {
-	const actor = {
+	const actor = actorFixture({
 		uuid: "Actor.victim",
 		name: "Victim",
-		items: [] as unknown[],
-		effects: [] as unknown[],
+		effects: [],
 		system: { insanity: 0 },
-	};
-	const updates: Record<string, unknown>[] = [];
+		recordUpdates: true,
+	}) as unknown as { system: { insanity: number } };
 	const actors = {
-		update: async (a: unknown, patch: Record<string, unknown>) => {
-			updates.push(patch);
-			// Dotted-path write, exactly what the real adapter applies.
-			for (const [key, value] of Object.entries(patch)) {
-				const path = key.split(".");
-				let cursor = a as Record<string, unknown>;
-				for (const step of path.slice(0, -1))
-					cursor = cursor[step] as Record<string, unknown>;
-				cursor[path[path.length - 1]!] = value;
-			}
+		update: async (
+			a: { update: (patch: object) => Promise<void> },
+			patch: Record<string, unknown>,
+		) => {
+			await a.update(patch);
 		},
 		createEffects: async () => undefined,
 		deleteEffects: async () => undefined,
 	} as unknown as Ports["actors"];
-	return { actor, updates, actors };
+	return { actor, updates: actorUpdateLog(actor), actors };
 }
 
 /** Dice stub: answer each formula from a queue, remembering every call. */

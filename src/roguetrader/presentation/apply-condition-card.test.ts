@@ -50,6 +50,7 @@ const { getPorts, resetPorts, setPorts } = await import(
 );
 const { applyConditionFromCard } = await import("./chat-actions");
 const { postCriticalCard } = await import("../rules/criticals");
+const { actorFixture } = await import("../../test-helpers/actor-fixture");
 
 const globals = globalThis as Record<string, unknown>;
 
@@ -313,6 +314,21 @@ function fakeButton(data: {
 }
 
 describe("applyConditionFromCard dispatch (bead ronn)", () => {
+	/**
+	 * A victim actor from the shared fixture: carried conditions live on
+	 * `effects`, and the ownership gate reads `isOwner`. The document is
+	 * ANONYMOUS (`name: null`) because the refusal copy falls back to the uuid,
+	 * which the warn assertions pin.
+	 */
+	function fakeVictim(isOwner = true) {
+		return actorFixture({
+			uuid: "Actor.victim",
+			name: null,
+			effects: [],
+			isOwner,
+		});
+	}
+
 	function fakeApplyPorts() {
 		const created: Array<{
 			actor: unknown;
@@ -342,7 +358,7 @@ describe("applyConditionFromCard dispatch (bead ronn)", () => {
 
 	test("applies the condition through ports.actors.createEffects, exactly once", async () => {
 		const { created, warns } = fakeApplyPorts();
-		const victim = { effects: [], isOwner: true };
+		const victim = fakeVictim();
 		globals.foundry = {
 			...globals.foundry,
 			utils: { fromUuidSync: () => victim },
@@ -394,7 +410,7 @@ describe("applyConditionFromCard dispatch (bead ronn)", () => {
 
 	test("ownership gate: a non-owner click never writes, and the refusal is LOUD (bead eolv)", async () => {
 		const { created, warns } = fakeApplyPorts();
-		const victim = { effects: [], isOwner: false };
+		const victim = fakeVictim(false);
 		globals.foundry = {
 			...globals.foundry,
 			utils: { fromUuidSync: () => victim },
@@ -414,7 +430,7 @@ describe("applyConditionFromCard dispatch (bead ronn)", () => {
 
 	test("the port's canModify answer controls the button (Permissions double)", async () => {
 		const { created, warns } = fakeApplyPorts();
-		const victim = { effects: [], isOwner: true };
+		const victim = fakeVictim();
 		globals.foundry = {
 			...globals.foundry,
 			utils: { fromUuidSync: () => victim },

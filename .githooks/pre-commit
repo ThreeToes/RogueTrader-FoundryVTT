@@ -41,8 +41,6 @@ echo "==> bun run build"
 if bun run build; then echo "    build OK"; else echo "    build FAILED"; fail=1; fi
 
 echo "==> packless parity pass (CI condition: no src/packs)"
-PACKLESS_WORKTREE="$(mktemp -d)/packless"
-PARITY_FAIL=0
 # git exports GIT_DIR / GIT_INDEX_FILE etc. into the hook's environment; the
 # child git must not inherit them (worktree add resolves the relative
 # GIT_INDEX_FILE against the NEW worktree and dies with "index file open
@@ -50,6 +48,25 @@ PARITY_FAIL=0
 # parity section.
 CLEAN_GIT="env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
 	-u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES git"
+
+# Cleanup is a trap on EXIT, not inline: the hook runs under set -eu, so any
+# mid-setup failure (mktemp, ln -s, worktree add) or a signal during the test
+# run aborts before inline cleanup lines are reached, leaking BOTH a
+# registered worktree entry (.git/worktrees — prunable but present) and its
+# directory. The trap covers success, failure, and kill alike.
+parity_cleanup() {
+	if [ -n "${PARITY_WORKTREE:-}" ] && [ -d "$PARITY_WORKTREE" ]; then
+		$CLEAN_GIT worktree remove --force "$PARITY_WORKTREE" >/dev/null 2>&1 ||
+			{ rm -rf "$PARITY_WORKTREE"; $CLEAN_GIT worktree prune >/dev/null 2>&1; }
+	fi
+	$CLEAN_GIT worktree prune >/dev/null 2>&1
+	rm -rf "$PARITY_BASE"
+}
+trap parity_cleanup EXIT
+
+PARITY_BASE="$(mktemp -d)"
+PACKLESS_WORKTREE="$PARITY_BASE/packless"
+PARITY_FAIL=0
 
 if $CLEAN_GIT worktree add --detach "$PACKLESS_WORKTREE" HEAD >/dev/null 2>&1; then
     # node_modules does not exist in a fresh worktree; symlink this
@@ -78,8 +95,6 @@ if $CLEAN_GIT worktree add --detach "$PACKLESS_WORKTREE" HEAD >/dev/null 2>&1; t
         echo "    packless bun test FAILED (CI would fail: this run had no src/packs)"
         PARITY_FAIL=1
     fi
-    $CLEAN_GIT worktree remove --force "$PACKLESS_WORKTREE" >/dev/null 2>&1 || \
-        rm -rf "$PACKLESS_WORKTREE"
 else
     echo "    setup FAILED: could not create the packless worktree — refusing this"
     echo "    commit because CI parity cannot be verified. If it persists, try"

@@ -6,17 +6,19 @@
 #
 # Checks: typecheck (pure + scoped), lint, bun test, verify:templates, build.
 #
-# The hook runs the same steps and order as ci.yaml. Note the parity
-# limitation: the hook runs WITH this checkout's src/packs present, while
-# CI has none. A pack-dependent test that fails only when packs are ABSENT
-# (a missing skipIf guard on an existsSync read) therefore passes here and
-# fails there — the 2026-10-22 CI red was exactly this (afflictions pack
-# guard). That class is now caught STATICALLY, not by a second test run:
-# utils/pack-read-guard.test.ts fails `bun test` when a src/ or utils/ suite
-# reads a src/packs path at runtime with no skipIf/existsSync guard (bead
-# 0qyi, option b — a packless parity pass would double the hook's slowest
-# step). New pack-driven tests must use the skipIf guard shape of
-# rules/origins.test.ts. Bypass with: git commit --no-verify.
+# The hook runs the same steps and order as ci.yaml, PLUS a packless parity
+# pass (bead 0qyi, option a): the hook sees src/packs, CI does not, and the
+# 2026-10-22 CI red was a test that failed only then (afflictions pack
+# guard). Two closures: (1) utils/pack-read-guard.test.ts fails `bun test`
+# when a src/ or utils/ suite reads a src/packs path at runtime with no
+# skipIf/existsSync guard (static, fast — catches the direct-read class);
+# (2) the packless pass below runs `bun test` in a throwaway worktree with
+# NO src/packs, which is the CI condition exactly — it closes the class at
+# any layer, including helper-indirection reads the static guard cannot see
+# (the 2026-10-25 CI red was emit-careers-yaml's keyAdvance reading the
+# packs from inside a helper). The packless suite is small (pack-dependent
+# tests skip) and runs in ~1-2s. New pack-driven tests must use the skipIf
+# guard shape of rules/origins.test.ts. Bypass with: git commit --no-verify.
 set -eu
 
 cd "$(git rev-parse --show-toplevel)"
@@ -37,6 +39,26 @@ if bun run verify:templates; then echo "    verify:templates OK"; else echo "   
 
 echo "==> bun run build"
 if bun run build; then echo "    build OK"; else echo "    build FAILED"; fail=1; fi
+
+echo "==> packless parity pass (CI condition: no src/packs)"
+PACKLESS_WORKTREE="$(mktemp -d)/packless"
+PARITY_FAIL=0
+if git worktree add --detach "$PACKLESS_WORKTREE" HEAD >/dev/null 2>&1; then
+    # node_modules does not exist in a fresh worktree; symlink this
+    # checkout's — same bun/binary, same packages.
+    ln -s "$(pwd)/node_modules" "$PACKLESS_WORKTREE/node_modules"
+    if (cd "$PACKLESS_WORKTREE" && bun test); then
+        echo "    packless bun test OK"
+    else
+        echo "    packless bun test FAILED (CI would fail: this run had no src/packs)"
+        PARITY_FAIL=1
+    fi
+    git worktree remove --force "$PACKLESS_WORKTREE" >/dev/null 2>&1 || \
+        rm -rf "$PACKLESS_WORKTREE"
+    [ "$PARITY_FAIL" -eq 0 ] || fail=1
+else
+    echo "    skipped (worktree add failed — parity not verified this commit)"
+fi
 
 if [ "$fail" -ne 0 ]; then
     echo ""

@@ -52,17 +52,33 @@ let packNamesCache: PackNames | null = null;
  * it is a CLI script whose body writes careers.yaml, and the fail-loud maps
  * below are unit-tested by importing their exports. Emitting still resolves
  * keyAdvance against the same three packs.
+ *
+ * Packless contexts (packs repo absent, e.g. the CI checkout) resolve
+ * NOTHING: an absent pack YAML degrades to an empty name set with a console
+ * warning, so keyAdvance stays honest (rows keep the verbatim name) instead
+ * of throwing ENOENT from a unit test. The loud gate for the emit CLI lives
+ * in main(), which throws before writing anything when the packs are missing.
  */
 function packNameSets(): PackNames {
 	packNamesCache ??= {
-		skills: namesFrom(SKILLS_YAML),
-		talents: namesFrom(TALENTS_YAML),
-		traits: namesFrom(TRAITS_YAML),
+		skills: namesFrom(SKILLS_YAML, "skills"),
+		talents: namesFrom(TALENTS_YAML, "talents"),
+		traits: namesFrom(TRAITS_YAML, "traits"),
 	};
 	return packNamesCache;
 }
 
-function namesFrom(path: string): Set<string> {
+function namesFrom(path: string, family: string): Set<string> {
+	if (!existsSync(path)) {
+		// Packless checkout (CI / the emit-referenced packs absent): nothing
+		// can resolve, but crashing every keyAdvance caller here is the
+		// hdn7-class regression that broke CI in 2026-10-23; main() keeps the
+		// emit path loud.
+		console.warn(
+			`[careers] ${family} pack YAML missing (${path}) — advance keys will not resolve`,
+		);
+		return new Set();
+	}
 	const docs = yaml.parse(readFileSync(path, "utf8")) as Array<{
 		name: string;
 	}>;

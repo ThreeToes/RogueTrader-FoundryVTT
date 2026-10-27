@@ -52,15 +52,15 @@ CLEAN_GIT="env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
 # Cleanup is a trap on EXIT, not inline: the hook runs under set -eu, so any
 # mid-setup failure (mktemp, ln -s, worktree add) or a signal during the test
 # run aborts before inline cleanup lines are reached, leaking BOTH a
-# registered worktree entry (.git/worktrees — prunable but present) and its
-# directory. The trap covers success, failure, and kill alike.
+# registered worktree entry (.git/worktrees) and its directory. The trap
+# covers success, failure, and kill alike.
 parity_cleanup() {
-	if [ -n "${PARITY_WORKTREE:-}" ] && [ -d "$PARITY_WORKTREE" ]; then
-		$CLEAN_GIT worktree remove --force "$PARITY_WORKTREE" >/dev/null 2>&1 ||
-			{ rm -rf "$PARITY_WORKTREE"; $CLEAN_GIT worktree prune >/dev/null 2>&1; }
+	if [ -n "${PACKLESS_WORKTREE:-}" ] && [ -d "$PACKLESS_WORKTREE" ]; then
+		$CLEAN_GIT worktree remove --force "$PACKLESS_WORKTREE" >/dev/null 2>&1 ||
+			{ rm -rf "$PACKLESS_WORKTREE"; $CLEAN_GIT worktree prune >/dev/null 2>&1; }
 	fi
 	$CLEAN_GIT worktree prune >/dev/null 2>&1
-	rm -rf "$PARITY_BASE"
+	rm -rf "${PARITY_BASE:-}"
 }
 trap parity_cleanup EXIT
 

@@ -43,22 +43,50 @@ if bun run build; then echo "    build OK"; else echo "    build FAILED"; fail=1
 echo "==> packless parity pass (CI condition: no src/packs)"
 PACKLESS_WORKTREE="$(mktemp -d)/packless"
 PARITY_FAIL=0
-if git worktree add --detach "$PACKLESS_WORKTREE" HEAD >/dev/null 2>&1; then
+# git exports GIT_DIR / GIT_INDEX_FILE etc. into the hook's environment; the
+# child git must not inherit them (worktree add resolves the relative
+# GIT_INDEX_FILE against the NEW worktree and dies with "index file open
+# failed: Not a directory"), so strip the inherited git vars for the whole
+# parity section.
+CLEAN_GIT="env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
+	-u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES git"
+
+if $CLEAN_GIT worktree add --detach "$PACKLESS_WORKTREE" HEAD >/dev/null 2>&1; then
     # node_modules does not exist in a fresh worktree; symlink this
     # checkout's — same bun/binary, same packages.
     ln -s "$(pwd)/node_modules" "$PACKLESS_WORKTREE/node_modules"
+    # The worktree checks out HEAD — but the commit being made does not
+    # exist yet, and the hook's job is to gate THAT tree. write-tree reads
+    # the commit's index (the hook inherits GIT_INDEX_FILE); a two-way
+    # read-tree -m -u HEAD <tree> then materialises the staged delta in the
+    # worktree (adds, edits AND deletions). reset --hard cannot be used:
+    # it rejects a bare tree ("a tree, not a commit").
+    if ! COMMIT_TREE=$($CLEAN_GIT write-tree); then
+        echo "    setup FAILED: write-tree could not read the index — refusing;"
+        echo "    CI parity cannot be verified for this commit."
+        PARITY_FAIL=1
+    fi
+    if [ "$PARITY_FAIL" -eq 0 ]; then
+        $CLEAN_GIT -C "$PACKLESS_WORKTREE" read-tree -m -u HEAD "$COMMIT_TREE" \
+            >/dev/null 2>&1 || PARITY_FAIL=1
+        [ "$PARITY_FAIL" -eq 0 ] || echo "    setup FAILED: could not materialise the"
+        [ "$PARITY_FAIL" -eq 0 ] || echo "    staged tree in the parity worktree."
+    fi
     if (cd "$PACKLESS_WORKTREE" && bun test); then
         echo "    packless bun test OK"
     else
         echo "    packless bun test FAILED (CI would fail: this run had no src/packs)"
         PARITY_FAIL=1
     fi
-    git worktree remove --force "$PACKLESS_WORKTREE" >/dev/null 2>&1 || \
+    $CLEAN_GIT worktree remove --force "$PACKLESS_WORKTREE" >/dev/null 2>&1 || \
         rm -rf "$PACKLESS_WORKTREE"
-    [ "$PARITY_FAIL" -eq 0 ] || fail=1
 else
-    echo "    skipped (worktree add failed — parity not verified this commit)"
+    echo "    setup FAILED: could not create the packless worktree — refusing this"
+    echo "    commit because CI parity cannot be verified. If it persists, try"
+    echo "    'git worktree prune'; the escape hatch is --no-verify."
+    PARITY_FAIL=1
 fi
+[ "$PARITY_FAIL" -eq 0 ] || fail=1
 
 if [ "$fail" -ne 0 ]; then
     echo ""
